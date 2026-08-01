@@ -1,0 +1,19 @@
+@import "../global.css";
+
+/* Modular Badge Styles using Tailwind @apply */
+
+.badge-base {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider select-none;
+}
+
+.badge-lime {
+  @apply bg-secondary-container/20 text-[#3c4d00];
+}
+
+.badge-delayed {
+  @apply bg-error/10 text-error;
+}
+
+.badge-completed {
+  @apply bg-surface-container-high text-on-surface-variant;
+}

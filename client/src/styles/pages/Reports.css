@@ -1,0 +1,19 @@
+@import "../global.css";
+
+/* Reports Page Styles (Desktop & Mobile Responsive) */
+
+.reports-table-container {
+  @apply rounded-3xl p-4 md:p-6 shadow-md bg-white/95 border border-border-glass overflow-x-auto;
+}
+
+.reports-table {
+  @apply w-full border-collapse text-left min-w-[600px];
+}
+
+.reports-th {
+  @apply p-3 md:p-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant border-b border-border-glass whitespace-nowrap;
+}
+
+.reports-td {
+  @apply p-3 md:p-4 border-b border-surface-container-high text-sm whitespace-nowrap;
+}

@@ -1,0 +1,19 @@
+@import "../global.css";
+
+/* Modular Avatar Styles using Tailwind @apply */
+
+.avatar-base {
+  @apply rounded-full object-cover border-2 border-surface shadow-sm;
+}
+
+.avatar-sm {
+  @apply w-8 h-8;
+}
+
+.avatar-md {
+  @apply w-9 h-9;
+}
+
+.avatar-lg {
+  @apply w-14 h-14;
+}

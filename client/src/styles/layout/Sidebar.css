@@ -1,0 +1,43 @@
+@import "../global.css";
+
+/* Sidebar Layout Styles (Desktop Rail Only - Hidden on Mobile) */
+
+.sidebar-container {
+  @apply hidden md:flex w-72 bg-surface border-r border-border-glass flex-col p-6 shrink-0 h-full z-40 select-none;
+}
+
+.sidebar-brand {
+  @apply flex items-center justify-between mb-10 pl-2;
+}
+
+.sidebar-brand-icon {
+  @apply w-10 h-10 rounded-2xl bg-primary text-on-primary flex items-center justify-center shadow-md text-xl;
+}
+
+.sidebar-brand-title {
+  @apply font-headline text-lg font-extrabold text-primary leading-tight;
+}
+
+.sidebar-brand-subtitle {
+  @apply text-xs text-on-surface-variant font-semibold tracking-wider;
+}
+
+.sidebar-nav {
+  @apply flex flex-col gap-2 flex-1;
+}
+
+.sidebar-nav-btn {
+  @apply flex items-center gap-3.5 px-4 py-3 rounded-2xl border-none cursor-pointer font-semibold text-sm transition-all duration-200 text-left;
+}
+
+.sidebar-nav-btn-active {
+  @apply bg-primary text-on-primary shadow-md;
+}
+
+.sidebar-nav-btn-inactive {
+  @apply bg-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface;
+}
+
+.sidebar-footer-card {
+  @apply rounded-2xl p-4 flex flex-col gap-2 bg-white/80 border border-border-glass shadow-sm mt-auto;
+}

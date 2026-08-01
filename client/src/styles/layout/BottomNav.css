@@ -1,0 +1,27 @@
+@import "../global.css";
+
+/* Bottom Navigation Bar Styles for Mobile Screen */
+
+.bottom-nav-container {
+  @apply fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-border-glass px-3 py-2 flex items-center justify-around md:hidden shadow-2xl select-none;
+}
+
+.bottom-nav-btn {
+  @apply flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 cursor-pointer border-none bg-transparent;
+}
+
+.bottom-nav-btn-active {
+  @apply text-primary font-bold scale-105;
+}
+
+.bottom-nav-btn-inactive {
+  @apply text-on-surface-variant/70 hover:text-on-surface font-medium;
+}
+
+.bottom-nav-icon {
+  @apply text-xl;
+}
+
+.bottom-nav-label {
+  @apply text-[10px] tracking-tight leading-none;
+}

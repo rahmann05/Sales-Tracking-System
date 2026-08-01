@@ -1,0 +1,39 @@
+@import "../global.css";
+
+/* Modular Button Component Styles using Tailwind @apply */
+
+.btn-base {
+  @apply inline-flex items-center justify-center gap-2 font-bold cursor-pointer transition-all duration-200 font-body select-none;
+}
+
+.btn-primary {
+  @apply bg-primary text-on-primary border-none shadow-md hover:opacity-90;
+}
+
+.btn-secondary {
+  @apply bg-surface-container-low text-on-surface border border-border-glass shadow-sm hover:bg-surface-container;
+}
+
+.btn-ghost {
+  @apply bg-transparent text-on-surface-variant hover:bg-surface-container hover:text-on-surface;
+}
+
+.btn-icon {
+  @apply bg-surface-container-lowest text-on-surface border border-border-glass rounded-full p-0 flex items-center justify-center shadow-sm hover:shadow-md;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 text-xs rounded-lg;
+}
+
+.btn-md {
+  @apply px-5 py-2.5 text-sm rounded-xl;
+}
+
+.btn-lg {
+  @apply px-7 py-3.5 text-base rounded-2xl;
+}
+
+.btn-disabled {
+  @apply opacity-60 cursor-not-allowed;
+}

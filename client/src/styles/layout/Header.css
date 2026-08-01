@@ -1,0 +1,23 @@
+@import "../global.css";
+
+/* Header Layout Styles (Desktop Top Bar Only - Hidden on Mobile for Clean View) */
+
+.header-container {
+  @apply hidden md:flex h-20 bg-surface/90 backdrop-blur-xl border-b border-border-glass px-8 items-center justify-between shrink-0 z-30 select-none w-full;
+}
+
+.header-controls {
+  @apply flex items-center gap-5;
+}
+
+.header-user-badge {
+  @apply flex items-center gap-3 py-1.5 px-1.5 md:pl-5 md:pr-1.5 bg-surface-container-lowest rounded-full border border-border-glass shadow-sm hover:shadow-md transition-shadow cursor-pointer;
+}
+
+.header-user-title {
+  @apply text-xs font-bold text-on-surface;
+}
+
+.header-user-avatar {
+  @apply w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center text-lg;
+}
