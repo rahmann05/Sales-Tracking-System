@@ -1,15 +1,18 @@
 import React from 'react';
-import { LuBell, LuUser, LuSearch, LuLogOut, LuTrendingUp } from 'react-icons/lu';
+import { LuSearch, LuLogOut, LuTrendingUp } from 'react-icons/lu';
 import { FiCheckCircle } from 'react-icons/fi';
 import { Input } from '../common/Input';
-import { Button } from '../common/Button';
 import { StatusMonitor } from '../common/StatusMonitor';
+import { NotificationCenterDropdown } from './NotificationCenterDropdown';
+import { useApp } from '../../context/AppContext';
 import '../../styles/layout/Header.css';
 
 /**
- * Header Layout Component (Desktop Only Top Bar with Integrated KPI Overview Stats)
+ * Header Layout Component (Desktop Only Top Bar with User Role Info & Notification Dropdown)
  */
-export const Header = ({ searchQuery, setSearchQuery, onLogout, totalVisits = 142, completionRate = 84 }) => {
+export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
+  const { user } = useApp();
+
   return (
     <header className="header-container">
       {/* Left: Search Input Bar */}
@@ -17,65 +20,40 @@ export const Header = ({ searchQuery, setSearchQuery, onLogout, totalVisits = 14
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search routes, reps..."
+          placeholder="Cari rute, toko, sales..."
           icon={LuSearch}
         />
       </div>
 
-      {/* Middle: Integrated Top Navbar KPI Stats (Total Visits & Completion) */}
+      {/* Middle: Active Role Badge */}
       <div className="hidden lg:flex items-center gap-3 bg-surface-container-low/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-border-glass">
-        {/* Total Visits Pill */}
-        <div className="flex items-center gap-2.5 pr-4 border-r border-border-glass">
-          <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
-            <LuTrendingUp />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 leading-none">
-              <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Total Visits</span>
-              <span className="text-[10px] font-extrabold bg-secondary-container/40 text-[#3c4d00] px-1.5 py-0.5 rounded-full">
-                +12%
-              </span>
-            </div>
-            <span className="text-sm font-extrabold text-on-surface">{totalVisits}</span>
-          </div>
-        </div>
-
-        {/* Completion Rate Pill */}
-        <div className="flex items-center gap-2.5 pl-1">
-          <div className="w-8 h-8 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center text-sm font-bold">
-            <FiCheckCircle />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block leading-none">Completion</span>
-            <span className="text-sm font-extrabold text-on-surface">{completionRate}%</span>
-          </div>
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs font-semibold text-on-surface-variant">Peran Aktif Login:</span>
+          <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full uppercase tracking-wider">
+            {user?.roleLabel || user?.role || 'User'}
+          </span>
         </div>
       </div>
 
       {/* Right Header Controls */}
       <div className="header-controls">
-        {/* Class Component: StatusMonitor */}
         <StatusMonitor label="WIB" />
 
-        {/* Notifications Icon Button */}
-        <div className="relative">
-          <Button
-            variant="icon"
-            icon={LuBell}
-            onClick={() => alert('No new notifications')}
-          />
-          <span className="absolute top-2 right-2.5 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
-        </div>
+        {/* Real-time Notification Dropdown */}
+        <NotificationCenterDropdown />
 
-        {/* User Profile Badge */}
-        <div className="header-user-badge" onClick={onLogout} title="Klik untuk Keluar (Logout)">
-          <span className="header-user-title">
-            Executive Admin
-          </span>
-          <div className="header-user-avatar">
-            <LuUser />
+        {/* User Profile Badge & Logout */}
+        <div
+          className="header-user-badge cursor-pointer hover:bg-surface-variant/50 transition-all p-1.5 rounded-xl border border-border-glass"
+          onClick={onLogout}
+          title="Klik untuk Keluar (Logout)"
+        >
+          <img src={user?.avatar} alt={user?.name} className="w-8 h-8 rounded-lg object-cover" />
+          <div className="flex flex-col text-left">
+            <span className="text-xs font-bold text-on-surface">{user?.name}</span>
+            <span className="text-[10px] text-on-surface-variant font-medium">{user?.role}</span>
           </div>
-          <LuLogOut className="text-on-surface-variant text-sm ml-1" />
+          <LuLogOut className="text-on-surface-variant text-base ml-1" />
         </div>
       </div>
     </header>

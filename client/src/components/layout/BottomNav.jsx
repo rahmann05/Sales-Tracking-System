@@ -3,20 +3,43 @@ import {
   LuLayoutDashboard,
   LuNavigation,
   LuUsers,
+  LuTruck,
+  LuShieldCheck,
+  LuFileCheck,
+  LuBriefcase,
 } from 'react-icons/lu';
-import { FiBarChart2 } from 'react-icons/fi';
+import { useApp } from '../../context/AppContext';
 import '../../styles/layout/BottomNav.css';
 
 /**
- * BottomNav Component (Single Responsibility: Mobile Bottom Navigation Bar)
+ * BottomNav Component (Single Responsibility: Mobile Bottom Navigation Bar with Role Integration)
  * 1 File per Component
  */
 export const BottomNav = ({ activeTab, setActiveTab }) => {
+  const { user } = useApp();
+
+  const getRoleNavItem = () => {
+    switch (user?.role) {
+      case 'SALES':
+        return { id: 'role-workspace', label: 'Absen & PJP', icon: LuNavigation };
+      case 'DRIVER':
+      case 'HELPER':
+        return { id: 'role-workspace', label: 'Delivery', icon: LuTruck };
+      case 'SUPERVISOR':
+        return { id: 'role-workspace', label: 'Supervisi', icon: LuShieldCheck };
+      case 'ADMIN':
+        return { id: 'role-workspace', label: 'Approval', icon: LuFileCheck };
+      case 'OPERATIONAL_MANAGER':
+        return { id: 'role-workspace', label: 'Ops Rute', icon: LuBriefcase };
+      default:
+        return { id: 'role-workspace', label: 'Task', icon: LuNavigation };
+    }
+  };
+
   const navItems = [
+    getRoleNavItem(),
     { id: 'dashboard', label: 'Dashboard', icon: LuLayoutDashboard },
-    { id: 'route-planning', label: 'Routes', icon: LuNavigation },
-    { id: 'team-tracking', label: 'Team', icon: LuUsers },
-    { id: 'reports', label: 'Reports', icon: FiBarChart2 },
+    { id: 'team-tracking', label: 'Tim', icon: LuUsers },
   ];
 
   return (
