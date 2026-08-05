@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SALES
+  DRIVER
+  HELPER
+  SUPERVISOR
+  ADMIN
+  MANAJER_OPERASIONAL
+}
+
+enum PjpStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum PjpType {
+  SALES
+  DRIVER
+  HELPER
+}
+
+enum VisitStatus {
+  PENDING
+  VISITED
+  CLOSED_REPORTED
+  SKIPPED
+}
+
+enum OrderStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum RouteChangeType {
+  REROUTE
+  SKIP
+}
+
+enum RouteChangeStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ACKNOWLEDGED
+}
+
+enum AttendanceType {
+  IN
+  OUT
+}
+
+model User {
+  id                    String               @id @default(uuid())
+  name                  String
+  email                 String               @unique
+  password              String
+  role                  Role
+  clusterId             String?
+  cluster               Cluster?             @relation(fields: [clusterId], references: [id])
+  
+  // Driver/Helper paired to a Sales user
+  salesId               String?
+  sales                 User?                @relation("SalesDriverHelper", fields: [salesId], references: [id])
+  subordinates          User[]               @relation("SalesDriverHelper")
+
+  pjps                  Pjp[]
+  attendances           Attendance[]
+  ordersCreated         Order[]              @relation("OrderCreatedBy")
+  ordersApproved        Order[]              @relation("OrderApprovedBy")
+  routeChangesReported  RouteChangeRequest[] @relation("RouteChangeReportedBy")
+  routeChangesHandled   RouteChangeRequest[] @relation("RouteChangeHandledBy")
+  routeChangesApproved  RouteChangeRequest[] @relation("RouteChangeApprovedBy")
+  notifications         Notification[]
+
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  deletedAt             DateTime?
+}
+
+model Cluster {
+  id        String    @id @default(uuid())
+  name      String
+  region    String
+  users     User[]
+  outlets   Outlet[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Outlet {
+  id                       String               @id @default(uuid())
+  name                     String
+  address                  String
+  latitude                 Float
+  longitude                Float
+  clusterId                String
+  cluster                  Cluster              @relation(fields: [clusterId], references: [id])
+  pjpStops                 PjpStop[]
+  routeChangesReplacement  RouteChangeRequest[] @relation("ReplacementOutlet")
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  deletedAt                DateTime?
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  sku         String      @unique
+  name        String
+  price       Float
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
+}
+
+model Pjp {
+  id            String               @id @default(uuid())
+  userId        String
+  user          User                 @relation(fields: [userId], references: [id])
+  date          DateTime
+  status        PjpStatus            @default(SCHEDULED)
+  type          PjpType
+  sourcePjpId   String?
+  sourcePjp     Pjp?                 @relation("PjpSourceHistory", fields: [sourcePjpId], references: [id])
+  derivedPjps   Pjp[]                @relation("PjpSourceHistory")
+  stops         PjpStop[]
+  routeChanges  RouteChangeRequest[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+}
+
+model PjpStop {
+  id           String               @id @default(uuid())
+  pjpId        String
+  pjp          Pjp                  @relation(fields: [pjpId], references: [id], onDelete: Cascade)
+  outletId     String
+  outlet       Outlet               @relation(fields: [outletId], references: [id])
+  sequence     Int
+  status       VisitStatus          @default(PENDING)
+  attendances  Attendance[]
+  orders       Order[]
+  routeChanges RouteChangeRequest[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model Attendance {
+  id        String         @id @default(uuid())
+  pjpStopId String
+  pjpStop   PjpStop        @relation(fields: [pjpStopId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  type      AttendanceType
+  latitude  Float
+  longitude Float
+  photoUrl  String?
+  timestamp DateTime       @default(now())
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  pjpStopId      String
+  pjpStop        PjpStop     @relation(fields: [pjpStopId], references: [id])
+  createdBy      String
+  createdByUser  User        @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  items          OrderItem[]
+  totalValue     Float
+  status         OrderStatus @default(PENDING_APPROVAL)
+  approvedBy     String?
+  approvedByUser User?       @relation("OrderApprovedBy", fields: [approvedBy], references: [id])
+  approvedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+}
+
+model RouteChangeRequest {
+  id                  String            @id @default(uuid())
+  pjpId               String
+  pjp                 Pjp               @relation(fields: [pjpId], references: [id])
+  pjpStopId           String
+  pjpStop             PjpStop           @relation(fields: [pjpStopId], references: [id])
+  type                RouteChangeType
+  reportedBy          String
+  reportedByUser      User              @relation("RouteChangeReportedBy", fields: [reportedBy], references: [id])
+  handledBy           String?
+  handledByUser       User?             @relation("RouteChangeHandledBy", fields: [handledBy], references: [id])
+  replacementOutletId String?
+  replacementOutlet   Outlet?           @relation("ReplacementOutlet", fields: [replacementOutletId], references: [id])
+  reason              String?
+  photoUrl            String?
+  status              RouteChangeStatus
+  approvedBy          String?
+  approvedByUser      User?             @relation("RouteChangeApprovedBy", fields: [approvedBy], references: [id])
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  payload   Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

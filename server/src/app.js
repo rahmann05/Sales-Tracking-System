@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { createServer } from 'http';
+import rateLimit from 'express-rate-limit';
 
 import { config } from './config/index.js';
 import apiRouter from './routes/index.js';
@@ -9,30 +11,44 @@ import { notFoundHandler } from './middlewares/notFound.middleware.js';
 import { errorHandler } from './middlewares/errorHandler.middleware.js';
 
 const app = express();
+const httpServer = createServer(app);
 
-// Security Middlewares
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Terlalu banyak request, coba lagi setelah 15 menit' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Terlalu banyak percobaan login, coba lagi setelah 15 menit' },
+});
+
+// ─── Security Middlewares ─────────────────────────────────────────────────────
 app.use(helmet());
-app.use(
-  cors({
-    origin: config.clientOrigin,
-    credentials: true,
-  })
-);
+app.use(cors({ origin: config.clientOrigin, credentials: true }));
+app.use(globalLimiter);
 
-// Logging & Body Parsers
+// ─── Logging & Body Parsers ───────────────────────────────────────────────────
 if (config.env === 'development') {
   app.use(morgan('dev'));
 }
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Main API Route Mounting
+// ─── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/v1/auth', authLimiter);
 app.use('/api', apiRouter);
 
-// 404 Route Not Found Handler
+// ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFoundHandler);
-
-// Centralized Error Handler Middleware
 app.use(errorHandler);
 
+export { httpServer };
 export default app;

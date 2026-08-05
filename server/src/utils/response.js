@@ -1,21 +1,17 @@
-/**
- * Formats a successful response
- */
-export const successResponse = (res, statusCode = 200, message = 'Success', data = null) => {
-  return res.status(statusCode).json({
+export const successResponse = (res, statusCode = 200, data = null, message = undefined) => {
+  const response = {
     success: true,
-    message,
-    data,
-  });
+  };
+  if (message !== undefined) response.message = message;
+  if (data !== null) response.data = data;
+  return res.status(statusCode).json(response);
 };
 
-/**
- * Formats an error response
- */
-export const errorResponse = (res, statusCode = 500, message = 'Internal Server Error', errors = null) => {
-  return res.status(statusCode).json({
+export const errorResponse = (res, statusCode = 500, message = 'Internal Server Error', errors = undefined) => {
+  const response = {
     success: false,
     message,
-    errors,
-  });
+  };
+  if (errors !== undefined) response.errors = errors;
+  return res.status(statusCode).json(response);
 };
