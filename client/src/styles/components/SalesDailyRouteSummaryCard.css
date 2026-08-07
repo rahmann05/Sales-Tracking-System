@@ -71,5 +71,5 @@
   justify-content: center;
   font-weight: 800;
   font-size: 0.75rem;
-  shrink-0: 0;
+  flex-shrink: 0;
 }

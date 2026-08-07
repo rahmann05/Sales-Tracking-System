@@ -1,112 +1,87 @@
 import React from 'react';
-import {
-  LuLayoutDashboard,
-  LuNavigation,
-  LuUsers,
-  LuLayers,
-  LuTruck,
-  LuShieldCheck,
-  LuFileCheck,
-  LuBriefcase,
-} from 'react-icons/lu';
-import { FiBarChart2 } from 'react-icons/fi';
+import { LuLayers } from 'react-icons/lu';
 import { useApp } from '../../context/AppContext';
+import { getNavigationTabs } from '../../constants/navigation';
 import '../../styles/layout/Sidebar.css';
 
 /**
- * Sidebar Layout Component (Desktop Only Rail with Role-specific Nav Items)
+ * SidebarBrand Component
+ * Single Responsibility: Display the app brand/logo section.
+ */
+const SidebarBrand = () => (
+  <div className="sidebar-brand">
+    <div className="flex items-center gap-3">
+      <div className="sidebar-brand-icon">
+        <LuLayers />
+      </div>
+      <div>
+        <h1 className="sidebar-brand-title">Sinar Anugrah</h1>
+        <span className="sidebar-brand-subtitle">PJP & ABSENSI SYSTEM</span>
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * SidebarNavItem Component
+ * Single Responsibility: Render a single navigation button.
+ */
+const SidebarNavItem = ({ item, isActive, onClick }) => {
+  const Icon = item.icon;
+  return (
+    <button
+      onClick={() => onClick(item.id)}
+      className={`sidebar-nav-btn ${isActive ? 'sidebar-nav-btn-active' : 'sidebar-nav-btn-inactive'}`}
+    >
+      <Icon className="text-xl" />
+      <span>{item.label}</span>
+    </button>
+  );
+};
+
+/**
+ * SidebarRoleBadge Component
+ * Single Responsibility: Display the current active role badge.
+ */
+const SidebarRoleBadge = ({ roleLabel }) => (
+  <div className="sidebar-footer-card">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-bold uppercase tracking-wider text-secondary">
+        Role Aktif
+      </span>
+      <span className="pulse-dot"></span>
+    </div>
+    <p className="text-xs font-semibold text-on-surface">{roleLabel}</p>
+    <span className="text-xs text-on-surface-variant">
+      Express REST API Connected
+    </span>
+  </div>
+);
+
+/**
+ * Sidebar Layout Component (Desktop Rail)
+ * Single Responsibility: Render the desktop navigation sidebar.
  */
 export const Sidebar = ({ activeTab, setActiveTab }) => {
   const { user } = useApp();
-
-  const getRoleNavItem = () => {
-    switch (user?.role) {
-      case 'SALES':
-        return { id: 'role-workspace', label: 'PJP Sales Field', icon: LuNavigation };
-      case 'DRIVER':
-      case 'HELPER':
-        return { id: 'role-workspace', label: 'Delivery Manifest H+1', icon: LuTruck };
-      case 'SUPERVISOR':
-        return { id: 'role-workspace', label: 'Supervisi Insiden Toko', icon: LuShieldCheck };
-      case 'ADMIN':
-        return { id: 'role-workspace', label: 'Approval Order Admin', icon: LuFileCheck };
-      case 'OPERATIONAL_MANAGER':
-        return { id: 'role-workspace', label: 'Persetujuan Rute Ops', icon: LuBriefcase };
-      default:
-        return { id: 'role-workspace', label: 'Workspace', icon: LuNavigation };
-    }
-  };
-
-  const getNavItems = () => {
-    const items = [getRoleNavItem()];
-    items.push({ id: 'dashboard', label: 'Peta & Dashboard', icon: LuLayoutDashboard });
-
-    // Master RJP: for SALES, SUPERVISOR, and OPERATIONAL_MANAGER
-    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER'].includes(user?.role)) {
-      items.push({ id: 'route-planning', label: user?.role === 'SALES' ? 'Jadwal Master RJP' : 'Kelola Master RJP', icon: LuNavigation });
-    }
-
-    // Tracking Tim & Reports: for SALES, SUPERVISOR, OPERATIONAL_MANAGER, ADMIN
-    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
-      items.push({ id: 'team-tracking', label: user?.role === 'SALES' ? 'Tim & RJP Sales' : 'Tracking Tim Field', icon: LuUsers });
-    }
-
-    if (['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
-      items.push({ id: 'reports', label: 'Laporan & Analitik', icon: FiBarChart2 });
-    }
-
-    return items;
-  };
-
-  const navItems = getNavItems();
+  const navItems = getNavigationTabs(user?.role);
 
   return (
     <aside className="sidebar-container">
-      <div className="sidebar-brand">
-        <div className="flex items-center gap-3">
-          <div className="sidebar-brand-icon">
-            <LuLayers />
-          </div>
-          <div>
-            <h1 className="sidebar-brand-title">Sinar Anugrah</h1>
-            <span className="sidebar-brand-subtitle">PJP & ABSENSI SYSTEM</span>
-          </div>
-        </div>
-      </div>
+      <SidebarBrand />
 
       <nav className="sidebar-nav">
-        {navItems.map((item) => {
-          const isActive = activeTab === item.id;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`sidebar-nav-btn ${
-                isActive ? 'sidebar-nav-btn-active' : 'sidebar-nav-btn-inactive'
-              }`}
-            >
-              <Icon className="text-xl" />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+        {navItems.map((item) => (
+          <SidebarNavItem
+            key={item.id}
+            item={item}
+            isActive={activeTab === item.id}
+            onClick={setActiveTab}
+          />
+        ))}
       </nav>
 
-      <div className="sidebar-footer-card">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-            Role Aktif
-          </span>
-          <span className="pulse-dot"></span>
-        </div>
-        <p className="text-xs font-semibold text-on-surface">
-          {user?.roleLabel || user?.role}
-        </p>
-        <span className="text-xs text-on-surface-variant">
-          Express REST API Connected
-        </span>
-      </div>
+      <SidebarRoleBadge roleLabel={user?.roleLabel || user?.role} />
     </aside>
   );
 };
