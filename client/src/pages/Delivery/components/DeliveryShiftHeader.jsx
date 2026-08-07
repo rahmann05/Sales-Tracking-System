@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { LuTruck, LuUserCheck, LuClock, LuCamera } from 'react-icons/lu';
+import { Avatar } from '../../../components/common/Avatar';
 
 export const DeliveryShiftHeader = () => {
   const { user, shiftAttendance, handleShiftClockIn, handleShiftClockOut } = useApp();
@@ -9,7 +10,7 @@ export const DeliveryShiftHeader = () => {
     <div className="bg-surface border border-border-glass rounded-2xl p-4 md:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         <div className="relative">
-          <img src={user.avatar} alt={user.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-blue-500/30" />
+          <Avatar src={user.avatar} name={user.name} size="lg" className="rounded-2xl ring-2 ring-blue-500/30" />
           <span className="absolute -bottom-1 -right-1 bg-blue-500 w-4 h-4 rounded-full border-2 border-surface flex items-center justify-center text-[10px] text-white">
             <LuTruck />
           </span>

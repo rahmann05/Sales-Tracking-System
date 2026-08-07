@@ -8,11 +8,12 @@ import {
   LuFileCheck,
   LuBriefcase,
 } from 'react-icons/lu';
+import { FiBarChart2 } from 'react-icons/fi';
 import { useApp } from '../../context/AppContext';
 import '../../styles/layout/BottomNav.css';
 
 /**
- * BottomNav Component (Single Responsibility: Mobile Bottom Navigation Bar with Role Integration)
+ * BottomNav Component (Single Responsibility: Mobile Bottom Navigation Bar Synchronized with User Role)
  * 1 File per Component
  */
 export const BottomNav = ({ activeTab, setActiveTab }) => {
@@ -32,15 +33,30 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
       case 'OPERATIONAL_MANAGER':
         return { id: 'role-workspace', label: 'Ops Rute', icon: LuBriefcase };
       default:
-        return { id: 'role-workspace', label: 'Task', icon: LuNavigation };
+        return { id: 'role-workspace', label: 'Workspace', icon: LuNavigation };
     }
   };
 
-  const navItems = [
-    getRoleNavItem(),
-    { id: 'dashboard', label: 'Dashboard', icon: LuLayoutDashboard },
-    { id: 'team-tracking', label: 'Tim', icon: LuUsers },
-  ];
+  const getNavItems = () => {
+    const items = [getRoleNavItem()];
+    items.push({ id: 'dashboard', label: 'Peta', icon: LuLayoutDashboard });
+
+    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER'].includes(user?.role)) {
+      items.push({ id: 'route-planning', label: 'Master RJP', icon: LuNavigation });
+    }
+
+    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+      items.push({ id: 'team-tracking', label: 'Tim', icon: LuUsers });
+    }
+
+    if (['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+      items.push({ id: 'reports', label: 'Laporan', icon: FiBarChart2 });
+    }
+
+    return items;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <nav className="bottom-nav-container">
@@ -50,6 +66,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
         return (
           <button
             key={item.id}
+            type="button"
             onClick={() => setActiveTab(item.id)}
             className={`bottom-nav-btn ${
               isActive ? 'bottom-nav-btn-active' : 'bottom-nav-btn-inactive'

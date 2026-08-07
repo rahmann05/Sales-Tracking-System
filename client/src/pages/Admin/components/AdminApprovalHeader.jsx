@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { LuFileCheck, LuClock } from 'react-icons/lu';
 import { FiCheckCircle } from 'react-icons/fi';
+import { Avatar } from '../../../components/common/Avatar';
 
 /**
  * AdminApprovalHeader Component (Single Responsibility: Header Overview for Admin Sales Approval)
@@ -14,7 +15,7 @@ export const AdminApprovalHeader = () => {
   return (
     <div className="bg-surface border border-border-glass rounded-2xl p-4 md:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <img src={user.avatar} alt={user.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-amber-500/30" />
+        <Avatar src={user.avatar} name={user.name} size="lg" className="rounded-2xl ring-2 ring-amber-500/30" />
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold text-on-surface">{user.name}</h2>

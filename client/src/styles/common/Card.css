@@ -1,6 +1,18 @@
 @import "../global.css";
 
-/* Modular Glassmorphism Card Styles */
+/* Modular Card Styles */
+
+.app-card {
+  @apply bg-surface border border-border-glass rounded-2xl p-4 md:p-6 shadow-sm transition-all duration-200;
+}
+
+.app-card-interactive {
+  @apply bg-surface border border-border-glass rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer;
+}
+
+.app-card-header {
+  @apply flex items-center justify-between border-b border-border-glass pb-3 mb-4;
+}
 
 .glass-card {
   @apply bg-surface/85 backdrop-blur-xl border border-border-glass shadow-sm transition-all duration-200 hover:shadow-md rounded-3xl p-5;

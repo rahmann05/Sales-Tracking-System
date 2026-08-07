@@ -1,0 +1,75 @@
+.sales-daily-summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.sales-daily-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+@media (min-width: 640px) {
+  .sales-daily-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.sales-daily-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.sales-daily-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(0, 106, 106, 0.1);
+  color: var(--primary);
+  width: fit-content;
+}
+
+.sales-stops-sequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sales-stop-mini-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  border-radius: 0.875rem;
+  font-size: 0.8125rem;
+}
+
+.sales-stop-seq-num {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.75rem;
+  shrink-0: 0;
+}

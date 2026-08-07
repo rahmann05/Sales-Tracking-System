@@ -9,13 +9,13 @@ async function main() {
   const hashedPassword = await bcrypt.hash('password123', 10);
 
   // 1. Create Clusters
-  const clusterJakarta = await prisma.cluster.upsert({
-    where: { id: 'cluster-jkt-01' },
+  const clusterCimahi = await prisma.cluster.upsert({
+    where: { id: 'cluster-cmh-01' },
     update: {},
     create: {
-      id: 'cluster-jkt-01',
-      name: 'Cluster Jakarta Selatan',
-      region: 'DKI Jakarta',
+      id: 'cluster-cmh-01',
+      name: 'Cluster Cimahi & Bandung Barat',
+      region: 'Cimahi - Bandung Barat',
     },
   });
 
@@ -26,10 +26,10 @@ async function main() {
     create: {
       id: 'outlet-tb-01',
       name: 'Toko Berkah Utama',
-      address: 'Jl. Fatmawati No. 12, Jakarta Selatan',
-      latitude: -6.2915,
-      longitude: 106.7974,
-      clusterId: clusterJakarta.id,
+      address: 'Jl. H. Amir Machmud No. 12, Cimahi',
+      latitude: -6.8722,
+      longitude: 107.5423,
+      clusterId: clusterCimahi.id,
     },
   });
 
@@ -39,10 +39,10 @@ async function main() {
     create: {
       id: 'outlet-tj-02',
       name: 'Toko Jaya Abadi',
-      address: 'Jl. Panglima Polim No. 45, Jakarta Selatan',
-      latitude: -6.2443,
-      longitude: 106.7991,
-      clusterId: clusterJakarta.id,
+      address: 'Jl. Raya Padalarang No. 45, Bandung Barat',
+      latitude: -6.8375,
+      longitude: 107.4764,
+      clusterId: clusterCimahi.id,
     },
   });
 
@@ -88,7 +88,7 @@ async function main() {
       email: 'sales@sinaranugrah.com',
       password: hashedPassword,
       role: 'SALES',
-      clusterId: clusterJakarta.id,
+      clusterId: clusterCimahi.id,
     },
   });
 

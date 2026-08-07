@@ -36,7 +36,7 @@ function AppContent() {
     }
   };
 
-  // Render active view based on activeTab or active user role
+  // Render active view based on activeTab or active user role with strict Role Access Control
   const renderView = () => {
     if (activeTab === 'role-workspace') {
       switch (user?.role) {
@@ -54,6 +54,58 @@ function AppContent() {
         default:
           return <SalesPage />;
       }
+    }
+
+    // Role Access Control Checks
+    if (activeTab === 'route-planning' && !['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER'].includes(user?.role)) {
+      return (
+        <div className="p-8 text-center bg-surface border border-red-500/30 rounded-3xl m-6 space-y-3">
+          <h3 className="text-lg font-bold text-red-600">Akses Dibatasi (Access Denied)</h3>
+          <p className="text-xs text-on-surface-variant max-w-md mx-auto">
+            Halaman <strong>Jadwal Master RJP</strong> hanya dapat diakses oleh Sales Field, Supervisor, dan Manajer Operasional.
+          </p>
+          <button
+            onClick={() => setActiveTab('role-workspace')}
+            className="px-4 py-2 bg-primary text-on-primary rounded-xl font-semibold text-xs shadow-md"
+          >
+            Kembali ke Workspace Saya
+          </button>
+        </div>
+      );
+    }
+
+    if (activeTab === 'team-tracking' && !['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+      return (
+        <div className="p-8 text-center bg-surface border border-red-500/30 rounded-3xl m-6 space-y-3">
+          <h3 className="text-lg font-bold text-red-600">Akses Dibatasi (Access Denied)</h3>
+          <p className="text-xs text-on-surface-variant max-w-md mx-auto">
+            Halaman Tim dan RJP hanya dapat diakses oleh pengguna terdaftar.
+          </p>
+          <button
+            onClick={() => setActiveTab('role-workspace')}
+            className="px-4 py-2 bg-primary text-on-primary rounded-xl font-semibold text-xs shadow-md"
+          >
+            Kembali ke Workspace Saya
+          </button>
+        </div>
+      );
+    }
+
+    if (activeTab === 'reports' && !['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+      return (
+        <div className="p-8 text-center bg-surface border border-red-500/30 rounded-3xl m-6 space-y-3">
+          <h3 className="text-lg font-bold text-red-600">Akses Dibatasi (Access Denied)</h3>
+          <p className="text-xs text-on-surface-variant max-w-md mx-auto">
+            Fitur Laporan hanya dapat diakses oleh Supervisor, Manajer Operasional, atau Admin Penjualan.
+          </p>
+          <button
+            onClick={() => setActiveTab('role-workspace')}
+            className="px-4 py-2 bg-primary text-on-primary rounded-xl font-semibold text-xs shadow-md"
+          >
+            Kembali ke Workspace Saya
+          </button>
+        </div>
+      );
     }
 
     switch (activeTab) {
@@ -93,8 +145,8 @@ function AppContent() {
             onLogout={handleLogout}
           />
 
-          {/* View Container */}
-          <main className="flex-1 relative overflow-y-auto md:overflow-hidden bg-background pb-16 md:pb-0">
+          {/* View Container (Scrollable on both Mobile and Desktop) */}
+          <main className="flex-1 relative overflow-y-auto bg-background pb-16 md:pb-8 min-h-0">
             <MobileHeader onLogout={handleLogout} />
             <ErrorBoundary>{renderView()}</ErrorBoundary>
           </main>

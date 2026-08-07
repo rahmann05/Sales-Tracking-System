@@ -1,0 +1,54 @@
+.matrix-cell {
+  padding: 0.75rem;
+  min-width: 140px;
+  vertical-align: top;
+  border-right: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.matrix-cell-card {
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  border-radius: 0.875rem;
+  padding: 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.matrix-cell-card:hover {
+  background: var(--surface-container-high);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.matrix-cell-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  line-height: 1.25;
+}
+
+.matrix-cell-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  margin-top: 0.25rem;
+}
+
+.matrix-cell-quota {
+  font-weight: 800;
+  color: #0e7490;
+  background: rgba(14, 116, 144, 0.1);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+}
+
+.matrix-cell-area {
+  color: var(--on-surface-variant);
+  font-size: 0.625rem;
+}

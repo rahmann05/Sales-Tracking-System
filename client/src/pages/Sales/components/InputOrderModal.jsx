@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LuSend } from 'react-icons/lu';
 import { FiXCircle } from 'react-icons/fi';
-import { MOCK_PRODUCTS } from '../../../context/AppContext';
+import { MOCK_PRODUCTS } from '../../../data/mockData';
 import { ProductOrderItem } from './ProductOrderItem';
 
 /**
@@ -99,11 +99,11 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold text-on-surface">Syarat Pembayaran</label>
+          <label className="form-label">Syarat Pembayaran</label>
           <select
             value={paymentType}
             onChange={(e) => setPaymentType(e.target.value)}
-            className="w-full p-2.5 rounded-xl border border-border-glass bg-surface text-xs font-semibold text-on-surface"
+            className="form-select"
           >
             <option value="CASH">CASH (Bayar Tunai saat kirim)</option>
             <option value="TOP_14">TOP 14 Hari (Tempo)</option>

@@ -1,0 +1,101 @@
+.rjp-ops-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 768px) {
+  .rjp-ops-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.rjp-ops-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rjp-ops-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: fit-content;
+}
+
+.rjp-ops-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.rjp-ops-subtitle {
+  font-size: 0.8125rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+}
+
+.rjp-ops-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rjp-ops-btn-import {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rjp-ops-btn-import:hover {
+  background: var(--surface-container-highest);
+  transform: translateY(-1px);
+}
+
+.rjp-ops-btn-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 106, 106, 0.25);
+  transition: all 0.2s ease;
+}
+
+.rjp-ops-btn-create:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}

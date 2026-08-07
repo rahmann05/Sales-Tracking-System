@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { LuCheck, LuX } from 'react-icons/lu';
 import { FiAlertCircle } from 'react-icons/fi';
+import { OrderItemsTable } from './OrderItemsTable';
+import '../../../styles/components/PendingOrderCard.css';
 
 /**
  * PendingOrderCard Component (Single Responsibility: Order Card with Credit Limit & SKU Breakdown for Admin)
@@ -14,32 +16,24 @@ export const PendingOrderCard = ({ order, onDecision }) => {
 
   return (
     <div
-      className={`bg-surface border rounded-2xl p-5 shadow-sm space-y-4 transition-all ${
-        order.status === 'APPROVED'
-          ? 'border-emerald-500/40 bg-emerald-500/5'
-          : order.status === 'REJECTED'
-          ? 'border-rose-500/40 bg-rose-500/5'
-          : 'border-border-glass'
+      className={`pending-order-card ${
+        order.status === 'APPROVED' ? 'approved' : order.status === 'REJECTED' ? 'rejected' : 'pending'
       }`}
     >
-      <div className="flex items-start justify-between">
+      <div className="poc-header">
         <div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary uppercase">
+          <span className="poc-order-id">
             Order #{order.id}
           </span>
-          <h4 className="font-bold text-on-surface text-base mt-1">{order.outletName}</h4>
-          <p className="text-xs text-on-surface-variant">
-            Sales: <span className="font-semibold text-on-surface">{order.salesName}</span> • Syarat: {order.paymentType}
+          <h4 className="poc-outlet-name">{order.outletName}</h4>
+          <p className="poc-sales-info">
+            Sales: <span className="poc-sales-name">{order.salesName}</span> • Syarat: {order.paymentType}
           </p>
         </div>
 
         <span
-          className={`text-[11px] font-bold px-2.5 py-1 rounded-full uppercase ${
-            order.status === 'APPROVED'
-              ? 'bg-emerald-500/10 text-emerald-600'
-              : order.status === 'REJECTED'
-              ? 'bg-rose-500/10 text-rose-600'
-              : 'bg-amber-500/10 text-amber-600'
+          className={`poc-status-badge ${
+            order.status === 'APPROVED' ? 'approved' : order.status === 'REJECTED' ? 'rejected' : 'pending'
           }`}
         >
           {order.status}
@@ -47,52 +41,38 @@ export const PendingOrderCard = ({ order, onDecision }) => {
       </div>
 
       {/* Credit Limit & Debt Check */}
-      <div className="p-3 bg-surface-variant/30 rounded-xl border border-border-glass grid grid-cols-2 gap-2 text-xs">
+      <div className="poc-credit-check">
         <div>
-          <span className="text-on-surface-variant block">Limit Kredit Toko:</span>
-          <span className="font-bold text-on-surface">Rp {order.creditLimit.toLocaleString('id-ID')}</span>
+          <span className="poc-credit-label">Limit Kredit Toko:</span>
+          <span className="poc-credit-value">Rp {order.creditLimit.toLocaleString('id-ID')}</span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">Total Setelah Order Ini:</span>
-          <span className={`font-bold ${isOverCredit ? 'text-rose-600' : 'text-emerald-600'}`}>
+          <span className="poc-credit-label">Total Setelah Order Ini:</span>
+          <span className={`poc-credit-value ${isOverCredit ? 'over' : 'ok'}`}>
             Rp {(order.outstanding + order.totalAmount).toLocaleString('id-ID')}
           </span>
         </div>
       </div>
 
       {isOverCredit && (
-        <div className="flex items-center gap-1.5 text-xs text-rose-600 bg-rose-500/10 p-2 rounded-lg font-semibold">
-          <FiAlertCircle className="text-base flex-shrink-0" />
+        <div className="poc-warning">
+          <FiAlertCircle className="poc-warning-icon" />
           <span>Warning: Order ini melebihi Plafon Kredit Toko!</span>
         </div>
       )}
 
       {/* Items Breakdown */}
-      <div className="space-y-1.5 text-xs border-t border-border-glass pt-3">
-        <span className="font-bold text-on-surface block">Rincian Item SKU:</span>
-        {order.items.map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between text-on-surface-variant">
-            <span>
-              {item.productName} ({item.qty}x)
-            </span>
-            <span className="font-semibold text-on-surface">Rp {item.subtotal.toLocaleString('id-ID')}</span>
-          </div>
-        ))}
-        <div className="flex items-center justify-between font-bold text-sm text-primary pt-2 border-t border-border-glass/50">
-          <span>Total Nilai Order:</span>
-          <span>Rp {order.totalAmount.toLocaleString('id-ID')}</span>
-        </div>
-      </div>
+      <OrderItemsTable items={order.items} totalAmount={order.totalAmount} />
 
       {/* Approval Buttons */}
       {order.status === 'PENDING_APPROVAL' && (
-        <div className="space-y-2 pt-2">
+        <div className="poc-actions-container">
           {!showRejectForm ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="poc-action-grid">
               <button
                 type="button"
                 onClick={() => onDecision({ orderId: order.id, approved: true })}
-                className="py-2.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                className="poc-btn-approve"
               >
                 <LuCheck className="text-base" />
                 <span>Approve Order</span>
@@ -101,23 +81,23 @@ export const PendingOrderCard = ({ order, onDecision }) => {
               <button
                 type="button"
                 onClick={() => setShowRejectForm(true)}
-                className="py-2.5 bg-rose-500/10 text-rose-600 border border-rose-500/30 font-bold text-xs rounded-xl hover:bg-rose-500/20 transition-all flex items-center justify-center gap-1.5"
+                className="poc-btn-reject"
               >
                 <LuX className="text-base" />
                 <span>Reject Order</span>
               </button>
             </div>
           ) : (
-            <div className="space-y-2 bg-rose-500/5 p-3 rounded-xl border border-rose-500/20">
-              <label className="text-xs font-bold text-rose-600">Alasan Penolakan Order Admin:</label>
+            <div className="poc-reject-form">
+              <label className="poc-reject-label">Alasan Penolakan Order Admin:</label>
               <input
                 type="text"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Contoh: Overlimit kredit / Stok kosong"
-                className="w-full p-2 rounded-lg border border-border-glass text-xs bg-surface text-on-surface"
+                className="poc-reject-input"
               />
-              <div className="flex items-center gap-2">
+              <div className="poc-reject-actions">
                 <button
                   type="button"
                   onClick={() =>
@@ -127,14 +107,14 @@ export const PendingOrderCard = ({ order, onDecision }) => {
                       rejectionReason: rejectReason || 'Ditolak oleh Admin',
                     })
                   }
-                  className="flex-1 py-2 bg-rose-600 text-white text-xs font-bold rounded-lg hover:bg-rose-700"
+                  className="poc-btn-confirm"
                 >
                   Konfirmasi Reject
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowRejectForm(false)}
-                  className="px-3 py-2 bg-surface border border-border-glass text-xs font-bold rounded-lg"
+                  className="poc-btn-cancel"
                 >
                   Batal
                 </button>

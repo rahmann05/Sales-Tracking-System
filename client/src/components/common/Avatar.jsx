@@ -33,10 +33,10 @@ export const Avatar = ({ src, name = '', size = 'md', className = '' }) => {
 
   return (
     <div
-      className={`avatar-base ${sizeClass} bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 ${className}`}
+      className={`avatar-base ${sizeClass} bg-primary/10 text-primary flex items-center justify-center shrink-0 ${className}`}
       title={name}
     >
-      {initials || <LuUser className="text-sm" />}
+      <LuUser className="text-base" />
     </div>
   );
 };

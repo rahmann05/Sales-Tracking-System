@@ -5,6 +5,7 @@ import { Input } from '../common/Input';
 import { StatusMonitor } from '../common/StatusMonitor';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { useApp } from '../../context/AppContext';
+import { Avatar } from '../common/Avatar';
 import '../../styles/layout/Header.css';
 
 /**
@@ -20,8 +21,6 @@ export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Cari rute, toko, sales..."
-          icon={LuSearch}
         />
       </div>
 
@@ -35,8 +34,9 @@ export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
         </div>
       </div>
 
-      {/* Right Header Controls */}
-      <div className="header-controls">
+      {/* Right Controls: Connectivity Status & User Profile Badge */}
+      <div className="header-actions flex items-center gap-3">
+        {/* Real-time System Connectivity Indicator */}
         <StatusMonitor label="WIB" />
 
         {/* Real-time Notification Dropdown */}
@@ -48,7 +48,7 @@ export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
           onClick={onLogout}
           title="Klik untuk Keluar (Logout)"
         >
-          <img src={user?.avatar} alt={user?.name} className="w-8 h-8 rounded-lg object-cover" />
+          <Avatar src={user?.avatar} name={user?.name} size="sm" />
           <div className="flex flex-col text-left">
             <span className="text-xs font-bold text-on-surface">{user?.name}</span>
             <span className="text-[10px] text-on-surface-variant font-medium">{user?.role}</span>

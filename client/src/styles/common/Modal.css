@@ -1,0 +1,15 @@
+@import "../global.css";
+
+/* Modular Modal Overlay & Container Styles */
+
+.modal-backdrop {
+  @apply fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4;
+}
+
+.modal-card {
+  @apply bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl;
+}
+
+.modal-header {
+  @apply flex items-center justify-between border-b border-border-glass pb-3;
+}

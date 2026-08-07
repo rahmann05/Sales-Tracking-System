@@ -13,3 +13,15 @@
 .input-icon {
   @apply text-on-surface-variant mr-2.5 text-xl flex items-center justify-center;
 }
+
+.form-input {
+  @apply w-full p-2.5 rounded-xl border border-border-glass bg-surface text-xs font-semibold text-on-surface outline-none focus:border-primary/40 transition-all;
+}
+
+.form-select {
+  @apply w-full p-2.5 rounded-xl border border-border-glass bg-surface text-xs font-semibold text-on-surface outline-none focus:border-primary/40 transition-all;
+}
+
+.form-textarea {
+  @apply w-full p-2.5 rounded-xl border border-border-glass bg-surface text-xs text-on-surface outline-none focus:border-primary/40 transition-all;
+}

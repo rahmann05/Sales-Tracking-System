@@ -1,0 +1,110 @@
+.import-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.import-modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 36rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.import-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-container-low);
+}
+
+.import-modal-title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.import-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+}
+
+.import-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.import-dropzone {
+  border: 2px dashed var(--border-glass);
+  border-radius: 1rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  background: var(--surface-container-lowest);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.import-dropzone:hover {
+  border-color: var(--primary);
+  background: rgba(0, 106, 106, 0.02);
+}
+
+.import-dropzone-icon {
+  font-size: 2.5rem;
+  color: var(--primary);
+}
+
+.import-template-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--surface-container-low);
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.import-btn-download-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--primary);
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.import-modal-footer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border-glass);
+  background: var(--surface-container-low);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

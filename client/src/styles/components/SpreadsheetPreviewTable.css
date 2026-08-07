@@ -1,0 +1,30 @@
+.spreadsheet-preview-container {
+  border: 1px solid var(--border-glass);
+  border-radius: 1rem;
+  overflow-x: auto;
+  max-height: 180px;
+  background: var(--surface-container-low);
+}
+
+.spreadsheet-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.spreadsheet-preview-th {
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-weight: 700;
+  text-align: left;
+  border-bottom: 1px solid var(--border-glass);
+  position: sticky;
+  top: 0;
+}
+
+.spreadsheet-preview-td {
+  padding: 0.5rem 0.75rem;
+  color: var(--on-surface);
+  border-bottom: 1px solid var(--border-glass);
+}

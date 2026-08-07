@@ -1,0 +1,63 @@
+.weekly-matrix-card {
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.weekly-matrix-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-container-low);
+}
+
+.weekly-matrix-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.weekly-matrix-subtitle {
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+  margin-top: 0.125rem;
+}
+
+.weekly-matrix-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.weekly-matrix-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.weekly-matrix-th {
+  padding: 0.875rem 1rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border-bottom: 1px solid var(--border-glass);
+  border-right: 1px solid var(--border-glass);
+  text-align: center;
+}
+
+.weekly-matrix-th.sticky-sales {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  text-align: left;
+  min-width: 180px;
+}

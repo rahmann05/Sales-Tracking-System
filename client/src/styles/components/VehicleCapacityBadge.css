@@ -1,0 +1,42 @@
+.vehicle-capacity-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-glass);
+  border-radius: 1rem;
+}
+
+.vehicle-capacity-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.vehicle-capacity-bar-track {
+  width: 100%;
+  height: 0.5rem;
+  background: var(--surface-container-high);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.vehicle-capacity-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.vehicle-capacity-bar-fill.normal {
+  background: var(--primary);
+}
+
+.vehicle-capacity-bar-fill.warning {
+  background: #f59e0b;
+}
+
+.vehicle-capacity-bar-fill.danger {
+  background: #ef4444;
+}

@@ -4,13 +4,13 @@ import { Card } from '../../../components/common/Card';
 
 /**
  * OverviewCards Component (Single Responsibility: Displaying KPI Stats)
- * 1 File per Component
+ * Equal height standard: h-full min-h-[140px] flex flex-col justify-between
  */
 export const OverviewCards = ({ totalVisits = 142, completionRate = 84 }) => {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-4 items-stretch">
       {/* Card 1: Total Visits */}
-      <Card className="flex flex-col justify-between">
+      <Card className="h-full min-h-[140px] flex flex-col justify-between p-5">
         <span className="text-label-bold text-on-surface-variant">
           Total Visits
         </span>
@@ -26,7 +26,7 @@ export const OverviewCards = ({ totalVisits = 142, completionRate = 84 }) => {
       </Card>
 
       {/* Card 2: Completion Rate */}
-      <Card className="flex flex-col justify-between">
+      <Card className="h-full min-h-[140px] flex flex-col justify-between p-5">
         <span className="text-label-bold text-on-surface-variant">
           Completion
         </span>

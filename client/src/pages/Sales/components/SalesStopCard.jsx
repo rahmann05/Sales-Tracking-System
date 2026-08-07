@@ -1,97 +1,129 @@
 import React from 'react';
-import { LuMapPin, LuCamera, LuShoppingCart } from 'react-icons/lu';
-import { FiAlertCircle } from 'react-icons/fi';
-import { GeofenceStatusBadge } from './GeofenceStatusBadge';
+import { LuMapPin, LuNavigation } from 'react-icons/lu';
+import { OutletPhoto } from './OutletPhoto';
+import { OutletExcelMetadata } from './OutletExcelMetadata';
+import { OutletGooglePlaceInfo } from './OutletGooglePlaceInfo';
+import { SalesStopActions } from './SalesStopActions';
+import { useOutletLockStatus } from '../../../hooks/useOutletLockStatus';
 
 /**
- * SalesStopCard Component (Single Responsibility: Individual Outlet Card in PJP Route List)
- * 1 File per Component
+ * SalesStopCard Component
+ * Single Responsibility: Container card orchestrating outlet information,
+ * photo, Excel metadata, Google API information, Geofence status, lock state, and actions.
+ * Equal height standard: h-full flex flex-col justify-between
  */
-export const SalesStopCard = ({ stop, onAbsenIn, onInputOrder, onReportClosed }) => {
+export const SalesStopCard = ({
+  stop,
+  allStops = [],
+  onAbsenIn,
+  onAbsenOut,
+  onInputOrder,
+  onClosedReport,
+  onRequestUnlock,
+}) => {
+  const isInsideGeofence = stop.currentDistance <= stop.radiusMeters;
+  const customerName = stop.customerName || stop.outletName;
+  const customerId = stop.customerId || stop.outletCode;
+
+  // Single Responsibility Hook for calculating lock status
+  const { isLocked, lockReason } = useOutletLockStatus(stop, allStops);
+
   return (
     <div
-      className={`bg-surface border rounded-2xl p-5 shadow-sm space-y-4 transition-all relative ${
+      className={`bg-surface border rounded-2xl p-5 shadow-sm space-y-4 transition-all relative h-full flex flex-col justify-between ${
         stop.status === 'ORDERED'
+          ? 'border-blue-500/40 bg-blue-500/5'
+          : stop.status === 'VISITED' || stop.status === 'COMPLETED'
           ? 'border-emerald-500/40 bg-emerald-500/5'
           : stop.status === 'CLOSED'
           ? 'border-rose-500/40 bg-rose-500/5'
           : stop.status === 'SKIPPED'
           ? 'border-amber-500/40 bg-amber-500/5 opacity-75'
+          : isLocked
+          ? 'border-amber-500/30 bg-surface opacity-90'
           : 'border-border-glass hover:border-primary/40'
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary font-bold text-sm flex items-center justify-center">
-            #{stop.sequence}
-          </span>
-          <div>
-            <h4 className="font-bold text-on-surface text-base">{stop.outletName}</h4>
-            <p className="text-xs text-on-surface-variant flex items-center gap-1">
-              <LuMapPin className="text-primary text-xs" />
-              {stop.address}
-            </p>
+      {/* Top Body Details */}
+      <div className="space-y-3.5">
+        {/* 1. Header Bar: Sequence Number, Store Title, and Status Badge */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 mt-0.5">
+              #{stop.sequence}
+            </span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap min-h-[1.75rem]">
+                <h4 className="font-bold text-on-surface text-base tracking-tight">{customerName}</h4>
+                <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface-variant text-on-surface-variant">
+                  {customerId}
+                </span>
+              </div>
+              <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
+                <LuMapPin className="text-primary text-xs shrink-0" />
+                <span>{stop.address}</span>
+              </p>
+            </div>
           </div>
+
+          {/* Status Badge */}
+          <span
+            className={`text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
+              stop.status === 'ORDERED'
+                ? 'bg-blue-500/10 text-blue-600'
+                : stop.status === 'VISITED' || stop.status === 'COMPLETED'
+                ? 'bg-emerald-500/10 text-emerald-600'
+                : stop.status === 'ARRIVED'
+                ? 'bg-amber-500/10 text-amber-600'
+                : stop.status === 'CLOSED'
+                ? 'bg-rose-500/10 text-rose-600'
+                : stop.status === 'SKIPPED'
+                ? 'bg-amber-500/10 text-amber-600'
+                : 'bg-surface-variant text-on-surface-variant'
+            }`}
+          >
+            {stop.status}
+          </span>
         </div>
 
-        <span
-          className={`text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-            stop.status === 'ORDERED'
-              ? 'bg-emerald-500/10 text-emerald-600'
-              : stop.status === 'ARRIVED'
-              ? 'bg-blue-500/10 text-blue-600'
-              : stop.status === 'CLOSED'
-              ? 'bg-rose-500/10 text-rose-600'
-              : stop.status === 'SKIPPED'
-              ? 'bg-amber-500/10 text-amber-600'
-              : 'bg-surface-variant text-on-surface-variant'
-          }`}
-        >
-          {stop.status}
-        </span>
+        {/* 2. Outlet Photo Section: ONLY displayed if Google Places photo is available */}
+        <OutletPhoto
+          photoUrl={stop.googlePlaceDetails?.photoUrl || stop.photoUrl}
+          customerName={customerName}
+        />
+
+        {/* 3. Excel Columns Metadata Grid */}
+        <OutletExcelMetadata stop={stop} />
+
+        {/* 4. Google Places API Details Section */}
+        <OutletGooglePlaceInfo googlePlaceDetails={stop.googlePlaceDetails} />
+
+        {/* 5. Geofence Distance Indicator */}
+        <div className="flex items-center justify-between text-xs bg-surface-variant/30 px-3 py-2 rounded-xl">
+          <span className="text-on-surface-variant">Jarak Geofence GPS:</span>
+          <span
+            className={`font-bold flex items-center gap-1 ${
+              isInsideGeofence ? 'text-emerald-600' : 'text-amber-600'
+            }`}
+          >
+            <LuNavigation className="text-xs" />
+            {stop.currentDistance} meter ({isInsideGeofence ? 'Dalam Geofence ≤50m' : 'Luar Geofence >50m'})
+          </span>
+        </div>
       </div>
 
-      <GeofenceStatusBadge distanceMeters={stop.currentDistance} radiusMeters={stop.radiusMeters} />
-
-      <div className="flex items-center gap-2 pt-1">
-        {stop.status === 'PENDING' && (
-          <button
-            type="button"
-            onClick={() => onAbsenIn(stop)}
-            className="flex-1 py-2.5 bg-primary text-on-primary font-semibold text-xs rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-sm"
-          >
-            <LuCamera className="text-base" />
-            <span>Absen In Toko</span>
-          </button>
-        )}
-
-        {stop.status === 'ARRIVED' && (
-          <>
-            <button
-              type="button"
-              onClick={() => onInputOrder(stop)}
-              className="flex-1 py-2.5 bg-emerald-600 text-white font-semibold text-xs rounded-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-            >
-              <LuShoppingCart className="text-base" />
-              <span>Input Order</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onReportClosed(stop)}
-              className="px-3 py-2.5 bg-rose-500/10 text-rose-600 border border-rose-500/30 font-semibold text-xs rounded-xl hover:bg-rose-500/20 transition-all flex items-center justify-center gap-1"
-            >
-              <FiAlertCircle className="text-base" />
-              <span>Toko Tutup</span>
-            </button>
-          </>
-        )}
-
-        {(stop.status === 'ORDERED' || stop.status === 'CLOSED' || stop.status === 'SKIPPED') && (
-          <div className="w-full text-center text-xs text-on-surface-variant font-medium py-1">
-            Kunjungan selesai ({stop.checkInTime || 'Selesai'})
-          </div>
-        )}
+      {/* 6. Action Buttons Section (Pinned cleanly to bottom) */}
+      <div className="pt-2 mt-auto">
+        <SalesStopActions
+          stop={stop}
+          isLocked={isLocked}
+          lockReason={lockReason}
+          onRequestUnlock={onRequestUnlock}
+          onAbsenIn={onAbsenIn}
+          onAbsenOut={onAbsenOut}
+          onInputOrder={onInputOrder}
+          onClosedReport={onClosedReport}
+        />
       </div>
     </div>
   );

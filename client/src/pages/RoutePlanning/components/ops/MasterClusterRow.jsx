@@ -1,0 +1,61 @@
+import React from 'react';
+import { LuMapPin, LuStore, LuUserCheck } from 'react-icons/lu';
+import '../../../../styles/components/MasterClusterRow.css';
+
+/**
+ * MasterClusterRow Component
+ * Single Responsibility: Render a single row inside MasterClusterTable.
+ * 1 File = 1 Component
+ */
+export const MasterClusterRow = ({ cluster }) => {
+  return (
+    <tr className="master-cluster-row">
+      {/* Code */}
+      <td className="master-cluster-td">
+        <span className="master-cluster-code">{cluster.code}</span>
+      </td>
+
+      {/* Cluster Name & Sub-Districts */}
+      <td className="master-cluster-td">
+        <div className="master-cluster-name">{cluster.name}</div>
+        <div className="master-cluster-subdistricts">
+          {Array.isArray(cluster.subDistricts) ? cluster.subDistricts.join(', ') : 'Area Bandung Barat'}
+        </div>
+      </td>
+
+      {/* Region */}
+      <td className="master-cluster-td">
+        <span className="master-cluster-region-badge">
+          <LuMapPin className="text-xs text-primary" />
+          {cluster.region}
+        </span>
+      </td>
+
+      {/* Quota / Allocated Outlets */}
+      <td className="master-cluster-td">
+        <span className="master-cluster-quota-badge">
+          <LuStore className="text-sm" />
+          {cluster.allocatedOutletsCount} Toko
+        </span>
+      </td>
+
+      {/* Assigned Supervisor */}
+      <td className="master-cluster-td">
+        <div className="master-cluster-spv">
+          <span className="master-cluster-spv-name flex items-center gap-1">
+            <LuUserCheck className="text-primary text-xs" />
+            {cluster.assignedSpvName}
+          </span>
+          <span className="master-cluster-spv-team">{cluster.spvTeamName}</span>
+        </div>
+      </td>
+
+      {/* Status */}
+      <td className="master-cluster-td">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600">
+          ● {cluster.status}
+        </span>
+      </td>
+    </tr>
+  );
+};

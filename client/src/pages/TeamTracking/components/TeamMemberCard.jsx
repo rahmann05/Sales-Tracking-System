@@ -6,11 +6,11 @@ import { Badge } from '../../../components/common/Badge';
 
 /**
  * TeamMemberCard Component (Single Responsibility: Individual Team Member Card)
- * 1 File per Component
+ * Equal height standard: h-full min-h-[140px] flex items-center gap-5
  */
 export const TeamMemberCard = ({ member }) => {
   return (
-    <Card className="rounded-2xl p-6 flex items-center gap-5">
+    <Card className="rounded-2xl p-5 h-full min-h-[140px] flex items-center gap-5 shadow-sm hover:shadow-md transition-all">
       <Avatar src={member.avatar} alt={member.name} size="lg" />
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">

@@ -7,7 +7,7 @@ import '../../../styles/pages/Dashboard.css';
  * MapView Component (Single Responsibility: Real Google Maps Integration for Dashboard)
  * 1 File per Component
  */
-export const MapView = ({ locationName = 'Jakarta Central Business District' }) => {
+export const MapView = ({ locationName = 'Cimahi, Bandung Barat' }) => {
   const [zoom, setZoom] = useState(14);
   const [mapType, setMapType] = useState('m'); // 'm' for roadmap, 'k' for satellite
   const [currentLocation, setCurrentLocation] = useState(locationName);
@@ -42,8 +42,8 @@ export const MapView = ({ locationName = 'Jakarta Central Business District' }) 
         <Button
           variant="icon"
           icon={LuMapPin}
-          onClick={() => setCurrentLocation('Jakarta Central Business District')}
-          title="Recenter to Central CBD"
+          onClick={() => setCurrentLocation('Cimahi, Bandung Barat')}
+          title="Recenter to Cimahi & Bandung Barat"
         />
 
         {/* Toggle Satellite / Roadmap Layer Button */}

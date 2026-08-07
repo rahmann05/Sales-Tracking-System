@@ -37,13 +37,28 @@ export const Sidebar = ({ activeTab, setActiveTab }) => {
     }
   };
 
-  const navItems = [
-    getRoleNavItem(),
-    { id: 'dashboard', label: 'Peta & Dashboard', icon: LuLayoutDashboard },
-    { id: 'route-planning', label: 'Kelola Master PJP', icon: LuNavigation },
-    { id: 'team-tracking', label: 'Tracking Tim Field', icon: LuUsers },
-    { id: 'reports', label: 'Laporan & Analitik', icon: FiBarChart2 },
-  ];
+  const getNavItems = () => {
+    const items = [getRoleNavItem()];
+    items.push({ id: 'dashboard', label: 'Peta & Dashboard', icon: LuLayoutDashboard });
+
+    // Master RJP: for SALES, SUPERVISOR, and OPERATIONAL_MANAGER
+    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER'].includes(user?.role)) {
+      items.push({ id: 'route-planning', label: user?.role === 'SALES' ? 'Jadwal Master RJP' : 'Kelola Master RJP', icon: LuNavigation });
+    }
+
+    // Tracking Tim & Reports: for SALES, SUPERVISOR, OPERATIONAL_MANAGER, ADMIN
+    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+      items.push({ id: 'team-tracking', label: user?.role === 'SALES' ? 'Tim & RJP Sales' : 'Tracking Tim Field', icon: LuUsers });
+    }
+
+    if (['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+      items.push({ id: 'reports', label: 'Laporan & Analitik', icon: FiBarChart2 });
+    }
+
+    return items;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <aside className="sidebar-container">

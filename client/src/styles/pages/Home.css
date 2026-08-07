@@ -1,0 +1,140 @@
+/* src/styles/pages/Home.css */
+
+.home-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem 0;
+}
+
+.home-banner {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: radial-gradient(circle at top, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.home-banner-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.home-banner-text {
+  color: var(--text-muted);
+  max-width: 650px;
+  margin: 0 auto 1.5rem;
+}
+
+.home-banner-status-loading {
+  color: var(--text-muted);
+}
+
+.home-banner-status-error {
+  color: #ef4444;
+}
+
+.home-banner-status-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.feature-card-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-card-list {
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.api-demo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.api-demo-title {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.api-demo-error {
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.api-demo-loading {
+  color: var(--text-muted);
+  padding: 1rem 0;
+}
+
+.api-demo-table-wrapper {
+  overflow-x: auto;
+}
+
+.api-demo-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.api-demo-table th {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  color: var(--text-muted);
+  padding: 0.75rem 0.5rem;
+}
+
+.api-demo-table td {
+  padding: 0.75rem 0.5rem;
+}
+
+.api-demo-table tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.api-demo-table td.name {
+  font-weight: 600;
+}
+
+.api-demo-table td.email {
+  color: var(--text-muted);
+}
+
+.role-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.role-badge.admin {
+  background: rgba(56, 189, 248, 0.2);
+  color: var(--primary);
+}
+
+.role-badge.default {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}

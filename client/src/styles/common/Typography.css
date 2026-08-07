@@ -1,0 +1,27 @@
+@import "../global.css";
+
+/* Modular Typography Utility Classes */
+
+.page-title {
+  @apply font-headline text-xl md:text-2xl font-extrabold text-on-surface tracking-tight;
+}
+
+.section-title {
+  @apply font-headline text-lg font-bold text-on-surface tracking-tight;
+}
+
+.card-title {
+  @apply font-headline text-base font-bold text-on-surface;
+}
+
+.card-subtitle {
+  @apply font-body text-xs text-on-surface-variant font-normal;
+}
+
+.label-bold {
+  @apply font-body text-xs font-bold text-on-surface;
+}
+
+.caption-mono {
+  @apply font-mono text-[11px] text-on-surface-variant;
+}

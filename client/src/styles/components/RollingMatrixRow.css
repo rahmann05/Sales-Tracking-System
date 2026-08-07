@@ -1,0 +1,35 @@
+.matrix-row-sales {
+  padding: 1rem;
+  font-size: 0.8125rem;
+  vertical-align: middle;
+  border-right: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
+  background: var(--surface);
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 180px;
+}
+
+.matrix-sales-name {
+  font-weight: 800;
+  color: var(--on-surface);
+  font-size: 0.875rem;
+}
+
+.matrix-sales-cluster {
+  font-size: 0.6875rem;
+  color: var(--on-surface-variant);
+  margin-top: 0.125rem;
+}
+
+.matrix-row-total {
+  padding: 1rem;
+  font-weight: 800;
+  font-size: 0.875rem;
+  color: var(--primary);
+  text-align: center;
+  border-bottom: 1px solid var(--border-glass);
+  background: var(--surface-container-low);
+  min-width: 100px;
+}

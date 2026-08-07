@@ -17,16 +17,16 @@ export const RerouteApprovalInbox = ({ pendingReroutes, onDecision }) => {
   return (
     <div className="space-y-3">
       {pendingReroutes.map((item) => (
-        <div key={item.id} className="bg-surface border border-purple-500/30 rounded-2xl p-5 shadow-sm space-y-3">
+        <div key={item.id} className="bg-surface border border-tertiary/30 rounded-2xl p-5 shadow-sm space-y-3">
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 uppercase">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-tertiary/10 text-tertiary uppercase">
                 Permohonan Reroute PJP
               </span>
               <h4 className="font-bold text-on-surface text-base mt-1 flex items-center gap-2">
                 <span>{item.outletName}</span>
-                <LuArrowRight className="text-purple-600 text-sm" />
-                <span className="text-purple-700">{item.newOutletName}</span>
+                <LuArrowRight className="text-tertiary text-sm" />
+                <span className="text-tertiary font-extrabold">{item.newOutletName}</span>
               </h4>
               <p className="text-xs text-on-surface-variant">
                 Diajukan oleh SPV: <span className="font-semibold text-on-surface">Ahmad Subagja</span> • Alasan: {item.rerouteReason}
