@@ -6,8 +6,7 @@ const DAYS_LIST = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 /**
  * RollingMatrixRow Component
- * Single Responsibility: Render a single Salesperson row inside the Weekly Rolling Matrix.
- * 1 File = 1 Component
+ * Single Responsibility: Render a single Salesperson row inside the CSS Grid Matrix.
  */
 export const RollingMatrixRow = ({ row, onCellClick }) => {
   // Compute total weekly visits
@@ -16,12 +15,12 @@ export const RollingMatrixRow = ({ row, onCellClick }) => {
   }, 0);
 
   return (
-    <tr>
+    <div className="matrix-grid-row">
       {/* Sticky Left: Sales Person & Primary Cluster */}
-      <td className="matrix-row-sales">
+      <div className="matrix-sales-cell sticky-col">
         <div className="matrix-sales-name">{row.salesName}</div>
         <div className="matrix-sales-cluster">{row.primaryCluster}</div>
-      </td>
+      </div>
 
       {/* Monday to Saturday Schedule Cells */}
       {DAYS_LIST.map((day) => (
@@ -34,9 +33,9 @@ export const RollingMatrixRow = ({ row, onCellClick }) => {
       ))}
 
       {/* Rightmost: Total Outlets Visited per Week */}
-      <td className="matrix-row-total">
-        {totalWeeklyVisits} Toko
-      </td>
-    </tr>
+      <div className="matrix-total-cell">
+        <span className="matrix-total-value">{totalWeeklyVisits} Toko</span>
+      </div>
+    </div>
   );
 };

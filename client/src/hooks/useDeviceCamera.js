@@ -52,7 +52,13 @@ export const useDeviceCamera = (facingModeDefault = 'user', autoStart = true) =>
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
         videoRef.current.setAttribute('muted', 'true');
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          if (playErr.name !== 'AbortError') {
+            console.warn('[Camera] Play call handled:', playErr);
+          }
+        }
         setCameraActive(true);
       }
     } catch (err) {
@@ -63,7 +69,13 @@ export const useDeviceCamera = (facingModeDefault = 'user', autoStart = true) =>
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream;
           videoRef.current.setAttribute('playsinline', 'true');
-          await videoRef.current.play();
+          try {
+            await videoRef.current.play();
+          } catch (playErr) {
+            if (playErr.name !== 'AbortError') {
+              console.warn('[Camera] Fallback play call handled:', playErr);
+            }
+          }
           setCameraActive(true);
         }
       } catch (fallbackErr) {
@@ -72,7 +84,7 @@ export const useDeviceCamera = (facingModeDefault = 'user', autoStart = true) =>
           setCameraError('Izin akses kamera ditolak. Harap izinkan browser mengakses kamera.');
         } else if (fallbackErr.name === 'NotFoundError' || fallbackErr.name === 'DevicesNotFoundError') {
           setCameraError('Perangkat kamera (webcam/kamera HP) tidak ditemukan.');
-        } else {
+        } else if (fallbackErr.name !== 'AbortError') {
           setCameraError('Gagal membuka kamera: ' + (fallbackErr.message || 'Error tidak diketahui'));
         }
       }

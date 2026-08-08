@@ -6,53 +6,86 @@
 @import "./common/Modal.css";
 @import "./common/Button.css";
 @import "./common/Input.css";
+@import "./animations.css";
 
 @theme {
-  /* Apple Editorial Palette */
+  /* ── Apple Editorial Monochrome ── */
   --color-background: #F5F5F7;
   --color-surface: #FFFFFF;
-  --color-surface-dim: #E5E5EA;
+  --color-surface-dim: #E8E8ED;
   --color-surface-bright: #FFFFFF;
   --color-surface-container-lowest: #FFFFFF;
   --color-surface-container-low: #FBFBFD;
-  --color-surface-container: #F2F2F7;
-  --color-surface-container-high: #E5E5EA;
-  --color-surface-container-highest: #D1D1D6;
-  
+  --color-surface-container: #F5F5F7;
+  --color-surface-container-high: #E8E8ED;
+  --color-surface-container-highest: #D2D2D7;
+
   --color-on-surface: #1D1D1F;
   --color-on-surface-variant: #86868B;
-  
+
   --color-inverse-surface: #1D1D1F;
   --color-inverse-on-surface: #F5F5F7;
-  
+
+  /* Primary — Near Black */
   --color-primary: #1D1D1F;
   --color-on-primary: #FFFFFF;
   --color-primary-container: #333336;
-  --color-on-primary-container: #E5E5EA;
-  
-  --color-secondary: #007AFF;
+  --color-on-primary-container: #E8E8ED;
+
+  /* Secondary — Mid Gray */
+  --color-secondary: #86868B;
   --color-on-secondary: #FFFFFF;
-  --color-secondary-container: #E5F0FF;
-  --color-on-secondary-container: #0058B3;
-  --color-secondary-fixed: #007AFF;
-  --color-secondary-fixed-dim: #0062CC;
-  
+  --color-secondary-container: #E8E8ED;
+  --color-on-secondary-container: #1D1D1F;
+
+  /* Semantic — Good */
   --color-tertiary: #34C759;
   --color-on-tertiary: #FFFFFF;
-  --color-tertiary-container: #E8F8EE;
-  --color-on-tertiary-container: #248A3D;
-  
+  --color-tertiary-container: #E4F7EA;
+  --color-on-tertiary-container: #1E7E34;
+
+  /* Semantic — Warning */
+  --color-warning: #FF9500;
+  --color-on-warning: #FFFFFF;
+  --color-warning-container: #FFF0D9;
+  --color-on-warning-container: #B36A00;
+
+  /* Semantic — Alert */
   --color-error: #FF3B30;
   --color-on-error: #FFFFFF;
-  --color-error-container: #FFECEB;
-  --color-on-error-container: #B32922;
-  
-  --color-outline: #86868B;
-  --color-outline-variant: #D2D2D7;
+  --color-error-container: #FFE5E3;
+  --color-on-error-container: #B3261E;
+
+  --color-outline: #D2D2D7;
+  --color-outline-variant: #E8E8ED;
   --color-border-glass: rgba(0, 0, 0, 0.06);
-  
-  --font-headline: 'Inter', sans-serif;
-  --font-body: 'Inter', sans-serif;
+
+  /* Typography */
+  --font-headline: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Border radius */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+:root {
+  --surface: #ffffff;
+  --surface-dim: #E8E8ED;
+  --surface-bright: #ffffff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #FBFBFD;
+  --surface-container: #F5F5F7;
+  --surface-container-high: #E8E8ED;
+  --surface-container-highest: #D2D2D7;
+
+  --on-surface: #1D1D1F;
+  --on-surface-variant: #86868B;
+  --primary: #1D1D1F;
+  --on-primary: #ffffff;
+  --border-glass: rgba(0, 0, 0, 0.08);
 }
 
 @layer base {
@@ -62,11 +95,12 @@
     padding: 0;
   }
 
-  html, body {
+  html,
+  body {
     width: 100%;
     height: 100%;
     overscroll-behavior: none;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: #F5F5F7;
     color: #1D1D1F;
     line-height: 1.5;
@@ -77,33 +111,37 @@
   #root {
     width: 100%;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     overflow: hidden;
   }
 }
 
-/* Custom Scrollbar */
+/* ── Custom Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #c4c7c7;
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #747878;
+  background: rgba(0, 0, 0, 0.24);
 }
 
-/* Global Pulse Animation Utility */
+/* ── Pulse Dot ── */
 .pulse-dot {
   position: relative;
   display: inline-flex;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 .pulse-dot::before {
@@ -111,23 +149,25 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background-color: #abd600;
-  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-  opacity: 0.75;
+  background-color: #34C759;
+  animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.6;
 }
 
 .pulse-dot::after {
   content: '';
   position: relative;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background-color: #abd600;
+  background-color: #34C759;
 }
 
 @keyframes ping {
-  75%, 100% {
-    transform: scale(2.2);
+
+  75%,
+  100% {
+    transform: scale(2.4);
     opacity: 0;
   }
 }

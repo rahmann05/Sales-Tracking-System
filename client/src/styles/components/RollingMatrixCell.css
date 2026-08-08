@@ -1,43 +1,62 @@
-.matrix-cell {
-  padding: 0.75rem;
-  min-width: 140px;
-  vertical-align: top;
-  border-right: 1px solid var(--border-glass);
-  border-bottom: 1px solid var(--border-glass);
+.matrix-day-cell {
+  padding: 0.5rem;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: stretch;
+  box-sizing: border-box;
 }
 
 .matrix-cell-card {
-  background: var(--surface-container-low);
-  border: 1px solid var(--border-glass);
+  width: 100%;
+  background: #fbfbfd;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 0.875rem;
   padding: 0.625rem;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 0.375rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .matrix-cell-card:hover {
-  background: var(--surface-container-high);
-  border-color: var(--primary);
+  background: #ffffff;
+  border-color: #1d1d1f;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.matrix-cell-card.empty {
+  cursor: default;
+  opacity: 0.5;
+  justify-content: center;
+  align-items: center;
+}
+
+.matrix-cell-card.empty:hover {
+  background: #fbfbfd;
+  border-color: rgba(0, 0, 0, 0.08);
+  transform: none;
+  box-shadow: none;
 }
 
 .matrix-cell-title {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--on-surface);
+  color: #1d1d1f;
   line-height: 1.25;
+  word-break: break-word;
 }
 
 .matrix-cell-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.25rem;
   font-size: 0.6875rem;
   margin-top: 0.25rem;
+  flex-wrap: wrap;
 }
 
 .matrix-cell-quota {
@@ -46,9 +65,16 @@
   background: rgba(14, 116, 144, 0.1);
   padding: 0.125rem 0.375rem;
   border-radius: 0.375rem;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .matrix-cell-area {
-  color: var(--on-surface-variant);
+  color: #86868b;
   font-size: 0.625rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

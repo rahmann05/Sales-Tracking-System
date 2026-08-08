@@ -37,59 +37,74 @@ export const ReassignDayRouteModal = ({ isOpen, onClose, cellData, onSave }) => 
     <div className="reassign-modal-backdrop">
       <div className="reassign-modal-box">
         <div className="reassign-modal-header">
-          <h3 className="reassign-modal-title">
-            Ubah Rute: {cellData.day}
-          </h3>
-          <button type="button" onClick={onClose} className="create-cluster-modal-close">
-            <LuX />
+          <div>
+            <h3 className="reassign-modal-title">
+              Ubah Rute: {cellData.day}
+            </h3>
+            <p className="text-xs text-on-surface-variant font-medium">Penyesuaian Sub-Rute & Target Kunjungan</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-surface-variant/50 hover:bg-surface-variant text-on-surface-variant flex items-center justify-center transition-colors"
+          >
+            <LuX className="text-base" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="reassign-modal-body">
-            <div className="create-cluster-form-group">
-              <label className="create-cluster-label">Nama Sub-Rute / Klaster</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface">Nama Sub-Rute / Klaster</label>
               <input
                 type="text"
                 value={clusterName}
                 onChange={(e) => setClusterName(e.target.value)}
-                className="create-cluster-input"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border-glass bg-surface-variant/30 text-on-surface text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium"
                 placeholder="misal: Cimahi Selatan (Cibeureum)"
                 required
               />
             </div>
 
-            <div className="create-cluster-form-group">
-              <label className="create-cluster-label">Target Jumlah Outlet Kunjungan</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface">Target Jumlah Outlet Kunjungan</label>
               <input
                 type="number"
                 min="1"
                 max="50"
                 value={outletsCount}
                 onChange={(e) => setOutletsCount(e.target.value)}
-                className="create-cluster-input"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border-glass bg-surface-variant/30 text-on-surface text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium"
                 required
               />
             </div>
 
-            <div className="create-cluster-form-group">
-              <label className="create-cluster-label">Kecamatan / Area Fokus</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface">Kecamatan / Area Fokus</label>
               <input
                 type="text"
                 value={subDistrict}
                 onChange={(e) => setSubDistrict(e.target.value)}
-                className="create-cluster-input"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border-glass bg-surface-variant/30 text-on-surface text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium"
                 placeholder="misal: Cibeureum"
               />
             </div>
           </div>
 
           <div className="reassign-modal-footer">
-            <button type="button" onClick={onClose} className="create-cluster-btn-cancel">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl border border-border-glass bg-surface hover:bg-surface-variant text-on-surface text-xs font-bold transition-all"
+            >
               Batal
             </button>
-            <button type="submit" className="create-cluster-btn-submit">
-              <LuSave className="inline mr-1" /> Terapkan Rute
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
+            >
+              <LuSave className="text-sm" />
+              <span>Terapkan Rute</span>
             </button>
           </div>
         </form>
@@ -97,3 +112,4 @@ export const ReassignDayRouteModal = ({ isOpen, onClose, cellData, onSave }) => 
     </div>
   );
 };
+

@@ -135,25 +135,28 @@ export const useSalesActions = ({
   };
 
   // Sales Action: Absen / Check-In at Off-PJP Outlet
-  const handleSalesAbsenOffPJP = ({ outletName, address, reason, photoUrl }) => {
+  const handleSalesAbsenOffPJP = ({ outletName, customerName, phone, address, reason, photoUrl, gpsLocation }) => {
     const newAbsen = {
       id: `absen-off-${Date.now()}`,
       salesName: user.name,
       outletName,
+      customerName: customerName || 'Pemilik Toko',
+      phone: phone || '-',
       address,
       timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
       photoUrl,
+      gpsLocation,
       reason,
       spvName: 'Ahmad Subagja',
       spvTeam: 'Tim SPV Ahmad Subagja (Cimahi - KBB)',
-      validationStatus: 'TIDAK_TERVALIDASI',
+      validationStatus: 'MENUNGGU',
     };
 
     setOffPjpAttendances((prev) => [newAbsen, ...prev]);
 
     addNotification({
-      title: 'Absen Toko Luar RJP (TIDAK TERVALIDASI)',
-      message: `Sales ${user.name} melakukan Absen Toko Luar RJP di ${outletName}. Status: TIDAK TERVALIDASI. Membutuhkan review SPV.`,
+      title: 'Absen Toko Luar RJP (Menunggu Validasi)',
+      message: `Sales ${user.name} melakukan Absen Toko Luar RJP di ${outletName}. Status: MENUNGGU. Membutuhkan review SPV.`,
       roleTarget: ['SUPERVISOR'],
     });
   };

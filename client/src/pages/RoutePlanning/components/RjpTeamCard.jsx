@@ -1,59 +1,78 @@
 import React from 'react';
 import { FiCalendar } from 'react-icons/fi';
+import { LuStore, LuUserCheck, LuShield } from 'react-icons/lu';
 import { Avatar } from '../../../components/common/Avatar';
 
 /**
  * RjpTeamCard Component
- * Equal height standard: h-full min-h-[260px] flex flex-col justify-between
+ * Single Responsibility: Render a 1-row full width card for RJP Field Team.
+ * Clean, spacious horizontal layout preventing any text truncation.
  */
 export const RjpTeamCard = ({ team }) => {
   return (
-    <div className="app-card h-full min-h-[260px] flex flex-col justify-between border-l-4 border-l-tertiary shadow-sm hover:shadow-md transition-all">
-      {/* Top Header */}
-      <div>
-        <div className="flex-between border-b border-border-glass pb-3 mb-3">
-          <div>
-            <span className="badge-tertiary text-[10px] uppercase tracking-wider mb-1 inline-block">
-              TIM RJP KHUSUS
-            </span>
-            <h4 className="card-title text-base font-bold text-on-surface line-clamp-1">{team.name}</h4>
-            <p className="card-subtitle text-xs text-on-surface-variant">Klaster: {team.cluster}</p>
-          </div>
-          <div className="text-right shrink-0">
-            <span className="caption-mono font-bold block text-sm">{team.routesCount} Outlet</span>
-            <span className="text-[11px] text-on-surface-variant">SPV: {team.spvName}</span>
-          </div>
+    <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-l-4 border-l-emerald-500">
+      {/* Left: Team Info & Cluster */}
+      <div className="flex-1 min-w-[240px]">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 font-extrabold text-[10px] rounded-full uppercase tracking-wider">
+            TIM RJP KHUSUS
+          </span>
+          <span className="text-xs font-semibold text-on-surface-variant flex items-center gap-1">
+            <LuShield className="text-xs text-primary" /> SPV: {team.spvName}
+          </span>
         </div>
+        <h4 className="text-base font-extrabold text-on-surface leading-tight">
+          {team.name}
+        </h4>
+        <p className="text-xs text-on-surface-variant mt-0.5">
+          Klaster Wilayah: <span className="font-semibold text-on-surface">{team.cluster}</span>
+        </p>
+      </div>
 
-        {/* Days Badges */}
-        <div className="space-y-1.5 mb-3 min-h-[52px]">
-          <h5 className="text-xs font-bold text-on-surface">Jadwal Hari Kunjungan Active:</h5>
+      {/* Middle: Active Schedule Days & Quota */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div>
+          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+            Jadwal Kunjungan:
+          </span>
           <div className="flex items-center gap-1.5 flex-wrap">
-            {(team.assignedDays || ['Senin', 'Kamis']).map((day, idx) => (
+            {(team.assignedDays || ['Senin']).map((day, idx) => (
               <span
                 key={idx}
-                className="px-3 py-1 bg-tertiary/10 text-tertiary font-bold text-xs rounded-full border border-tertiary/30 flex items-center gap-1"
+                className="px-3 py-1 bg-emerald-500/10 text-emerald-600 font-bold text-xs rounded-full border border-emerald-500/20 flex items-center gap-1.5"
               >
                 <FiCalendar className="text-xs" /> Hari {day}
               </span>
             ))}
           </div>
         </div>
+
+        <div className="bg-surface-container-low border border-border-glass px-3.5 py-1.5 rounded-xl text-center">
+          <span className="text-[10px] font-bold text-on-surface-variant uppercase block">Target Kunjungan</span>
+          <span className="text-sm font-extrabold text-primary flex items-center justify-center gap-1">
+            <LuStore className="text-xs" /> {team.routesCount || 10} Outlet
+          </span>
+        </div>
       </div>
 
-      {/* Members List (Bottom Aligned) */}
-      <div className="space-y-2 pt-2 border-t border-border-glass mt-auto min-h-[64px]">
-        <h5 className="text-xs font-bold text-on-surface">
-          Anggota Sales Terdaftar ({team.memberSalesNames?.length || 0}):
-        </h5>
+      {/* Right: Registered Sales Reps */}
+      <div className="border-t lg:border-t-0 lg:border-l border-border-glass pt-3 lg:pt-0 lg:pl-4 min-w-[200px]">
+        <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5">
+          Sales Lapangan ({team.memberSalesNames?.length || 0}):
+        </span>
         <div className="flex flex-wrap gap-2">
           {team.memberSalesNames?.map((name, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-2 bg-surface-variant/30 border border-border-glass px-2.5 py-1 rounded-xl text-xs"
+              className="flex items-center gap-2 bg-surface-container-high/60 border border-border-glass px-3 py-1.5 rounded-xl"
             >
               <Avatar name={name} size="sm" />
-              <span className="font-bold text-on-surface text-xs">{name}</span>
+              <div className="text-left">
+                <span className="font-extrabold text-on-surface text-xs block leading-none">{name}</span>
+                <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 mt-0.5">
+                  <LuUserCheck className="text-[10px]" /> Aktif Bertugas
+                </span>
+              </div>
             </div>
           ))}
         </div>

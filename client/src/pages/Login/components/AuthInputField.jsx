@@ -1,5 +1,9 @@
 import React from 'react';
 
+/**
+ * AuthInputField Component
+ * Single Responsibility: Render a single labeled input with icon for auth forms.
+ */
 export const AuthInputField = ({
   label,
   type = 'text',
@@ -13,7 +17,7 @@ export const AuthInputField = ({
     <div className="login-field-group">
       <label className="login-label">{label}</label>
       <div className="login-input-box">
-        {IconComponent && <IconComponent className="text-on-surface-variant mr-3 text-lg" />}
+        {IconComponent && <IconComponent className="login-input-icon" />}
         <input
           type={type}
           value={value}

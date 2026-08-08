@@ -52,20 +52,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
           </button>
         </div>
 
-        {/* 1. Keterangan Kunjungan Awal */}
-        <AbsenNotesInput
-          notes={notes}
-          onChangeNotes={setNotes}
-          label="Keterangan Masuk / Rencana Aktivitas Toko"
-          presets={[
-            'Kunjungan Rutin & Cek Stok',
-            'Penagihan Piutang & Inkaso',
-            'Display Produk Baru & Promo',
-            'Follow-up Pesanan Tertunda',
-          ]}
-        />
-
-        {/* 2. Live Device Camera & GPS Verification */}
+        {/* 1. Live Device Camera & GPS Verification (Top Section) */}
         <DeviceCameraCapture
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
@@ -77,6 +64,14 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen In"
+        />
+
+        {/* 2. Keterangan Kunjungan Awal (Below Camera) */}
+        <AbsenNotesInput
+          notes={notes}
+          onChangeNotes={setNotes}
+          label="Keterangan Masuk / Rencana Aktivitas Toko"
+          placeholder="Tuliskan keterangan kunjungan atau rencana aktivitas..."
         />
 
         {/* 3. Confirmation Button */}

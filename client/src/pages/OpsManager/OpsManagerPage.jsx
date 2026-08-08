@@ -3,17 +3,24 @@ import { useApp } from '../../context/AppContext';
 import { notifySuccess } from '../../services/notificationService';
 import { SectionHeader } from '../../components/common/SectionHeader';
 import { OpsManagerHeader } from './components/OpsManagerHeader';
+import { OpsSalesComplianceAnalytics } from './components/OpsSalesComplianceAnalytics';
 import { RerouteApprovalInbox } from './components/RerouteApprovalInbox';
 import { SkipAuditLog } from './components/SkipAuditLog';
 import { TeamRouteChangesReport } from './components/TeamRouteChangesReport';
 
 /**
  * OpsManagerPage Component (Container Page for Operational Manager Role)
- * Single Responsibility: Orchestrate reroute approvals, team route change reports,
- * and skip audit logs.
+ * Single Responsibility: Orchestrate route compliance audits, reroute approvals,
+ * team route change reports, and skip audit logs.
  */
 export const OpsManagerPage = () => {
-  const { incidents, handleOpsManagerRerouteDecision } = useApp();
+  const {
+    incidents,
+    salesStops,
+    offPjpAttendances,
+    rjpTeams,
+    handleOpsManagerRerouteDecision,
+  } = useApp();
 
   const pendingReroutes = incidents.filter((i) => i.status === 'RESOLVED_REROUTE_PENDING_OPS');
   const skipIncidents = incidents.filter((i) => i.status === 'RESOLVED_SKIP');
@@ -30,6 +37,13 @@ export const OpsManagerPage = () => {
   return (
     <div className="page-container">
       <OpsManagerHeader />
+
+      {/* Section 0: Audit Kepatuhan Master RJP vs Deviasi Luar RJP */}
+      <OpsSalesComplianceAnalytics
+        salesStops={salesStops}
+        offPjpAttendances={offPjpAttendances}
+        rjpTeams={rjpTeams}
+      />
 
       {/* Section 1: Inbox Approval Perubahan Rute */}
       <div className="section-block">

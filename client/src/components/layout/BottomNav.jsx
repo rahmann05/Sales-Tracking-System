@@ -68,9 +68,8 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
             key={item.id}
             type="button"
             onClick={() => setActiveTab(item.id)}
-            className={`bottom-nav-btn ${
-              isActive ? 'bottom-nav-btn-active' : 'bottom-nav-btn-inactive'
-            }`}
+            className={`bottom-nav-btn ${isActive ? 'bottom-nav-btn-active' : 'bottom-nav-btn-inactive'
+              }`}
           >
             <Icon className="bottom-nav-icon" />
             <span className="bottom-nav-label">{item.label}</span>

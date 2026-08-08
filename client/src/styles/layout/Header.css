@@ -1,23 +1,46 @@
 @import "../global.css";
 
-/* Header Layout Styles (Desktop Top Bar Only - Hidden on Mobile for Clean View) */
+/* ── Header — Apple Editorial ── */
 
 .header-container {
-  @apply hidden md:flex h-20 bg-surface/90 backdrop-blur-xl border-b border-border-glass px-8 items-center justify-between shrink-0 z-30 select-none w-full;
+  @apply hidden md:flex items-center justify-between px-6 py-3 min-h-[64px] shrink-0;
+  background: #FFFFFF;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.header-controls {
-  @apply flex items-center gap-5;
+.header-search {
+  @apply flex items-center gap-2.5 px-3.5 py-1.5 rounded-full w-full transition-all duration-150;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid transparent;
+}
+
+.header-search:focus-within {
+  background: #FFFFFF;
+  border-color: #1D1D1F;
+}
+
+.header-search-input {
+  @apply bg-transparent border-none outline-none text-xs text-on-surface w-full;
+}
+
+.header-search-input::placeholder {
+  color: #86868B;
+}
+
+.header-actions {
+  @apply flex items-center gap-3;
 }
 
 .header-user-badge {
-  @apply flex items-center gap-3 py-1.5 px-1.5 md:pl-5 md:pr-1.5 bg-surface-container-lowest rounded-full border border-border-glass shadow-sm hover:shadow-md transition-shadow cursor-pointer;
+  @apply flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-border-glass bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer select-none;
 }
 
-.header-user-title {
-  @apply text-xs font-bold text-on-surface;
+.header-avatar {
+  @apply w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold cursor-pointer transition-all duration-150;
+  background: #1D1D1F;
+  color: #FFFFFF;
 }
 
-.header-user-avatar {
-  @apply w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center text-lg;
+.header-avatar:hover {
+  transform: scale(1.05);
 }

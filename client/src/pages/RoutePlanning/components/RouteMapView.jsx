@@ -1,74 +1,88 @@
-import React, { useState } from 'react';
-import { LuMapPin, LuNavigation, LuPlus, LuMinus, LuLayers } from 'react-icons/lu';
-import { Card } from '../../../components/common/Card';
+import React, { useState, useMemo } from 'react';
+import { LuNavigation } from 'react-icons/lu';
+import { GoogleClusterRouteMap } from '../../Dashboard/components/GoogleClusterRouteMap';
+import { useApp } from '../../../context/AppContext';
 
 /**
- * RouteMapView Component (Single Responsibility: Real Google Maps View for Route Planning)
+ * RouteMapView Component
+ * Single Responsibility: Interactive Google Map displaying all sales/team outlet markers and routes.
  * 1 File per Component
  */
-export const RouteMapView = ({ selectedRouteName = 'Rute Central Business District' }) => {
-  const [zoom, setZoom] = useState(13);
-  const [mapType, setMapType] = useState('m'); // 'm' for roadmap, 'k' for satellite
+export const RouteMapView = () => {
+  const { salesStops = [], user } = useApp();
+  const [selectedFilter, setSelectedFilter] = useState('ALL'); // 'ALL' | 'sales-1' | 'sales-2' | 'sales-3'
 
-  const mapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(
-    selectedRouteName + ', Indonesia'
-  )}&t=${mapType}&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
+  // Team/Sales filter options
+  const filterOptions = [
+    { id: 'ALL', name: 'Semua Tim (30 Outlet)', salesName: null },
+    { id: 'sales-1', name: 'Tim Cimahi - Budi Santoso', salesName: 'Budi Santoso' },
+    { id: 'sales-2', name: 'Tim Padalarang - Siti Rahma', salesName: 'Siti Rahma' },
+    { id: 'sales-3', name: 'Tim Lembang - Agus Wijaya', salesName: 'Agus Wijaya' },
+  ];
+
+  const currentOption = useMemo(() => {
+    return filterOptions.find((f) => f.id === selectedFilter) || filterOptions[0];
+  }, [selectedFilter]);
+
+  // Selected Sales object for GoogleClusterRouteMap
+  const selectedSalesObj = useMemo(() => {
+    if (selectedFilter === 'ALL') return null;
+    const filteredStops = salesStops.filter((s) => s.assignedSalesName === currentOption.salesName);
+    return {
+      id: selectedFilter,
+      name: currentOption.salesName,
+      stops: filteredStops,
+    };
+  }, [selectedFilter, salesStops, currentOption]);
+
+  const activeStops = useMemo(() => {
+    if (selectedFilter === 'ALL') return salesStops;
+    return salesStops.filter((s) => s.assignedSalesName === currentOption.salesName);
+  }, [salesStops, selectedFilter, currentOption]);
 
   return (
-    <Card variant="panel" className="!p-0 overflow-hidden shadow-lg border border-border-glass mb-8 relative">
+    <div className="bg-surface border border-border-glass rounded-2xl overflow-hidden shadow-md">
       {/* Map Header Overlay */}
-      <div className="p-4 bg-white/90 backdrop-blur-md border-b border-border-glass flex items-center justify-between z-10 relative">
+      <div className="p-4 bg-surface-container-low border-b border-border-glass flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center text-lg">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl shrink-0">
             <LuNavigation />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-on-surface">Peta Real-Time Google Maps Rute Sales</h3>
-            <span className="text-xs text-on-surface-variant font-medium">{selectedRouteName}</span>
+            <h3 className="text-base font-extrabold text-on-surface">Peta Spasial Rute & Titik Outlet Tim Sales</h3>
+            <p className="text-xs text-on-surface-variant">
+              Menampilkan {activeStops.length} titik outlet aktif di wilayah Region Cimahi - Bandung Barat
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMapType((prev) => (prev === 'm' ? 'k' : 'm'))}
-            className="px-3 py-1.5 rounded-xl bg-surface-container-low text-on-surface text-xs font-bold border border-border-glass flex items-center gap-1.5 hover:bg-surface-container transition-colors"
-          >
-            <LuLayers />
-            <span>{mapType === 'm' ? 'Satellite View' : 'Roadmap View'}</span>
-          </button>
+        {/* Team/Sales Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          {filterOptions.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setSelectedFilter(opt.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+                selectedFilter === opt.id
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              {opt.name}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Real Google Maps Container - Extended Mobile & Desktop Vertical Height */}
-      <div className="w-full h-[560px] md:h-[620px] relative bg-surface-container">
-        <iframe
-          title="Google Maps Route Planning"
-          width="100%"
-          height="100%"
-          src={mapSrc}
-          className="border-none w-full h-full filter saturate-[1.05]"
-          loading="lazy"
-          allowFullScreen
-        ></iframe>
-
-        {/* Floating Zoom Controls Bottom Right */}
-        <div className="absolute bottom-4 right-4 z-20 flex flex-col bg-white/90 backdrop-blur-md rounded-xl border border-border-glass shadow-md overflow-hidden">
-          <button
-            onClick={() => setZoom((prev) => Math.min(prev + 1, 20))}
-            className="w-8 h-8 flex items-center justify-center text-on-surface border-b border-border-glass hover:bg-surface-container transition-colors"
-            title="Zoom In"
-          >
-            <LuPlus className="text-sm" />
-          </button>
-          <button
-            onClick={() => setZoom((prev) => Math.max(prev - 1, 1))}
-            className="w-8 h-8 flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors"
-            title="Zoom Out"
-          >
-            <LuMinus className="text-sm" />
-          </button>
-        </div>
+      {/* Real Interactive Google Maps Container */}
+      <div className="w-full h-[540px] md:h-[600px] relative">
+        <GoogleClusterRouteMap
+          allStops={activeStops}
+          selectedSales={selectedSalesObj}
+          userRole={user?.role || 'SUPERVISOR'}
+        />
       </div>
-    </Card>
+    </div>
   );
 };

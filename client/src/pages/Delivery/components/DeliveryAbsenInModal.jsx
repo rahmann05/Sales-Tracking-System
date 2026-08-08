@@ -57,12 +57,7 @@ export const DeliveryAbsenInModal = ({ stop, onClose, onConfirm }) => {
           notes={notes}
           onChangeNotes={setNotes}
           label="Keterangan Kedatangan / Kondisi Parkir & Drop"
-          presets={[
-            'Armada Tiba di Lokasi & Mulai Bongkar Muatan',
-            'Parkir di Depan Ruko, Penerima Siap di Tempat',
-            'Toko Ramai, Menunggu Antrean Bongkar',
-            'Akses Jalan Sempit, Bongkar Menggunakan Troli',
-          ]}
+          placeholder="Tuliskan keterangan kedatangan armada atau kondisi bongkar..."
         />
 
         {/* 2. Live Device Camera & GPS Verification */}

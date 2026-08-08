@@ -52,20 +52,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           </button>
         </div>
 
-        {/* 1. Keterangan Hasil Kunjungan */}
-        <AbsenNotesInput
-          notes={notes}
-          onChangeNotes={setNotes}
-          label="Keterangan Selesai / Catatan Hasil Kunjungan"
-          presets={[
-            'Kunjungan Selesai & Transaksi Berhasil',
-            'Toko Ramai, Order Dititipkan ke Kasir',
-            'Display & Merchandising Selesai Ditata',
-            'Follow-up Jadwal Kunjungan Berikutnya',
-          ]}
-        />
-
-        {/* 2. Live Device Camera & GPS Verification */}
+        {/* 1. Live Device Camera & GPS Verification (Top Section) */}
         <DeviceCameraCapture
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
@@ -77,6 +64,14 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen Out"
+        />
+
+        {/* 2. Keterangan Hasil Kunjungan (Below Camera) */}
+        <AbsenNotesInput
+          notes={notes}
+          onChangeNotes={setNotes}
+          label="Keterangan Selesai / Catatan Hasil Kunjungan"
+          placeholder="Tuliskan ringkasan hasil kunjungan toko..."
         />
 
         {/* 3. Confirmation Button */}

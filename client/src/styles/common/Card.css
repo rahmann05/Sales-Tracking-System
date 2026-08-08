@@ -1,23 +1,59 @@
 @import "../global.css";
 
-/* Modular Card Styles */
+/* ── Card Styles — Apple Editorial ── */
 
 .app-card {
-  @apply bg-surface border border-border-glass rounded-2xl p-4 md:p-6 shadow-sm transition-all duration-200;
+  @apply bg-surface rounded-2xl p-5 transition-all duration-200;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.app-card:hover {
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .app-card-interactive {
-  @apply bg-surface border border-border-glass rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer;
+  @apply bg-surface rounded-2xl p-5 cursor-pointer transition-all duration-200;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.app-card-interactive:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.app-card-interactive:active {
+  transform: translateY(0);
 }
 
 .app-card-header {
-  @apply flex items-center justify-between border-b border-border-glass pb-3 mb-4;
+  @apply flex items-center justify-between pb-4 mb-4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.glass-card {
-  @apply bg-surface/85 backdrop-blur-xl border border-border-glass shadow-sm transition-all duration-200 hover:shadow-md rounded-3xl p-5;
+/* Feature card — numbered list */
+.feature-card {
+  @apply flex items-start gap-4 py-4;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.glass-panel {
-  @apply bg-white/95 backdrop-blur-2xl border border-border-glass rounded-3xl p-5 shadow-lg;
+.feature-card:last-child {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.feature-num {
+  @apply w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0;
+  background: #F5F5F7;
+  color: #86868B;
+}
+
+.feature-content {
+  @apply flex flex-col gap-0.5;
+}
+
+.feature-title {
+  @apply text-[13px] font-semibold text-on-surface;
+}
+
+.feature-desc {
+  @apply text-sm text-on-surface-variant;
 }

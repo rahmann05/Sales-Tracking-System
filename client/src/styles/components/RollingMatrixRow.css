@@ -1,35 +1,61 @@
-.matrix-row-sales {
-  padding: 1rem;
-  font-size: 0.8125rem;
-  vertical-align: middle;
-  border-right: 1px solid var(--border-glass);
-  border-bottom: 1px solid var(--border-glass);
-  background: var(--surface);
+.matrix-grid-row {
+  display: grid;
+  grid-template-columns: 240px repeat(6, minmax(135px, 1fr)) 110px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  transition: background-color 0.15s ease;
+}
+
+.matrix-grid-row:hover {
+  background: #fafafc;
+}
+
+.matrix-sales-cell {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.matrix-grid-row:hover .matrix-sales-cell {
+  background: #fafafc;
+}
+
+.matrix-sales-cell.sticky-col {
   position: sticky;
   left: 0;
-  z-index: 2;
-  min-width: 180px;
+  z-index: 10;
+  box-shadow: 3px 0 8px rgba(0, 0, 0, 0.04);
 }
 
 .matrix-sales-name {
   font-weight: 800;
-  color: var(--on-surface);
+  color: #1d1d1f;
   font-size: 0.875rem;
+  line-height: 1.2;
 }
 
 .matrix-sales-cluster {
   font-size: 0.6875rem;
-  color: var(--on-surface-variant);
-  margin-top: 0.125rem;
+  color: #86868b;
+  margin-top: 0.25rem;
+  line-height: 1.3;
 }
 
-.matrix-row-total {
-  padding: 1rem;
+.matrix-total-cell {
+  padding: 1rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fbfbfd;
+  box-sizing: border-box;
+}
+
+.matrix-total-value {
   font-weight: 800;
   font-size: 0.875rem;
-  color: var(--primary);
-  text-align: center;
-  border-bottom: 1px solid var(--border-glass);
-  background: var(--surface-container-low);
-  min-width: 100px;
+  color: #1d1d1f;
 }

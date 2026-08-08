@@ -1,27 +1,40 @@
 @import "../global.css";
 
-/* Bottom Navigation Bar Styles for Mobile Screen */
+/* ── Bottom Nav — Apple Editorial ── */
 
 .bottom-nav-container {
-  @apply fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-border-glass px-3 py-2 flex items-center justify-around md:hidden shadow-2xl select-none;
+  @apply md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-1.5 shadow-lg select-none;
+  background: #FFFFFF;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 
-.bottom-nav-btn {
-  @apply flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 cursor-pointer border-none bg-transparent;
+.bottom-nav-btn,
+.bottom-nav-item {
+  @apply flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-lg transition-all duration-150 cursor-pointer border-none bg-transparent min-w-[60px];
+  color: var(--color-on-surface-variant);
 }
 
-.bottom-nav-btn-active {
-  @apply text-primary font-bold scale-105;
+.bottom-nav-btn:hover,
+.bottom-nav-item:hover {
+  color: var(--color-on-surface);
+}
+
+.bottom-nav-btn-active,
+.bottom-nav-item.active {
+  color: #1D1D1F !important;
+  font-weight: 700;
 }
 
 .bottom-nav-btn-inactive {
-  @apply text-on-surface-variant/70 hover:text-on-surface font-medium;
+  color: var(--color-on-surface-variant);
+  font-weight: 500;
 }
 
 .bottom-nav-icon {
-  @apply text-xl;
+  @apply text-xl flex-shrink-0;
 }
 
 .bottom-nav-label {
-  @apply text-[10px] tracking-tight leading-none;
+  @apply text-[10px] font-semibold leading-tight tracking-tight block text-center;
 }

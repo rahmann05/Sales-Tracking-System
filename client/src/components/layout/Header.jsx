@@ -44,16 +44,16 @@ export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
 
         {/* User Profile Badge & Logout */}
         <div
-          className="header-user-badge cursor-pointer hover:bg-surface-variant/50 transition-all p-1.5 rounded-xl border border-border-glass"
+          className="header-user-badge"
           onClick={onLogout}
           title="Klik untuk Keluar (Logout)"
         >
           <Avatar src={user?.avatar} name={user?.name} size="sm" />
-          <div className="flex flex-col text-left">
+          <div className="flex flex-col text-left leading-tight">
             <span className="text-xs font-bold text-on-surface">{user?.name}</span>
-            <span className="text-[10px] text-on-surface-variant font-medium">{user?.role}</span>
+            <span className="text-[10px] text-on-surface-variant font-medium">{user?.roleLabel || user?.role}</span>
           </div>
-          <LuLogOut className="text-on-surface-variant text-base ml-1" />
+          <LuLogOut className="text-on-surface-variant text-sm ml-1 shrink-0" />
         </div>
       </div>
     </header>

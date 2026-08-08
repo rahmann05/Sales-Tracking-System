@@ -11,4 +11,5 @@ export { logisticsOptimizerService } from './logisticsOptimizerService';
 export { nativeFileCaptureService } from './nativeFileCaptureService';
 export { rjpOptimizationService } from './rjpOptimizationService';
 export { spreadsheetImportService } from './spreadsheetImportService';
+export { getDetailedAddressFromGps, formatDetailedIndonesianAddress } from './reverseGeocodeService';
 export { notifySuccess, notifyError, notifyInfo } from './notificationService';

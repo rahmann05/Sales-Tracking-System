@@ -1,43 +1,58 @@
 @import "../global.css";
 
-/* Sidebar Layout Styles (Desktop Rail Only - Hidden on Mobile) */
+/* ── Sidebar — Apple Editorial ── */
 
 .sidebar-container {
-  @apply hidden md:flex w-72 bg-surface border-r border-border-glass flex-col p-6 shrink-0 h-full z-40 select-none;
+  @apply hidden md:flex md:w-[260px] lg:w-[280px] flex-col h-full shrink-0;
+  background: #FFFFFF;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-brand {
-  @apply flex items-center justify-between mb-10 pl-2;
+  @apply px-6 pt-8 pb-6;
 }
 
 .sidebar-brand-icon {
-  @apply w-10 h-10 rounded-2xl bg-primary text-on-primary flex items-center justify-center shadow-md text-xl;
+  @apply w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0;
+  background: #1D1D1F;
+  color: #FFFFFF;
 }
 
 .sidebar-brand-title {
-  @apply font-headline text-lg font-extrabold text-primary leading-tight;
+  @apply text-[17px] font-bold text-on-surface tracking-tight;
 }
 
 .sidebar-brand-subtitle {
-  @apply text-xs text-on-surface-variant font-semibold tracking-wider;
+  @apply text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest;
 }
 
 .sidebar-nav {
-  @apply flex flex-col gap-2 flex-1;
+  @apply flex-1 flex flex-col gap-1 px-4 overflow-y-auto;
 }
 
 .sidebar-nav-btn {
-  @apply flex items-center gap-3.5 px-4 py-3 rounded-2xl border-none cursor-pointer font-semibold text-sm transition-all duration-200 text-left;
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-150 cursor-pointer border-none w-full text-left;
+  color: var(--color-on-surface-variant);
+  background: transparent;
+}
+
+.sidebar-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--color-on-surface);
 }
 
 .sidebar-nav-btn-active {
-  @apply bg-primary text-on-primary shadow-md;
+  background: #1D1D1F !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
 }
 
 .sidebar-nav-btn-inactive {
-  @apply bg-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface;
+  color: var(--color-on-surface-variant);
 }
 
 .sidebar-footer-card {
-  @apply rounded-2xl p-4 flex flex-col gap-2 bg-white/80 border border-border-glass shadow-sm mt-auto;
+  @apply mx-4 mb-6 p-4 rounded-xl flex flex-col gap-2;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.04);
 }

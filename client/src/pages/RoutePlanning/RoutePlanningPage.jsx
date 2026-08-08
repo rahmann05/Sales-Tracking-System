@@ -31,31 +31,31 @@ import { useSupervisorRollingMatrix } from '../../hooks/useSupervisorRollingMatr
 import '../../styles/pages/RoutePlanning.css';
 
 /**
- * Tab configuration per role.
+ * Tab configuration per role with mobile-optimized short labels.
  * Single Responsibility: Define which tabs each role can see.
  */
 const ROLE_TAB_MAP = {
   OPS: [
-    { id: 'OPS_MANAGER', label: 'Operational Manager (Master Region & Quota)', icon: LuShieldCheck },
-    { id: 'SPV_ROLLING', label: 'Supervisor (Matriks Rolling)', icon: LuUsers },
-    { id: 'SALES_VIEW', label: 'Pratinjau Sales (Rute Harian & TSP)', icon: LuNavigation },
-    { id: 'MAP_DIRECTORY', label: 'Peta Spasial & Direktori Tim', icon: LuMap },
+    { id: 'OPS_MANAGER', shortLabel: 'Master Ops', label: 'Operational Manager (Master Region & Quota)', icon: LuShieldCheck },
+    { id: 'SPV_ROLLING', shortLabel: 'Supervisor', label: 'Supervisor (Matriks Rolling)', icon: LuUsers },
+    { id: 'SALES_VIEW', shortLabel: 'Pratinjau Sales', label: 'Pratinjau Sales (Rute Harian & TSP)', icon: LuNavigation },
+    { id: 'MAP_DIRECTORY', shortLabel: 'Peta & Tim', label: 'Peta Spasial & Direktori Tim', icon: LuMap },
   ],
   SPV: [
-    { id: 'SPV_ROLLING', label: 'Supervisor (Matriks Rolling Mingguan)', icon: LuUsers },
-    { id: 'SALES_VIEW', label: 'Pratinjau Rute Sales Harian & TSP', icon: LuNavigation },
-    { id: 'MAP_DIRECTORY', label: 'Peta Spasial & Direktori Tim', icon: LuMap },
+    { id: 'SPV_ROLLING', shortLabel: 'Matriks Rolling', label: 'Supervisor (Matriks Rolling Mingguan)', icon: LuUsers },
+    { id: 'SALES_VIEW', shortLabel: 'Pratinjau Sales', label: 'Pratinjau Rute Sales Harian & TSP', icon: LuNavigation },
+    { id: 'MAP_DIRECTORY', shortLabel: 'Peta & Tim', label: 'Peta Spasial & Direktori Tim', icon: LuMap },
   ],
   SALES: [
-    { id: 'SALES_VIEW', label: 'Rute Kunjungan & Jadwal Rolling Saya', icon: LuNavigation },
-    { id: 'MAP_DIRECTORY', label: 'Peta Spasial Rute', icon: LuMap },
+    { id: 'SALES_VIEW', shortLabel: 'Rute Saya', label: 'Rute Kunjungan & Jadwal Rolling Saya', icon: LuNavigation },
+    { id: 'MAP_DIRECTORY', shortLabel: 'Peta Spasial', label: 'Peta Spasial Rute', icon: LuMap },
   ],
 };
 
 /**
  * RoutePlanningPage Component (Master RJP Container)
  * Single Responsibility: Orchestrate Operational Manager, Supervisor Rolling Matrix,
- * and Sales Execution Views.
+ * and Sales Execution Views tailored to logged-in user.
  */
 export const RoutePlanningPage = () => {
   const { user, salesStops = [], rjpTeams = [] } = useApp();
@@ -100,9 +100,53 @@ export const RoutePlanningPage = () => {
     handleExecuteAutoRolling,
   } = useSupervisorRollingMatrix();
 
+  // Active Sales Rep & Day selection state for Tab 3 (Sales View)
+  const [selectedSalesPerson, setSelectedSalesPerson] = useState(null);
+  const [selectedDay, setSelectedDay] = useState('Senin');
+
+  // Compute the current active sales row based on logged-in user or explicit selection
+  const currentSalesRow = useMemo(() => {
+    if (selectedSalesPerson) {
+      const found = matrixRows.find(
+        (r) => r.salesId === selectedSalesPerson.salesId || r.salesName === selectedSalesPerson.salesName
+      );
+      if (found) return found;
+    }
+    // Match by logged-in user name
+    const userMatch = matrixRows.find(
+      (r) => r.salesName?.toLowerCase() === user?.name?.toLowerCase() || r.salesId === user?.id
+    );
+    return userMatch || matrixRows[0];
+  }, [matrixRows, selectedSalesPerson, user]);
+
+  // Current day's cluster information
+  const dailyScheduleInfo = useMemo(() => {
+    return currentSalesRow?.schedule?.[selectedDay] || {
+      clusterName: 'Klaster Cimahi Tengah (RJP-CIMAHI-01)',
+      outletsCount: 10,
+      subDistrict: 'Cimahi',
+    };
+  }, [currentSalesRow, selectedDay]);
+
+  // Daily stops filtered strictly for the active sales rep and active day (10 outlets per plan)
+  const filteredDailyStops = useMemo(() => {
+    const matched = salesStops.filter((stop) => {
+      const matchSales = !stop.assignedSalesName || stop.assignedSalesName === currentSalesRow?.salesName;
+      const matchDay = !stop.dayOfWeek || stop.dayOfWeek === selectedDay;
+      return matchSales && matchDay;
+    });
+    if (matched.length > 0) return matched;
+
+    // Fallback to day matching
+    const byDay = salesStops.filter((s) => s.dayOfWeek === selectedDay);
+    if (byDay.length > 0) return byDay;
+
+    return salesStops.slice(0, 10);
+  }, [salesStops, currentSalesRow, selectedDay]);
+
   return (
     <div className="page-container">
-      {/* Role Navigation Tab Bar */}
+      {/* Mobile Optimized Role Navigation Tab Bar */}
       <div className="rjp-role-tab-bar">
         {allowedTabs.map((tab) => {
           const Icon = tab.icon;
@@ -113,8 +157,9 @@ export const RoutePlanningPage = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`rjp-role-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
             >
-              <Icon className="text-base" />
-              <span>{tab.label}</span>
+              <Icon className="text-base shrink-0" />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="inline sm:hidden">{tab.shortLabel}</span>
             </button>
           );
         })}
@@ -147,12 +192,21 @@ export const RoutePlanningPage = () => {
       {activeTab === 'SALES_VIEW' && (
         <div className="space-y-6">
           <SalesDailyRouteSummaryCard
-            activeRoute={{ day: 'Senin', name: 'Klaster Cimahi Selatan (Cibeureum)' }}
-            stops={salesStops}
+            salesPerson={currentSalesRow}
+            supervisorName={currentSalesRow?.spvName || 'Ahmad Subagja'}
+            activeRoute={{ day: selectedDay, name: dailyScheduleInfo.clusterName }}
+            stops={filteredDailyStops}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            salesList={matrixRows}
+            onSelectSales={setSelectedSalesPerson}
+            canSwitchSales={isSupervisor || isOpsOrAdmin}
           />
           <SalesRollingScheduleView
-            userSchedule={matrixRows[0]?.schedule || {}}
-            todayDay="Senin"
+            userSchedule={currentSalesRow?.schedule || {}}
+            todayDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            salesName={currentSalesRow?.salesName}
           />
         </div>
       )}
@@ -168,7 +222,7 @@ export const RoutePlanningPage = () => {
             <p className="text-xs text-on-surface-variant mb-4">
               Daftar supervisor dan anggota sales yang bertugas di wilayah Bandung Barat & Cimahi
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-3.5">
               {rjpTeams.map((team) => (
                 <RjpTeamCard key={team.id} team={team} />
               ))}
