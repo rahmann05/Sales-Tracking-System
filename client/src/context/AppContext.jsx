@@ -16,7 +16,6 @@ import { useSalesActions } from '../hooks/useSalesActions';
 import { useSupervisorActions } from '../hooks/useSupervisorActions';
 import { useOpsActions } from '../hooks/useOpsActions';
 import { useAdminActions } from '../hooks/useAdminActions';
-import { useDeliveryActions } from '../hooks/useDeliveryActions';
 
 const AppContext = createContext();
 
@@ -60,9 +59,6 @@ export const AppProvider = ({ children }) => {
 
   // Store incidents (closed shop reports, unlock requests, etc.)
   const [incidents, setIncidents] = useState([]);
-
-  // Delivery Stops
-  const [deliveryStops, setDeliveryStops] = useState([]);
 
   // Notifications
   const [notifications, setNotifications] = useState([]);
@@ -123,8 +119,6 @@ export const AppProvider = ({ children }) => {
     setIncidents,
     salesStops,
     setSalesStops,
-    deliveryStops,
-    setDeliveryStops,
     setOffPjpAttendances,
     addNotification,
   });
@@ -145,8 +139,6 @@ export const AppProvider = ({ children }) => {
   const adminActions = useAdminActions({
     orders,
     setOrders,
-    deliveryStops,
-    setDeliveryStops,
     salesStops,
     setSalesStops,
     incidents,
@@ -154,46 +146,70 @@ export const AppProvider = ({ children }) => {
     addNotification,
   });
 
-  const deliveryActions = useDeliveryActions({
-    user,
-    deliveryStops,
-    setDeliveryStops,
-    setIncidents,
-    addNotification,
-  });
+  const markNotificationAsRead = (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  };
 
-  return (
-    <AppContext.Provider
-      value={{
-        user,
-        setUser,
-        loginAsRole,
-        shiftAttendance,
-        handleShiftClockIn,
-        handleShiftClockOut,
-        salesStops,
-        supervisorTeams,
-        teamMembers,
-        activeRoutes,
-        masterRoutes,
-        salesList,
-        rjpTeams,
-        offPjpAttendances,
-        orders,
-        incidents,
-        deliveryStops,
-        notifications,
-        addNotification,
-        ...salesActions,
-        ...supervisorActions,
-        ...opsActions,
-        ...adminActions,
-        ...deliveryActions,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  );
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  const value = {
+    // Current User Session
+    user,
+    setUser,
+    loginAsRole,
+
+    // Shift Clock-In State
+    shiftAttendance,
+    handleShiftClockIn,
+    handleShiftClockOut,
+
+    // Core Domain State
+    salesStops,
+    setSalesStops,
+    supervisorTeams,
+    setSupervisorTeams,
+    teamMembers,
+    setTeamMembers,
+    activeRoutes,
+    setActiveRoutes,
+    masterRoutes,
+    setMasterRoutes,
+    salesList,
+    setSalesList,
+    rjpTeams,
+    setRjpTeams,
+    offPjpAttendances,
+    setOffPjpAttendances,
+    orders,
+    setOrders,
+    incidents,
+    setIncidents,
+    products: MOCK_PRODUCTS,
+
+    // Notifications
+    notifications,
+    addNotification,
+    markNotificationAsRead,
+    clearNotifications,
+
+    // Dedicated Domain Actions
+    ...salesActions,
+    ...supervisorActions,
+    ...opsActions,
+    ...adminActions,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-export const useApp = () => useContext(AppContext);
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+};

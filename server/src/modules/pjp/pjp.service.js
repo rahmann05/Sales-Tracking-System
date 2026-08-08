@@ -127,48 +127,6 @@ export const generateDailyPjps = async () => {
     generatedCount++;
   }
 
-  // Step 2: Generate PJP for Driver & Helper based on yesterday's approved orders
-  const yesterdaySalesPjps = await prisma.pjp.findMany({
-    where: { type: PJP_TYPE.SALES, date: yesterdayRange },
-    include: {
-      stops: { include: { orders: { where: { status: 'APPROVED' } } } },
-      user: { include: { subordinates: { where: { deletedAt: null } } } },
-    },
-  });
-
-  for (const salesPjp of yesterdaySalesPjps) {
-    const eligibleStops = salesPjp.stops.filter((stop) => stop.orders.length > 0);
-    if (eligibleStops.length === 0) continue;
-
-    for (const partner of salesPjp.user.subordinates) {
-      const isDriverOrHelper = partner.role === ROLES.DRIVER || partner.role === ROLES.HELPER;
-      if (!isDriverOrHelper) continue;
-
-      const existingPartnerPjp = await prisma.pjp.findFirst({
-        where: { userId: partner.id, date: { gte: today } },
-      });
-      if (existingPartnerPjp) continue;
-
-      await prisma.pjp.create({
-        data: {
-          userId: partner.id,
-          date: today,
-          type: partner.role === ROLES.DRIVER ? PJP_TYPE.DRIVER : PJP_TYPE.HELPER,
-          status: PJP_STATUS.SCHEDULED,
-          sourcePjpId: salesPjp.id,
-          stops: {
-            create: eligibleStops.map((stop, idx) => ({
-              outletId: stop.outletId,
-              sequence: idx + 1,
-              status: 'PENDING',
-            })),
-          },
-        },
-      });
-      generatedCount++;
-    }
-  }
-
   return {
     message: `PJP berhasil di-generate (${generatedCount} rute dibuat)`,
     count: generatedCount,

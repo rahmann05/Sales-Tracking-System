@@ -22,15 +22,15 @@ export const AdminApprovalPage = () => {
   const handleDecision = (payload) => {
     handleAdminOrderDecision(payload);
     if (payload.approved) {
-      alert('Order APPROVED! Stok dikunci dan Rute Pengiriman H+1 Driver & Helper otomatis dibuat.');
+      alert('Order APPROVED! Stok penjualan telah disetujui.');
     } else {
       alert('Order REJECTED.');
     }
   };
 
-  const handleApproveUnlock = (requestId, stopId, userRole) => {
-    handleApproveUnlockRequest(requestId, stopId, userRole);
-    alert('Permintaan Unlock disetujui! Outlet telah dibuka untuk presensi tim lapangan.');
+  const handleApproveUnlock = (requestId, stopId) => {
+    handleApproveUnlockRequest(requestId, stopId);
+    alert('Permintaan Unlock disetujui! Outlet telah dibuka untuk presensi tim sales.');
   };
 
   const handleRejectUnlock = (requestId) => {
@@ -42,7 +42,7 @@ export const AdminApprovalPage = () => {
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto pb-24">
       <AdminApprovalHeader />
 
-      {/* Section 1: Permintaan Unlock Outlet dari Sales & Logistik */}
+      {/* Section 1: Permintaan Unlock Outlet dari Sales */}
       {unlockRequests.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -54,12 +54,12 @@ export const AdminApprovalPage = () => {
                 </span>
               </h3>
               <p className="text-xs text-on-surface-variant">
-                Permohonan pembukaan kunci dari Sales / Driver / Helper yang belum menyelesaikan absen toko sebelumnya
+                Permohonan pembukaan kunci dari Sales yang belum menyelesaikan absen toko sebelumnya
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {unlockRequests.map((req) => (
               <UnlockRequestCard
                 key={req.id}
@@ -72,23 +72,27 @@ export const AdminApprovalPage = () => {
         </div>
       )}
 
-      {/* Section 2: Order Approval */}
-      <div className="space-y-4">
+      {/* Section 2: Daftar Order Penjualan */}
+      <div className="space-y-3">
         <div>
           <h3 className="text-lg font-bold text-on-surface">Daftar Order Penjualan Menunggu Persetujuan Admin</h3>
           <p className="text-xs text-on-surface-variant">
-            Persetujuan akan mengunci stok gudang & menjadwalkan manifest pengiriman H+1 untuk Driver/Helper
+            Persetujuan akan mengonfirmasi stok penjualan dan memproses pesanan Sales
           </p>
         </div>
 
         {orders.length === 0 ? (
-          <div className="p-8 text-center bg-surface border border-border-glass rounded-2xl text-on-surface-variant text-xs font-medium">
-            Tidak ada antrean order yang perlu diproses saat ini.
+          <div className="p-8 text-center bg-surface-container-low rounded-xl border border-outline/20">
+            <p className="text-sm text-on-surface-variant">Belum ada order penjualan yang masuk saat ini.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {orders.map((order) => (
-              <PendingOrderCard key={order.id} order={order} onDecision={handleDecision} />
+              <PendingOrderCard
+                key={order.id}
+                order={order}
+                onDecision={handleDecision}
+              />
             ))}
           </div>
         )}

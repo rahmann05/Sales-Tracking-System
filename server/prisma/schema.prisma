@@ -9,8 +9,6 @@ datasource db {
 
 enum Role {
   SALES
-  DRIVER
-  HELPER
   SUPERVISOR
   ADMIN
   MANAJER_OPERASIONAL
@@ -24,8 +22,6 @@ enum PjpStatus {
 
 enum PjpType {
   SALES
-  DRIVER
-  HELPER
 }
 
 enum VisitStatus {
@@ -44,6 +40,7 @@ enum OrderStatus {
 enum RouteChangeType {
   REROUTE
   SKIP
+  OFF_PJP_REQUEST
 }
 
 enum RouteChangeStatus {
@@ -58,6 +55,18 @@ enum AttendanceType {
   OUT
 }
 
+enum OutletLockStatus {
+  NORMAL
+  LOCKED
+  UNLOCK_REQUESTED
+}
+
+enum OffPjpStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id                    String               @id @default(uuid())
   name                  String
@@ -66,20 +75,18 @@ model User {
   role                  Role
   clusterId             String?
   cluster               Cluster?             @relation(fields: [clusterId], references: [id])
-  
-  // Driver/Helper paired to a Sales user
-  salesId               String?
-  sales                 User?                @relation("SalesDriverHelper", fields: [salesId], references: [id])
-  subordinates          User[]               @relation("SalesDriverHelper")
 
   pjps                  Pjp[]
   attendances           Attendance[]
+  offPjpAttendances     OffPjpAttendance[]
   ordersCreated         Order[]              @relation("OrderCreatedBy")
   ordersApproved        Order[]              @relation("OrderApprovedBy")
   routeChangesReported  RouteChangeRequest[] @relation("RouteChangeReportedBy")
   routeChangesHandled   RouteChangeRequest[] @relation("RouteChangeHandledBy")
   routeChangesApproved  RouteChangeRequest[] @relation("RouteChangeApprovedBy")
   notifications         Notification[]
+  unlockRequestsCreated OutletUnlockRequest[] @relation("UnlockRequestedBy")
+  unlockRequestsHandled OutletUnlockRequest[] @relation("UnlockHandledBy")
 
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
@@ -98,17 +105,30 @@ model Cluster {
 }
 
 model Outlet {
-  id                       String               @id @default(uuid())
+  id                       String                @id @default(uuid())
   name                     String
   address                  String
   latitude                 Float
   longitude                Float
   clusterId                String
-  cluster                  Cluster              @relation(fields: [clusterId], references: [id])
+  cluster                  Cluster               @relation(fields: [clusterId], references: [id])
+
+  outletCode               String?               @unique
+  ownerName                String?
+  phone                    String?
+  creditLimit              Float?                @default(0)
+  outstanding              Float?                @default(0)
+  radiusMeters             Int?                  @default(50)
+
+  lockStatus               OutletLockStatus      @default(NORMAL)
+
   pjpStops                 PjpStop[]
-  routeChangesReplacement  RouteChangeRequest[] @relation("ReplacementOutlet")
-  createdAt                DateTime             @default(now())
-  updatedAt                DateTime             @updatedAt
+  offPjpAttendances        OffPjpAttendance[]
+  routeChangesReplacement  RouteChangeRequest[]  @relation("ReplacementOutlet")
+  unlockRequests           OutletUnlockRequest[]
+
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
   deletedAt                DateTime?
 }
 
@@ -117,6 +137,8 @@ model Product {
   sku         String      @unique
   name        String
   price       Float
+  category    String?
+  stock       Int?        @default(0)
   orderItems  OrderItem[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -169,6 +191,48 @@ model Attendance {
   updatedAt DateTime       @updatedAt
 }
 
+model OffPjpAttendance {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+
+  outletId        String?
+  outlet          Outlet?      @relation(fields: [outletId], references: [id])
+
+  outletName      String
+  customerName    String?
+  phone           String?
+  address         String
+
+  latitude        Float
+  longitude       Float
+  photoUrl        String?
+  reason          String
+
+  status          OffPjpStatus @default(PENDING)
+  validatedBy     String?
+  validatedAt     DateTime?
+  rejectionNote   String?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model OutletUnlockRequest {
+  id          String           @id @default(uuid())
+  outletId    String
+  outlet      Outlet           @relation(fields: [outletId], references: [id])
+  requestedBy String
+  requestedByUser User         @relation("UnlockRequestedBy", fields: [requestedBy], references: [id])
+  reason      String
+  status      RouteChangeStatus @default(PENDING_APPROVAL)
+  handledBy   String?
+  handledByUser User?          @relation("UnlockHandledBy", fields: [handledBy], references: [id])
+  handledAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
 model Order {
   id             String      @id @default(uuid())
   pjpStopId      String
@@ -177,6 +241,7 @@ model Order {
   createdByUser  User        @relation("OrderCreatedBy", fields: [createdBy], references: [id])
   items          OrderItem[]
   totalValue     Float
+  paymentType    String?
   status         OrderStatus @default(PENDING_APPROVAL)
   approvedBy     String?
   approvedByUser User?       @relation("OrderApprovedBy", fields: [approvedBy], references: [id])

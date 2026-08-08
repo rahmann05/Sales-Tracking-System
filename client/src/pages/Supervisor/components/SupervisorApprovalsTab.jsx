@@ -1,31 +1,33 @@
 import React, { useState } from 'react';
-import { SectionHeader } from '../../../components/common/SectionHeader';
-import { EmptyState } from '../../../components/common/EmptyState';
+import { SectionHeader } from './SectionHeader';
 import { ApprovalSubFilterChips } from './ApprovalSubFilterChips';
+import { IncidentCard } from './IncidentCard';
+import { UnlockRequestCard } from './UnlockRequestCard';
 import { OffPjpAttendanceCard } from './OffPjpAttendanceCard';
-import { OffPjpRequestCard } from './OffPjpRequestCard';
-import { UnlockRequestCard } from '../../Admin/components/UnlockRequestCard';
-import { LuCircleCheck } from 'react-icons/lu';
 
 /**
  * SupervisorApprovalsTab Component
- * Single Responsibility: Konten tab Antrean Approval & Validasi (unlock, absen luar RJP, pengajuan toko).
+ * Single Responsibility: Present all pending approvals for Supervisor with dedicated sub-filter chips
  */
 export const SupervisorApprovalsTab = ({
-    unlockRequests = [],
+    incidents = [],
     offPjpAttendances = [],
-    offPjpRequests = [],
-    totalPending = 0,
-    userRole,
+    onDirectReroute,
+    onRequestReroute,
+    onSkip,
     onApproveUnlock,
     onRejectUnlock,
     onValidateOffPjp,
-    onApproveOffPjpRequest,
 }) => {
     const [subFilter, setSubFilter] = useState('ALL');
 
+    const closedShopReports = incidents.filter((i) => i.type === 'CLOSED_SHOP');
+    const unlockRequests = incidents.filter((i) => i.type === 'UNLOCK_REQUEST');
+    const offPjpRequests = incidents.filter((i) => i.type === 'OFF_PJP_REQUEST');
+
     const counts = {
-        ALL: totalPending,
+        ALL: closedShopReports.length + unlockRequests.length + offPjpAttendances.length + offPjpRequests.length,
+        CLOSED_SHOP: closedShopReports.length,
         UNLOCK: unlockRequests.length,
         OFF_PJP_ATTENDANCE: offPjpAttendances.length,
         OFF_PJP_REQUEST: offPjpRequests.length,
@@ -34,6 +36,7 @@ export const SupervisorApprovalsTab = ({
     const showUnlock = subFilter === 'ALL' || subFilter === 'UNLOCK';
     const showOffPjpAttendance = subFilter === 'ALL' || subFilter === 'OFF_PJP_ATTENDANCE';
     const showOffPjpRequest = subFilter === 'ALL' || subFilter === 'OFF_PJP_REQUEST';
+    const showClosed = subFilter === 'ALL' || subFilter === 'CLOSED_SHOP';
 
     return (
         <div className="space-y-6">
@@ -43,14 +46,14 @@ export const SupervisorApprovalsTab = ({
                 <div className="space-y-3">
                     <SectionHeader
                         title="Permintaan Buka Kunci (Unlock) Presensi Outlet"
-                        subtitle="Permohonan pembukaan presensi dari tim Sales / Driver / Helper yang terkunci karena belum menyelesaikan toko sebelumnya"
+                        subtitle="Permohonan pembukaan presensi dari tim Sales yang terkunci karena belum menyelesaikan toko sebelumnya"
                     />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
                         {unlockRequests.map((req) => (
                             <UnlockRequestCard
                                 key={req.id}
                                 request={req}
-                                onApprove={(id, stopId) => onApproveUnlock(id, stopId, userRole)}
+                                onApprove={(id, stopId) => onApproveUnlock(id, stopId)}
                                 onReject={onRejectUnlock}
                             />
                         ))}
@@ -58,37 +61,59 @@ export const SupervisorApprovalsTab = ({
                 </div>
             )}
 
-            {showOffPjpAttendance && (
+            {showOffPjpAttendance && offPjpAttendances.length > 0 && (
                 <div className="space-y-3">
                     <SectionHeader
-                        title="Validasi Presensi Toko Luar RJP"
-                        subtitle="Tinjau dan beri validasi presensi sales di luar rute terjadwal (disertai foto GPS dan alasan)"
+                        title="Validasi Absen Toko Luar RJP"
+                        subtitle="Sales melakukan check-in dan foto di toko prospek di luar jadwal PJP hari ini"
                     />
-                    {offPjpAttendances.length === 0 ? (
-                        <EmptyState
-                            icon={LuCircleCheck}
-                            title="Tidak Ada Presensi Luar RJP"
-                            description="Semua presensi tim sales berada dalam koridor jadwal RJP resmi."
-                        />
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
-                            {offPjpAttendances.map((item) => (
-                                <OffPjpAttendanceCard key={item.id} item={item} onValidate={onValidateOffPjp} />
-                            ))}
-                        </div>
-                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
+                        {offPjpAttendances.map((att) => (
+                            <OffPjpAttendanceCard
+                                key={att.id}
+                                attendance={att}
+                                onValidate={onValidateOffPjp}
+                            />
+                        ))}
+                    </div>
                 </div>
             )}
 
             {showOffPjpRequest && offPjpRequests.length > 0 && (
                 <div className="space-y-3">
                     <SectionHeader
-                        title="Pengajuan Toko Baru di Luar RJP"
-                        subtitle="Permohonan pendaftaran outlet baru dari tim lapangan untuk dievaluasi kelayakannya"
+                        title="Pengajuan Kunjungan Toko Luar RJP"
+                        subtitle="Permintaan izin kunjungan tambahan ke toko prospek hari ini"
                     />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
                         {offPjpRequests.map((req) => (
-                            <OffPjpRequestCard key={req.id} request={req} onApprove={onApproveOffPjpRequest} />
+                            <IncidentCard
+                                key={req.id}
+                                incident={req}
+                                onDirectReroute={onDirectReroute}
+                                onRequestReroute={onRequestReroute}
+                                onSkip={onSkip}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {showClosed && closedShopReports.length > 0 && (
+                <div className="space-y-3">
+                    <SectionHeader
+                        title="Laporan Toko Tutup"
+                        subtitle="Toko yang dilaporkan tutup dan memerlukan tindakan lewati (skip) atau dialihkan (reroute)"
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
+                        {closedShopReports.map((inc) => (
+                            <IncidentCard
+                                key={inc.id}
+                                incident={inc}
+                                onDirectReroute={onDirectReroute}
+                                onRequestReroute={onRequestReroute}
+                                onSkip={onSkip}
+                            />
                         ))}
                     </div>
                 </div>

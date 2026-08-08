@@ -14,7 +14,6 @@ import { RoutePlanningPage } from '../pages/RoutePlanning/RoutePlanningPage';
 import { TeamTrackingPage } from '../pages/TeamTracking/TeamTrackingPage';
 import { ReportsPage } from '../pages/Reports/ReportsPage';
 import { SalesPage } from '../pages/Sales/SalesPage';
-import { DeliveryPage } from '../pages/Delivery/DeliveryPage';
 import { SupervisorPage } from '../pages/Supervisor/SupervisorPage';
 import { AdminApprovalPage } from '../pages/Admin/AdminApprovalPage';
 import { OpsManagerPage } from '../pages/OpsManager/OpsManagerPage';
@@ -27,9 +26,6 @@ const RoleWorkspace = ({ role }) => {
     switch (role) {
         case ROLES.SALES:
             return <SalesPage />;
-        case ROLES.DRIVER:
-        case ROLES.HELPER:
-            return <DeliveryPage />;
         case ROLES.SUPERVISOR:
             return <SupervisorPage />;
         case ROLES.ADMIN:

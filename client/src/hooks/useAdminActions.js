@@ -1,12 +1,10 @@
 /**
  * Custom hook containing all business logic for Admin actions.
- * Single Responsibility: Order approvals, Dispatch routing, and Outlet Unlock approvals.
+ * Single Responsibility: Order approvals and Outlet Unlock approvals.
  */
 export const useAdminActions = ({
   orders,
   setOrders,
-  deliveryStops,
-  setDeliveryStops,
   salesStops,
   setSalesStops,
   incidents,
@@ -23,29 +21,10 @@ export const useAdminActions = ({
         prev.map((o) => (o.id === orderId ? { ...o, status: 'APPROVED' } : o))
       );
 
-      // Automatically synthesize Delivery PJP H+1 for Driver & Helper!
-      const newDeliveryStop = {
-        id: `del-${Date.now()}`,
-        orderId: order.id,
-        outletName: order.outletName,
-        address: 'Jl. Alamat Delivery Pengiriman',
-        driverName: 'Hendra Wijaya',
-        helperName: 'Rian Putra',
-        itemsCount: order.items.length,
-        totalAmount: order.totalAmount,
-        paymentType: order.paymentType,
-        status: 'PENDING',
-        podSignature: null,
-        podPhoto: null,
-        cashCollected: 0,
-      };
-
-      setDeliveryStops((prev) => [newDeliveryStop, ...prev]);
-
       addNotification({
-        title: 'Order Approved & Rute Pengiriman Dibuat',
-        message: `Order #${order.id} (${order.outletName}) telah disetujui oleh Admin dan dijadwalkan untuk pengiriman H+1.`,
-        roleTarget: ['SALES', 'DRIVER', 'HELPER'],
+        title: 'Order Disetujui Admin',
+        message: `Order #${order.id} (${order.outletName}) telah disetujui oleh Admin Penjualan.`,
+        roleTarget: ['SALES', 'SUPERVISOR'],
       });
     } else {
       setOrders((prev) =>
@@ -63,17 +42,13 @@ export const useAdminActions = ({
   };
 
   // Admin Action: Approve Unlock Request
-  const handleApproveUnlockRequest = (requestId, stopId, userRole) => {
+  const handleApproveUnlockRequest = (requestId, stopId) => {
     setIncidents((prev) =>
       prev.map((i) => (i.id === requestId ? { ...i, status: 'APPROVED' } : i))
     );
 
-    if (userRole === 'SALES' && setSalesStops) {
+    if (setSalesStops) {
       setSalesStops((prev) =>
-        prev.map((s) => (s.id === stopId ? { ...s, unlockedByAdmin: true } : s))
-      );
-    } else if (setDeliveryStops) {
-      setDeliveryStops((prev) =>
         prev.map((s) => (s.id === stopId ? { ...s, unlockedByAdmin: true } : s))
       );
     }
@@ -81,7 +56,7 @@ export const useAdminActions = ({
     addNotification({
       title: 'Permintaan Unlock Disetujui Admin',
       message: `Admin telah membuka kunci (Unlock) outlet untuk akses presensi.`,
-      roleTarget: ['SALES', 'DRIVER', 'HELPER'],
+      roleTarget: ['SALES', 'SUPERVISOR'],
     });
   };
 
@@ -94,7 +69,7 @@ export const useAdminActions = ({
     addNotification({
       title: 'Permintaan Unlock Ditolak',
       message: `Permintaan unlock outlet telah ditolak oleh Admin.`,
-      roleTarget: ['SALES', 'DRIVER', 'HELPER'],
+      roleTarget: ['SALES', 'SUPERVISOR'],
     });
   };
 

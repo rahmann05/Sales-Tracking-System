@@ -2,6 +2,17 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
 
+/** Reusable select object for clean user queries */
+const USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  clusterId: true,
+  cluster: { select: { id: true, name: true, region: true } },
+  createdAt: true,
+};
+
 export const getUsers = async (query = {}) => {
   const { role, clusterId, search } = query;
   const where = { deletedAt: null };
@@ -15,44 +26,25 @@ export const getUsers = async (query = {}) => {
     ];
   }
 
-  return await prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      clusterId: true,
-      cluster: { select: { id: true, name: true, region: true } },
-      salesId: true,
-      sales: { select: { id: true, name: true } },
-      createdAt: true,
-    },
+    select: USER_SELECT,
     orderBy: { createdAt: 'desc' },
   });
+
+  return users.map(enrichUserResponse);
 };
 
 export const getUserById = async (id) => {
   const user = await prisma.user.findUnique({
     where: { id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      clusterId: true,
-      cluster: { select: { id: true, name: true, region: true } },
-      salesId: true,
-      sales: { select: { id: true, name: true } },
-      subordinates: { select: { id: true, name: true, role: true } },
-      createdAt: true,
-    },
+    select: USER_SELECT,
   });
 
   if (!user || user.deletedAt) {
     throw new AppError('User tidak ditemukan', 404);
   }
-  return user;
+  return enrichUserResponse(user);
 };
 
 export const createUser = async (data) => {
@@ -62,21 +54,11 @@ export const createUser = async (data) => {
   }
 
   const hashedPassword = await bcrypt.hash(data.password, 10);
-  return await prisma.user.create({
-    data: {
-      ...data,
-      password: hashedPassword,
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      clusterId: true,
-      salesId: true,
-      createdAt: true,
-    },
+  const created = await prisma.user.create({
+    data: { ...data, password: hashedPassword },
+    select: USER_SELECT,
   });
+  return enrichUserResponse(created);
 };
 
 export const updateUser = async (id, data) => {
@@ -84,19 +66,12 @@ export const updateUser = async (id, data) => {
     data.password = await bcrypt.hash(data.password, 10);
   }
 
-  return await prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      clusterId: true,
-      salesId: true,
-      updatedAt: true,
-    },
+    select: USER_SELECT,
   });
+  return enrichUserResponse(updated);
 };
 
 export const deleteUser = async (id) => {
@@ -105,3 +80,17 @@ export const deleteUser = async (id) => {
     data: { deletedAt: new Date() },
   });
 };
+
+const ROLE_LABELS = {
+  SALES: 'Sales Field Rep',
+  SUPERVISOR: 'Supervisor Operasional',
+  ADMIN: 'Admin Penjualan',
+  MANAJER_OPERASIONAL: 'Manajer Operasional',
+};
+
+const enrichUserResponse = (user) => ({
+  ...user,
+  region: user.cluster?.region ?? null,
+  clusterName: user.cluster?.name ?? null,
+  roleLabel: ROLE_LABELS[user.role] ?? user.role,
+});

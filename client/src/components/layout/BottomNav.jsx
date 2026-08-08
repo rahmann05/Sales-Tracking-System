@@ -3,7 +3,6 @@ import {
   LuLayoutDashboard,
   LuNavigation,
   LuUsers,
-  LuTruck,
   LuShieldCheck,
   LuFileCheck,
   LuBriefcase,
@@ -14,7 +13,6 @@ import '../../styles/layout/BottomNav.css';
 
 /**
  * BottomNav Component (Single Responsibility: Mobile Bottom Navigation Bar Synchronized with User Role)
- * 1 File per Component
  */
 export const BottomNav = ({ activeTab, setActiveTab }) => {
   const { user } = useApp();
@@ -23,9 +21,6 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
     switch (user?.role) {
       case 'SALES':
         return { id: 'role-workspace', label: 'Absen & PJP', icon: LuNavigation };
-      case 'DRIVER':
-      case 'HELPER':
-        return { id: 'role-workspace', label: 'Delivery', icon: LuTruck };
       case 'SUPERVISOR':
         return { id: 'role-workspace', label: 'Supervisi', icon: LuShieldCheck };
       case 'ADMIN':
