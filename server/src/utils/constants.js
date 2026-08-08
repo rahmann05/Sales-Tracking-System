@@ -5,8 +5,6 @@
 
 export const ROLES = /** @type {const} */ ({
   SALES: 'SALES',
-  DRIVER: 'DRIVER',
-  HELPER: 'HELPER',
   SUPERVISOR: 'SUPERVISOR',
   ADMIN: 'ADMIN',
   MANAJER_OPERASIONAL: 'MANAJER_OPERASIONAL',
@@ -20,8 +18,6 @@ export const PJP_STATUS = /** @type {const} */ ({
 
 export const PJP_TYPE = /** @type {const} */ ({
   SALES: 'SALES',
-  DRIVER: 'DRIVER',
-  HELPER: 'HELPER',
 });
 
 export const VISIT_STATUS = /** @type {const} */ ({
@@ -40,6 +36,7 @@ export const ORDER_STATUS = /** @type {const} */ ({
 export const ROUTE_CHANGE_TYPE = /** @type {const} */ ({
   REROUTE: 'REROUTE',
   SKIP: 'SKIP',
+  OFF_PJP_REQUEST: 'OFF_PJP_REQUEST',
 });
 
 export const ROUTE_CHANGE_STATUS = /** @type {const} */ ({
@@ -64,8 +61,28 @@ export const NOTIFICATION_TYPES = /** @type {const} */ ({
   ROUTE_SKIP_ACKNOWLEDGED: 'ROUTE_SKIP_ACKNOWLEDGED',
   REROUTE_APPROVED: 'REROUTE_APPROVED',
   REROUTE_REJECTED: 'REROUTE_REJECTED',
+  // Off-PJP
+  OFF_PJP_SUBMITTED: 'OFF_PJP_SUBMITTED',
+  OFF_PJP_VALIDATED: 'OFF_PJP_VALIDATED',
+  OFF_PJP_REJECTED: 'OFF_PJP_REJECTED',
+  // Outlet Lock/Unlock
+  UNLOCK_REQUEST: 'UNLOCK_REQUEST',
+  UNLOCK_APPROVED: 'UNLOCK_APPROVED',
+  UNLOCK_REJECTED: 'UNLOCK_REJECTED',
 });
 
 export const SOCKET_EVENTS = /** @type {const} */ ({
   NOTIFICATION: 'notification',
+});
+
+export const OUTLET_LOCK_STATUS = /** @type {const} */ ({
+  NORMAL: 'NORMAL',
+  LOCKED: 'LOCKED',
+  UNLOCK_REQUESTED: 'UNLOCK_REQUESTED',
+});
+
+export const OFF_PJP_STATUS = /** @type {const} */ ({
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
 });

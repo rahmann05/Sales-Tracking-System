@@ -4,7 +4,7 @@ import { createNotification, createBulkNotificationByRoles } from '../notificati
 import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../utils/pagination.js';
 import { ORDER_STATUS, ROLES, NOTIFICATION_TYPES } from '../../utils/constants.js';
 
-export const createOrder = async (salesId, pjpStopId, items) => {
+export const createOrder = async (salesId, pjpStopId, items, paymentType) => {
   const stop = await prisma.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: { pjp: true, attendances: true, outlet: true },
@@ -43,6 +43,7 @@ export const createOrder = async (salesId, pjpStopId, items) => {
       pjpStopId,
       createdBy: salesId,
       totalValue,
+      paymentType: paymentType || null,
       status: ORDER_STATUS.PENDING_APPROVAL,
       items: { create: orderItemsData },
     },

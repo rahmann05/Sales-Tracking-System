@@ -6,7 +6,6 @@
 export { useAdminActions } from './useAdminActions';
 export { useApi } from './useApi';
 export { useAuth } from './useAuth';
-export { useDeliveryActions } from './useDeliveryActions';
 export { useDeviceCamera } from './useDeviceCamera';
 export { useGeofence } from './useGeofence';
 export { useLiveClock } from './useLiveClock';

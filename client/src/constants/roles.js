@@ -5,8 +5,6 @@
 
 export const ROLES = Object.freeze({
     SALES: 'SALES',
-    DRIVER: 'DRIVER',
-    HELPER: 'HELPER',
     SUPERVISOR: 'SUPERVISOR',
     ADMIN: 'ADMIN',
     OPERATIONAL_MANAGER: 'OPERATIONAL_MANAGER',
@@ -14,8 +12,6 @@ export const ROLES = Object.freeze({
 
 export const ROLE_LABELS = Object.freeze({
     [ROLES.SALES]: 'Sales Field',
-    [ROLES.DRIVER]: 'Driver',
-    [ROLES.HELPER]: 'Helper',
     [ROLES.SUPERVISOR]: 'Supervisor',
     [ROLES.ADMIN]: 'Admin Penjualan',
     [ROLES.OPERATIONAL_MANAGER]: 'Manajer Operasional',
@@ -49,9 +45,7 @@ export const OPS_MANAGER_ROLES = Object.freeze([
     ROLES.ADMIN,
 ]);
 
-/** Roles that are field-operations (Sales / Driver / Helper) */
+/** Roles that are field-operations */
 export const FIELD_ROLES = Object.freeze([
     ROLES.SALES,
-    ROLES.DRIVER,
-    ROLES.HELPER,
 ]);

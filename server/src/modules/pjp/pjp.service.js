@@ -3,6 +3,24 @@ import { AppError } from '../../utils/errors.js';
 import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../utils/pagination.js';
 import { PJP_STATUS, PJP_TYPE, ROLES } from '../../utils/constants.js';
 
+/** Days of week in Indonesian, Sunday = 0 */
+const DAYS_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+/**
+ * Enrich a PJP object with computed fields expected by the frontend:
+ * - callplanName: e.g. "RJP-CIMAHI-01" (cluster abbreviation + PJP type)
+ * - regionName: from the user's cluster.region
+ * - dayOfWeek: e.g. "Senin"
+ */
+const enrichPjpResponse = (pjp) => ({
+  ...pjp,
+  callplanName: pjp.user?.cluster?.name
+    ? `RJP-${pjp.user.cluster.name.toUpperCase().replace(/\s+/g, '-').substring(0, 12)}-${String(pjp.id).substring(0, 2).toUpperCase()}`
+    : null,
+  regionName: pjp.user?.cluster?.region ?? null,
+  dayOfWeek: DAYS_ID[new Date(pjp.date).getDay()],
+});
+
 const PJP_STOP_INCLUDE = {
   outlet: true,
   attendances: true,
@@ -24,7 +42,7 @@ export const getTodayPjp = async (userId) => {
     },
   });
 
-  return pjp ?? null;
+  return pjp ? enrichPjpResponse(pjp) : null;
 };
 
 export const getAllPjps = async (query = {}) => {
@@ -71,7 +89,7 @@ export const getPjpById = async (id, currentUser) => {
     throw new AppError('Anda tidak memiliki akses ke PJP ini', 403);
   }
 
-  return pjp;
+  return enrichPjpResponse(pjp);
 };
 
 export const updatePjpStopDirectly = async (pjpId, stopId, updateData) => {
@@ -125,48 +143,6 @@ export const generateDailyPjps = async () => {
       },
     });
     generatedCount++;
-  }
-
-  // Step 2: Generate PJP for Driver & Helper based on yesterday's approved orders
-  const yesterdaySalesPjps = await prisma.pjp.findMany({
-    where: { type: PJP_TYPE.SALES, date: yesterdayRange },
-    include: {
-      stops: { include: { orders: { where: { status: 'APPROVED' } } } },
-      user: { include: { subordinates: { where: { deletedAt: null } } } },
-    },
-  });
-
-  for (const salesPjp of yesterdaySalesPjps) {
-    const eligibleStops = salesPjp.stops.filter((stop) => stop.orders.length > 0);
-    if (eligibleStops.length === 0) continue;
-
-    for (const partner of salesPjp.user.subordinates) {
-      const isDriverOrHelper = partner.role === ROLES.DRIVER || partner.role === ROLES.HELPER;
-      if (!isDriverOrHelper) continue;
-
-      const existingPartnerPjp = await prisma.pjp.findFirst({
-        where: { userId: partner.id, date: { gte: today } },
-      });
-      if (existingPartnerPjp) continue;
-
-      await prisma.pjp.create({
-        data: {
-          userId: partner.id,
-          date: today,
-          type: partner.role === ROLES.DRIVER ? PJP_TYPE.DRIVER : PJP_TYPE.HELPER,
-          status: PJP_STATUS.SCHEDULED,
-          sourcePjpId: salesPjp.id,
-          stops: {
-            create: eligibleStops.map((stop, idx) => ({
-              outletId: stop.outletId,
-              sequence: idx + 1,
-              status: 'PENDING',
-            })),
-          },
-        },
-      });
-      generatedCount++;
-    }
   }
 
   return {

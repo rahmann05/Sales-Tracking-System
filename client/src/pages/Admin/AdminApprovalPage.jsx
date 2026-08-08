@@ -22,7 +22,7 @@ export const AdminApprovalPage = () => {
   const handleDecision = (payload) => {
     handleAdminOrderDecision(payload);
     if (payload.approved) {
-      alert('Order APPROVED! Stok dikunci dan Rute Pengiriman H+1 Driver & Helper otomatis dibuat.');
+      alert('Order APPROVED! Stok penjualan telah disetujui.');
     } else {
       alert('Order REJECTED.');
     }
@@ -54,7 +54,7 @@ export const AdminApprovalPage = () => {
                 </span>
               </h3>
               <p className="text-xs text-on-surface-variant">
-                Permohonan pembukaan kunci dari Sales / Driver / Helper yang belum menyelesaikan absen toko sebelumnya
+                Permohonan pembukaan kunci dari Sales yang belum menyelesaikan absen toko sebelumnya
               </p>
             </div>
           </div>
@@ -77,7 +77,7 @@ export const AdminApprovalPage = () => {
         <div>
           <h3 className="text-lg font-bold text-on-surface">Daftar Order Penjualan Menunggu Persetujuan Admin</h3>
           <p className="text-xs text-on-surface-variant">
-            Persetujuan akan mengunci stok gudang & menjadwalkan manifest pengiriman H+1 untuk Driver/Helper
+            Persetujuan akan mengonfirmasi stok penjualan dan memproses pesanan Sales
           </p>
         </div>
 

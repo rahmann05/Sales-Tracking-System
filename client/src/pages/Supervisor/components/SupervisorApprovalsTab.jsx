@@ -43,7 +43,7 @@ export const SupervisorApprovalsTab = ({
                 <div className="space-y-3">
                     <SectionHeader
                         title="Permintaan Buka Kunci (Unlock) Presensi Outlet"
-                        subtitle="Permohonan pembukaan presensi dari tim Sales / Driver / Helper yang terkunci karena belum menyelesaikan toko sebelumnya"
+                        subtitle="Permohonan pembukaan presensi dari tim Sales yang terkunci karena belum menyelesaikan toko sebelumnya"
                     />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
                         {unlockRequests.map((req) => (

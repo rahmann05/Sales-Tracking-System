@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { LuMail, LuLock, LuArrowRight, LuUserCheck, LuTruck, LuPackageCheck, LuShieldCheck, LuFileCheck, LuBriefcase } from 'react-icons/lu';
+import { LuMail, LuLock, LuArrowRight, LuUserCheck, LuShieldCheck, LuFileCheck, LuBriefcase } from 'react-icons/lu';
 import { DEMO_USERS } from '../../../data';
 import { AuthInputField } from './AuthInputField';
 
 const ROLE_PRESETS = [
   { key: 'SALES', icon: LuUserCheck, name: 'Sales', desc: 'Budi Santoso' },
-  { key: 'DRIVER', icon: LuTruck, name: 'Driver', desc: 'Hendra Wijaya' },
-  { key: 'HELPER', icon: LuPackageCheck, name: 'Helper', desc: 'Rian Putra' },
   { key: 'SUPERVISOR', icon: LuShieldCheck, name: 'SPV', desc: 'Ahmad Subagja' },
   { key: 'ADMIN', icon: LuFileCheck, name: 'Admin', desc: 'Maria Ulfah' },
   { key: 'OPERATIONAL_MANAGER', icon: LuBriefcase, name: 'Ops Mgr', desc: 'Bambang S.' },

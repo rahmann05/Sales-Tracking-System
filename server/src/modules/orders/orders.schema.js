@@ -12,5 +12,6 @@ export const createOrderSchema = z.object({
     items: z
       .array(orderItemSchema)
       .min(1, 'Minimal harus ada 1 item dalam order'),
+    paymentType: z.enum(['CASH', 'CREDIT', 'TRANSFER']).optional(),
   }),
 });

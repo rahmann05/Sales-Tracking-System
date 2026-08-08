@@ -8,8 +8,6 @@ export const useSupervisorActions = ({
   setIncidents,
   salesStops,
   setSalesStops,
-  deliveryStops,
-  setDeliveryStops,
   setOffPjpAttendances,
   addNotification,
 }) => {
@@ -173,17 +171,13 @@ export const useSupervisorActions = ({
   };
 
   // Supervisor Action: Approve Unlock Request
-  const handleApproveUnlockRequest = (requestId, stopId, userRole) => {
+  const handleApproveUnlockRequest = (requestId, stopId) => {
     setIncidents((prev) =>
       prev.map((i) => (i.id === requestId ? { ...i, status: 'APPROVED' } : i))
     );
 
-    if (userRole === 'SALES' && setSalesStops) {
+    if (setSalesStops) {
       setSalesStops((prev) =>
-        prev.map((s) => (s.id === stopId ? { ...s, unlockedByAdmin: true } : s))
-      );
-    } else if (setDeliveryStops) {
-      setDeliveryStops((prev) =>
         prev.map((s) => (s.id === stopId ? { ...s, unlockedByAdmin: true } : s))
       );
     }
@@ -191,7 +185,7 @@ export const useSupervisorActions = ({
     addNotification({
       title: 'Permintaan Unlock Disetujui Supervisor',
       message: `Supervisor ${user.name} telah membuka kunci (Unlock) outlet untuk akses presensi.`,
-      roleTarget: ['SALES', 'DRIVER', 'HELPER'],
+      roleTarget: ['SALES'],
     });
   };
 
@@ -204,7 +198,7 @@ export const useSupervisorActions = ({
     addNotification({
       title: 'Permintaan Unlock Ditolak',
       message: `Permintaan unlock outlet telah ditolak oleh Supervisor.`,
-      roleTarget: ['SALES', 'DRIVER', 'HELPER'],
+      roleTarget: ['SALES'],
     });
   };
 

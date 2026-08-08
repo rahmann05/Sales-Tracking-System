@@ -8,7 +8,6 @@ import {
     LuLayoutDashboard,
     LuNavigation,
     LuUsers,
-    LuTruck,
     LuShieldCheck,
     LuFileCheck,
     LuBriefcase,
@@ -28,8 +27,6 @@ export const TAB_IDS = Object.freeze({
 /** Role-specific "home workspace" tab metadata */
 const ROLE_WORKSPACE_MAP = Object.freeze({
     [ROLES.SALES]: { label: 'PJP Sales Field', icon: LuNavigation },
-    [ROLES.DRIVER]: { label: 'Delivery Manifest H+1', icon: LuTruck },
-    [ROLES.HELPER]: { label: 'Delivery Manifest H+1', icon: LuTruck },
     [ROLES.SUPERVISOR]: { label: 'Supervisi Lapangan', icon: LuShieldCheck },
     [ROLES.ADMIN]: { label: 'Approval Order Admin', icon: LuFileCheck },
     [ROLES.OPERATIONAL_MANAGER]: { label: 'Persetujuan Rute Ops', icon: LuBriefcase },
