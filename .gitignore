@@ -4,6 +4,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+server-dev.log
 
 # Environment files
 .env
@@ -36,3 +38,4 @@ FRONTEND_ARCHITECTURE.md
 Analisis/
 KUNJUNGAN_TOKO_BELFOODS_CONVERTED.json
 docs/
+.gitignore
