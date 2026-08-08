@@ -1,29 +1,29 @@
 import React from 'react';
 import { CLUSTER_COLORS } from '../../../services/clusterColorService';
+import '../../../styles/components/ClusterMapLegend.css';
 
 /**
  * ClusterMapLegend Component
  * Single Responsibility: Display color-coded legend indicators per cluster/region on Google Maps.
- * 1 File = 1 Component
  */
 export const ClusterMapLegend = ({ totalOutletsCount = 0 }) => {
   return (
-    <div className="absolute top-4 left-4 z-30 pointer-events-auto bg-surface/95 backdrop-blur-md p-3.5 rounded-2xl border border-border-glass shadow-xl max-w-xs space-y-2">
-      <div className="flex items-center justify-between gap-2 border-b border-border-glass pb-1.5">
-        <h4 className="font-extrabold text-xs text-on-surface">Peta Klaster Regional</h4>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+    <div className="cluster-map-legend">
+      <div className="cluster-map-legend__header">
+        <h4 className="cluster-map-legend__title">Peta Klaster Regional</h4>
+        <span className="cluster-map-legend__badge">
           {totalOutletsCount} Outlet
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+      <div className="cluster-map-legend__grid">
         {CLUSTER_COLORS.map((cluster) => (
-          <div key={cluster.key} className="flex items-center gap-1.5">
+          <div key={cluster.key} className="cluster-map-legend__item">
             <span
-              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+              className="cluster-map-legend__color"
               style={{ backgroundColor: cluster.hex }}
             />
-            <span className="font-medium text-on-surface truncate" title={cluster.name}>
+            <span className="cluster-map-legend__label" title={cluster.name}>
               {cluster.name.replace('Klaster ', '')}
             </span>
           </div>

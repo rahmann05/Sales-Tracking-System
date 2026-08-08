@@ -1,0 +1,88 @@
+/**
+ * OutletInfoWindow Styles
+ * Single Responsibility: Styling untuk info window popup pada outlet marker.
+ */
+
+.outlet-info-window {
+    padding: 0.25rem;
+    min-width: 200px;
+    font-size: 0.75rem;
+}
+
+.outlet-info-window__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.375rem;
+}
+
+.outlet-info-window__cluster {
+    font-weight: 700;
+    color: var(--color-primary, #2563eb);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.outlet-info-window__source {
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.outlet-info-window__name {
+    font-weight: 700;
+    color: #111827;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    margin-bottom: 0.25rem;
+}
+
+.outlet-info-window__address {
+    color: #4b5563;
+    font-size: 0.6875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.375rem;
+}
+
+.outlet-info-window__address-icon {
+    color: var(--color-primary, #2563eb);
+    flex-shrink: 0;
+}
+
+.outlet-info-window__actions {
+    padding-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.outlet-info-window__nav-link {
+    padding: 0.25rem 0.5rem;
+    background: var(--color-primary, #2563eb);
+    color: white;
+    border-radius: 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+}
+
+.outlet-info-window__maps-link {
+    padding: 0.25rem 0.375rem;
+    background: #f3f4f6;
+    color: #374151;
+    border-radius: 0.375rem;
+    font-size: 0.625rem;
+    border: 1px solid #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
