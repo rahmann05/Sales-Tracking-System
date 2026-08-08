@@ -1,4 +1,4 @@
-imporustt { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { routingService } from '../../../services/routingService';
 
 const deg2rad = (d) => (d * Math.PI) / 180;

@@ -1,0 +1,18 @@
+
+> sinar-anugrah-server@1.0.0 dev
+> nodemon index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node index.js`[39m
+=================================
+🚀 Server running on port 5000
+🌐 Environment: development
+🔗 API Base URL: http://localhost:5000/api/v1
+🔌 Socket.IO enabled
+=================================
+[Socket.IO]: Server initialized.
+[Scheduler]: Daily PJP cron job initialized (Scheduled for 03:00 AM daily).
+[0mPOST /api/v1/routing/road-route [32m200[0m 627.100 ms - 35528[0m
