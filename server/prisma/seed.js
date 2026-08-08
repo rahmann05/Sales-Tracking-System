@@ -248,56 +248,46 @@ async function main() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  await prisma.pjp.create({
-    data: {
-      id: 'pjp-budi-today',
-      userId: salesBudi.id,
-      date: today,
-      type: 'SALES',
-      status: 'SCHEDULED',
-      stops: {
-        create: createdCimahiOutlets.map((o, idx) => ({
-          outletId: o.id,
-          sequence: idx + 1,
-          status: 'PENDING',
-        })),
-      },
-    },
-  });
+  // Helper to upsert PJP cleanly with stops
+  const upsertPjpWithStops = async (pjpId, userId, outlets) => {
+    // Delete existing stops for this seed PJP to avoid duplication
+    await prisma.pjpStop.deleteMany({ where: { pjpId } });
 
-  await prisma.pjp.create({
-    data: {
-      id: 'pjp-siti-today',
-      userId: salesSiti.id,
-      date: today,
-      type: 'SALES',
-      status: 'SCHEDULED',
-      stops: {
-        create: createdPadalarangOutlets.map((o, idx) => ({
-          outletId: o.id,
-          sequence: idx + 1,
-          status: 'PENDING',
-        })),
+    await prisma.pjp.upsert({
+      where: { id: pjpId },
+      update: {
+        userId,
+        date: today,
+        type: 'SALES',
+        status: 'SCHEDULED',
+        stops: {
+          create: outlets.map((o, idx) => ({
+            outletId: o.id,
+            sequence: idx + 1,
+            status: 'PENDING',
+          })),
+        },
       },
-    },
-  });
+      create: {
+        id: pjpId,
+        userId,
+        date: today,
+        type: 'SALES',
+        status: 'SCHEDULED',
+        stops: {
+          create: outlets.map((o, idx) => ({
+            outletId: o.id,
+            sequence: idx + 1,
+            status: 'PENDING',
+          })),
+        },
+      },
+    });
+  };
 
-  await prisma.pjp.create({
-    data: {
-      id: 'pjp-agus-today',
-      userId: salesAgus.id,
-      date: today,
-      type: 'SALES',
-      status: 'SCHEDULED',
-      stops: {
-        create: createdLembangOutlets.map((o, idx) => ({
-          outletId: o.id,
-          sequence: idx + 1,
-          status: 'PENDING',
-        })),
-      },
-    },
-  });
+  await upsertPjpWithStops('pjp-budi-today', salesBudi.id, createdCimahiOutlets);
+  await upsertPjpWithStops('pjp-siti-today', salesSiti.id, createdPadalarangOutlets);
+  await upsertPjpWithStops('pjp-agus-today', salesAgus.id, createdLembangOutlets);
 
   console.log('[SUCCESS] Database seed completed with clean roles and 30 outlets.');
 }

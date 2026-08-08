@@ -7,6 +7,11 @@ export const createOutletSchema = z.object({
     latitude: z.number({ required_error: 'Latitude wajib diisi' }).min(-90).max(90),
     longitude: z.number({ required_error: 'Longitude wajib diisi' }).min(-180).max(180),
     clusterId: z.string().uuid('clusterId harus berformat UUID'),
+    outletCode: z.string().optional(),
+    ownerName: z.string().optional(),
+    phone: z.string().optional(),
+    creditLimit: z.number().optional(),
+    radiusMeters: z.number().optional(),
   }),
 });
 
@@ -17,8 +22,28 @@ export const updateOutletSchema = z.object({
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
     clusterId: z.string().uuid().optional(),
+    outletCode: z.string().optional(),
+    ownerName: z.string().optional(),
+    phone: z.string().optional(),
+    creditLimit: z.number().optional(),
+    radiusMeters: z.number().optional(),
   }),
   params: z.object({
     id: z.string().uuid('ID tidak valid'),
+  }),
+});
+
+export const lockOutletSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID outlet tidak valid'),
+  }),
+});
+
+export const unlockRequestSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID outlet tidak valid'),
+  }),
+  body: z.object({
+    reason: z.string().min(3, 'Alasan permohonan unlock minimal 3 karakter'),
   }),
 });
