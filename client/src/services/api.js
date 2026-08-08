@@ -177,3 +177,10 @@ export const routeChangesApi = {
     return await request(`/route-changes${query ? `?${query}` : ''}`);
   },
 };
+
+// ─── 7. Legacy apiService Compatibility ───────────────────────────────────────
+export const apiService = {
+  getHealth: async () => request('/health'),
+  getUsers: async () => request('/users'),
+};
+
