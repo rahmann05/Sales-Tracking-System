@@ -10,7 +10,7 @@ import {
   INITIAL_MASTER_ROUTES,
   INITIAL_OFF_PJP_ATTENDANCES,
   MOCK_PRODUCTS,
-} from '../data/mockData';
+} from '../data';
 
 import { useSalesActions } from '../hooks/useSalesActions';
 import { useSupervisorActions } from '../hooks/useSupervisorActions';

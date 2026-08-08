@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LuSend } from 'react-icons/lu';
 import { FiXCircle } from 'react-icons/fi';
-import { MOCK_PRODUCTS } from '../../../data/mockData';
+import { MOCK_PRODUCTS } from '../../../data';
 import { ProductOrderItem } from './ProductOrderItem';
 
 /**

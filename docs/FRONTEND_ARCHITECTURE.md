@@ -1,6 +1,7 @@
 # Frontend Architecture — Sinar Anugrah Sales Tracking System
 
 > Refactored with SOLID principles, clean code, and modular design.
+> **1 file = 1 component** · Parent → Child hierarchy · UI dipisah dari data & logic.
 
 ---
 
@@ -8,180 +9,165 @@
 
 ```
 client/src/
-├── constants/          # Immutable configuration (roles, navigation)
-│   ├── roles.js        # Role definitions & access-control matrices
-│   ├── navigation.js   # Tab registry & role-based nav builder
-│   └── index.js        # Barrel export
+├── constants/              # Immutable configuration
+│   ├── roles.js            # Role definitions & access-control matrices
+│   ├── navigation.js       # Tab registry & role-based nav builder
+│   ├── maps.js             # Google Maps options & default depot location
+│   ├── routePlanning.js    # RJP_ROLE_TAB_MAP (tab per role)
+│   ├── supervisor.js       # Supervisor domain constants
+│   └── index.js            # Barrel export
 │
-├── context/            # Global state (React Context)
-│   └── AppContext.jsx  # AppProvider composing domain action hooks
+├── context/                # Global state (React Context)
+│   └── AppContext.jsx      # AppProvider composing domain action hooks
 │
-├── hooks/              # Custom React hooks (1 hook = 1 concern)
-│   ├── useAuth.js           # Authentication state
-│   ├── useTabNavigation.js  # Active tab management
-│   ├── useSearch.js         # Search query state
-│   ├── useModal.js          # Modal open/close + payload
-│   ├── useSalesActions.js   # Sales business logic
-│   ├── useSupervisorActions.js
-│   ├── useOpsActions.js
-│   ├── useAdminActions.js
-│   ├── useDeliveryActions.js
-│   ├── useRjpManagement.js
-│   ├── useSupervisorRollingMatrix.js
-│   ├── useLogisticsDispatch.js
-│   ├── useGeofence.js
-│   ├── useDeviceCamera.js
-│   ├── useLiveClock.js
-│   ├── useApi.js
-│   ├── useOutletLockStatus.js
-│   ├── useRouteFilter.js
-│   └── index.js        # Barrel export
+├── hooks/                  # Global custom hooks (1 hook = 1 concern)
+│   ├── useAuth.js, useTabNavigation.js, useSearch.js, useModal.js
+│   ├── useSalesActions.js, useSupervisorActions.js, useOpsActions.js,
+│   ├── useAdminActions.js, useDeliveryActions.js
+│   ├── useRjpManagement.js, useSupervisorRollingMatrix.js, useLogisticsDispatch.js
+│   ├── useGeofence.js, useDeviceCamera.js, useLiveClock.js, useApi.js
+│   ├── useOutletLockStatus.js, useRouteFilter.js
+│   └── index.js            # Barrel export
 │
-├── services/           # External I/O & API layer
+├── services/               # External I/O & API layer
 │   ├── api.js                  # HTTP client
 │   ├── notificationService.js  # User notifications (replaces alert)
-│   ├── cameraSnapshotService.js
-│   ├── nativeFileCaptureService.js
-│   ├── deviceDetectionService.js
-│   ├── googlePlacesService.js
-│   ├── logisticsOptimizerService.js
-│   ├── rjpOptimizationService.js
-│   ├── spreadsheetImportService.js
-│   └── index.js        # Barrel export
+│   ├── cameraSnapshotService.js / nativeFileCaptureService.js / deviceDetectionService.js
+│   ├── googlePlacesService.js / googleDirectionsService.js / reverseGeocodeService.js
+│   ├── salesPerformanceService.js / clusterColorService.js
+│   ├── logisticsOptimizerService.js / rjpOptimizationService.js / spreadsheetImportService.js
+│   └── index.js            # Barrel export
+│
+├── data/                   # Mock/seed data — dipisah per domain (bukan 1 file raksasa)
+│   ├── usersData.js        # INITIAL_USERS, CURRENT_USER
+│   ├── salesStopsData.js   # INITIAL_SALES_STOPS
+│   ├── teamsData.js        # INITIAL_RJP_TEAMS
+│   ├── routesData.js       # INITIAL_ROUTES
+│   ├── productsData.js     # PRODUCT_CATALOG
+│   ├── coverageOutletsData.js / initialClustersData.js
+│   └── index.js            # Barrel export
 │
 ├── components/
-│   ├── common/         # Reusable atomic components
-│   │   ├── AccessDenied.jsx   # RBAC fallback UI
-│   │   ├── EmptyState.jsx     # Consistent empty-state placeholder
-│   │   ├── SectionHeader.jsx  # Section title + subtitle
-│   │   ├── ErrorBoundary.jsx  # Class component error boundary
-│   │   ├── Button.jsx
-│   │   ├── Card.jsx
-│   │   ├── Input.jsx
-│   │   ├── Badge.jsx
-│   │   ├── Avatar.jsx
-│   │   ├── FeatureCard.jsx
-│   │   ├── SignatureCanvas.jsx
-│   │   ├── StatusMonitor.jsx
-│   │   ├── DeviceCameraCapture.jsx
-│   │   └── index.js           # Barrel export
-│   │
-│   ├── layout/         # App shell layout components
-│   │   ├── Sidebar.jsx        # Desktop nav rail (sub-components inside)
-│   │   ├── Header.jsx
-│   │   ├── MobileHeader.jsx
-│   │   ├── BottomNav.jsx
-│   │   ├── Footer.jsx
-│   │   ├── HomeBanner.jsx
-│   │   └── NotificationCenterDropdown.jsx
-│   │
-│   ├── camera/         # Camera capture sub-components
-│   │   ├── CameraLiveVideoFeed.jsx
-│   │   ├── CameraLiveOverlay.jsx
-│   │   ├── CameraGpsStatusBadge.jsx
-│   │   ├── CameraErrorDisplay.jsx
-│   │   ├── CapturedPhotoPreview.jsx
-│   │   ├── CameraCaptureButton.jsx
-│   │   └── CameraNativeFileTrigger.jsx
-│   │
-│   └── AppRouter.jsx   # Tab-based router with RBAC
+│   ├── common/         # Reusable atomic components (Button, Card, Input, Badge, Avatar,
+│   │                   #  AccessDenied, EmptyState, SectionHeader, ErrorBoundary, ...)
+│   ├── layout/         # App shell (Sidebar, Header, MobileHeader, BottomNav, Footer, ...)
+│   ├── camera/         # Camera capture sub-components (CameraLiveVideoFeed, CameraLiveOverlay, ...)
+│   └── AppRouter.jsx   # Tab-based router dengan RBAC (ACCESS_CONTROL map)
 │
-├── pages/              # Page-level containers
-│   ├── Login/
-│   ├── Dashboard/
-│   ├── Sales/
-│   │   ├── SalesPage.jsx        # Thin wrapper → SalesFieldView
-│   │   ├── SalesFieldView.jsx   # Orchestrator (uses useModal + SalesModals)
-│   │   └── components/
-│   │       ├── SalesModals.jsx  # Modal dispatcher (extracted)
-│   │       └── ... (atomic child components)
-│   ├── Delivery/
-│   │   ├── DeliveryPage.jsx     # Orchestrator (uses useModal + DeliveryModals)
-│   │   └── components/
-│   │       ├── DeliveryModals.jsx # Modal dispatcher (extracted)
-│   │       └── ... (atomic child components)
-│   ├── Supervisor/
-│   │   └── SupervisorPage.jsx   # Uses SectionHeader + EmptyState + useModal
-│   ├── Admin/
-│   ├── OpsManager/
-│   │   └── OpsManagerPage.jsx   # Uses SectionHeader + notificationService
-│   ├── RoutePlanning/
-│   │   └── RoutePlanningPage.jsx # Uses constants for role-based tabs
-│   ├── TeamTracking/
-│   ├── Reports/
-│   └── Home.jsx
-│
-├── data/               # Mock/seed data
-├── utils/              # Pure utility functions
-└── styles/             # CSS files organized by scope
+└── pages/              # Page-level orchestrators — 1 Page = 1 orchestrator tipis
+    │
+    ├── Dashboard/
+    │   ├── DashboardPage.jsx
+    │   ├── hooks/
+    │   │   ├── useClusterStops.js      # Seleksi + nearest-neighbor ordering stops
+    │   │   └── useRoadDirections.js    # Fetch road path dari Google DirectionsService
+    │   └── components/
+    │       ├── GoogleClusterRouteMap.jsx  # Orchestrator peta (logic ada di hooks)
+    │       ├── ClusterMapLegend.jsx / SelectedSalesMapHeader.jsx
+    │       └── ...
+    │
+    ├── Sales/
+    │   ├── SalesPage.jsx / SalesFieldView.jsx
+    │   ├── hooks/
+    │   │   └── useOffPjpCheckIn.js     # State machine form absen luar RJP (GPS + geocode)
+    │   └── components/
+    │       ├── SalesModals.jsx            # Modal dispatcher
+    │       ├── AbsenOffPjpModal.jsx       # Orchestrator modal (state di hook)
+    │       ├── OffPjpIdentityForm.jsx     # Child: form identitas outlet + alamat GPS
+    │       └── ... (atomic child components)
+    │
+    ├── Supervisor/
+    │   ├── SupervisorPage.jsx
+    │   ├── hooks/useSupervisorFieldVisits.js
+    │   └── components/
+    │       ├── SupervisorFieldView.jsx        # Parent
+    │       ├── SpvKpiCard / SpvMetricsGrid / SpvModeSelector / SpvStopCard (children)
+    │       ├── SpvFieldModals.jsx             # Modal dispatcher
+    │       ├── SupervisorPerformanceAnalytics.jsx  # Orchestrator analitik
+    │       ├── ComplianceKpiCards.jsx       # Child: header + 4 KPI kepatuhan
+    │       ├── AdherenceGauge.jsx           # Child: gauge distribusi RJP vs luar RJP
+    │       ├── SalesRepProgressCard.jsx     # Child: kartu progres 1 sales rep
+    │       └── ...
+    │
+    ├── RoutePlanning/
+    │   ├── RoutePlanningPage.jsx            # Orchestrator tipis (tab + modal)
+    │   ├── hooks/useSalesRouteSelection.js  # Seleksi sales & hari + filter stops
+    │   └── components/
+    │       ├── RjpRoleTabBar.jsx        # Child: tab bar navigasi per role
+    │       ├── SalesViewTab.jsx         # Child: konten tab pratinjau rute sales
+    │       ├── MapDirectoryTab.jsx      # Child: peta + direktori tim
+    │       ├── ops/  (RjpOpsHeader, MasterClusterTable, CreateClusterModal, ...)
+    │       ├── spv/  (WeeklyRollingMatrixTable, MobileMatrixFilters,
+    │       │         MobileMatrixSalesCard, RollingMatrixRow, RollingMatrixCell, ...)
+    │       └── sales/ (SalesDailyRouteSummaryCard, SalesRollingScheduleView)
+    │
+    ├── Delivery/ / Admin/ / OpsManager/ / TeamTracking/ / Reports/ / Login/ / Home.jsx
 ```
 
 ---
 
-## 🔑 SOLID Principles Applied
+## 🔑 Prinsip yang Diterapkan
 
-### S — Single Responsibility Principle
-| Before | After |
+### S — Single Responsibility
+| Sebelum | Sesudah |
 |--------|-------|
-| `App.jsx` contained routing + auth + layout | `AppRouter.jsx` (routing), `useAuth` (auth), `App.jsx` (composition) |
-| `SalesFieldView` managed 6 modals inline | `SalesModals.jsx` (modal dispatcher), `useModal` (state) |
-| `Sidebar` contained nav-item logic inline | `constants/navigation.js` (config), sub-components (UI) |
-| Scattered `alert()` calls | `notificationService.js` (centralized) |
+| `mockData.js` 776 baris campur semua domain | Dipecah per domain: `usersData`, `salesStopsData`, `teamsData`, `routesData`, `productsData` + barrel `data/index.js` |
+| `SupervisorPerformanceAnalytics` 261 baris (header + KPI + gauge + rep cards inline) | Orchestrator + `ComplianceKpiCards`, `AdherenceGauge`, `SalesRepProgressCard` |
+| `GoogleClusterRouteMap` 384 baris (map config + sorting + directions inline) | Orchestrator + `useClusterStops`, `useRoadDirections`, `constants/maps.js` |
+| `AbsenOffPjpModal` 337 baris (form state + geocode + UI inline) | Orchestrator + `useOffPjpCheckIn` (hook) + `OffPjpIdentityForm` (child) |
+| `RoutePlanningPage` 267 baris (tab config + selection logic + tab UI inline) | Orchestrator + `RJP_ROLE_TAB_MAP` (constant), `useSalesRouteSelection` (hook), `RjpRoleTabBar` / `SalesViewTab` / `MapDirectoryTab` (children) |
+| `WeeklyRollingMatrixTable` 204 baris (desktop + mobile view inline) | Parent + `MobileMatrixFilters`, `MobileMatrixSalesCard` children |
+| `SupervisorFieldView` (KPI, mode selector, stop cards, modals inline) | Parent + `SpvKpiCard`, `SpvMetricsGrid`, `SpvModeSelector`, `SpvStopCard`, `SpvFieldModals` |
 
-### O — Open/Closed Principle
-- `notificationService` — swap `alert` for a toast library without touching consumers
-- `ACCESS_CONTROL` map in `AppRouter` — add new restricted tabs without modifying routing logic
-- `ROLE_TAB_MAP` in `RoutePlanningPage` — add new role tabs declaratively
+### O — Open/Closed
+- `RJP_ROLE_TAB_MAP` — tambah tab role baru secara deklaratif tanpa ubah routing logic
+- `notificationService` — swap `alert` → toast library tanpa menyentuh consumer
+- `ACCESS_CONTROL` map di `AppRouter` — tambah restricted tab baru tanpa ubah logic
 
-### L — Liskov Substitution Principle
-- All page components are interchangeable in `AppRouter` — they share the same contract (no props required beyond optional `searchQuery`)
+### L — Liskov Substitution
+- Semua page component interchangeable di `AppRouter` (kontrak sama: tanpa props wajib selain optional `searchQuery`)
 
-### I — Interface Segregation Principle
-- Each custom hook exposes only the state/actions relevant to its domain
-- `useModal` provides a minimal API: `openModal`, `closeModal`, `isOpen`, `modalType`, `payload`
+### I — Interface Segregation
+- Setiap hook hanya expose state/actions domainnya (`useModal`: `openModal`, `closeModal`, `isOpen`, `modalType`, `payload`)
 
-### D — Dependency Inversion Principle
-- Components depend on the `useApp()` context abstraction, not on concrete state implementations
-- Services (`api.js`, `notificationService.js`) are imported, not instantiated inline
-
----
-
-## 📦 Barrel Exports
-
-```js
-// Instead of:
-import { Button } from '../components/common/Button';
-import { AccessDenied } from '../components/common/AccessDenied';
-
-// Use:
-import { Button, AccessDenied } from '../components/common';
-```
-
-Available barrel exports:
-- `components/common/index.js`
-- `hooks/index.js`
-- `services/index.js`
-- `constants/index.js`
+### D — Dependency Inversion
+- Component bergantung pada abstraksi `useApp()` context & services, bukan implementasi state konkret
 
 ---
 
 ## 🧩 Component Hierarchy Convention
 
 ```
-Page (1 file = 1 orchestrator)
+Page (1 file = 1 orchestrator tipis)
   └── Parent Component (1 file = 1 section)
-        └── Child Component (1 file = 1 UI element)
+        └── Child Component (1 file = 1 UI element terkecil)
 ```
 
-Example:
+Aturan:
+- **1 file = 1 component** (class atau functional).
+- Business logic → custom hook (`hooks/` global atau `pages/<Page>/hooks/` lokal).
+- Data (mock sekalipun) → `data/` atau `constants/`, tidak inline di JSX.
+- Umumnya 1 file ≤ 100 baris (30–70 baris).
+
+Contoh:
 ```
-SalesPage.jsx
-  └── SalesFieldView.jsx (orchestrator)
-        ├── SalesShiftHeader.jsx (section)
-        ├── DailyPjpOverview.jsx (section)
-        ├── SalesStopCard.jsx (repeated item)
-        └── SalesModals.jsx (modal dispatcher)
-              ├── AbsenInModal.jsx
-              ├── AbsenOutModal.jsx
-              └── ...
+RoutePlanningPage.jsx (orchestrator)
+  ├── RjpRoleTabBar.jsx
+  ├── SalesViewTab.jsx
+  │     ├── SalesDailyRouteSummaryCard.jsx
+  │     └── SalesRollingScheduleView.jsx
+  ├── WeeklyRollingMatrixTable.jsx (parent)
+  │     ├── RollingMatrixRow.jsx → RollingMatrixCell.jsx
+  │     ├── MobileMatrixFilters.jsx
+  │     └── MobileMatrixSalesCard.jsx
+  └── hooks/useSalesRouteSelection.js
 ```
+
+## 📦 Barrel Exports
+
+```js
+import { Button, AccessDenied } from '../components/common';
+import { INITIAL_SALES_STOPS, INITIAL_USERS } from '../data';
+```
+
+Available: `components/common/index.js`, `hooks/index.js`, `services/index.js`, `constants/index.js`, `data/index.js`.

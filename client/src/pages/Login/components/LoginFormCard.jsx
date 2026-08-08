@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LuMail, LuLock, LuArrowRight, LuUserCheck, LuTruck, LuPackageCheck, LuShieldCheck, LuFileCheck, LuBriefcase } from 'react-icons/lu';
-import { DEMO_USERS } from '../../../data/mockData';
+import { DEMO_USERS } from '../../../data';
 import { AuthInputField } from './AuthInputField';
 
 const ROLE_PRESETS = [
