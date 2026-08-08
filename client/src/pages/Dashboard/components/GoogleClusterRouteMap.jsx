@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, MarkerF, PolylineF, InfoWindowF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { getClusterColorHex, getClusterInfo } from '../../../services/clusterColorService';
 import { googleDirectionsService } from '../../../services/googleDirectionsService';
 import { googlePlacesService } from '../../../services/googlePlacesService';
 import { ClusterMapLegend } from './ClusterMapLegend';
 import { SelectedSalesMapHeader } from './SelectedSalesMapHeader';
+import { RouteProviderBadge } from './RouteProviderBadge';
+import { RouteLegsPolyline } from './RouteLegsPolyline';
 import { INITIAL_SALES_STOPS } from '../../../data';
 import { GOOGLE_MAP_CONTAINER_STYLE, GOOGLE_MAP_OPTIONS, DEFAULT_DEPOT_LOCATION } from '../../../constants/maps';
 import { useClusterStops } from '../hooks/useClusterStops';
@@ -37,11 +39,16 @@ export const GoogleClusterRouteMap = ({
   const onMapLoad = useCallback((map) => { mapRef.current = map; }, []);
   const onMapUnmount = useCallback(() => { mapRef.current = null; }, []);
 
-  // Stop selection + nearest-neighbor ordering + fallback polyline
-  const { systemStops, polylinePositions } = useClusterStops({ allStops, selectedSales, isSalesRole, salesLocation });
+  // Stop selection + nearest-neighbor ordering
+  const { systemStops } = useClusterStops({ allStops, selectedSales, isSalesRole, salesLocation });
 
-  // Real driving road network route dari DirectionsService
-  const { roadNetworkPath } = useRoadDirections({ isLoaded, apiKey, salesLocation, systemStops });
+  // Rute mengikuti jalan per leg: Google SDK → backend proxy (Google REST → OSRM) → garis lurus
+  const { routeLegs, routeProvider } = useRoadDirections({ isLoaded, salesLocation, systemStops });
+
+  // Warna dasar rute mengikuti cluster sales yang sedang dilihat
+  const clusterBaseColor = systemStops.length > 0
+    ? getClusterColorHex(systemStops[0].clusterName, systemStops[0].callplanName)
+    : '#2563eb';
 
   // Pan & zoom ke outlet yang dipilih dari daftar Active Routes
   useEffect(() => {
@@ -173,19 +180,13 @@ export const GoogleClusterRouteMap = ({
           );
         })}
 
-        {roadNetworkPath.length > 0 ? (
-          <PolylineF
-            path={roadNetworkPath}
-            options={{ strokeColor: '#2563eb', strokeOpacity: 0.9, strokeWeight: 5, geodesic: true }}
-          />
-        ) : (
-          polylinePositions.length > 1 && (
-            <PolylineF
-              path={polylinePositions}
-              options={{ strokeColor: '#94a3b8', strokeOpacity: 0.6, strokeWeight: 3, geodesic: true }}
-            />
-          )
-        )}
+        <RouteLegsPolyline
+          legs={routeLegs}
+          clusterBaseColor={clusterBaseColor}
+          activeLegIndex={0}
+        />
+
+        <RouteProviderBadge provider={routeProvider} />
 
         {activeMarkerStop && activeMarkerStop.latitude != null && (
           <InfoWindowF
@@ -213,7 +214,7 @@ export const GoogleClusterRouteMap = ({
                   rel="noopener noreferrer"
                   className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] font-bold flex items-center gap-1 text-decoration-none"
                 >
-                  <LuNavigation /> Navigasi Directions ➔
+                  <LuNavigation /> Navigasi Directions
                 </a>
                 <a
                   href={googlePlacesService.getGoogleMapsUrl(activeMarkerStop.latitude, activeMarkerStop.longitude, activeMarkerStop.outletName)}
