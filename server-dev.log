@@ -257,3 +257,33 @@ Node.js v24.14.1
 =================================
 [Socket.IO]: Server initialized.
 [Scheduler]: Daily PJP cron job initialized (Scheduled for 03:00 AM daily).
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+=================================
+🚀 Server running on port 5000
+🌐 Environment: development
+🔗 API Base URL: http://localhost:5000/api/v1
+🔌 Socket.IO enabled
+=================================
+[Socket.IO]: Server initialized.
+[Scheduler]: Daily PJP cron job initialized (Scheduled for 03:00 AM daily).
+[32m[nodemon] starting `node index.js`[39m
+=================================
+🚀 Server running on port 5000
+🌐 Environment: development
+🔗 API Base URL: http://localhost:5000/api/v1
+🔌 Socket.IO enabled
+=================================
+[Socket.IO]: Server initialized.
+[Scheduler]: Daily PJP cron job initialized (Scheduled for 03:00 AM daily).
