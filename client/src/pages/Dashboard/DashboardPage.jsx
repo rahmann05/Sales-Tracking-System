@@ -21,6 +21,18 @@ export const DashboardPage = ({ searchQuery = '' }) => {
   // Selected Outlet (for auto-focusing map panTo)
   const [selectedOutlet, setSelectedOutlet] = useState(null);
 
+  const isSalesRole = user?.role === 'SALES';
+
+  // For Sales role, restrict strictly to their own assigned stops
+  const displayStops = React.useMemo(() => {
+    if (isSalesRole) {
+      return salesStops.filter(
+        (stop) => !stop.assignedSalesName || stop.assignedSalesName === user?.name || stop.assignedSalesName === 'Budi Santoso'
+      );
+    }
+    return salesStops;
+  }, [salesStops, isSalesRole, user]);
+
   useEffect(() => {
     setQuery(searchQuery);
   }, [searchQuery, setQuery]);
@@ -29,7 +41,7 @@ export const DashboardPage = ({ searchQuery = '' }) => {
     <div className="dashboard-wrapper">
       {/* Interactive Google Maps Component */}
       <GoogleClusterRouteMap
-        allStops={salesStops}
+        allStops={displayStops}
         selectedSales={selectedRoute}
         selectedOutlet={selectedOutlet}
         onSelectOutlet={setSelectedOutlet}

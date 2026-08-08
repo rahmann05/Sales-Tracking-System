@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { clustersApi } from '../../../services/api';
+import { useApp } from '../../../context/AppContext';
 
 const DAYS = [
   { key: 'senin', label: 'Senin' },
@@ -38,8 +39,12 @@ const selectStyle = {
 /**
  * ScheduleMap - Peta jadwal kunjungan per sales, per hari, per cluster.
  * Sumber data: GET /clusters (jadwal mingguan hasil generate).
+ * Opsi menampilkan cluster lain hanya diizinkan untuk Supervisor & Manager Operasional.
  */
 export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
+  const { user } = useApp();
+  const isSupervisorOrManager = ['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
+
   const todayKey = DAYS[new Date().getDay() === 0 ? -1 : new Date().getDay() - 1]?.key || 'senin';
   const [day, setDay] = useState(todayKey);
   const [salesId, setSalesId] = useState(defaultSalesId);
@@ -125,20 +130,22 @@ export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
         <select style={selectStyle} value={day} onChange={(e) => setDay(e.target.value)} title="Hari">
           {DAYS.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
         </select>
-        {salesOptions.length > 0 && (
+        {isSupervisorOrManager && salesOptions.length > 0 && (
           <select style={selectStyle} value={salesId} onChange={(e) => setSalesId(e.target.value)} title="Sales">
             <option value="">Semua Sales</option>
             {salesOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         )}
-        <select style={selectStyle} value={clusterId} onChange={(e) => setClusterId(e.target.value)} title="Cluster">
-          <option value="all">Semua Cluster</option>
-          {clusters.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} ({(c.pjps || []).reduce((n, p) => n + (p.stops?.length || 0), 0)} outlet)
-            </option>
-          ))}
-        </select>
+        {isSupervisorOrManager && (
+          <select style={selectStyle} value={clusterId} onChange={(e) => setClusterId(e.target.value)} title="Cluster">
+            <option value="all">Semua Cluster</option>
+            {clusters.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({(c.pjps || []).reduce((n, p) => n + (p.stops?.length || 0), 0)} outlet)
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {loading && (

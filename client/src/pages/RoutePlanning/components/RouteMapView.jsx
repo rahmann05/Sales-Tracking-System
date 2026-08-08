@@ -10,9 +10,13 @@ import { useApp } from '../../../context/AppContext';
  */
 export const RouteMapView = () => {
   const { salesStops = [], user } = useApp();
-  const [selectedFilter, setSelectedFilter] = useState('ALL'); // 'ALL' | 'sales-1' | 'sales-2' | 'sales-3'
+  const [selectedFilter, setSelectedFilter] = useState('ALL');
 
-  // Team/Sales filter options
+  // Role check: Only Supervisor, Operational Manager, and Admin can see options to switch to other teams / clusters / all teams
+  const isSupervisorOrManager = ['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
+  const isSalesRole = user?.role === 'SALES';
+
+  // Team/Sales filter options (only accessible to Supervisor & Manager)
   const filterOptions = [
     { id: 'ALL', name: 'Semua Tim (30 Outlet)', salesName: null },
     { id: 'sales-1', name: 'Tim Cimahi - Budi Santoso', salesName: 'Budi Santoso' },
@@ -26,19 +30,22 @@ export const RouteMapView = () => {
 
   // Selected Sales object for GoogleClusterRouteMap
   const selectedSalesObj = useMemo(() => {
-    if (selectedFilter === 'ALL') return null;
+    if (!isSupervisorOrManager || selectedFilter === 'ALL') return null;
     const filteredStops = salesStops.filter((s) => s.assignedSalesName === currentOption.salesName);
     return {
       id: selectedFilter,
       name: currentOption.salesName,
       stops: filteredStops,
     };
-  }, [selectedFilter, salesStops, currentOption]);
+  }, [isSupervisorOrManager, selectedFilter, salesStops, currentOption]);
 
   const activeStops = useMemo(() => {
+    if (isSalesRole) {
+      return salesStops.filter((s) => !s.assignedSalesName || s.assignedSalesName === user?.name || s.assignedSalesName === 'Budi Santoso');
+    }
     if (selectedFilter === 'ALL') return salesStops;
     return salesStops.filter((s) => s.assignedSalesName === currentOption.salesName);
-  }, [salesStops, selectedFilter, currentOption]);
+  }, [salesStops, selectedFilter, currentOption, isSalesRole, user]);
 
   return (
     <div className="bg-surface border border-border-glass rounded-2xl overflow-hidden shadow-md">
@@ -49,30 +56,36 @@ export const RouteMapView = () => {
             <LuNavigation />
           </div>
           <div>
-            <h3 className="text-base font-extrabold text-on-surface">Peta Spasial Rute & Titik Outlet Tim Sales</h3>
+            <h3 className="text-base font-extrabold text-on-surface">
+              {isSalesRole ? 'Peta Spasial Rute & Titik Outlet Kunjungan Anda' : 'Peta Spasial Rute & Titik Outlet Tim Sales'}
+            </h3>
             <p className="text-xs text-on-surface-variant">
-              Menampilkan {activeStops.length} titik outlet aktif di wilayah Region Cimahi - Bandung Barat
+              {isSalesRole
+                ? `Menampilkan ${activeStops.length} titik outlet aktif pada rute RJP klaster Anda`
+                : `Menampilkan ${activeStops.length} titik outlet aktif di wilayah Region Cimahi - Bandung Barat`}
             </p>
           </div>
         </div>
 
-        {/* Team/Sales Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {filterOptions.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setSelectedFilter(opt.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
-                selectedFilter === opt.id
-                  ? 'bg-primary text-on-primary shadow-sm'
-                  : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              {opt.name}
-            </button>
-          ))}
-        </div>
+        {/* Team/Sales Filter Pills (Restricted to Supervisor & Operational Manager) */}
+        {isSupervisorOrManager && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            {filterOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setSelectedFilter(opt.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+                  selectedFilter === opt.id
+                    ? 'bg-primary text-on-primary shadow-sm'
+                    : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {opt.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Real Interactive Google Maps Container */}

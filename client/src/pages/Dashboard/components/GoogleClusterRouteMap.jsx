@@ -42,7 +42,12 @@ export const GoogleClusterRouteMap = ({
   const onMapLoad = useCallback((map) => { mapRef.current = map; }, []);
   const onMapUnmount = useCallback(() => { mapRef.current = null; }, []);
 
-  const { systemStops } = useClusterStops({ allStops, selectedSales, isSalesRole, salesLocation });
+  const { systemStops } = useClusterStops({
+    allStops,
+    selectedSales,
+    isSalesRole,
+    salesLocation,
+  });
   const { routeLegs, routeProvider } = useRoadDirections({ isLoaded, salesLocation, systemStops });
   const { getMarkerSymbol, getSalesLocationSymbol } = useMapMarkers();
 
@@ -83,7 +88,11 @@ export const GoogleClusterRouteMap = ({
 
   return (
     <div className="google-cluster-route-map">
-      <ClusterMapLegend totalOutletsCount={allStops.length} />
+      <ClusterMapLegend
+        totalOutletsCount={systemStops.length}
+        isSalesRole={isSalesRole}
+        userClusterName={systemStops[0]?.clusterName}
+      />
 
       {!isSalesRole && selectedSales && (
         <SelectedSalesMapHeader selectedSales={selectedSales} onClearSelection={onClearSelection} />

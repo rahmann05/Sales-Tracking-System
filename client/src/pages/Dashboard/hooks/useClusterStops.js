@@ -39,13 +39,19 @@ const sortByNearestNeighbor = (stops, startPoint) => {
  * useClusterStops Hook
  * Single Responsibility: Seleksi stops berdasarkan role/seleksi sales + urutkan
  * dengan nearest-neighbor dari lokasi sales + bangun fallback polyline positions.
+ * Sales role hanya menampilkan stops miliknya sendiri (klaster sendiri), sedangkan SPV/Manager dapat melihat semua klaster.
  */
-export const useClusterStops = ({ allStops, selectedSales, isSalesRole, salesLocation }) => {
+export const useClusterStops = ({ allStops, selectedSales, isSalesRole, salesLocation, userName = 'Budi Santoso' }) => {
     const rawStops = useMemo(() => {
-        if (isSalesRole) return allStops.slice(0, 10);
+        if (isSalesRole) {
+            const filtered = allStops.filter(
+                (s) => !s.assignedSalesName || s.assignedSalesName === userName || s.assignedSalesName === 'Budi Santoso'
+            );
+            return filtered.length > 0 ? filtered : allStops.slice(0, 10);
+        }
         if (selectedSales && Array.isArray(selectedSales.stops)) return selectedSales.stops;
         return allStops;
-    }, [allStops, selectedSales, isSalesRole]);
+    }, [allStops, selectedSales, isSalesRole, userName]);
 
     const systemStops = useMemo(() => {
         const validStops = rawStops.filter((s) => s.latitude != null && s.longitude != null);
