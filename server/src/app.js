@@ -16,18 +16,20 @@ const httpServer = createServer(app);
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: config.env === 'development' ? 5000 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Terlalu banyak request, coba lagi setelah 15 menit' },
+  skip: () => config.env === 'development',
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: config.env === 'development' ? 1000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Terlalu banyak percobaan login, coba lagi setelah 15 menit' },
+  skip: () => config.env === 'development',
 });
 
 // ─── Security Middlewares ─────────────────────────────────────────────────────

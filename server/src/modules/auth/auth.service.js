@@ -4,9 +4,12 @@ import { prisma } from '../../config/prisma.js';
 import { config } from '../../config/index.js';
 import { AppError } from '../../utils/errors.js';
 
-export const loginUser = async (email, password) => {
-  const user = await prisma.user.findUnique({
-    where: { email },
+export const loginUser = async (rawEmail, password) => {
+  const email = String(rawEmail || '').trim().toLowerCase();
+  const user = await prisma.user.findFirst({
+    where: {
+      email: { equals: email, mode: 'insensitive' },
+    },
   });
 
   if (!user || user.deletedAt) {

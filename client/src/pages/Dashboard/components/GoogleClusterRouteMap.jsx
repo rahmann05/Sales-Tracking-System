@@ -10,7 +10,6 @@ import { MapRecenterButton } from './MapRecenterButton';
 import { OutletInfoWindow } from './OutletInfoWindow';
 import { OutletMarkers } from './OutletMarkers';
 import { SalesLocationMarker } from './SalesLocationMarker';
-import { INITIAL_SALES_STOPS } from '../../../data';
 import { GOOGLE_MAP_CONTAINER_STYLE, GOOGLE_MAP_OPTIONS, DEFAULT_DEPOT_LOCATION } from '../../../constants/maps';
 import { useClusterStops } from '../hooks/useClusterStops';
 import { useRoadDirections } from '../hooks/useRoadDirections';
@@ -23,7 +22,7 @@ import '../../../styles/components/GoogleClusterRouteMap.css';
  * Single Responsibility: Compose child components untuk Google Map cluster route.
  */
 export const GoogleClusterRouteMap = ({
-  allStops = INITIAL_SALES_STOPS,
+  allStops = [],
   selectedSales = null,
   selectedOutlet = null,
   onSelectOutlet = () => { },

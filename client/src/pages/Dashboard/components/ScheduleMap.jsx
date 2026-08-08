@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { clustersApi } from '../../../services/api';
+import { routingService } from '../../../services/routingService';
 import { useApp } from '../../../context/AppContext';
 
 const DAYS = [
@@ -13,7 +14,11 @@ const DAYS = [
   { key: 'sabtu', label: 'Sabtu' },
 ];
 
+const getTodayDayKey = () => DAYS[new Date().getDay() === 0 ? -1 : new Date().getDay() - 1]?.key || 'senin';
+
 const PALETTE = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5'];
+
+const MAX_ROUTE_WAYPOINTS = 25; // Batas backend /routing/road-route
 
 const makeIcon = (color, label, big) => {
   const size = big ? 36 : 30;
@@ -37,7 +42,9 @@ const selectStyle = {
 };
 
 /**
- * ScheduleMap - Peta jadwal kunjungan per sales, per hari, per cluster.
+ * ScheduleMap - Peta jadwal kunjungan HARI INI per sales & per cluster.
+ * Hari dikunci ke hari ini untuk semua role (tidak bisa ganti hari).
+ * Rute digambar mengikuti jalan via backend proxy (Google Directions → fallback OSRM).
  * Sumber data: GET /clusters (jadwal mingguan hasil generate).
  * Opsi menampilkan cluster lain hanya diizinkan untuk Supervisor & Manager Operasional.
  */
@@ -45,13 +52,17 @@ export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
   const { user } = useApp();
   const isSupervisorOrManager = ['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
 
-  const todayKey = DAYS[new Date().getDay() === 0 ? -1 : new Date().getDay() - 1]?.key || 'senin';
-  const [day, setDay] = useState(todayKey);
+  // Hari SELALU hari ini — tidak dapat diubah oleh role manapun
+  const day = getTodayDayKey();
+  const todayLabel = DAYS.find((d) => d.key === day)?.label || 'Hari Ini';
+
   const [salesId, setSalesId] = useState(defaultSalesId);
   const [clusterId, setClusterId] = useState('all');
   const [clusters, setClusters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [routeLegsByPjp, setRouteLegsByPjp] = useState({});
+  const [routeProvider, setRouteProvider] = useState(null); // 'google' | 'osrm' | null
 
   useEffect(() => {
     if (defaultSalesId) setSalesId(defaultSalesId);
@@ -99,8 +110,8 @@ export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
     [clusters, clusterId]
   );
 
-  const { markers, polylines, fitPoints } = useMemo(() => {
-    const mk = []; const lines = []; const fit = [];
+  const { markers, straightLines, fitPoints, routeRequests } = useMemo(() => {
+    const mk = []; const lines = []; const fit = []; const requests = [];
     visibleClusters.forEach((cluster) => {
       (cluster.pjps || []).forEach((pjp) => {
         const color = colorOf(cluster.id);
@@ -113,23 +124,67 @@ export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
           mk.push({ id: stop.stopId || stop.id, lat, lng, color, seq: stop.sequence || i + 1, outletName: o.name, address: o.address, owner: o.owner, sales: pjp.salesName, cluster: cluster.name });
           coords.push([lat, lng]); fit.push([lat, lng]);
         });
-        if (coords.length > 1) lines.push({ id: pjp.id, color, coords });
+        if (coords.length > 1) {
+          lines.push({ id: pjp.id, color, coords });
+          if (coords.length <= MAX_ROUTE_WAYPOINTS) {
+            requests.push({ id: pjp.id, color, waypoints: coords.map(([lat, lng]) => ({ lat, lng })) });
+          }
+        }
       });
     });
-    return { markers: mk, polylines: lines, fitPoints: fit };
+    return { markers: mk, straightLines: lines, fitPoints: fit, routeRequests: requests };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleClusters, clusters]);
+
+  // Resolve rute mengikuti jalan via backend (Google Directions → fallback OSRM).
+  // Jika gagal total, garis lurus (straightLines) tetap ditampilkan.
+  useEffect(() => {
+    if (routeRequests.length === 0) { setRouteLegsByPjp({}); setRouteProvider(null); return; }
+    let cancelled = false;
+
+    const resolveAll = async () => {
+      const results = await Promise.all(
+        routeRequests.map(async (req) => {
+          try {
+            const { legs, provider } = await routingService.fetchRoadRoute(req.waypoints);
+            return { id: req.id, color: req.color, legs, provider };
+          } catch {
+            return null; // fallback ke garis lurus untuk PJP ini
+          }
+        })
+      );
+      if (cancelled) return;
+      const map = {};
+      let provider = null;
+      results.forEach((r) => {
+        if (r?.legs?.some((l) => l.path?.length > 1)) {
+          map[r.id] = r;
+          provider = provider || r.provider;
+        }
+      });
+      setRouteLegsByPjp(map);
+      setRouteProvider(provider);
+    };
+
+    resolveAll();
+    return () => { cancelled = true; };
+  }, [routeRequests]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 400 }}>
       {/* Filter Bar */}
       <div style={{
         position: 'absolute', top: 12, left: 12, zIndex: 1000, display: 'flex',
-        gap: 8, flexWrap: 'wrap', background: 'rgba(255,255,255,0.95)',
+        gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'rgba(255,255,255,0.95)',
         padding: 10, borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
       }}>
-        <select style={selectStyle} value={day} onChange={(e) => setDay(e.target.value)} title="Hari">
-          {DAYS.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
-        </select>
+        {/* Hari dikunci ke hari ini untuk semua role */}
+        <span style={{
+          ...selectStyle, cursor: 'default', display: 'inline-flex', alignItems: 'center',
+          background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8',
+        }} title="Peta hanya menampilkan rute jadwal hari ini">
+          📅 {todayLabel} (Hari Ini)
+        </span>
         {isSupervisorOrManager && salesOptions.length > 0 && (
           <select style={selectStyle} value={salesId} onChange={(e) => setSalesId(e.target.value)} title="Sales">
             <option value="">Semua Sales</option>
@@ -145,6 +200,15 @@ export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
               </option>
             ))}
           </select>
+        )}
+        {routeProvider && (
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999,
+            background: routeProvider === 'google' ? '#dcfce7' : '#fef3c7',
+            color: routeProvider === 'google' ? '#15803d' : '#b45309',
+          }} title="Sumber garis rute mengikuti jalan">
+            {routeProvider === 'google' ? 'Rute jalan: Google' : 'Rute jalan: OSRM'}
+          </span>
         )}
       </div>
 
@@ -162,9 +226,23 @@ export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
       <MapContainer center={[-6.8722, 107.5423]} zoom={11} style={{ width: '100%', height: '100%' }} scrollWheelZoom>
         <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {fitPoints.length > 0 && <FitBounds points={fitPoints} />}
-        {polylines.map((l) => (
-          <Polyline key={l.id} positions={l.coords} pathOptions={{ color: l.color, weight: 4, opacity: 0.6 }} />
+
+        {/* Garis lurus (fallback / dasar) */}
+        {straightLines.map((l) => (
+          <Polyline key={l.id} positions={l.coords} pathOptions={{ color: l.color, weight: 4, opacity: routeLegsByPjp[l.id] ? 0 : 0.6 }} />
         ))}
+
+        {/* Garis rute mengikuti jalan (Google → OSRM) */}
+        {Object.values(routeLegsByPjp).map((r) =>
+          r.legs.map((leg, idx) => (
+            <Polyline
+              key={`${r.id}-road-${idx}`}
+              positions={leg.path.map((p) => [p.lat, p.lng])}
+              pathOptions={{ color: r.color, weight: 4, opacity: 0.85 }}
+            />
+          ))
+        )}
+
         {markers.map((m) => (
           <Marker key={m.id} position={[m.lat, m.lng]} icon={makeIcon(m.color, m.seq, clusterId !== 'all')}>
             <Popup>

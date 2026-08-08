@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { LuNavigation } from 'react-icons/lu';
 import { GoogleClusterRouteMap } from '../../Dashboard/components/GoogleClusterRouteMap';
 import { useApp } from '../../../context/AppContext';
+import { getTodayNameId, filterStopsForToday } from '../../../utils/dateUtils';
 
 /**
  * RouteMapView Component
@@ -11,6 +12,10 @@ import { useApp } from '../../../context/AppContext';
 export const RouteMapView = () => {
   const { salesStops = [], user } = useApp();
   const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const todayName = getTodayNameId();
+
+  // Peta hanya menampilkan rute jadwal HARI INI (untuk semua role)
+  const todayStops = useMemo(() => filterStopsForToday(salesStops), [salesStops]);
 
   // Role check: Only Supervisor, Operational Manager, and Admin can see options to switch to other teams / clusters / all teams
   const isSupervisorOrManager = ['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
@@ -26,26 +31,27 @@ export const RouteMapView = () => {
 
   const currentOption = useMemo(() => {
     return filterOptions.find((f) => f.id === selectedFilter) || filterOptions[0];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFilter]);
 
-  // Selected Sales object for GoogleClusterRouteMap
+  // Selected Sales object for GoogleClusterRouteMap (sudah terfilter hari ini)
   const selectedSalesObj = useMemo(() => {
     if (!isSupervisorOrManager || selectedFilter === 'ALL') return null;
-    const filteredStops = salesStops.filter((s) => s.assignedSalesName === currentOption.salesName);
+    const filteredStops = todayStops.filter((s) => s.assignedSalesName === currentOption.salesName);
     return {
       id: selectedFilter,
       name: currentOption.salesName,
       stops: filteredStops,
     };
-  }, [isSupervisorOrManager, selectedFilter, salesStops, currentOption]);
+  }, [isSupervisorOrManager, selectedFilter, todayStops, currentOption]);
 
   const activeStops = useMemo(() => {
     if (isSalesRole) {
-      return salesStops.filter((s) => !s.assignedSalesName || s.assignedSalesName === user?.name || s.assignedSalesName === 'Budi Santoso');
+      return todayStops.filter((s) => !s.assignedSalesName || s.assignedSalesName === user?.name || s.assignedSalesName === 'Budi Santoso');
     }
-    if (selectedFilter === 'ALL') return salesStops;
-    return salesStops.filter((s) => s.assignedSalesName === currentOption.salesName);
-  }, [salesStops, selectedFilter, currentOption, isSalesRole, user]);
+    if (selectedFilter === 'ALL') return todayStops;
+    return todayStops.filter((s) => s.assignedSalesName === currentOption.salesName);
+  }, [todayStops, selectedFilter, currentOption, isSalesRole, user]);
 
   return (
     <div className="bg-surface border border-border-glass rounded-2xl overflow-hidden shadow-md">
@@ -61,8 +67,8 @@ export const RouteMapView = () => {
             </h3>
             <p className="text-xs text-on-surface-variant">
               {isSalesRole
-                ? `Menampilkan ${activeStops.length} titik outlet aktif pada rute RJP klaster Anda`
-                : `Menampilkan ${activeStops.length} titik outlet aktif di wilayah Region Cimahi - Bandung Barat`}
+                ? `Menampilkan ${activeStops.length} titik outlet jadwal hari ini (${todayName}) pada rute RJP klaster Anda`
+                : `Menampilkan ${activeStops.length} titik outlet jadwal hari ini (${todayName}) di wilayah Region Cimahi - Bandung Barat`}
             </p>
           </div>
         </div>
@@ -75,11 +81,10 @@ export const RouteMapView = () => {
                 key={opt.id}
                 type="button"
                 onClick={() => setSelectedFilter(opt.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
-                  selectedFilter === opt.id
-                    ? 'bg-primary text-on-primary shadow-sm'
-                    : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-                }`}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${selectedFilter === opt.id
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+                  }`}
               >
                 {opt.name}
               </button>

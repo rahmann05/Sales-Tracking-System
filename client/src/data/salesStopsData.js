@@ -4,7 +4,7 @@
 // ==========================================
 // RENCANA PJP 1: RJP-CIMAHI-01 (10 TOKO)
 // Region: Region Cimahi - Bandung Barat
-// Day: Senin (Budi Santoso) / Monday
+// Day: Senin & Sabtu (Budi Santoso)
 // ==========================================
 const CIMAHI_STOPS = [
     { id: 'stop-101', sequence: 1, customerName: 'Toko Sumber Rezeki', outletName: 'Toko Sumber Rezeki', owner: 'Hj. Aminah', phone: '0812-3456-7890', address: 'Jl. Raya Amir Machmud No. 12, Cimahi', latitude: -6.8722, longitude: 107.5423 },
@@ -22,7 +22,7 @@ const CIMAHI_STOPS = [
     callplanName: 'RJP-CIMAHI-01',
     clusterName: 'Klaster Cimahi Tengah',
     regionName: 'Region Cimahi - Bandung Barat',
-    dayOfWeek: 'Senin',
+    dayOfWeek: ['Senin', 'Sabtu'],
     assignedSalesName: 'Budi Santoso',
     customerId: `CUST-00${s.sequence}`,
     outletCode: `CUST-00${s.sequence}`,
@@ -32,7 +32,7 @@ const CIMAHI_STOPS = [
 // ==========================================
 // RENCANA PJP 2: RJP-PADALARANG-01 (10 TOKO)
 // Region: Region Cimahi - Bandung Barat
-// Day: Selasa (Budi Santoso) / Senin (Siti Rahma)
+// Day: Selasa & Sabtu (Budi Santoso)
 // ==========================================
 const PADALARANG_STOPS = [
     { id: 'stop-201', sequence: 1, customerName: 'Minimarket Maju Jaya', outletName: 'Minimarket Maju Jaya', owner: 'Pak Koes', phone: '0813-8888-9999', address: 'Jl. Raya Padalarang No. 88, KBB', latitude: -6.8375, longitude: 107.4764 },
@@ -50,7 +50,7 @@ const PADALARANG_STOPS = [
     callplanName: 'RJP-PADALARANG-01',
     clusterName: 'Klaster Padalarang',
     regionName: 'Region Cimahi - Bandung Barat',
-    dayOfWeek: 'Selasa',
+    dayOfWeek: ['Selasa', 'Sabtu'],
     assignedSalesName: 'Budi Santoso',
     customerId: `CUST-01${s.sequence}`,
     outletCode: `CUST-01${s.sequence}`,
@@ -60,7 +60,7 @@ const PADALARANG_STOPS = [
 // ==========================================
 // RENCANA PJP 3: RJP-LEMBANG-01 (10 TOKO)
 // Region: Region Cimahi - Bandung Barat
-// Day: Rabu (Budi Santoso) / Senin (Agus Wijaya)
+// Day: Rabu & Sabtu (Budi Santoso)
 // ==========================================
 const LEMBANG_STOPS = [
     { id: 'stop-301', sequence: 1, customerName: 'Toko Kelontong Berkah', outletName: 'Toko Kelontong Berkah', owner: 'Ibu Susanti', phone: '0811-2233-4455', address: 'Jl. Tangkuban Perahu No. 45, Lembang', latitude: -6.8142, longitude: 107.6144 },
@@ -78,7 +78,7 @@ const LEMBANG_STOPS = [
     callplanName: 'RJP-LEMBANG-01',
     clusterName: 'Klaster Lembang',
     regionName: 'Region Cimahi - Bandung Barat',
-    dayOfWeek: 'Rabu',
+    dayOfWeek: ['Rabu', 'Sabtu'],
     assignedSalesName: 'Budi Santoso',
     customerId: `CUST-02${s.sequence}`,
     outletCode: `CUST-02${s.sequence}`,

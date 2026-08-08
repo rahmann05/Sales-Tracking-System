@@ -1,18 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  DEMO_USERS,
-  INITIAL_SALES_STOPS,
-  INITIAL_SUPERVISOR_TEAMS,
-  INITIAL_SALES_LIST,
-  INITIAL_RJP_TEAMS,
-  INITIAL_TEAM_MEMBERS,
-  INITIAL_ACTIVE_ROUTES,
-  INITIAL_MASTER_ROUTES,
-  INITIAL_OFF_PJP_ATTENDANCES,
-  MOCK_PRODUCTS,
-} from '../data';
+import { getAuthToken } from '../services/api';
 
-import { authApi, pjpApi, ordersApi, absensiApi, outletsApi } from '../services/api';
+import { authApi, pjpApi, ordersApi, absensiApi, outletsApi, clustersApi } from '../services/api';
 import { useSalesActions } from '../hooks/useSalesActions';
 import { useSupervisorActions } from '../hooks/useSupervisorActions';
 import { useOpsActions } from '../hooks/useOpsActions';
@@ -20,8 +9,23 @@ import { useAdminActions } from '../hooks/useAdminActions';
 
 const AppContext = createContext();
 
+const ROLE_LABELS = {
+  SALES: 'Sales Field Rep',
+  SUPERVISOR: 'Supervisor Operasional',
+  ADMIN: 'Admin Penjualan',
+  OPERATIONAL_MANAGER: 'Manajer Operasional',
+  MANAJER_OPERASIONAL: 'Manajer Operasional',
+};
+
 export const AppProvider = ({ children }) => {
-  const [user, setUser] = useState(DEMO_USERS.SALES);
+  // User murni dari auth backend (PostgreSQL) via localStorage 'authUser'
+  const [user, setUser] = useState(() => authApi.getStoredUser());
+
+  // Set user dari hasil login backend (dipanggil setelah login sukses)
+  const setUserFromAuth = () => {
+    const u = authApi.getStoredUser();
+    if (u) setUser({ ...u, roleLabel: ROLE_LABELS[u.role] || u.role });
+  };
 
   // Shift Attendance State
   const [shiftAttendance, setShiftAttendance] = useState({
@@ -31,29 +35,29 @@ export const AppProvider = ({ children }) => {
     photoUrl: null,
   });
 
-  // Sales Daily PJP Stops
-  const [salesStops, setSalesStops] = useState(INITIAL_SALES_STOPS);
+  // Sales Daily PJP Stops (diisi dari PostgreSQL saat login)
+  const [salesStops, setSalesStops] = useState([]);
 
-  // Supervisor Teams List
-  const [supervisorTeams, setSupervisorTeams] = useState(INITIAL_SUPERVISOR_TEAMS);
+  // Supervisor Teams List (dari PostgreSQL)
+  const [supervisorTeams, setSupervisorTeams] = useState([]);
 
-  // Field Team Members List
-  const [teamMembers, setTeamMembers] = useState(INITIAL_TEAM_MEMBERS);
+  // Field Team Members List (dari PostgreSQL)
+  const [teamMembers, setTeamMembers] = useState([]);
 
-  // Dashboard Active Routes List
-  const [activeRoutes, setActiveRoutes] = useState(INITIAL_ACTIVE_ROUTES);
+  // Dashboard Active Routes List (diisi dari PostgreSQL)
+  const [activeRoutes, setActiveRoutes] = useState([]);
 
-  // Master PJP Routes List (Route Planning)
-  const [masterRoutes, setMasterRoutes] = useState(INITIAL_MASTER_ROUTES);
+  // Master PJP Routes List (Route Planning) — diisi dari PostgreSQL
+  const [masterRoutes, setMasterRoutes] = useState([]);
 
-  // Detailed Sales Reps List
-  const [salesList, setSalesList] = useState(INITIAL_SALES_LIST);
+  // Detailed Sales Reps List (dari PostgreSQL)
+  const [salesList, setSalesList] = useState([]);
 
-  // Tim RJP / Tim Kunjungan List
-  const [rjpTeams, setRjpTeams] = useState(INITIAL_RJP_TEAMS);
+  // Tim RJP / Tim Kunjungan List (dari PostgreSQL)
+  const [rjpTeams, setRjpTeams] = useState([]);
 
-  // Off-PJP Store Absen Records
-  const [offPjpAttendances, setOffPjpAttendances] = useState(INITIAL_OFF_PJP_ATTENDANCES);
+  // Off-PJP Store Absen Records (diisi dari PostgreSQL)
+  const [offPjpAttendances, setOffPjpAttendances] = useState([]);
 
   // Sales Orders List
   const [orders, setOrders] = useState([]);
@@ -70,10 +74,8 @@ export const AppProvider = ({ children }) => {
 
     const syncWithBackend = async () => {
       try {
-        // 1. Authenticate with current user email to get active JWT
-        if (user?.email) {
-          await authApi.login(user.email, 'password123').catch(() => {});
-        }
+        // Hanya sinkron jika ada sesi login valid (token dari auth backend)
+        if (!getAuthToken() || !user?.email) return;
 
         // 2. If user is Sales, load today's PJP directly from PostgreSQL
         if (user?.role === 'SALES') {
@@ -102,6 +104,49 @@ export const AppProvider = ({ children }) => {
               status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
             }));
             setSalesStops(mappedStops);
+          }
+        }
+
+        // 2b. Supervisor/Manager: bangun activeRoutes dari PJP hari ini (PostgreSQL)
+        if (user?.role !== 'SALES') {
+          const res = await pjpApi.getAllPjps().catch(() => null);
+          const pjps = Array.isArray(res?.data) ? res.data : [];
+          if (pjps.length > 0 && isMounted) {
+            const todayStr = new Date().toDateString();
+            const todays = pjps.filter((p) => new Date(p.date).toDateString() === todayStr);
+            const routes = todays.map((p) => {
+              const stops = (p.stops || []).map((s, idx) => ({
+                id: s.id,
+                sequence: s.sequence || idx + 1,
+                outletName: s.outlet?.name || `Toko ${idx + 1}`,
+                customerName: s.outlet?.name || `Toko ${idx + 1}`,
+                owner: s.outlet?.ownerName || s.outlet?.owner || '-',
+                phone: s.outlet?.phone || '-',
+                address: s.outlet?.address || '-',
+                latitude: Number(s.outlet?.latitude),
+                longitude: Number(s.outlet?.longitude),
+                callplanName: p.name || 'RJP',
+                clusterName: p.cluster?.name || 'Klaster',
+                regionName: p.cluster?.region || '-',
+                dayOfWeek: p.dayOfWeek,
+                assignedSalesName: p.user?.name || 'Sales',
+                status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
+              }));
+              const done = stops.filter((s) => s.status === 'VISITED').length;
+              return {
+                id: p.id,
+                salesId: p.userId,
+                name: p.user?.name || 'Sales',
+                avatar: null,
+                region: p.cluster?.name || 'Klaster',
+                status: done === stops.length && stops.length > 0 ? 'Completed' : 'In Transit',
+                progress: stops.length ? Math.round((done / stops.length) * 100) : 0,
+                stops,
+                distance: '-',
+                vehicle: '-',
+              };
+            });
+            setActiveRoutes(routes);
           }
         }
 
@@ -158,11 +203,7 @@ export const AppProvider = ({ children }) => {
   }, [user]);
 
   // Auth & Shift Actions
-  const loginAsRole = (roleKey) => {
-    if (DEMO_USERS[roleKey]) {
-      setUser(DEMO_USERS[roleKey]);
-    }
-  };
+  // loginAsRole dihapus — user kini murni dari auth backend (PostgreSQL)
 
   const handleShiftClockIn = (photoUrl) => {
     setShiftAttendance({
@@ -254,7 +295,7 @@ export const AppProvider = ({ children }) => {
     // Current User Session
     user,
     setUser,
-    loginAsRole,
+    setUserFromAuth,
 
     // Shift Clock-In State
     shiftAttendance,
@@ -282,7 +323,7 @@ export const AppProvider = ({ children }) => {
     setOrders,
     incidents,
     setIncidents,
-    products: MOCK_PRODUCTS,
+    products: [],
 
     // Notifications
     notifications,

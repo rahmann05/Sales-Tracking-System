@@ -1,9 +1,11 @@
 /**
  * OSRM Provider
  * Single Responsibility: Fetch route legs dari OSRM (Open Source Routing Machine) API.
+ * Digunakan sebagai FALLBACK dari Google Directions API.
  */
 
-const OSRM_BASE_URL = 'https://router.project-osrm.org/route/v1/driving';
+const OSRM_BASE_URL = process.env.OSRM_BASE_URL || 'https://router.project-osrm.org/route/v1/driving';
+const OSRM_TIMEOUT_MS = 10000;
 
 /**
  * Split full geometry per leg berdasarkan proporsi distance kumulatif
@@ -43,7 +45,7 @@ export const fetchOsrmLegs = async (waypoints) => {
     const coords = waypoints.map((p) => `${p.lng},${p.lat}`).join(';');
     const url = `${OSRM_BASE_URL}/${coords}?overview=full&geometries=geojson&steps=false`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(OSRM_TIMEOUT_MS) });
     const data = await response.json();
 
     const route = data.routes?.[0];

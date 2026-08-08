@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { filterStopsForToday } from '../../../utils/dateUtils';
 
 const deg2rad = (d) => (d * Math.PI) / 180;
 
@@ -39,6 +40,7 @@ const sortByNearestNeighbor = (stops, startPoint) => {
  * useClusterStops Hook
  * Single Responsibility: Seleksi stops berdasarkan role/seleksi sales + urutkan
  * dengan nearest-neighbor dari lokasi sales + bangun fallback polyline positions.
+ * Peta SELALU memfilter stops ke jadwal HARI INI (semua role).
  * Sales role hanya menampilkan stops miliknya sendiri (klaster sendiri), sedangkan SPV/Manager dapat melihat semua klaster.
  */
 export const useClusterStops = ({ allStops, selectedSales, isSalesRole, salesLocation, userName = 'Budi Santoso' }) => {
@@ -47,10 +49,10 @@ export const useClusterStops = ({ allStops, selectedSales, isSalesRole, salesLoc
             const filtered = allStops.filter(
                 (s) => !s.assignedSalesName || s.assignedSalesName === userName || s.assignedSalesName === 'Budi Santoso'
             );
-            return filtered.length > 0 ? filtered : allStops.slice(0, 10);
+            return filterStopsForToday(filtered.length > 0 ? filtered : allStops.slice(0, 10));
         }
-        if (selectedSales && Array.isArray(selectedSales.stops)) return selectedSales.stops;
-        return allStops;
+        if (selectedSales && Array.isArray(selectedSales.stops)) return filterStopsForToday(selectedSales.stops);
+        return filterStopsForToday(allStops);
     }, [allStops, selectedSales, isSalesRole, userName]);
 
     const systemStops = useMemo(() => {

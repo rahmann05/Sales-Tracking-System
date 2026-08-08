@@ -1,18 +1,56 @@
-import { useState, useMemo } from 'react';
-import { INITIAL_MASTER_CLUSTERS } from '../data/initialClustersData';
-import { MASTER_COVERAGE_OUTLETS } from '../data/coverageOutletsData';
+import { useState, useMemo, useEffect } from 'react';
 import { parseSpreadsheetCsv } from '../services/spreadsheetImportService';
+import { clustersApi, outletsApi } from '../services/api';
 
 /**
  * useRjpManagement Hook
- * Single Responsibility: Master Cluster State, 400 Outlets Quota Management, and Spreadsheet Import Workflow.
- * 1 File = 1 Logic Hook
+ * Single Responsibility: Master Cluster State, Outlets Quota Management, and Spreadsheet Import Workflow.
+ * Data murni dari PostgreSQL (bukan mockup).
  */
 export const useRjpManagement = () => {
-  const [masterClusters, setMasterClusters] = useState(INITIAL_MASTER_CLUSTERS);
-  const [coverageOutlets, setCoverageOutlets] = useState(MASTER_COVERAGE_OUTLETS);
+  const [masterClusters, setMasterClusters] = useState([]);
+  const [coverageOutlets, setCoverageOutlets] = useState([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Load master clusters & coverage outlets dari PostgreSQL
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      const [clustersRes, outletsRes] = await Promise.all([
+        clustersApi.getAll().catch(() => null),
+        outletsApi.getAll().catch(() => null),
+      ]);
+      if (!isMounted) return;
+
+      const clusters = Array.isArray(clustersRes?.data) ? clustersRes.data : [];
+      setMasterClusters(clusters.map((c, idx) => ({
+        id: c.id,
+        code: c.code || `CLS-${idx + 1}`,
+        name: c.name,
+        region: c.region || '-',
+        subDistricts: c.subDistricts || [],
+        allocatedOutletsCount: c._count?.outlets ?? c.allocatedOutletsCount ?? 0,
+        assignedSpvName: c.assignedSpvName || '-',
+        spvTeamName: c.spvTeamName || '-',
+        status: c.status || 'ACTIVE',
+        createdAt: c.createdAt ? String(c.createdAt).split('T')[0] : '',
+      })));
+
+      const outlets = Array.isArray(outletsRes?.data) ? outletsRes.data : [];
+      setCoverageOutlets(outlets.map((o) => ({
+        id: o.id,
+        name: o.name,
+        outletCode: o.outletCode,
+        address: o.address,
+        clusterName: o.cluster?.name || o.clusterName || '-',
+        latitude: Number(o.latitude),
+        longitude: Number(o.longitude),
+      })));
+    };
+    load();
+    return () => { isMounted = false; };
+  }, []);
 
   // Computed Allocation Statistics
   const stats = useMemo(() => {

@@ -7,7 +7,7 @@ import '../../styles/pages/Login.css';
  * LoginPage Component — Apple Editorial / Modern Clean
  * Direct, centered login interface for both Desktop and Mobile (no full-viewport hero scroll).
  */
-export const LoginPage = ({ onLogin }) => {
+export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
   return (
     <div className="login-wrapper">
       {/* Mobile: Splash Screen Animation */}
@@ -39,9 +39,9 @@ export const LoginPage = ({ onLogin }) => {
           <div className="login-card shadow-sm border border-border-glass">
             <div className="login-card-header">
               <h2 className="login-card-title">Selamat Datang</h2>
-              <p className="login-card-subtitle">Pilih peran akun demo dan masuk ke sistem</p>
+              <p className="login-card-subtitle">Masuk dengan akun Anda untuk melanjutkan</p>
             </div>
-            <LoginFormCard onLogin={onLogin} />
+            <LoginFormCard onLogin={onLogin} loading={loading} error={error} />
           </div>
 
           {/* Footer */}

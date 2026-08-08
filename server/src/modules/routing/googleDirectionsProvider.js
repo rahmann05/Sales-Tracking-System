@@ -6,6 +6,7 @@
 import { decodePolyline } from './polylineDecoder.js';
 
 const GOOGLE_DIRECTIONS_URL = 'https://maps.googleapis.com/maps/api/directions/json';
+const GOOGLE_TIMEOUT_MS = 8000;
 
 /**
  * Build URL untuk Google Directions API request
@@ -44,7 +45,7 @@ const parseLeg = (leg, route) => ({
  */
 export const fetchGoogleLegs = async (waypoints, apiKey) => {
     const url = buildDirectionsUrl(waypoints, apiKey);
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS) });
     const data = await response.json();
 
     if (data.status !== 'OK' || !data.routes?.[0]?.legs) {

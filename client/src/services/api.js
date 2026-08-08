@@ -49,10 +49,17 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (res?.data?.token) {
-      setAuthToken(res.data.token);
-    }
-    return res.data;
+    const token = res?.data?.accessToken || res?.data?.token;
+    if (token) setAuthToken(token);
+    if (res?.data?.user) localStorage.setItem('authUser', JSON.stringify(res.data.user));
+    return res.data; // { user, accessToken, refreshToken }
+  },
+  logout: () => {
+    setAuthToken('');
+    localStorage.removeItem('authUser');
+  },
+  getStoredUser: () => {
+    try { return JSON.parse(localStorage.getItem('authUser') || 'null'); } catch { return null; }
   },
 };
 
@@ -178,7 +185,26 @@ export const routeChangesApi = {
   },
 };
 
-// ─── 7. Legacy apiService Compatibility ───────────────────────────────────────
+// ─── 7. Clusters API ─────────────────────────────────────────────────────────
+export const clustersApi = {
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/clusters${query ? `?${query}` : ''}`);
+  },
+  getById: async (id) => {
+    return await request(`/clusters/${id}`);
+  },
+};
+
+// ─── 8. Users API ────────────────────────────────────────────────────────────
+export const usersApi = {
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/users${query ? `?${query}` : ''}`);
+  },
+};
+
+// ─── 9. Legacy apiService Compatibility ───────────────────────────────────────
 export const apiService = {
   getHealth: async () => request('/health'),
   getUsers: async () => request('/users'),

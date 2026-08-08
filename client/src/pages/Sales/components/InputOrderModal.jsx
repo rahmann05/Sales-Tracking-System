@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { LuSend } from 'react-icons/lu';
 import { FiXCircle } from 'react-icons/fi';
-import { MOCK_PRODUCTS } from '../../../data';
 import { ProductOrderItem } from './ProductOrderItem';
+import { useApp } from '../../../context/AppContext';
 
 /**
  * InputOrderModal Component (Single Responsibility: Order Taking Form Modal for Sales)
  * 1 File per Component
  */
 export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
+  const { products = [] } = useApp(); // Produk dari PostgreSQL via context
   const [orderItems, setOrderItems] = useState([]);
   const [paymentType, setPaymentType] = useState('TOP_14');
 
@@ -83,7 +84,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
         <div className="space-y-3">
           <h4 className="font-bold text-sm text-on-surface">Pilih Produk SKU</h4>
           <div className="space-y-2">
-            {MOCK_PRODUCTS.map((prd) => {
+            {products.map((prd) => {
               const existing = orderItems.find((item) => item.product.id === prd.id);
               const qty = existing ? existing.qty : 0;
               return (

@@ -16,21 +16,21 @@ import { useSearch } from './hooks/useSearch';
  * Single Responsibility: Compose the app shell (layout + routing) for authenticated users.
  */
 const AppContent = () => {
-  const { user, loginAsRole } = useApp();
-  const { isAuthenticated, login, logout } = useAuth();
+  const { user, setUserFromAuth } = useApp();
+  const { isAuthenticated, authLoading, authError, login, logout } = useAuth();
   const { activeTab, setActiveTab, goToWorkspace } = useTabNavigation();
   const { searchQuery, setSearchQuery } = useSearch();
 
-  const handleLogin = ({ roleKey }) => {
-    if (roleKey) {
-      loginAsRole(roleKey);
+  const handleLogin = async ({ email, password }) => {
+    const ok = await login(email, password); // autentikasi via backend PostgreSQL
+    if (ok) {
+      setUserFromAuth();
+      goToWorkspace();
     }
-    login();
-    goToWorkspace();
   };
 
   const handleLogout = () => {
-    if (window.confirm(`Apakah Anda yakin ingin keluar dari akun ${user.name} (${user.roleLabel})?`)) {
+    if (window.confirm(`Apakah Anda yakin ingin keluar dari akun ${user?.name || 'ini'}?`)) {
       logout();
     }
   };
@@ -38,7 +38,7 @@ const AppContent = () => {
   if (!isAuthenticated) {
     return (
       <ErrorBoundary>
-        <LoginPage onLogin={handleLogin} />
+        <LoginPage onLogin={handleLogin} loading={authLoading} error={authError} />
       </ErrorBoundary>
     );
   }
