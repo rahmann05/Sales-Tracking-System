@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SectionHeader } from './SectionHeader';
 import { ApprovalSubFilterChips } from './ApprovalSubFilterChips';
 import { IncidentCard } from './IncidentCard';
-import { UnlockRequestCard } from './UnlockRequestCard';
+import { UnlockRequestCard } from '../../Admin/components/UnlockRequestCard';
 import { OffPjpAttendanceCard } from './OffPjpAttendanceCard';
 
 /**

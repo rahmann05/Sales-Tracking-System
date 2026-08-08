@@ -1,6 +1,9 @@
+import { absensiApi, ordersApi, outletsApi, routeChangesApi } from '../services/api';
+
 /**
  * Custom hook containing all business logic for Sales actions.
  * Single Responsibility: Sales Rep business workflows (Absen In, Absen Out, Orders, Closed Reports, Off-PJP, Unlock Requests).
+ * Wired directly to the Backend REST API with optimistic local state updates.
  */
 export const useSalesActions = ({
   user,
@@ -28,6 +31,16 @@ export const useSalesActions = ({
           : s
       )
     );
+
+    // Call Backend API
+    absensiApi.checkIn(stopId, {
+      latitude: payload.gpsLocation?.lat || -6.8722,
+      longitude: payload.gpsLocation?.lng || 107.5423,
+      photoUrl: payload.photoUrl || null,
+      notes: payload.notes || 'Kunjungan Rutin',
+    }).catch((err) => {
+      console.warn('[API] Absen In sync error:', err.message);
+    });
   };
 
   // Absen Out Outlet (Sales Check-Out)
@@ -47,6 +60,16 @@ export const useSalesActions = ({
           : s
       )
     );
+
+    // Call Backend API
+    absensiApi.checkOut(stopId, {
+      latitude: payload.gpsLocation?.lat || -6.8722,
+      longitude: payload.gpsLocation?.lng || 107.5423,
+      photoUrl: payload.photoUrl || null,
+      notes: payload.notes || 'Kunjungan Selesai',
+    }).catch((err) => {
+      console.warn('[API] Absen Out sync error:', err.message);
+    });
   };
 
   // Submit Order (Sales)
@@ -58,130 +81,149 @@ export const useSalesActions = ({
       outletName: stop ? stop.outletName : 'Unknown Outlet',
       salesName: user.name,
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      totalAmount,
-      paymentType,
+      items: items || [],
+      totalAmount: totalAmount || items?.reduce((sum, item) => sum + (item.quantity * (item.price || item.unitPrice || 0)), 0) || 0,
+      paymentType: paymentType || 'CASH',
       status: 'PENDING_APPROVAL',
-      creditLimit: stop?.creditLimit || 15000000,
-      outstanding: stop?.outstanding || 3500000,
-      items,
     };
 
     setOrders((prev) => [newOrder, ...prev]);
 
-    setSalesStops((prev) =>
-      prev.map((s) => (s.id === stopId ? { ...s, status: 'ORDERED' } : s))
-    );
-
     addNotification({
-      title: 'Order Baru Menunggu Approval',
-      message: `Sales ${user.name} menginput order ${newOrder.id} (${stop?.outletName}) sebesar Rp ${totalAmount.toLocaleString('id-ID')}`,
+      title: 'Order Baru Masuk (Menunggu Persetujuan)',
+      message: `Sales ${user.name} membuat pesanan baru untuk ${newOrder.outletName} sebesar Rp ${(newOrder.totalAmount).toLocaleString('id-ID')}.`,
       roleTarget: ['SUPERVISOR', 'ADMIN'],
+    });
+
+    // Call Backend API
+    ordersApi.createOrder({
+      pjpStopId: stopId,
+      items: items?.map((i) => ({
+        productId: i.productId || i.id,
+        quantity: Number(i.quantity),
+        unitPrice: Number(i.price || i.unitPrice || 0),
+      })),
+      paymentType: paymentType || 'CASH',
+    }).catch((err) => {
+      console.warn('[API] Create Order sync error:', err.message);
     });
   };
 
-  // Report Closed Outlet (Sales -> SPV)
+  // Report Closed Outlet
   const handleReportClosedOutlet = ({ stopId, reason, photoUrl }) => {
     const stop = salesStops.find((s) => s.id === stopId);
-    const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    if (!stop) return;
+
     const newIncident = {
       id: `inc-${Date.now()}`,
-      type: 'CLOSED_SHOP',
       stopId,
-      outletName: stop?.outletName,
+      type: 'CLOSED_SHOP',
+      outletName: stop.outletName,
       salesName: user.name,
-      spvName: 'Ahmad Subagja',
-      spvTeam: 'Tim SPV Ahmad Subagja (Cimahi - KBB)',
-      reason,
-      photoUrl,
-      reportedAt: timeNow,
+      reportedTime: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+      reason: reason || 'Toko Tutup',
+      photoUrl: photoUrl || null,
       status: 'PENDING_SPV',
     };
 
     setIncidents((prev) => [newIncident, ...prev]);
+
     setSalesStops((prev) =>
-      prev.map((s) => (s.id === stopId ? { ...s, status: 'CLOSED', checkOutTime: timeNow } : s))
+      prev.map((s) => (s.id === stopId ? { ...s, status: 'CLOSED' } : s))
     );
 
     addNotification({
-      title: 'Laporan Toko Tutup',
-      message: `Sales ${user.name} melaporkan Toko Tutup: ${stop?.outletName}. Membutuhkan penanganan SPV.`,
-      roleTarget: ['SUPERVISOR'],
+      title: 'Laporan Toko Tutup Masuk',
+      message: `Sales ${user.name} melaporkan bahwa ${stop.outletName} tutup. Alasan: ${reason}.`,
+      roleTarget: ['SUPERVISOR', 'OPERATIONAL_MANAGER'],
+    });
+
+    // Call Backend API
+    routeChangesApi.reportClosed({
+      pjpStopId: stopId,
+      reason,
+      photoUrl,
+    }).catch((err) => {
+      console.warn('[API] Report closed sync error:', err.message);
     });
   };
 
-  // Sales Action: Request Unlock for Locked Outlet
-  const handleRequestUnlockOutlet = ({ stopId, outletName, address, activeVisitingOutlet, reason }) => {
+  // Sales Action: Request Unlock Outlet
+  const handleRequestUnlockOutlet = ({ stopId, outletName, address, reason }) => {
     const newRequest = {
-      id: `unlock-req-${Date.now()}`,
-      type: 'UNLOCK_REQUEST',
+      id: `req-unlock-${Date.now()}`,
       stopId,
+      type: 'UNLOCK_REQUEST',
       outletName,
-      address,
-      userRole: 'SALES',
-      userName: user.name,
-      activeVisitingOutlet,
+      salesName: user.name,
+      reportedTime: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
       reason,
-      requestedAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+      address,
       status: 'PENDING',
+      userRole: user.role,
     };
 
     setIncidents((prev) => [newRequest, ...prev]);
 
     addNotification({
-      title: 'Permintaan Buka Kunci (Unlock) Outlet',
-      message: `Sales ${user.name} meminta unlock outlet "${outletName}". Alasan: ${reason}`,
-      roleTarget: ['ADMIN', 'SUPERVISOR'],
+      title: 'Permohonan Buka Kunci Outlet',
+      message: `Sales ${user.name} mengajukan permohonan buka kunci presensi untuk toko ${outletName}. Alasan: ${reason}.`,
+      roleTarget: ['SUPERVISOR', 'ADMIN'],
+    });
+
+    // Call Backend API
+    outletsApi.requestUnlock(stopId, reason).catch((err) => {
+      console.warn('[API] Request unlock sync error:', err.message);
     });
   };
 
-  // Sales Action: Absen / Check-In at Off-PJP Outlet
-  const handleSalesAbsenOffPJP = ({ outletName, customerName, phone, address, reason, photoUrl, gpsLocation }) => {
-    const newAbsen = {
-      id: `absen-off-${Date.now()}`,
+  // Sales Action: Absen Toko Luar RJP (Off-PJP)
+  const handleSalesAbsenOffPJP = ({
+    outletName,
+    customerName,
+    phone,
+    address,
+    reason,
+    photoUrl,
+    gpsLocation,
+  }) => {
+    const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    const newRecord = {
+      id: `off-pjp-${Date.now()}`,
+      salesId: user.id,
       salesName: user.name,
       outletName,
-      customerName: customerName || 'Pemilik Toko',
-      phone: phone || '-',
+      customerName,
+      phone,
       address,
-      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+      reason,
       photoUrl,
       gpsLocation,
-      reason,
-      spvName: 'Ahmad Subagja',
-      spvTeam: 'Tim SPV Ahmad Subagja (Cimahi - KBB)',
+      time: timeNow,
+      date: new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }),
       validationStatus: 'MENUNGGU',
     };
 
-    setOffPjpAttendances((prev) => [newAbsen, ...prev]);
+    setOffPjpAttendances((prev) => [newRecord, ...prev]);
 
     addNotification({
-      title: 'Absen Toko Luar RJP (Menunggu Validasi)',
-      message: `Sales ${user.name} melakukan Absen Toko Luar RJP di ${outletName}. Status: MENUNGGU. Membutuhkan review SPV.`,
+      title: 'Presensi Toko Luar RJP Masuk',
+      message: `Sales ${user.name} melakukan presensi di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
       roleTarget: ['SUPERVISOR'],
     });
-  };
 
-  // Sales Action: Request Visit to Off-PJP Store
-  const handleSalesRequestOffPJP = ({ outletName, address, reason }) => {
-    const newRequest = {
-      id: `inc-offpjp-${Date.now()}`,
-      type: 'OFF_PJP_REQUEST',
+    // Call Backend API
+    absensiApi.submitOffPjp({
       outletName,
+      customerName,
+      phone,
       address,
-      salesName: user.name,
-      spvName: 'Ahmad Subagja',
-      spvTeam: 'Tim SPV Ahmad Subagja (Cimahi - KBB)',
       reason,
-      reportedAt: new Date().toLocaleTimeString(),
-      status: 'PENDING_SPV_OFFPJP',
-    };
-
-    setIncidents((prev) => [newRequest, ...prev]);
-
-    addNotification({
-      title: 'Pengajuan Kunjungan Toko Luar RJP',
-      message: `Sales ${user.name} mengajukan kunjungan ke ${outletName} (Luar RJP Hari Ini). Membutuhkan persetujuan SPV.`,
-      roleTarget: ['SUPERVISOR'],
+      photoUrl,
+      latitude: gpsLocation?.lat || -6.8722,
+      longitude: gpsLocation?.lng || 107.5423,
+    }).catch((err) => {
+      console.warn('[API] Submit off-PJP sync error:', err.message);
     });
   };
 
@@ -192,6 +234,5 @@ export const useSalesActions = ({
     handleReportClosedOutlet,
     handleRequestUnlockOutlet,
     handleSalesAbsenOffPJP,
-    handleSalesRequestOffPJP,
   };
 };
