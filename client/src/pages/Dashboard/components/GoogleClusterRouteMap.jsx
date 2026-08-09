@@ -1,21 +1,43 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect, Component } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 import { getClusterColorHex } from '../../../services/clusterColorService';
 import { ClusterMapLegend } from './ClusterMapLegend';
 import { SelectedSalesMapHeader } from './SelectedSalesMapHeader';
 import { RouteProviderBadge } from './RouteProviderBadge';
 import { RouteLegsPolyline } from './RouteLegsPolyline';
-import { MapLoadingFallback } from './MapLoadingFallback';
+import { LeafletFallbackRouteMap } from './LeafletFallbackRouteMap';
 import { MapRecenterButton } from './MapRecenterButton';
 import { OutletInfoWindow } from './OutletInfoWindow';
 import { OutletMarkers } from './OutletMarkers';
 import { SalesLocationMarker } from './SalesLocationMarker';
 import { GOOGLE_MAP_CONTAINER_STYLE, GOOGLE_MAP_OPTIONS, DEFAULT_DEPOT_LOCATION } from '../../../constants/maps';
+import { useApp } from '../../../context/AppContext';
 import { useClusterStops } from '../hooks/useClusterStops';
 import { useRoadDirections } from '../hooks/useRoadDirections';
 import { useMapMarkers } from '../hooks/useMapMarkers';
 import { useMapPanEffects } from '../hooks/useMapPanEffects';
 import '../../../styles/components/GoogleClusterRouteMap.css';
+
+/**
+ * MapErrorBoundary
+ * Catches internal react-google-maps crashes (e.g., IntersectionObserver)
+ */
+class MapErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.warn('[Google Maps ErrorBoundary] Caught map crash:', error);
+  }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
 
 /**
  * GoogleClusterRouteMap Component (Orchestrator)
@@ -36,7 +58,17 @@ export const GoogleClusterRouteMap = ({
   const [mapCenter] = useState({ lat: salesLocation.lat, lng: salesLocation.lng });
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const { isLoaded } = useJsApiLoader({ id: 'google-map-script-sdk', googleMapsApiKey: apiKey });
+  const { isLoaded, loadError } = useJsApiLoader({ id: 'google-map-script-sdk', googleMapsApiKey: apiKey });
+  const { currentLocation } = useApp();
+  const effectiveLocation = currentLocation || salesLocation;
+  const [authFailed, setAuthFailed] = useState(false);
+
+  useEffect(() => {
+    window.gm_authFailure = () => {
+      console.warn('[GoogleClusterRouteMap] Google Maps Auth/Quota Failed! Switching to fallback.');
+      setAuthFailed(true);
+    };
+  }, []);
 
   const onMapLoad = useCallback((map) => { mapRef.current = map; }, []);
   const onMapUnmount = useCallback(() => { mapRef.current = null; }, []);
@@ -45,9 +77,9 @@ export const GoogleClusterRouteMap = ({
     allStops,
     selectedSales,
     isSalesRole,
-    salesLocation,
+    salesLocation: effectiveLocation,
   });
-  const { routeLegs, routeProvider } = useRoadDirections({ isLoaded, salesLocation, systemStops });
+  const { routeLegs, routeProvider } = useRoadDirections({ isLoaded, salesLocation: effectiveLocation, systemStops });
   const { getMarkerSymbol, getSalesLocationSymbol } = useMapMarkers();
 
   useMapPanEffects({ mapRef, selectedOutlet, selectedSales, setActiveMarkerStop });
@@ -58,10 +90,10 @@ export const GoogleClusterRouteMap = ({
 
   const handleRecenterToSales = useCallback(() => {
     if (mapRef.current) {
-      mapRef.current.panTo({ lat: Number(salesLocation.lat), lng: Number(salesLocation.lng) });
+      mapRef.current.panTo({ lat: Number(effectiveLocation.lat), lng: Number(effectiveLocation.lng) });
       mapRef.current.setZoom(13);
     }
-  }, [salesLocation]);
+  }, [effectiveLocation]);
 
   const handleSelectOutlet = useCallback((stop) => {
     onSelectOutlet(stop);
@@ -72,17 +104,23 @@ export const GoogleClusterRouteMap = ({
     setActiveMarkerStop(null);
   }, []);
 
-  if (!isLoaded) {
-    return (
-      <MapLoadingFallback
-        allStopsCount={allStops.length}
-        isSalesRole={isSalesRole}
-        selectedSales={selectedSales}
-        onClearSelection={onClearSelection}
-        selectedOutlet={selectedOutlet}
-        salesLocation={salesLocation}
-      />
-    );
+  const fallbackMap = (
+    <LeafletFallbackRouteMap
+      systemStops={systemStops}
+      selectedSales={selectedSales}
+      selectedOutlet={selectedOutlet}
+      onSelectOutlet={handleSelectOutlet}
+      onClearSelection={onClearSelection}
+      userRole={userRole}
+      salesLocation={effectiveLocation}
+      routeLegs={routeLegs}
+      routeProvider={routeProvider}
+      clusterBaseColor={clusterBaseColor}
+    />
+  );
+
+  if (!isLoaded || loadError || authFailed) {
+    return fallbackMap;
   }
 
   return (
@@ -99,18 +137,19 @@ export const GoogleClusterRouteMap = ({
 
       <MapRecenterButton onRecenter={handleRecenterToSales} />
 
-      <GoogleMap
-        mapContainerStyle={GOOGLE_MAP_CONTAINER_STYLE}
-        zoom={selectedOutlet ? 15 : 12}
-        center={mapCenter}
-        options={{ ...GOOGLE_MAP_OPTIONS, gestureHandling: 'greedy' }}
-        onLoad={onMapLoad}
-        onUnmount={onMapUnmount}
-      >
-        <SalesLocationMarker
-          position={{ lat: salesLocation.lat, lng: salesLocation.lng }}
-          symbol={getSalesLocationSymbol()}
-        />
+      <MapErrorBoundary fallback={fallbackMap}>
+        <GoogleMap
+          mapContainerStyle={GOOGLE_MAP_CONTAINER_STYLE}
+          zoom={selectedOutlet ? 15 : 12}
+          center={mapCenter}
+          options={{ ...GOOGLE_MAP_OPTIONS, gestureHandling: 'greedy' }}
+          onLoad={onMapLoad}
+          onUnmount={onMapUnmount}
+        >
+          <SalesLocationMarker
+            position={{ lat: effectiveLocation.lat, lng: effectiveLocation.lng }}
+            symbol={getSalesLocationSymbol()}
+          />
 
         <OutletMarkers
           stops={systemStops}
@@ -130,11 +169,12 @@ export const GoogleClusterRouteMap = ({
         {activeMarkerStop && (
           <OutletInfoWindow
             stop={activeMarkerStop}
-            salesLocation={salesLocation}
+            salesLocation={effectiveLocation}
             onClose={handleCloseInfoWindow}
           />
         )}
-      </GoogleMap>
+        </GoogleMap>
+      </MapErrorBoundary>
     </div>
   );
 };

@@ -18,7 +18,7 @@ export const RouteMapView = () => {
   const todayStops = useMemo(() => filterStopsForToday(salesStops), [salesStops]);
 
   // Role check: Only Supervisor, Operational Manager, and Admin can see options to switch to other teams / clusters / all teams
-  const isSupervisorOrManager = ['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
+  const isSupervisorOrManager = ['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role);
   const isSalesRole = user?.role === 'SALES';
 
   // Team/Sales filter options (only accessible to Supervisor & Manager)

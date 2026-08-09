@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getTodayNameId } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
 import { useModal } from '../../hooks/useModal';
 import { notifySuccess } from '../../services/notificationService';
@@ -31,19 +32,35 @@ export const SalesFieldView = () => {
   const { modalType, payload: selectedStop, openModal, closeModal, isOpen } = useModal();
 
   // Active Selected Day Filter for PJP Plan
-  const [selectedDay, setSelectedDay] = useState('Senin');
+  const todayDayName = getTodayNameId();
+  const [selectedDay, setSelectedDay] = useState(todayDayName);
 
-  // Filter stops by selected Day & User assignment (Showing ONLY outlets scheduled for that day/plan)
+  // Extract unique days dynamically from the stops assigned to the sales rep
+  const dynamicDaysList = useMemo(() => {
+    const list = [];
+    const mapDays = new Map();
+    salesStops.forEach((s) => {
+      const day = s.dayOfWeek || todayDayName;
+      if (!mapDays.has(day)) {
+        mapDays.set(day, true);
+        list.push({
+          day: day,
+          plan: s.callplanName || '-',
+          cluster: s.clusterName || '-',
+        });
+      }
+    });
+
+    if (list.length === 0) {
+      list.push({ day: selectedDay, plan: 'Belum Ada Jadwal', cluster: '-' });
+    }
+    return list;
+  }, [salesStops, todayDayName, selectedDay]);
+
+  // Filter stops by selected Day & User assignment
   const activeDayStops = useMemo(() => {
-    if (user?.name === 'Siti Rahma') {
-      return salesStops.filter((stop) => stop.callplanName === 'RJP-PADALARANG-01');
-    }
-    if (user?.name === 'Agus Wijaya') {
-      return salesStops.filter((stop) => stop.callplanName === 'RJP-LEMBANG-01');
-    }
-    // Default for Budi Santoso (1 Sales 3 Days: Senin = Cimahi, Selasa = Padalarang, Rabu = Lembang)
-    return salesStops.filter((stop) => stop.dayOfWeek === selectedDay);
-  }, [salesStops, selectedDay, user]);
+    return salesStops.filter((stop) => (stop.dayOfWeek || todayDayName) === selectedDay);
+  }, [salesStops, selectedDay, todayDayName]);
 
   const stopActions = {
     onAbsenIn: (s) => openModal('ABSEN_IN', s),
@@ -117,13 +134,9 @@ export const SalesFieldView = () => {
 
         {/* Day / Call Plan Selector Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {[
-            { day: 'Senin', plan: 'RJP-CIMAHI-01', cluster: 'Cimahi Tengah' },
-            { day: 'Selasa', plan: 'RJP-PADALARANG-01', cluster: 'Padalarang' },
-            { day: 'Rabu', plan: 'RJP-LEMBANG-01', cluster: 'Lembang' },
-          ].map((item) => {
+          {dynamicDaysList.map((item) => {
             const isActive = selectedDay === item.day;
-            const count = salesStops.filter((s) => s.dayOfWeek === item.day).length;
+            const count = salesStops.filter((s) => (s.dayOfWeek || todayDayName) === item.day).length;
             return (
               <button
                 key={item.day}

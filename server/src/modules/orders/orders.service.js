@@ -131,7 +131,12 @@ export const approveOrder = async (orderId, adminId) => {
   const updatedOrder = await prisma.order.update({
     where: { id: orderId },
     data: { status: ORDER_STATUS.APPROVED, approvedBy: adminId, approvedAt: new Date() },
-    include: { items: { include: { product: true } } },
+    include: { 
+      items: { include: { product: true } },
+      pjpStop: { include: { outlet: { select: { id: true, name: true, address: true } } } },
+      createdByUser: { select: { id: true, name: true, email: true } },
+      approvedByUser: { select: { id: true, name: true } },
+    },
   });
 
   await createNotification(
@@ -159,6 +164,12 @@ export const rejectOrder = async (orderId, adminId) => {
   const updatedOrder = await prisma.order.update({
     where: { id: orderId },
     data: { status: ORDER_STATUS.REJECTED, approvedBy: adminId, approvedAt: new Date() },
+    include: { 
+      items: { include: { product: true } },
+      pjpStop: { include: { outlet: { select: { id: true, name: true, address: true } } } },
+      createdByUser: { select: { id: true, name: true, email: true } },
+      approvedByUser: { select: { id: true, name: true } },
+    },
   });
 
   await createNotification(

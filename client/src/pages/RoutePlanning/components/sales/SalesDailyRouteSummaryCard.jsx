@@ -11,7 +11,7 @@ const DAYS_LIST = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
  */
 export const SalesDailyRouteSummaryCard = ({
   salesPerson,
-  supervisorName = 'Ahmad Subagja',
+  supervisorName = '-',
   activeRoute,
   stops = [],
   selectedDay = 'Senin',
@@ -31,12 +31,12 @@ export const SalesDailyRouteSummaryCard = ({
               <span>Rute Aktif Hari: {selectedDay}</span>
             </div>
             <span className="px-2.5 py-0.5 bg-surface-container rounded-full text-xs font-bold text-on-surface flex items-center gap-1">
-              <LuUser className="text-xs text-primary" /> Sales: {salesPerson?.salesName || salesPerson?.name || 'Budi Santoso'}
+              <LuUser className="text-xs text-primary" /> Sales: {salesPerson?.salesName || salesPerson?.name || '-'}
             </span>
           </div>
 
           <h2 className="sales-daily-title">
-            {activeRoute?.name || 'Klaster Cimahi Tengah (RJP-CIMAHI-01)'}
+            {activeRoute?.name || '-'}
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
             Ditugaskan oleh Supervisor: <strong className="text-on-surface">{supervisorName}</strong>

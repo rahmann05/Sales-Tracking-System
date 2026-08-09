@@ -10,10 +10,9 @@ import { useAdminActions } from '../hooks/useAdminActions';
 const AppContext = createContext();
 
 const ROLE_LABELS = {
-  SALES: 'Sales Field Rep',
-  SUPERVISOR: 'Supervisor Operasional',
-  ADMIN: 'Admin Penjualan',
-  OPERATIONAL_MANAGER: 'Manajer Operasional',
+  SALES: 'Sales',
+  SUPERVISOR: 'Supervisor',
+  ADMIN: 'Admin',
   MANAJER_OPERASIONAL: 'Manajer Operasional',
 };
 
@@ -68,6 +67,34 @@ export const AppProvider = ({ children }) => {
   // Notifications
   const [notifications, setNotifications] = useState([]);
 
+  // Live GPS Location
+  const [currentLocation, setCurrentLocation] = useState(null);
+
+  // ─── Live Geolocation Tracking ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) {
+      setCurrentLocation(null);
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setCurrentLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          timestamp: pos.timestamp,
+        });
+      },
+      (err) => {
+        console.warn('[AppContext] Geolocation error:', err.message);
+      },
+      { enableHighAccuracy: true, maximumAge: 0 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [user]);
+
   // ─── Live Backend Integration Effect ───────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
@@ -84,23 +111,23 @@ export const AppProvider = ({ children }) => {
             const mappedStops = res.data.stops.map((s, idx) => ({
               id: s.id,
               sequence: s.sequence || idx + 1,
-              customerName: s.outlet?.name || `Toko ${idx + 1}`,
-              outletName: s.outlet?.name || `Toko ${idx + 1}`,
-              owner: s.outlet?.ownerName || s.outlet?.owner || 'Pemilik Toko',
-              phone: s.outlet?.phone || '0812-0000-0000',
-              address: s.outlet?.address || 'Bandung',
-              latitude: Number(s.outlet?.latitude || -6.8722),
-              longitude: Number(s.outlet?.longitude || 107.5423),
-              radiusMeters: s.outlet?.radiusMeters || 50,
-              creditLimit: s.outlet?.creditLimit || 15000000,
+              customerName: s.outlet?.name || '',
+              outletName: s.outlet?.name || '',
+              owner: s.outlet?.ownerName || s.outlet?.owner || '',
+              phone: s.outlet?.phone || '',
+              address: s.outlet?.address || '',
+              latitude: Number(s.outlet?.latitude) || null,
+              longitude: Number(s.outlet?.longitude) || null,
+              radiusMeters: s.outlet?.radiusMeters || 0,
+              creditLimit: s.outlet?.creditLimit || 0,
               outstanding: s.outlet?.outstanding || 0,
-              callplanName: res.data.callplanName || 'RJP-HARI-INI',
-              clusterName: res.data.clusterName || 'Klaster Aktif',
-              regionName: res.data.regionName || 'Region Cimahi - Bandung Barat',
-              dayOfWeek: res.data.dayOfWeek || 'Senin',
-              assignedSalesName: user.name,
-              customerId: s.outlet?.outletCode || `CUST-00${idx + 1}`,
-              outletCode: s.outlet?.outletCode || `CUST-00${idx + 1}`,
+              callplanName: res.data.callplanName || '',
+              clusterName: res.data.clusterName || '',
+              regionName: res.data.regionName || '',
+              dayOfWeek: res.data.dayOfWeek || '',
+              assignedSalesName: user?.name || '',
+              customerId: s.outlet?.outletCode || '',
+              outletCode: s.outlet?.outletCode || '',
               status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
             }));
             setSalesStops(mappedStops);
@@ -108,7 +135,8 @@ export const AppProvider = ({ children }) => {
         }
 
         // 2b. Supervisor/Manager: bangun activeRoutes dari PJP hari ini (PostgreSQL)
-        if (user?.role !== 'SALES') {
+        const allowedRoles = ['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'];
+        if (allowedRoles.includes(user?.role)) {
           const res = await pjpApi.getAllPjps().catch(() => null);
           const pjps = Array.isArray(res?.data) ? res.data : [];
           if (pjps.length > 0 && isMounted) {
@@ -118,32 +146,32 @@ export const AppProvider = ({ children }) => {
               const stops = (p.stops || []).map((s, idx) => ({
                 id: s.id,
                 sequence: s.sequence || idx + 1,
-                outletName: s.outlet?.name || `Toko ${idx + 1}`,
-                customerName: s.outlet?.name || `Toko ${idx + 1}`,
-                owner: s.outlet?.ownerName || s.outlet?.owner || '-',
-                phone: s.outlet?.phone || '-',
-                address: s.outlet?.address || '-',
-                latitude: Number(s.outlet?.latitude),
-                longitude: Number(s.outlet?.longitude),
-                callplanName: p.name || 'RJP',
-                clusterName: p.cluster?.name || 'Klaster',
-                regionName: p.cluster?.region || '-',
-                dayOfWeek: p.dayOfWeek,
-                assignedSalesName: p.user?.name || 'Sales',
+                outletName: s.outlet?.name || '',
+                customerName: s.outlet?.name || '',
+                owner: s.outlet?.ownerName || s.outlet?.owner || '',
+                phone: s.outlet?.phone || '',
+                address: s.outlet?.address || '',
+                latitude: Number(s.outlet?.latitude) || null,
+                longitude: Number(s.outlet?.longitude) || null,
+                callplanName: p.name || '',
+                clusterName: p.cluster?.name || '',
+                regionName: p.cluster?.region || '',
+                dayOfWeek: p.dayOfWeek || '',
+                assignedSalesName: p.user?.name || '',
                 status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
               }));
               const done = stops.filter((s) => s.status === 'VISITED').length;
               return {
                 id: p.id,
                 salesId: p.userId,
-                name: p.user?.name || 'Sales',
+                name: p.user?.name || '',
                 avatar: null,
-                region: p.cluster?.name || 'Klaster',
+                region: p.cluster?.name || '',
                 status: done === stops.length && stops.length > 0 ? 'Completed' : 'In Transit',
                 progress: stops.length ? Math.round((done / stops.length) * 100) : 0,
                 stops,
-                distance: '-',
-                vehicle: '-',
+                distance: '',
+                vehicle: '',
               };
             });
             setActiveRoutes(routes);
@@ -156,10 +184,10 @@ export const AppProvider = ({ children }) => {
           const mappedOffPjp = offPjpRes.data.map((att) => ({
             id: att.id,
             salesId: att.userId,
-            salesName: att.user?.name || 'Sales Field',
-            outletName: att.outletName,
-            customerName: att.customerName || att.outletName,
-            phone: att.phone || '-',
+            salesName: att.user?.name || '',
+            outletName: att.outletName || '',
+            customerName: att.customerName || att.outletName || '',
+            phone: att.phone || '',
             address: att.address,
             reason: att.reason,
             photoUrl: att.photoUrl,
@@ -179,8 +207,8 @@ export const AppProvider = ({ children }) => {
             const mappedOrders = rawOrders.map((o) => ({
               id: o.id,
               dailyStopId: o.pjpStopId,
-              outletName: o.pjpStop?.outlet?.name || 'Toko',
-              salesName: o.createdByUser?.name || 'Sales Rep',
+              outletName: o.pjpStop?.outlet?.name || '',
+              salesName: o.createdByUser?.name || '',
               createdAt: new Date(o.createdAt).toISOString().replace('T', ' ').substring(0, 16),
               items: o.items || [],
               totalAmount: o.totalValue,
@@ -296,6 +324,7 @@ export const AppProvider = ({ children }) => {
     user,
     setUser,
     setUserFromAuth,
+    currentLocation,
 
     // Shift Clock-In State
     shiftAttendance,

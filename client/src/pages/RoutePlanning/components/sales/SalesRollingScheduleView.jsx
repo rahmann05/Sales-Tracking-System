@@ -25,7 +25,7 @@ export const SalesRollingScheduleView = ({ userSchedule = {}, todayDay = 'Senin'
       <div className="sales-schedule-grid">
         {DAYS_LIST.map((day) => {
           const isToday = day === todayDay;
-          const dayInfo = userSchedule[day] || { clusterName: 'Rolling / Follow-up', outletsCount: 10, subDistrict: 'Bandung Barat' };
+          const dayInfo = userSchedule[day] || { clusterName: '-', outletsCount: 0, subDistrict: '-' };
 
           return (
             <div
@@ -50,7 +50,7 @@ export const SalesRollingScheduleView = ({ userSchedule = {}, todayDay = 'Senin'
                   <LuStore className="text-primary" />
                   {dayInfo.outletsCount} Toko
                 </span>
-                <span className="text-[10px]">{dayInfo.subDistrict || 'Bandung Barat'}</span>
+                <span className="text-[10px]">{dayInfo.subDistrict || '-'}</span>
               </div>
             </div>
           );

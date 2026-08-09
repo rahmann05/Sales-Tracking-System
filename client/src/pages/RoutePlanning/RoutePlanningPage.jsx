@@ -10,8 +10,11 @@ import { MapDirectoryTab } from './components/MapDirectoryTab';
 import { RjpOpsHeader } from './components/ops/RjpOpsHeader';
 import { RjpAllocationStats } from './components/ops/RjpAllocationStats';
 import { MasterClusterTable } from './components/ops/MasterClusterTable';
-import { CreateClusterModal } from './components/ops/CreateClusterModal';
+import { ClusterFormModal } from './components/ops/ClusterFormModal';
 import { SpreadsheetImportModal } from './components/ops/SpreadsheetImportModal';
+import { VehiclesHeader } from './components/ops/VehiclesHeader';
+import { VehicleSpecsTable } from './components/ops/VehicleSpecsTable';
+import { VehicleFormModal } from './components/ops/VehicleFormModal';
 import { RjpSpvHeader } from './components/spv/RjpSpvHeader';
 import { WeeklyRollingMatrixTable } from './components/spv/WeeklyRollingMatrixTable';
 import { ReassignDayRouteModal } from './components/spv/ReassignDayRouteModal';
@@ -19,6 +22,7 @@ import { AutoRollingConfirmModal } from './components/spv/AutoRollingConfirmModa
 
 // Hooks
 import { useRjpManagement } from '../../hooks/useRjpManagement';
+import { useVehicleManagement } from '../../hooks/useVehicleManagement';
 import { useSupervisorRollingMatrix } from '../../hooks/useSupervisorRollingMatrix';
 import { useSalesRouteSelection } from './hooks/useSalesRouteSelection';
 
@@ -54,11 +58,28 @@ export const RoutePlanningPage = () => {
     stats,
     isImportModalOpen,
     setIsImportModalOpen,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
+    isCreateModalOpen: _isCreateModalOpen,
+    setIsCreateModalOpen: _setIsCreateModalOpen,
+    isFormModalOpen,
+    setIsFormModalOpen,
+    editingCluster,
+    setEditingCluster,
     handleCreateCluster,
+    handleUpdateCluster,
+    handleDeleteCluster,
     handleImportSpreadsheet,
   } = useRjpManagement();
+
+  const {
+    vehicles,
+    isFormModalOpen: isVehicleFormOpen,
+    setIsFormModalOpen: setIsVehicleFormOpen,
+    editingVehicle,
+    setEditingVehicle,
+    handleCreateVehicle,
+    handleUpdateVehicle,
+    handleDeleteVehicle,
+  } = useVehicleManagement();
 
   const {
     matrixRows,
@@ -81,11 +102,22 @@ export const RoutePlanningPage = () => {
       {activeTab === 'OPS_MANAGER' && isOpsOrAdmin && (
         <div className="space-y-6">
           <RjpOpsHeader
-            onOpenCreateModal={() => setIsCreateModalOpen(true)}
+            onOpenCreateModal={() => setIsFormModalOpen(true)}
             onOpenImportModal={() => setIsImportModalOpen(true)}
           />
           <RjpAllocationStats stats={stats} />
-          <MasterClusterTable clusters={masterClusters} />
+          <MasterClusterTable 
+            clusters={masterClusters} 
+            onEdit={(c) => { setEditingCluster(c); setIsFormModalOpen(true); }}
+            onDelete={handleDeleteCluster}
+          />
+          <hr className="my-8 border-gray-200" />
+          <VehiclesHeader onOpenCreateModal={() => setIsVehicleFormOpen(true)} />
+          <VehicleSpecsTable
+            vehicles={vehicles}
+            onEdit={(v) => { setEditingVehicle(v); setIsVehicleFormOpen(true); }}
+            onDelete={handleDeleteVehicle}
+          />
         </div>
       )}
 
@@ -116,15 +148,28 @@ export const RoutePlanningPage = () => {
 
       {isOpsOrAdmin && (
         <>
-          <CreateClusterModal
-            isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
-            onSubmit={handleCreateCluster}
+          <ClusterFormModal
+            isOpen={isFormModalOpen}
+            onClose={() => { setIsFormModalOpen(false); setEditingCluster(null); }}
+            onSubmit={(data) => {
+              if (data.id) handleUpdateCluster(data.id, data);
+              else handleCreateCluster(data);
+            }}
+            cluster={editingCluster}
           />
           <SpreadsheetImportModal
             isOpen={isImportModalOpen}
             onClose={() => setIsImportModalOpen(false)}
             onImportSuccess={handleImportSpreadsheet}
+          />
+          <VehicleFormModal
+            isOpen={isVehicleFormOpen}
+            onClose={() => { setIsVehicleFormOpen(false); setEditingVehicle(null); }}
+            onSubmit={(data) => {
+              if (data.id) handleUpdateVehicle(data.id, data);
+              else handleCreateVehicle(data);
+            }}
+            vehicle={editingVehicle}
           />
         </>
       )}

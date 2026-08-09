@@ -7,7 +7,7 @@ import '../../../../styles/components/MasterClusterTable.css';
  * Single Responsibility: Table view container rendering all Master RJP Clusters.
  * 1 File = 1 Component
  */
-export const MasterClusterTable = ({ clusters = [] }) => {
+export const MasterClusterTable = ({ clusters = [], onEdit, onDelete }) => {
   return (
     <div className="master-cluster-table-card">
       <div className="master-cluster-table-header">
@@ -32,11 +32,17 @@ export const MasterClusterTable = ({ clusters = [] }) => {
               <th className="master-cluster-th">Kuota Outlet</th>
               <th className="master-cluster-th">Supervisor Penanggung Jawab</th>
               <th className="master-cluster-th">Status</th>
+              <th className="master-cluster-th text-center">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {clusters.map((cluster) => (
-              <MasterClusterRow key={cluster.id} cluster={cluster} />
+              <MasterClusterRow 
+                key={cluster.id} 
+                cluster={cluster} 
+                onEdit={onEdit} 
+                onDelete={onDelete} 
+              />
             ))}
           </tbody>
         </table>

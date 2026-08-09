@@ -16,7 +16,7 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
           <LuLayers />
         </div>
         <h1 className="login-mobile-splash-title">Sinar Anugrah</h1>
-        <p className="login-mobile-splash-subtitle">Sales & Distribution System</p>
+        <p className="login-mobile-splash-subtitle">Sales Tracking System</p>
       </div>
 
       {/* Main Direct Login Form Container (Desktop & Mobile) */}
@@ -28,10 +28,10 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
               <LuLayers />
             </div>
             <h1 className="text-2xl font-black text-on-surface tracking-tight">
-              PT. SINAR ANUGRAH
+              CV. SINAR ANUGRAH
             </h1>
             <p className="text-xs text-on-surface-variant max-w-xs">
-              Platform Manajemen PJP & Distribusi FMCG Terpadu
+              Platform Sales Tracking
             </p>
           </div>
 
@@ -46,7 +46,7 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
 
           {/* Footer */}
           <div className="login-footer mt-2">
-            <p>© 2026 PT. Sinar Anugrah • FMCG Distribution System</p>
+            <p>© 2026 CV. Sinar Anugrah </p>
           </div>
         </div>
       </div>

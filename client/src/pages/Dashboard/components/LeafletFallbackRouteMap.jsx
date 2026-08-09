@@ -109,15 +109,23 @@ export const LeafletFallbackRouteMap = ({
           salesLocation={salesLocation}
         />
 
-        {/* Depo / Starting Location Pin */}
+        {/* Starting / Current Location Pin */}
         <Marker
           position={[centerLat, centerLng]}
-          icon={createCustomPinIcon('#10b981', true)}
+          icon={createCustomPinIcon(salesLocation?.accuracy ? '#dc2626' : '#10b981', true)}
         >
           <Popup>
             <div className="text-xs p-1">
-              <span className="font-bold text-emerald-700">🏢 Depo Pusat Sinar Anugrah</span>
-              <p className="text-gray-600 text-[10px]">Titik Awal Keberangkatan Sales</p>
+              <span className={`font-bold flex items-center gap-1 ${salesLocation?.accuracy ? 'text-red-700' : 'text-emerald-700'}`}>
+                {salesLocation?.accuracy ? (
+                  <><LuMapPin /> Lokasi Anda Saat Ini</>
+                ) : (
+                  <><LuStore /> Depo Pusat Sinar Anugrah</>
+                )}
+              </span>
+              <p className="text-gray-600 text-[10px]">
+                {salesLocation?.accuracy ? 'Titik GPS Real-Time' : 'Titik Awal Keberangkatan Sales'}
+              </p>
             </div>
           </Popup>
         </Marker>

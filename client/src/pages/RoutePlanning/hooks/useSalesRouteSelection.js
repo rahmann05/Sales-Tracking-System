@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
 
 const FALLBACK_SCHEDULE_INFO = {
-    clusterName: 'Klaster Cimahi Tengah (RJP-CIMAHI-01)',
-    outletsCount: 10,
-    subDistrict: 'Cimahi',
+    clusterName: '-',
+    outletsCount: 0,
+    subDistrict: '-',
 };
 
 /**

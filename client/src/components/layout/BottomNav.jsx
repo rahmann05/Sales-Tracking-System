@@ -25,7 +25,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
         return { id: 'role-workspace', label: 'Supervisi', icon: LuShieldCheck };
       case 'ADMIN':
         return { id: 'role-workspace', label: 'Approval', icon: LuFileCheck };
-      case 'OPERATIONAL_MANAGER':
+      case 'MANAJER_OPERASIONAL':
         return { id: 'role-workspace', label: 'Ops Rute', icon: LuBriefcase };
       default:
         return { id: 'role-workspace', label: 'Workspace', icon: LuNavigation };
@@ -36,15 +36,15 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
     const items = [getRoleNavItem()];
     items.push({ id: 'dashboard', label: 'Peta', icon: LuLayoutDashboard });
 
-    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER'].includes(user?.role)) {
+    if (['SALES', 'SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role)) {
       items.push({ id: 'route-planning', label: 'Master RJP', icon: LuNavigation });
     }
 
-    if (['SALES', 'SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+    if (['SALES', 'SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role)) {
       items.push({ id: 'team-tracking', label: 'Tim', icon: LuUsers });
     }
 
-    if (['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role)) {
+    if (['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role)) {
       items.push({ id: 'reports', label: 'Laporan', icon: FiBarChart2 });
     }
 

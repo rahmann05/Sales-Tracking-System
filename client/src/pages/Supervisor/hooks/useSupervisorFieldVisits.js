@@ -1,87 +1,108 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { notifySuccess } from '../../../services/notificationService';
 import {
     SPV_MODES,
-    PRIORITY_AUDIT_STOPS,
-    OPENING_INSPECTION_TEAMS,
     DEFAULT_SPV_CHECKLIST,
 } from '../../../constants/supervisor';
 
 const nowWib = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' WIB';
 
-// Daftar toko untuk mode Joint Visit berdasarkan sales yang didampingi
-const buildJointVisitStops = (salesStops, selectedSales) => {
-    let baseStops = salesStops.slice(0, 10);
-    if (selectedSales === 'Siti Rahma') baseStops = salesStops.slice(10, 20);
-    else if (selectedSales === 'Agus Wijaya') baseStops = salesStops.slice(20, 30);
-
-    return baseStops.slice(0, 4).map((s, idx) => ({
-        id: `spv-stop-${idx + 1}`,
+// Extract stops from actual PJP based on selected sales name
+const buildJointVisitStops = (todayPjps, selectedSales) => {
+    const pjp = todayPjps.find(p => p.user?.name === selectedSales);
+    if (!pjp || !pjp.stops) return [];
+    
+    return pjp.stops.slice(0, 4).map((s, idx) => ({
+        id: `spv-stop-${s.id}`,
         sequence: idx + 1,
-        outletName: s.outletName || `Toko Pilihan ${idx + 1}`,
-        owner: s.owner || 'Pemilik Toko',
-        phone: s.phone || '0812-3456-7890',
-        address: s.address || 'Jl. Raya Area Klaster',
-        currentDistance: idx === 1 ? 15 : idx === 2 ? 35 : 55,
-        radiusMeters: 50,
+        outletName: s.outlet?.name || `Toko Pilihan ${idx + 1}`,
+        owner: s.outlet?.ownerName || 'Tidak ada data',
+        phone: s.outlet?.phone || 'Tidak ada data',
+        address: s.outlet?.address || 'Tidak ada data',
+        currentDistance: 0, // TODO: Hubungkan ke OSRM/Routing API untuk distance sebenarnya
+        radiusMeters: s.outlet?.radiusMeters || 50,
         spvVisitType: idx === 0 ? 'Inspeksi Pembuka Rute' : 'Pendampingan Sales (Joint Visit)',
         assignedSales: selectedSales,
     }));
 };
 
-const buildOpeningInspectionStops = (salesStops) =>
-    OPENING_INSPECTION_TEAMS.map((team, i) => {
-        const base = salesStops[team.index];
-        return {
-            id: `spv-open-${i + 1}`,
-            sequence: i + 1,
-            outletName: base?.outletName || team.fallbackOutlet,
-            owner: base?.owner || team.fallbackOwner,
-            phone: '0812-3456-7890',
-            address: base?.address || team.fallbackAddress,
-            currentDistance: team.distance,
-            radiusMeters: 50,
-            spvVisitType: team.type,
-            assignedSales: team.sales,
-        };
-    });
+const buildPriorityAuditStops = (todayPjps) => {
+    // Pick the first stop from up to 3 different PJPs as priority audits
+    const audits = [];
+    for (let i = 0; i < Math.min(3, todayPjps.length); i++) {
+        const pjp = todayPjps[i];
+        if (pjp.stops && pjp.stops.length > 0) {
+            const s = pjp.stops[0];
+            audits.push({
+                id: `spv-audit-${s.id}`,
+                sequence: i + 1,
+                outletName: s.outlet?.name || `Toko Pilihan ${i + 1}`,
+                owner: s.outlet?.ownerName || 'Tidak ada data',
+                phone: s.outlet?.phone || 'Tidak ada data',
+                address: s.outlet?.address || 'Tidak ada data',
+                currentDistance: 0,
+                radiusMeters: s.outlet?.radiusMeters || 50,
+                spvVisitType: 'Audit Key Account & Plafon Kredit',
+                assignedSales: pjp.user?.name || 'Sales',
+            });
+        }
+    }
+    return audits;
+};
+
+const buildOpeningInspectionStops = (todayPjps) => {
+    // Pick the second stop from up to 3 different PJPs as opening inspections
+    const opens = [];
+    for (let i = 0; i < Math.min(3, todayPjps.length); i++) {
+        const pjp = todayPjps[i];
+        if (pjp.stops && pjp.stops.length > 1) {
+            const s = pjp.stops[1];
+            opens.push({
+                id: `spv-open-${s.id}`,
+                sequence: i + 1,
+                outletName: s.outlet?.name || `Toko Pilihan ${i + 1}`,
+                owner: s.outlet?.ownerName || 'Tidak ada data',
+                phone: s.outlet?.phone || 'Tidak ada data',
+                address: s.outlet?.address || 'Tidak ada data',
+                currentDistance: 0,
+                radiusMeters: s.outlet?.radiusMeters || 50,
+                spvVisitType: 'Inspeksi Pembuka Rute',
+                assignedSales: pjp.user?.name || 'Sales',
+            });
+        }
+    }
+    return opens;
+};
 
 /**
  * useSupervisorFieldVisits Hook
  * Single Responsibility: Encapsulate SPV field-visit state machine
  * (mode selection, visit records, absen in/out, audit form, off-PJP form, active modal).
  */
-export const useSupervisorFieldVisits = (salesStops = []) => {
+export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
     const [spvMode, setSpvMode] = useState(SPV_MODES.JOINT_VISIT);
-    const [selectedSales, setSelectedSales] = useState('Budi Santoso');
+    const [selectedSales, setSelectedSales] = useState('');
+    
+    // Auto-select first sales when options load
+    useEffect(() => {
+      if (salesOptions.length > 0 && !selectedSales) {
+          setSelectedSales(salesOptions[0].value);
+      }
+    }, [salesOptions, selectedSales]);
+
     const [activeModal, setActiveModal] = useState(null); // 'ABSEN_IN' | 'AUDIT' | 'ABSEN_OUT' | 'OFF_PJP'
     const [selectedStop, setSelectedStop] = useState(null);
     const [inputNotes, setInputNotes] = useState('');
     const [checklist, setChecklist] = useState(DEFAULT_SPV_CHECKLIST);
     const [offPjpForm, setOffPjpForm] = useState({ outletName: '', address: '', owner: '', reason: '' });
 
-    const [spvVisitRecords, setSpvVisitRecords] = useState({
-        'spv-stop-1': {
-            status: 'COMPLETED',
-            checkInTime: '08:45 WIB',
-            checkOutTime: '09:20 WIB',
-            notes: 'Kunjungan pembuka berjalan lancar. Sales tiba tepat waktu, pajangan display sembako rapi, ketersediaan stok 100%.',
-            checklist: DEFAULT_SPV_CHECKLIST,
-        },
-        'spv-stop-2': {
-            status: 'IN_VISIT',
-            checkInTime: '09:35 WIB',
-            checkOutTime: null,
-            notes: '',
-            checklist: DEFAULT_SPV_CHECKLIST,
-        },
-    });
+    const [spvVisitRecords, setSpvVisitRecords] = useState({});
 
     const spvStops = useMemo(() => {
-        if (spvMode === SPV_MODES.JOINT_VISIT) return buildJointVisitStops(salesStops, selectedSales);
-        if (spvMode === SPV_MODES.PRIORITY_AUDIT) return PRIORITY_AUDIT_STOPS;
-        return buildOpeningInspectionStops(salesStops);
-    }, [spvMode, selectedSales, salesStops]);
+        if (spvMode === SPV_MODES.JOINT_VISIT) return buildJointVisitStops(todayPjps, selectedSales);
+        if (spvMode === SPV_MODES.PRIORITY_AUDIT) return buildPriorityAuditStops(todayPjps);
+        return buildOpeningInspectionStops(todayPjps);
+    }, [spvMode, selectedSales, todayPjps]);
 
     const updateRecord = (stopId, patch) =>
         setSpvVisitRecords((prev) => ({ ...prev, [stopId]: { ...prev[stopId], ...patch } }));

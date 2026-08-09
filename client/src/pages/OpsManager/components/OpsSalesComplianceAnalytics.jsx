@@ -112,10 +112,9 @@ export const OpsSalesComplianceAnalytics = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {rjpTeams.map((team, idx) => {
-            // Mock individual team compliance ratio
-            const isTeam1 = idx === 0;
-            const teamAdherence = isTeam1 ? regionalMetrics.rjpAdherenceRate : 92;
-            const teamOffPjp = isTeam1 ? regionalMetrics.offPjpTotal : 0;
+            // Extract individual team compliance ratio from data if available, else default to 0
+            const teamAdherence = team.rjpAdherenceRate || 0;
+            const teamOffPjp = team.offPjpTotal || 0;
 
             return (
               <div
@@ -125,7 +124,7 @@ export const OpsSalesComplianceAnalytics = ({
                 <div className="flex items-center justify-between">
                   <div>
                     <h5 className="font-bold text-on-surface text-sm">{team.teamName}</h5>
-                    <p className="text-xs text-on-surface-variant">SPV: {team.spvName || 'Ahmad Subagja'}</p>
+                    <p className="text-xs text-on-surface-variant">SPV: {team.spvName || 'Belum Ada SPV'}</p>
                   </div>
                   <span
                     className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${

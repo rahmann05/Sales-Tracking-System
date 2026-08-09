@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LuArrowRight } from 'react-icons/lu';
 import { FiXCircle, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { DecisionOptionCards } from './DecisionOptionCards';
+import { outletsApi } from '../../../services/api';
 
 /**
  * IncidentHandleModal Component (Single Responsibility: SPV Decision Modal for Skip vs Reroute Request)
@@ -9,9 +10,23 @@ import { DecisionOptionCards } from './DecisionOptionCards';
  */
 export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute, onRequestReroute }) => {
   const [actionType, setActionType] = useState('SKIP'); // 'SKIP', 'DIRECT_REROUTE', or 'REROUTE'
-  const [replacementOutletName, setReplacementOutletName] = useState('Toko Sumber Berkah Cimahi');
-  const [replacementAddress, setReplacementAddress] = useState('Jl. Raya Amir Machmud No. 88, Cimahi');
+  const [replacementOutletId, setReplacementOutletId] = useState('');
   const [rerouteReason, setRerouteReason] = useState('Penggantian toko rute langsung oleh Supervisor');
+  const [outlets, setOutlets] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (actionType === 'DIRECT_REROUTE' || actionType === 'REROUTE') {
+      setIsLoading(true);
+      outletsApi.getAll()
+        .then((res) => {
+          setOutlets(res.data || []);
+          if (res.data?.length > 0) setReplacementOutletId(res.data[0].id);
+        })
+        .catch(console.error)
+        .finally(() => setIsLoading(false));
+    }
+  }, [actionType]);
 
   if (!incident) return null;
 
@@ -19,16 +34,17 @@ export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute
     if (actionType === 'SKIP') {
       onSkip(incident.id);
     } else if (actionType === 'DIRECT_REROUTE') {
+      if (!replacementOutletId) return alert('Silakan pilih outlet pengganti.');
       onDirectReroute({
         incidentId: incident.id,
-        newOutletName: replacementOutletName,
-        address: replacementAddress,
+        replacementOutletId,
         reason: rerouteReason,
       });
     } else {
+      if (!replacementOutletId) return alert('Silakan pilih outlet pengganti.');
       onRequestReroute({
         incidentId: incident.id,
-        newOutletName: replacementOutletName,
+        replacementOutletId,
         reason: rerouteReason,
       });
     }
@@ -54,25 +70,24 @@ export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute
         {(actionType === 'DIRECT_REROUTE' || actionType === 'REROUTE') && (
           <div className="space-y-3 p-3 bg-tertiary/5 border border-tertiary/20 rounded-2xl">
             <div className="space-y-1">
-              <label className="form-label">Toko Pengganti (Cluster Cimahi - KBB):</label>
-              <input
-                type="text"
-                value={replacementOutletName}
-                onChange={(e) => setReplacementOutletName(e.target.value)}
-                className="form-input"
-              />
+              <label className="form-label">Toko Pengganti:</label>
+              {isLoading ? (
+                <div className="text-xs text-on-surface-variant">Memuat daftar outlet...</div>
+              ) : (
+                <select
+                  value={replacementOutletId}
+                  onChange={(e) => setReplacementOutletId(e.target.value)}
+                  className="form-input bg-surface border-border-glass text-xs w-full p-2 rounded-lg"
+                >
+                  <option value="" disabled>Pilih Outlet Pengganti</option>
+                  {outlets.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} - {o.address}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-            {actionType === 'DIRECT_REROUTE' && (
-              <div className="space-y-1">
-                <label className="form-label">Alamat Toko Pengganti:</label>
-                <input
-                  type="text"
-                  value={replacementAddress}
-                  onChange={(e) => setReplacementAddress(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-            )}
             <div className="space-y-1">
               <label className="form-label">Catatan Reroute SPV:</label>
               <textarea

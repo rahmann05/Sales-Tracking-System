@@ -2,22 +2,28 @@ import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
 import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../utils/pagination.js';
 import { PJP_STATUS, PJP_TYPE, ROLES } from '../../utils/constants.js';
-import { buildSalesClusterPlan } from '../clusters/cluster-generator.service.js';
-
-// Pemetaan hari JS (0=Minggu..6=Sabtu) -> key cluster generator (lowercase)
-const JS_DAY_TO_KEY = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
 
 /**
- * Auto-generate PJP untuk SATU sales pada hari ini berdasarkan logika clustering.
- * - Ambil seluruh outlet pada cluster sales.
- * - Bagi outlet ke hari-hari kerja (Senin-Sabtu) via cluster-generator (proximity + quota).
- * - Pilih grup yang sesuai hari ini; buat PJP + PjpStops berurutan (rute terdekat).
- * Mengembalikan PJP lengkap dgn stops, atau null jika hari libur (Minggu) / tidak ada outlet.
+ * Menghitung apakah minggu ini ganjil atau genap berdasarkan ISO Week.
+ * Mengembalikan 'WEEK_1' untuk ganjil, 'WEEK_2' untuk genap.
+ */
+const getCurrentWeekType = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const diff = now - start + (start.getTimezoneOffset() - now.getTimezoneOffset()) * 60000;
+  const oneDay = 1000 * 60 * 60 * 24;
+  const day = Math.floor(diff / oneDay);
+  const weekNumber = Math.ceil((day + start.getDay() + 1) / 7);
+  return weekNumber % 2 !== 0 ? 'WEEK_1' : 'WEEK_2';
+};
+
+/**
+ * Auto-generate PJP untuk SATU sales pada hari ini berdasarkan PjpTemplate.
  */
 const ensureTodayPjpForSales = async (userId) => {
   const now = new Date();
-  const dayKey = JS_DAY_TO_KEY[now.getDay()];
-  if (dayKey === 'minggu') return null; // Minggu libur — tidak ada PJP
+  const dayOfWeek = now.getDay();
+  if (dayOfWeek === 0) return null; // Minggu libur
 
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -25,17 +31,26 @@ const ensureTodayPjpForSales = async (userId) => {
   const sales = await prisma.user.findUnique({ where: { id: userId } });
   if (!sales || sales.role !== ROLES.SALES || !sales.clusterId) return null;
 
-  const clusterOutlets = await prisma.outlet.findMany({
-    where: { clusterId: sales.clusterId, deletedAt: null },
-    select: { id: true, name: true, latitude: true, longitude: true },
-    orderBy: { name: 'asc' },
-  });
-  if (clusterOutlets.length === 0) return null;
+  const currentWeekType = getCurrentWeekType();
 
-  // Bangun rencana cluster per-hari lalu ambil grup hari ini
-  const plan = buildSalesClusterPlan(sales.name, clusterOutlets);
-  const todayGroup = plan.find((g) => g.day === dayKey);
-  if (!todayGroup || todayGroup.outlets.length === 0) return null;
+  // Cari template untuk sales ini, hari ini, dan tipe minggu ini (atau ALL)
+  const template = await prisma.pjpTemplate.findFirst({
+    where: {
+      userId,
+      dayOfWeek,
+      OR: [
+        { weekType: currentWeekType },
+        { weekType: 'ALL' }
+      ]
+    },
+    include: {
+      stops: {
+        orderBy: { sequence: 'asc' }
+      }
+    }
+  });
+
+  if (!template || template.stops.length === 0) return null;
 
   return await prisma.pjp.create({
     data: {
@@ -44,9 +59,9 @@ const ensureTodayPjpForSales = async (userId) => {
       type: PJP_TYPE.SALES,
       status: PJP_STATUS.SCHEDULED,
       stops: {
-        create: todayGroup.outlets.map((outlet, idx) => ({
-          outletId: outlet.id,
-          sequence: idx + 1,
+        create: template.stops.map((ts, idx) => ({
+          outletId: ts.outletId,
+          sequence: ts.sequence || idx + 1,
           status: 'PENDING',
         })),
       },

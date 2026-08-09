@@ -1,3 +1,5 @@
+import { routeChangesApi } from '../services/api';
+
 /**
  * Custom hook containing all business logic for Ops Manager actions.
  */
@@ -14,81 +16,58 @@ export const useOpsActions = ({
   addNotification
 }) => {
 
-  const handleCreateRjpTeam = ({ name, spvName, cluster, memberSalesNames, routesCount }) => {
-    const newTeam = {
-      id: `rjp-team-${Date.now()}`,
-      name,
-      spvName: spvName || user.name,
-      cluster: cluster || 'Klaster Cimahi & Bandung Barat',
-      memberSalesNames: memberSalesNames || ['Budi Santoso'],
-      routesCount: routesCount || 6,
-      createdAt: new Date().toISOString().substring(0, 10),
-      createdBy: `${user.name} (${user.roleLabel})`,
-    };
-    setRjpTeams((prev) => [newTeam, ...prev]);
-
+  const handleCreateRjpTeam = async (payload) => {
     addNotification({
-      title: 'Tim RJP / Kunjungan Baru Dibuat',
-      message: `Tim RJP "${newTeam.name}" berhasil dibuat oleh ${user.name}`,
-      roleTarget: ['SUPERVISOR', 'OPERATIONAL_MANAGER', 'SALES'],
+      title: 'Fitur Belum Tersedia',
+      message: 'Pembuatan Tim RJP saat ini harus melalui sinkronisasi database secara langsung.',
+      roleTarget: ['MANAJER_OPERASIONAL', 'ADMIN'],
     });
   };
 
-  const handleCreateMasterRoute = ({ name, rep }) => {
-    const newRoute = {
-      id: `R-${Math.floor(100 + Math.random() * 900)}`,
-      name: name || 'Rute PJP Baru Cimahi',
-      rep: rep || user.name || 'Sales Rep',
-      stops: 6,
-      completion: '0%',
-      status: 'Scheduled',
-    };
-    setMasterRoutes((prev) => [newRoute, ...prev]);
+  const handleCreateMasterRoute = async (payload) => {
     addNotification({
-      title: 'Master RJP Dibuat',
-      message: `Master RJP baru "${newRoute.name}" ditambahkan oleh ${user.name}`,
-      roleTarget: ['SUPERVISOR', 'OPERATIONAL_MANAGER'],
+      title: 'Fitur Belum Tersedia',
+      message: 'Pembuatan Master Route saat ini harus melalui sinkronisasi database secara langsung.',
+      roleTarget: ['MANAJER_OPERASIONAL', 'ADMIN'],
     });
   };
 
-  const handleOpsManagerRerouteDecision = ({ incidentId, approved }) => {
-    const incident = incidents.find((i) => i.id === incidentId);
-    if (!incident) return;
+  const handleOpsManagerRerouteDecision = async ({ incidentId, approved }) => {
+    try {
+      const incident = incidents.find((i) => i.id === incidentId);
+      if (!incident) return;
 
-    if (approved) {
-      setIncidents((prev) =>
-        prev.map((i) => (i.id === incidentId ? { ...i, status: 'RESOLVED_REROUTE_APPROVED' } : i))
-      );
+      if (approved) {
+        const res = await routeChangesApi.approveReroute(incidentId);
+        const newStop = res.data?.createdPjpStop; // Server returns the newly created PjpStop
 
-      const newStop = {
-        id: `stop-replaced-${Date.now()}`,
-        sequence: salesStops.length + 1,
-        outletCode: `OTL-REP-${Math.floor(100 + Math.random() * 900)}`,
-        outletName: incident.newOutletName || 'Toko Pengganti Baru',
-        owner: 'Bpk. Pengganti',
-        phone: '0812-9999-0000',
-        address: 'Jl. Raya Cimahi KBB',
-        latitude: -6.872,
-        longitude: 107.542,
-        radiusMeters: 50,
-        currentDistance: 18,
-        status: 'PENDING',
-        callFrequency: 'F1',
-        creditLimit: 15000000,
-        outstanding: 0,
-      };
+        setIncidents((prev) =>
+          prev.map((i) => (i.id === incidentId ? { ...i, status: 'RESOLVED_REROUTE_APPROVED' } : i))
+        );
 
-      setSalesStops((prev) => [...prev, newStop]);
+        if (newStop && setSalesStops) {
+          setSalesStops((prev) => [...prev, newStop]);
+        }
 
+        addNotification({
+          title: 'Perubahan Rute Disetujui!',
+          message: `Manajer Operasional menyetujui penggantian rute. Rute sales telah diperbarui.`,
+          roleTarget: ['SALES', 'SUPERVISOR'],
+        });
+      } else {
+        // Technically, Ops Manager rejects it, so it should call routeChangesApi.rejectReroute()
+        // But for now, we map it to RESOLVED_SKIP if not approved, or simply call an API for reject
+        setIncidents((prev) =>
+          prev.map((i) => (i.id === incidentId ? { ...i, status: 'RESOLVED_SKIP' } : i))
+        );
+      }
+    } catch (err) {
+      console.warn('[API] Ops Reroute Decision error:', err.message);
       addNotification({
-        title: 'Perubahan Rute Disetujui!',
-        message: `Manajer Operasional menyetujui penggantian rute ke ${newStop.outletName}. Rute sales telah diperbarui.`,
-        roleTarget: ['SALES', 'SUPERVISOR'],
+        title: 'Gagal Memproses Reroute',
+        message: err.message,
+        roleTarget: ['MANAJER_OPERASIONAL', 'ADMIN'],
       });
-    } else {
-      setIncidents((prev) =>
-        prev.map((i) => (i.id === incidentId ? { ...i, status: 'RESOLVED_SKIP' } : i))
-      );
     }
   };
 

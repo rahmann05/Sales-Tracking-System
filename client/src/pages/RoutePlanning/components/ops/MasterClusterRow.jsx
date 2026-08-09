@@ -7,7 +7,7 @@ import '../../../../styles/components/MasterClusterRow.css';
  * Single Responsibility: Render a single row inside MasterClusterTable.
  * 1 File = 1 Component
  */
-export const MasterClusterRow = ({ cluster }) => {
+export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
   return (
     <tr className="master-cluster-row">
       {/* Code */}
@@ -53,8 +53,32 @@ export const MasterClusterRow = ({ cluster }) => {
       {/* Status */}
       <td className="master-cluster-td">
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600">
-          ● {cluster.status}
+          ● {cluster.status || 'Active'}
         </span>
+      </td>
+
+      {/* Aksi */}
+      <td className="master-cluster-td text-center">
+        <div className="flex items-center justify-center gap-2">
+          <button 
+            onClick={() => onEdit && onEdit(cluster)}
+            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+            title="Edit Klaster"
+          >
+            Edit
+          </button>
+          <button 
+            onClick={() => {
+              if (window.confirm(`Hapus klaster ${cluster.name}?`)) {
+                onDelete && onDelete(cluster.id);
+              }
+            }}
+            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+            title="Hapus Klaster"
+          >
+            Hapus
+          </button>
+        </div>
       </td>
     </tr>
   );

@@ -1,13 +1,13 @@
 import React from 'react';
 import { LuCompass, LuPlus } from 'react-icons/lu';
-import { SPV_MODES, SPV_MODE_OPTIONS, SPV_SALES_OPTIONS } from '../../../constants/supervisor';
+import { SPV_MODES, SPV_MODE_OPTIONS } from '../../../constants/supervisor';
 
 /**
  * SpvModeSelector Component
  * Single Responsibility: Mode bar untuk penentuan agenda kunjungan supervisi
  * (Joint Visit / Audit Prioritas / Inspeksi Pembuka) + tombol kunjungan luar RJP.
  */
-export const SpvModeSelector = ({ spvMode, onSelectMode, selectedSales, onSelectSales, onOpenOffPjp }) => (
+export const SpvModeSelector = ({ spvMode, onSelectMode, selectedSales, onSelectSales, salesOptions = [], onOpenOffPjp }) => (
     <div className="bg-surface border border-border-glass rounded-3xl p-5 md:p-6 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-glass pb-4">
             <div>
@@ -64,7 +64,7 @@ export const SpvModeSelector = ({ spvMode, onSelectMode, selectedSales, onSelect
                         onChange={(e) => onSelectSales(e.target.value)}
                         className="bg-transparent text-xs font-bold text-on-surface border-none outline-none cursor-pointer"
                     >
-                        {SPV_SALES_OPTIONS.map((opt) => (
+                        {salesOptions.map((opt) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                     </select>

@@ -1,24 +1,44 @@
-import React from 'react';
-import { CLUSTER_COLORS } from '../../../services/clusterColorService';
+import React, { useState, useEffect } from 'react';
+import { clustersApi } from '../../../services/api';
 import '../../../styles/components/ClusterMapLegend.css';
 
 /**
  * ClusterMapLegend Component
  * Single Responsibility: Display color-coded legend indicators per cluster/region on Google Maps.
- * Restricts view to only assigned cluster for Sales, while showing all clusters for Supervisor & Operational Manager.
+ * Fetches dynamic clusters from DB.
  */
 export const ClusterMapLegend = ({
   totalOutletsCount = 0,
   isSalesRole = false,
   userClusterName = 'Klaster Cimahi Tengah',
 }) => {
+  const [clusters, setClusters] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchClusters = async () => {
+      try {
+        const res = await clustersApi.getAll();
+        if (isMounted && res.data) {
+          setClusters(res.data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch clusters for map legend', err);
+      }
+    };
+    fetchClusters();
+    return () => { isMounted = false; };
+  }, []);
+
   const visibleClusters = isSalesRole
-    ? CLUSTER_COLORS.filter(
+    ? clusters.filter(
         (c) =>
           c.name.toLowerCase().includes('cimahi') ||
           (userClusterName && c.name.toLowerCase().includes(userClusterName.toLowerCase()))
       )
-    : CLUSTER_COLORS;
+    : clusters;
+
+  if (visibleClusters.length === 0) return null;
 
   return (
     <div className="cluster-map-legend">
@@ -33,10 +53,10 @@ export const ClusterMapLegend = ({
 
       <div className="cluster-map-legend__grid">
         {visibleClusters.map((cluster) => (
-          <div key={cluster.key} className="cluster-map-legend__item">
+          <div key={cluster.id} className="cluster-map-legend__item">
             <span
               className="cluster-map-legend__color"
-              style={{ backgroundColor: cluster.hex }}
+              style={{ backgroundColor: cluster.colorHex || '#3b82f6' }}
             />
             <span className="cluster-map-legend__label" title={cluster.name}>
               {cluster.name.replace('Klaster ', '')}

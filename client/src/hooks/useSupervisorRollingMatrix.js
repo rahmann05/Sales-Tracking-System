@@ -1,63 +1,54 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { pjpApi } from '../services/api';
 
-/**
- * Initial mock rolling matrix rows per salesman
- */
-const INITIAL_ROLLING_ROWS = [
-  {
-    salesId: 'sales-1',
-    salesName: 'Budi Santoso',
-    spvName: 'Ahmad Subagja',
-    primaryCluster: 'Klaster Cimahi Tengah & Utara',
-    schedule: {
-      Senin: { clusterName: 'Cimahi Selatan (Cibeureum)', outletsCount: 16, subDistrict: 'Cibeureum' },
-      Selasa: { clusterName: 'Cimahi Tengah (Alun-Alun)', outletsCount: 16, subDistrict: 'Cimahi' },
-      Rabu: { clusterName: 'Cimahi Utara (Cibabat)', outletsCount: 15, subDistrict: 'Cibabat' },
-      Kamis: { clusterName: 'Cimahi Selatan (Leuwigajah)', outletsCount: 16, subDistrict: 'Leuwigajah' },
-      Jumat: { clusterName: 'Cimahi Tengah (Karangmekar)', outletsCount: 14, subDistrict: 'Karangmekar' },
-      Sabtu: { clusterName: 'Rolling / Follow-up Khusus', outletsCount: 8, subDistrict: 'Cimahi' },
-    },
-  },
-  {
-    salesId: 'sales-2',
-    salesName: 'Siti Rahma',
-    spvName: 'Ahmad Subagja',
-    primaryCluster: 'Klaster Padalarang & Ngamprah',
-    schedule: {
-      Senin: { clusterName: 'Padalarang Timur (Kertamulya)', outletsCount: 15, subDistrict: 'Padalarang' },
-      Selasa: { clusterName: 'Ngamprah Barat (Cilame)', outletsCount: 16, subDistrict: 'Ngamprah' },
-      Rabu: { clusterName: 'Batujajar (Galanggang)', outletsCount: 14, subDistrict: 'Batujajar' },
-      Kamis: { clusterName: 'Padalarang Kota (Stasiun)', outletsCount: 15, subDistrict: 'Padalarang' },
-      Jumat: { clusterName: 'Ngamprah Pusat (Mekarsari)', outletsCount: 14, subDistrict: 'Ngamprah' },
-      Sabtu: { clusterName: 'Rolling / Follow-up Khusus', outletsCount: 6, subDistrict: 'Padalarang' },
-    },
-  },
-  {
-    salesId: 'sales-3',
-    salesName: 'Agus Wijaya',
-    spvName: 'Budi Kurniawan',
-    primaryCluster: 'Klaster Lembang & Parongpong',
-    schedule: {
-      Senin: { clusterName: 'Lembang Barat (Jayagiri)', outletsCount: 14, subDistrict: 'Lembang' },
-      Selasa: { clusterName: 'Parongpong (Cihanjuang)', outletsCount: 15, subDistrict: 'Parongpong' },
-      Rabu: { clusterName: 'Cisarua (Kertawangi)', outletsCount: 13, subDistrict: 'Cisarua' },
-      Kamis: { clusterName: 'Lembang Timur (Kayuambon)', outletsCount: 14, subDistrict: 'Lembang' },
-      Jumat: { clusterName: 'Parongpong (Sariwangi)', outletsCount: 13, subDistrict: 'Parongpong' },
-      Sabtu: { clusterName: 'Rolling / Follow-up Khusus', outletsCount: 6, subDistrict: 'Lembang' },
-    },
-  },
-];
+// Label hari (Senin-Sabtu) untuk mapping tanggal PJP
+const DAY_LABELS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 /**
  * useSupervisorRollingMatrix Hook
  * Single Responsibility: Supervisor Weekly Matrix State (Senin-Sabtu), Auto-Rolling Algorithm & Day Reassignments.
- * 1 File = 1 Logic Hook
+ * Data murni dari PostgreSQL (PJP per sales) — bukan mock.
  */
 export const useSupervisorRollingMatrix = () => {
-  const [matrixRows, setMatrixRows] = useState(INITIAL_ROLLING_ROWS);
+  const [matrixRows, setMatrixRows] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null); // { salesId, day, currentData }
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const [isAutoRollingModalOpen, setIsAutoRollingModalOpen] = useState(false);
+
+  // Bangun matrix rows dari PJP backend (per sales, per hari)
+  useEffect(() => {
+    let isMounted = true;
+    pjpApi.getAllPjps()
+      .then((res) => {
+        if (!isMounted) return;
+        const pjps = Array.isArray(res?.data) ? res.data : [];
+        const bySales = {};
+        pjps.forEach((p) => {
+          const sid = p.userId || p.user?.id;
+          if (!sid) return;
+          if (!bySales[sid]) {
+            bySales[sid] = {
+              salesId: sid,
+              salesName: p.user?.name || 'Sales',
+              spvName: p.user?.spvName || '-',
+              primaryCluster: p.user?.cluster?.name || p.cluster?.name || '-',
+              schedule: {},
+            };
+          }
+          const dayLabel = DAY_LABELS[new Date(p.date).getDay()];
+          const stops = p.stops || [];
+          const firstOutlet = stops[0]?.outlet || {};
+          bySales[sid].schedule[dayLabel] = {
+            clusterName: p.user?.cluster?.name || p.cluster?.name || p.name || 'RJP',
+            outletsCount: stops.length,
+            subDistrict: firstOutlet.subDistrict || firstOutlet.address || '-',
+          };
+        });
+        setMatrixRows(Object.values(bySales));
+      })
+      .catch(() => { });
+    return () => { isMounted = false; };
+  }, []);
 
   // Opens modal to reassign a specific day's route for a specific salesman
   const openReassignModal = useCallback((salesId, day, currentData) => {

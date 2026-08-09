@@ -50,7 +50,7 @@ const selectStyle = {
  */
 export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
   const { user } = useApp();
-  const isSupervisorOrManager = ['SUPERVISOR', 'OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
+  const isSupervisorOrManager = ['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role);
 
   // Hari SELALU hari ini — tidak dapat diubah oleh role manapun
   const day = getTodayDayKey();

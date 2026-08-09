@@ -24,6 +24,12 @@ enum PjpType {
   SALES
 }
 
+enum WeekType {
+  WEEK_1
+  WEEK_2
+  ALL
+}
+
 enum VisitStatus {
   PENDING
   VISITED
@@ -77,6 +83,7 @@ model User {
   cluster               Cluster?             @relation(fields: [clusterId], references: [id])
 
   pjps                  Pjp[]
+  pjpTemplates          PjpTemplate[]
   attendances           Attendance[]
   offPjpAttendances     OffPjpAttendance[]
   ordersCreated         Order[]              @relation("OrderCreatedBy")
@@ -97,6 +104,7 @@ model Cluster {
   id        String    @id @default(uuid())
   name      String
   region    String
+  colorHex  String?
   users     User[]
   outlets   Outlet[]
   createdAt DateTime  @default(now())
@@ -123,6 +131,7 @@ model Outlet {
   lockStatus               OutletLockStatus      @default(NORMAL)
 
   pjpStops                 PjpStop[]
+  pjpTemplateStops         PjpTemplateStop[]
   offPjpAttendances        OffPjpAttendance[]
   routeChangesReplacement  RouteChangeRequest[]  @relation("ReplacementOutlet")
   unlockRequests           OutletUnlockRequest[]
@@ -294,3 +303,51 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model PjpTemplate {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  dayOfWeek Int
+  weekType  WeekType
+  stops     PjpTemplateStop[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PjpTemplateStop {
+  id            String      @id @default(uuid())
+  pjpTemplateId String
+  pjpTemplate   PjpTemplate @relation(fields: [pjpTemplateId], references: [id])
+  outletId      String
+  outlet        Outlet      @relation(fields: [outletId], references: [id])
+  sequence      Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model Vehicle {
+  id                String    @id @default(uuid())
+  code              String    @unique
+  name              String
+  maxCartons        Int
+  maxWeightKg       Float
+  fuelKmPerLiter    Float
+  fuelType          String
+  fuelPricePerLiter Float
+  isActive          Boolean   @default(true)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+}
+
+model SystemConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+

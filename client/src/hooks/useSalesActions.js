@@ -15,170 +15,167 @@ export const useSalesActions = ({
   addNotification,
 }) => {
   // Absen In Outlet (Sales Check-In)
-  const handleSalesAbsenIn = (stopId, payload = {}) => {
-    const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-    setSalesStops((prev) =>
-      prev.map((s) =>
-        s.id === stopId
-          ? {
-              ...s,
-              status: 'ARRIVED',
-              checkInTime: timeNow,
-              checkInPhoto: payload.photoUrl || null,
-              checkInGps: payload.gpsLocation || null,
-              checkInNotes: payload.notes || 'Kunjungan Rutin',
-            }
-          : s
-      )
-    );
+  const handleSalesAbsenIn = async (stopId, payload = {}) => {
+    try {
+      // Call Backend API first
+      const response = await absensiApi.checkIn(stopId, {
+        latitude: payload.gpsLocation?.lat || -6.8722,
+        longitude: payload.gpsLocation?.lng || 107.5423,
+        photoUrl: payload.photoUrl || null,
+        notes: payload.notes || 'Kunjungan Rutin',
+      });
 
-    // Call Backend API
-    absensiApi.checkIn(stopId, {
-      latitude: payload.gpsLocation?.lat || -6.8722,
-      longitude: payload.gpsLocation?.lng || 107.5423,
-      photoUrl: payload.photoUrl || null,
-      notes: payload.notes || 'Kunjungan Rutin',
-    }).catch((err) => {
+      const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      setSalesStops((prev) =>
+        prev.map((s) =>
+          s.id === stopId
+            ? {
+                ...s,
+                status: 'ARRIVED',
+                checkInTime: timeNow,
+                checkInPhoto: payload.photoUrl || null,
+                checkInGps: payload.gpsLocation || null,
+                checkInNotes: payload.notes || 'Kunjungan Rutin',
+              }
+            : s
+        )
+      );
+    } catch (err) {
       console.warn('[API] Absen In sync error:', err.message);
-    });
+      addNotification({
+        title: 'Gagal Absen Masuk',
+        message: err.message,
+        roleTarget: ['SALES'],
+      });
+    }
   };
 
   // Absen Out Outlet (Sales Check-Out)
-  const handleSalesAbsenOut = (stopId, payload = {}) => {
-    const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-    setSalesStops((prev) =>
-      prev.map((s) =>
-        s.id === stopId
-          ? {
-              ...s,
-              status: 'VISITED',
-              checkOutTime: timeNow,
-              checkOutPhoto: payload.photoUrl || null,
-              checkOutGps: payload.gpsLocation || null,
-              checkOutNotes: payload.notes || 'Kunjungan Selesai',
-            }
-          : s
-      )
-    );
+  const handleSalesAbsenOut = async (stopId, payload = {}) => {
+    try {
+      // Call Backend API first
+      await absensiApi.checkOut(stopId, {
+        latitude: payload.gpsLocation?.lat || -6.8722,
+        longitude: payload.gpsLocation?.lng || 107.5423,
+        photoUrl: payload.photoUrl || null,
+        notes: payload.notes || 'Kunjungan Selesai',
+      });
 
-    // Call Backend API
-    absensiApi.checkOut(stopId, {
-      latitude: payload.gpsLocation?.lat || -6.8722,
-      longitude: payload.gpsLocation?.lng || 107.5423,
-      photoUrl: payload.photoUrl || null,
-      notes: payload.notes || 'Kunjungan Selesai',
-    }).catch((err) => {
+      const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      setSalesStops((prev) =>
+        prev.map((s) =>
+          s.id === stopId
+            ? {
+                ...s,
+                status: 'VISITED',
+                checkOutTime: timeNow,
+                checkOutPhoto: payload.photoUrl || null,
+                checkOutGps: payload.gpsLocation || null,
+                checkOutNotes: payload.notes || 'Kunjungan Selesai',
+              }
+            : s
+        )
+      );
+    } catch (err) {
       console.warn('[API] Absen Out sync error:', err.message);
-    });
+      addNotification({
+        title: 'Gagal Absen Keluar',
+        message: err.message,
+        roleTarget: ['SALES'],
+      });
+    }
   };
 
   // Submit Order (Sales)
-  const handleSubmitOrder = ({ stopId, items, paymentType, totalAmount }) => {
-    const stop = salesStops.find((s) => s.id === stopId);
-    const newOrder = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      dailyStopId: stopId,
-      outletName: stop ? stop.outletName : 'Unknown Outlet',
-      salesName: user.name,
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      items: items || [],
-      totalAmount: totalAmount || items?.reduce((sum, item) => sum + (item.quantity * (item.price || item.unitPrice || 0)), 0) || 0,
-      paymentType: paymentType || 'CASH',
-      status: 'PENDING_APPROVAL',
-    };
+  const handleSubmitOrder = async ({ stopId, items, paymentType }) => {
+    try {
+      // Call Backend API
+      const res = await ordersApi.createOrder({
+        pjpStopId: stopId,
+        items: items?.map((i) => ({
+          productId: i.productId || i.id,
+          quantity: Number(i.quantity),
+          unitPrice: Number(i.price || i.unitPrice || 0),
+        })),
+        paymentType: paymentType || 'CASH',
+      });
 
-    setOrders((prev) => [newOrder, ...prev]);
+      const newOrder = res.data; // Server returns real Order object with ID
+      setOrders((prev) => [newOrder, ...prev]);
 
-    addNotification({
-      title: 'Order Baru Masuk (Menunggu Persetujuan)',
-      message: `Sales ${user.name} membuat pesanan baru untuk ${newOrder.outletName} sebesar Rp ${(newOrder.totalAmount).toLocaleString('id-ID')}.`,
-      roleTarget: ['SUPERVISOR', 'ADMIN'],
-    });
-
-    // Call Backend API
-    ordersApi.createOrder({
-      pjpStopId: stopId,
-      items: items?.map((i) => ({
-        productId: i.productId || i.id,
-        quantity: Number(i.quantity),
-        unitPrice: Number(i.price || i.unitPrice || 0),
-      })),
-      paymentType: paymentType || 'CASH',
-    }).catch((err) => {
+      addNotification({
+        title: 'Order Baru Masuk (Menunggu Persetujuan)',
+        message: `Sales ${user.name} membuat pesanan baru untuk ${newOrder.pjpStop?.outlet?.name || 'Toko'} sebesar Rp ${(newOrder.totalValue || 0).toLocaleString('id-ID')}.`,
+        roleTarget: ['SUPERVISOR', 'ADMIN'],
+      });
+    } catch (err) {
       console.warn('[API] Create Order sync error:', err.message);
-    });
+      addNotification({
+        title: 'Gagal Membuat Order',
+        message: err.message,
+        roleTarget: ['SALES'],
+      });
+    }
   };
 
   // Report Closed Outlet
-  const handleReportClosedOutlet = ({ stopId, reason, photoUrl }) => {
-    const stop = salesStops.find((s) => s.id === stopId);
-    if (!stop) return;
+  const handleReportClosedOutlet = async ({ stopId, reason, photoUrl }) => {
+    try {
+      const stop = salesStops.find((s) => s.id === stopId);
+      if (!stop) return;
 
-    const newIncident = {
-      id: `inc-${Date.now()}`,
-      stopId,
-      type: 'CLOSED_SHOP',
-      outletName: stop.outletName,
-      salesName: user.name,
-      reportedTime: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-      reason: reason || 'Toko Tutup',
-      photoUrl: photoUrl || null,
-      status: 'PENDING_SPV',
-    };
+      const res = await routeChangesApi.reportClosed({
+        pjpId: stop.pjpId,
+        pjpStopId: stopId,
+        reason,
+        photoUrl,
+      });
 
-    setIncidents((prev) => [newIncident, ...prev]);
+      const newIncident = res.data;
+      setIncidents((prev) => [newIncident, ...prev]);
+      setSalesStops((prev) =>
+        prev.map((s) => (s.id === stopId ? { ...s, status: 'CLOSED_REPORTED' } : s))
+      );
 
-    setSalesStops((prev) =>
-      prev.map((s) => (s.id === stopId ? { ...s, status: 'CLOSED' } : s))
-    );
-
-    addNotification({
-      title: 'Laporan Toko Tutup Masuk',
-      message: `Sales ${user.name} melaporkan bahwa ${stop.outletName} tutup. Alasan: ${reason}.`,
-      roleTarget: ['SUPERVISOR', 'OPERATIONAL_MANAGER'],
-    });
-
-    // Call Backend API
-    routeChangesApi.reportClosed({
-      pjpStopId: stopId,
-      reason,
-      photoUrl,
-    }).catch((err) => {
+      addNotification({
+        title: 'Laporan Toko Tutup Masuk',
+        message: `Sales ${user.name} melaporkan bahwa toko tutup. Alasan: ${reason}.`,
+        roleTarget: ['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'],
+      });
+    } catch (err) {
       console.warn('[API] Report closed sync error:', err.message);
-    });
+      addNotification({
+        title: 'Gagal Melaporkan Toko Tutup',
+        message: err.message,
+        roleTarget: ['SALES'],
+      });
+    }
   };
 
   // Sales Action: Request Unlock Outlet
-  const handleRequestUnlockOutlet = ({ stopId, outletName, address, reason }) => {
-    const newRequest = {
-      id: `req-unlock-${Date.now()}`,
-      stopId,
-      type: 'UNLOCK_REQUEST',
-      outletName,
-      salesName: user.name,
-      reportedTime: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-      reason,
-      address,
-      status: 'PENDING',
-      userRole: user.role,
-    };
+  const handleRequestUnlockOutlet = async ({ stopId, reason }) => {
+    try {
+      const res = await outletsApi.requestUnlock(stopId, reason);
+      const newRequest = res.data;
 
-    setIncidents((prev) => [newRequest, ...prev]);
-
-    addNotification({
-      title: 'Permohonan Buka Kunci Outlet',
-      message: `Sales ${user.name} mengajukan permohonan buka kunci presensi untuk toko ${outletName}. Alasan: ${reason}.`,
-      roleTarget: ['SUPERVISOR', 'ADMIN'],
-    });
-
-    // Call Backend API
-    outletsApi.requestUnlock(stopId, reason).catch((err) => {
+      setIncidents((prev) => [newRequest, ...prev]);
+      addNotification({
+        title: 'Permohonan Buka Kunci Outlet',
+        message: `Sales ${user.name} mengajukan permohonan buka kunci presensi. Alasan: ${reason}.`,
+        roleTarget: ['SUPERVISOR', 'ADMIN'],
+      });
+    } catch (err) {
       console.warn('[API] Request unlock sync error:', err.message);
-    });
+      addNotification({
+        title: 'Gagal Request Unlock',
+        message: err.message,
+        roleTarget: ['SALES'],
+      });
+    }
   };
 
   // Sales Action: Absen Toko Luar RJP (Off-PJP)
-  const handleSalesAbsenOffPJP = ({
+  const handleSalesAbsenOffPJP = async ({
     outletName,
     customerName,
     phone,
@@ -187,44 +184,34 @@ export const useSalesActions = ({
     photoUrl,
     gpsLocation,
   }) => {
-    const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-    const newRecord = {
-      id: `off-pjp-${Date.now()}`,
-      salesId: user.id,
-      salesName: user.name,
-      outletName,
-      customerName,
-      phone,
-      address,
-      reason,
-      photoUrl,
-      gpsLocation,
-      time: timeNow,
-      date: new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }),
-      validationStatus: 'MENUNGGU',
-    };
+    try {
+      const res = await absensiApi.submitOffPjp({
+        outletName,
+        customerName,
+        phone,
+        address,
+        reason,
+        photoUrl,
+        latitude: gpsLocation?.lat || -6.8722,
+        longitude: gpsLocation?.lng || 107.5423,
+      });
 
-    setOffPjpAttendances((prev) => [newRecord, ...prev]);
+      const newRecord = res.data;
+      setOffPjpAttendances((prev) => [newRecord, ...prev]);
 
-    addNotification({
-      title: 'Presensi Toko Luar RJP Masuk',
-      message: `Sales ${user.name} melakukan presensi di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
-      roleTarget: ['SUPERVISOR'],
-    });
-
-    // Call Backend API
-    absensiApi.submitOffPjp({
-      outletName,
-      customerName,
-      phone,
-      address,
-      reason,
-      photoUrl,
-      latitude: gpsLocation?.lat || -6.8722,
-      longitude: gpsLocation?.lng || 107.5423,
-    }).catch((err) => {
+      addNotification({
+        title: 'Presensi Toko Luar RJP Masuk',
+        message: `Sales ${user.name} melakukan presensi di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
+        roleTarget: ['SUPERVISOR'],
+      });
+    } catch (err) {
       console.warn('[API] Submit off-PJP sync error:', err.message);
-    });
+      addNotification({
+        title: 'Gagal Presensi Off-PJP',
+        message: err.message,
+        roleTarget: ['SALES'],
+      });
+    }
   };
 
   return {

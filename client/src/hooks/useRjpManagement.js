@@ -11,7 +11,8 @@ export const useRjpManagement = () => {
   const [masterClusters, setMasterClusters] = useState([]);
   const [coverageOutlets, setCoverageOutlets] = useState([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [editingCluster, setEditingCluster] = useState(null);
 
   // Load master clusters & coverage outlets dari PostgreSQL
   useEffect(() => {
@@ -68,24 +69,40 @@ export const useRjpManagement = () => {
     };
   }, [masterClusters, coverageOutlets]);
 
-  // Create New Cluster
-  const handleCreateCluster = (newClusterData) => {
-    const cluster = {
-      id: `cluster-${Date.now()}`,
-      code: `CLS-MAN-${masterClusters.length + 1}`,
-      name: newClusterData.name,
-      region: newClusterData.region || 'Kota Cimahi',
-      subDistricts: newClusterData.subDistricts || ['Area Baru'],
-      allocatedOutletsCount: parseInt(newClusterData.allocatedOutletsCount, 10) || 20,
-      assignedSpvName: newClusterData.assignedSpvName || 'Ahmad Subagja',
-      spvTeamName: newClusterData.spvTeamName || 'Tim SPV Ahmad Subagja (Cimahi - KBB)',
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString().split('T')[0],
-    };
+  // CRUD Cluster via API
+  const handleCreateCluster = async (newClusterData) => {
+    try {
+      const res = await clustersApi.create(newClusterData);
+      setMasterClusters((prev) => [res.data, ...prev]);
+      setIsFormModalOpen(false);
+      return res.data;
+    } catch (error) {
+      console.error('Failed to create cluster:', error);
+      throw error;
+    }
+  };
 
-    setMasterClusters((prev) => [cluster, ...prev]);
-    setIsCreateModalOpen(false);
-    return cluster;
+  const handleUpdateCluster = async (id, updatedData) => {
+    try {
+      const res = await clustersApi.update(id, updatedData);
+      setMasterClusters((prev) => prev.map((c) => (c.id === id ? { ...c, ...res.data } : c)));
+      setIsFormModalOpen(false);
+      setEditingCluster(null);
+      return res.data;
+    } catch (error) {
+      console.error('Failed to update cluster:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteCluster = async (id) => {
+    try {
+      await clustersApi.delete(id);
+      setMasterClusters((prev) => prev.filter((c) => c.id !== id));
+    } catch (error) {
+      console.error('Failed to delete cluster:', error);
+      throw error;
+    }
   };
 
   // Import Spreadsheet & Auto-Generate Clusters
@@ -132,9 +149,13 @@ export const useRjpManagement = () => {
     stats,
     isImportModalOpen,
     setIsImportModalOpen,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
+    isFormModalOpen,
+    setIsFormModalOpen,
+    editingCluster,
+    setEditingCluster,
     handleCreateCluster,
+    handleUpdateCluster,
+    handleDeleteCluster,
     handleImportSpreadsheet,
   };
 };

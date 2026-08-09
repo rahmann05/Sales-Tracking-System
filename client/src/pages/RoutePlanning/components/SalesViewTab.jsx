@@ -19,7 +19,7 @@ export const SalesViewTab = ({
     <div className="space-y-6">
         <SalesDailyRouteSummaryCard
             salesPerson={currentSalesRow}
-            supervisorName={currentSalesRow?.spvName || 'Ahmad Subagja'}
+            supervisorName={currentSalesRow?.spvName || '-'}
             activeRoute={{ day: selectedDay, name: dailyScheduleInfo.clusterName }}
             stops={filteredDailyStops}
             selectedDay={selectedDay}

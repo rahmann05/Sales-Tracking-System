@@ -29,7 +29,7 @@ const ROLE_WORKSPACE_MAP = Object.freeze({
     [ROLES.SALES]: { label: 'PJP Sales Field', icon: LuNavigation },
     [ROLES.SUPERVISOR]: { label: 'Supervisi Lapangan', icon: LuShieldCheck },
     [ROLES.ADMIN]: { label: 'Approval Order Admin', icon: LuFileCheck },
-    [ROLES.OPERATIONAL_MANAGER]: { label: 'Persetujuan Rute Ops', icon: LuBriefcase },
+    [ROLES.MANAJER_OPERASIONAL]: { label: 'Persetujuan Rute Ops', icon: LuBriefcase },
 });
 
 /**

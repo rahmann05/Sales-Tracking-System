@@ -12,6 +12,8 @@ import routeChangeRoutes from '../modules/route-changes/route-change.routes.js';
 import notificationRoutes from '../modules/notifications/notifications.routes.js';
 import reportRoutes from '../modules/reports/reports.routes.js';
 import routingRoutes from '../modules/routing/routing.routes.js';
+import vehicleRoutes from '../modules/vehicles/vehicles.routes.js';
+import configRoutes from '../modules/config/config.routes.js';
 
 const router = Router();
 
@@ -30,6 +32,8 @@ v1Router.use('/route-changes', routeChangeRoutes);
 v1Router.use('/notifications', notificationRoutes);
 v1Router.use('/reports', reportRoutes);
 v1Router.use('/routing', routingRoutes);
+v1Router.use('/vehicles', vehicleRoutes);
+v1Router.use('/config', configRoutes);
 
 router.use('/v1', v1Router);
 

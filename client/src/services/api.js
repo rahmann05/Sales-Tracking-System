@@ -194,6 +194,23 @@ export const clustersApi = {
   getById: async (id) => {
     return await request(`/clusters/${id}`);
   },
+  create: async (data) => {
+    return await request('/clusters', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (id, data) => {
+    return await request(`/clusters/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id) => {
+    return await request(`/clusters/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ─── 8. Users API ────────────────────────────────────────────────────────────
@@ -208,5 +225,19 @@ export const usersApi = {
 export const apiService = {
   getHealth: async () => request('/health'),
   getUsers: async () => request('/users'),
+};
+
+// ─── 10. Vehicles API ─────────────────────────────────────────────────────────
+export const vehiclesApi = {
+  getAll: async () => request('/vehicles'),
+  create: async (data) => request('/vehicles', { method: 'POST', body: JSON.stringify(data) }),
+  update: async (id, data) => request(`/vehicles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: async (id) => request(`/vehicles/${id}`, { method: 'DELETE' }),
+};
+
+// ─── 11. Config API ───────────────────────────────────────────────────────────
+export const configApi = {
+  getByKey: async (key) => request(`/config/${key}`),
+  updateByKey: async (key, value) => request(`/config/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
 };
 

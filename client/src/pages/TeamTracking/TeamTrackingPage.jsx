@@ -22,7 +22,7 @@ export const TeamTrackingPage = () => {
   const [activeTab, setActiveTab] = useState('spv-teams'); // 'spv-teams', 'sales-list', 'rjp-teams'
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const isOpsOrAdmin = ['OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
+  const isOpsOrAdmin = ['MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role);
   const isSupervisor = user?.role === 'SUPERVISOR';
   const isSales = user?.role === 'SALES';
 

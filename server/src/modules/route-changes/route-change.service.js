@@ -119,6 +119,7 @@ export const submitSkip = async (supervisorId, requestId) => {
     prisma.routeChangeRequest.update({
       where: { id: requestId },
       data: { type: ROUTE_CHANGE_TYPE.SKIP, handledBy: supervisorId, status: ROUTE_CHANGE_STATUS.ACKNOWLEDGED },
+      include: { pjpStop: { include: { outlet: true } } },
     }),
     prisma.pjpStop.update({
       where: { id: request.pjpStopId },
@@ -166,7 +167,7 @@ export const approveReroute = async (managerId, requestId) => {
 
   const maxSeq = Math.max(...request.pjp.stops.map((s) => s.sequence), 0);
 
-  const [updatedRequest] = await prisma.$transaction([
+  const [updatedRequest, newPjpStop] = await prisma.$transaction([
     prisma.routeChangeRequest.update({
       where: { id: requestId },
       data: { status: ROUTE_CHANGE_STATUS.APPROVED, approvedBy: managerId },
@@ -178,6 +179,7 @@ export const approveReroute = async (managerId, requestId) => {
         sequence: maxSeq + 1,
         status: 'PENDING',
       },
+      include: { outlet: true },
     }),
   ]);
 
@@ -189,7 +191,7 @@ export const approveReroute = async (managerId, requestId) => {
     { pjpId: request.pjpId }
   );
 
-  return updatedRequest;
+  return { routeChangeRequest: updatedRequest, createdPjpStop: newPjpStop };
 };
 
 /**

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useSupervisorFieldVisits } from '../hooks/useSupervisorFieldVisits';
 import { SupervisorShiftHeader } from './SupervisorShiftHeader';
@@ -7,6 +7,7 @@ import { SpvModeSelector } from './SpvModeSelector';
 import { SpvStopCard } from './SpvStopCard';
 import { SpvFieldModals } from './SpvFieldModals';
 import { LuStore } from 'react-icons/lu';
+import { pjpApi } from '../../../services/api';
 
 /**
  * SupervisorFieldView Component (Orchestrator)
@@ -14,8 +15,35 @@ import { LuStore } from 'react-icons/lu';
  * State & business logic didelegasikan ke `useSupervisorFieldVisits`.
  */
 export const SupervisorFieldView = () => {
-  const { salesStops = [] } = useApp();
-  const field = useSupervisorFieldVisits(salesStops);
+  const [todayPjps, setTodayPjps] = useState([]);
+  
+  useEffect(() => {
+    let isMounted = true;
+    pjpApi.getAllPjps()
+      .then((res) => {
+        if (!isMounted) return;
+        const pjps = Array.isArray(res?.data) ? res.data : [];
+        const todayStr = new Date().toDateString();
+        setTodayPjps(pjps.filter((p) => new Date(p.date).toDateString() === todayStr));
+      })
+      .catch(() => { });
+    return () => { isMounted = false; };
+  }, []);
+
+  const salesOptions = useMemo(() => {
+    const uniqueSales = new Map();
+    todayPjps.forEach(p => {
+      if (p.user) {
+        uniqueSales.set(p.user.name, {
+          value: p.user.name,
+          label: `${p.user.name} (${p.user.cluster?.name || 'RJP'})`
+        });
+      }
+    });
+    return Array.from(uniqueSales.values());
+  }, [todayPjps]);
+
+  const field = useSupervisorFieldVisits(todayPjps, salesOptions);
 
   return (
     <div className="space-y-6">
@@ -34,6 +62,7 @@ export const SupervisorFieldView = () => {
         onSelectMode={field.setSpvMode}
         selectedSales={field.selectedSales}
         onSelectSales={field.setSelectedSales}
+        salesOptions={salesOptions}
         onOpenOffPjp={field.openOffPjp}
       />
 

@@ -1,20 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { LuUser } from 'react-icons/lu';
 import { calculateSalesPerformance } from '../../../services/salesPerformanceService';
 import { ComplianceKpiCards } from './ComplianceKpiCards';
 import { AdherenceGauge } from './AdherenceGauge';
 import { SalesRepProgressCard } from './SalesRepProgressCard';
+import { pjpApi } from '../../../services/api';
 
-// Mock: pemetaan tim sales ke segmen stops (sampai data real tersedia)
-const SALES_TEAM_SEGMENTS = [
-  { name: 'Budi Santoso', cluster: 'Klaster Cimahi Tengah', plan: 'RJP-CIMAHI-01', day: 'Senin', slice: [0, 10] },
-  { name: 'Siti Rahma', cluster: 'Klaster Padalarang', plan: 'RJP-PADALARANG-01', day: 'Selasa', slice: [10, 20] },
-  { name: 'Agus Wijaya', cluster: 'Klaster Lembang', plan: 'RJP-LEMBANG-01', day: 'Rabu', slice: [20, 30] },
-];
-
-const isDone = (s) => s.status === 'COMPLETED' || s.status === 'ORDERED';
+const isDone = (s) => s.status === 'COMPLETED' || s.status === 'ORDERED' || s.status === 'VISITED';
 const isActive = (s) => s.status === 'IN_VISIT' || s.status === 'ARRIVED';
-const isClosed = (s) => s.status === 'CLOSED' || s.status === 'SKIPPED';
+const isClosed = (s) => s.status === 'CLOSED' || s.status === 'SKIPPED' || s.status === 'CLOSED_REPORTED';
 
 /**
  * SupervisorPerformanceAnalytics Component (Orchestrator)
@@ -27,14 +21,32 @@ export const SupervisorPerformanceAnalytics = ({ salesStops = [], offPjpAttendan
     [salesStops, offPjpAttendances]
   );
 
+  // Breakdown per sales dari PJP hari ini (PostgreSQL) — bukan data dummy
+  const [todayPjps, setTodayPjps] = useState([]);
+  useEffect(() => {
+    let isMounted = true;
+    pjpApi.getAllPjps()
+      .then((res) => {
+        if (!isMounted) return;
+        const pjps = Array.isArray(res?.data) ? res.data : [];
+        const todayStr = new Date().toDateString();
+        setTodayPjps(pjps.filter((p) => new Date(p.date).toDateString() === todayStr));
+      })
+      .catch(() => { });
+    return () => { isMounted = false; };
+  }, []);
+
   const salesTeamBreakdown = useMemo(
     () =>
-      SALES_TEAM_SEGMENTS.map(({ slice, ...rep }) => {
-        const stops = salesStops.slice(slice[0], slice[1]);
+      todayPjps.map((p) => {
+        const stops = p.stops || [];
         const completed = stops.filter(isDone).length;
-        const total = stops.length || 10;
+        const total = stops.length || 1;
         return {
-          ...rep,
+          name: p.user?.name || 'Sales',
+          cluster: p.user?.cluster?.name || '-',
+          plan: p.name || 'RJP',
+          day: new Date(p.date).toLocaleDateString('id-ID', { weekday: 'long' }),
           stops,
           completed,
           inVisit: stops.filter(isActive).length,
@@ -43,7 +55,7 @@ export const SupervisorPerformanceAnalytics = ({ salesStops = [], offPjpAttendan
           progress: Math.round((completed / total) * 100),
         };
       }),
-    [salesStops]
+    [todayPjps]
   );
 
   return (

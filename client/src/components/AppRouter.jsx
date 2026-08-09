@@ -30,7 +30,7 @@ const RoleWorkspace = ({ role }) => {
             return <SupervisorPage />;
         case ROLES.ADMIN:
             return <AdminApprovalPage />;
-        case ROLES.OPERATIONAL_MANAGER:
+        case ROLES.MANAJER_OPERASIONAL:
             return <OpsManagerPage />;
         default:
             return <SalesPage />;

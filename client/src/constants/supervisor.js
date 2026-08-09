@@ -19,11 +19,7 @@ export const SPV_MODE_OPTIONS = [
     { id: SPV_MODES.OPENING_INSPECTION, label: 'Inspeksi Toko Pembuka (Pagi)', icon: LuClock },
 ];
 
-export const SPV_SALES_OPTIONS = [
-    { value: 'Budi Santoso', label: 'Budi Santoso (Cimahi)' },
-    { value: 'Siti Rahma', label: 'Siti Rahma (Padalarang)' },
-    { value: 'Agus Wijaya', label: 'Agus Wijaya (Lembang)' },
-];
+
 
 // Audit compliance checklist definition (label per key)
 export const SPV_AUDIT_CHECKLIST_ITEMS = [
@@ -56,28 +52,4 @@ export const DEFAULT_SPV_CHECKLIST = {
     salesGreeting: true,
 };
 
-// Mock: daftar toko Audit Prioritas (Key Account / outlet bermasalah)
-export const PRIORITY_AUDIT_STOPS = [
-    {
-        id: 'spv-audit-1', sequence: 1, outletName: 'Grosir Berkah Jaya Abadi', owner: 'Haji Mansyur',
-        phone: '0812-2222-1111', address: 'Jl. Mahar Martanegara No. 45, Leuwigajah, Cimahi',
-        currentDistance: 12, radiusMeters: 50, spvVisitType: 'Audit Key Account & Plafon Kredit', assignedSales: 'Budi Santoso',
-    },
-    {
-        id: 'spv-audit-2', sequence: 2, outletName: 'Toko Sumber Rejeki Barokah', owner: 'Ibu Ratna',
-        phone: '0813-8888-9999', address: 'Jl. Raya Tagog Padalarang No. 88, KBB',
-        currentDistance: 28, radiusMeters: 50, spvVisitType: 'Verifikasi Outlet Baru / Non-Aktif', assignedSales: 'Siti Rahma',
-    },
-    {
-        id: 'spv-audit-3', sequence: 3, outletName: 'Toserba Lembang Asri Mandiri', owner: 'Koh Kevin',
-        phone: '0811-7777-6666', address: 'Jl. Raya Lembang No. 120, Lembang',
-        currentDistance: 45, radiusMeters: 50, spvVisitType: 'Audit Kepatuhan Display & Promosi', assignedSales: 'Agus Wijaya',
-    },
-];
 
-// Mock: titik inspeksi pembuka rute per tim
-export const OPENING_INSPECTION_TEAMS = [
-    { index: 0, fallbackOutlet: 'Toko Sumber Berkah Cimahi', fallbackOwner: 'Pak Haji Ahmad', fallbackAddress: 'Jl. Gandawijaya No. 12, Cimahi', type: 'Inspeksi Pembuka Rute (Tim Cimahi)', sales: 'Budi Santoso', distance: 15 },
-    { index: 10, fallbackOutlet: 'Toko Barokah Padalarang', fallbackOwner: 'Ibu Hajah Maryam', fallbackAddress: 'Jl. Raya Tagog No. 45, Padalarang', type: 'Inspeksi Pembuka Rute (Tim Padalarang)', sales: 'Siti Rahma', distance: 32 },
-    { index: 20, fallbackOutlet: 'Toserba Mandiri Lembang', fallbackOwner: 'Koh Hendra', fallbackAddress: 'Jl. Raya Lembang No. 88, Lembang', type: 'Inspeksi Pembuka Rute (Tim Lembang)', sales: 'Agus Wijaya', distance: 48 },
-];
