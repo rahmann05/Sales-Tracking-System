@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AppProvider, useApp } from './context/AppContext';
 import { MapProvider } from './context/MapContext';
@@ -27,6 +27,22 @@ const AppContent = () => {
   const { searchQuery, setSearchQuery } = useSearch();
 
   const goToWorkspace = () => setActiveTab('role-workspace');
+
+  useEffect(() => {
+    if (isAuthenticated && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+          localStorage.setItem('user_gps_location', JSON.stringify(loc));
+          window.dispatchEvent(new CustomEvent('gps_location_updated', { detail: loc }));
+        },
+        (error) => {
+          console.error("GPS Error:", error);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+  }, [isAuthenticated]);
 
   const handleLogin = async ({ email, password }) => {
     const ok = await login(email, password);

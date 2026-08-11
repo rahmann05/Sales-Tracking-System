@@ -19,6 +19,7 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
   const [nearestOutlets, setNearestOutlets] = useState([]);
   const [generatedRoutes, setGeneratedRoutes] = useState([]);
   const [activeRouteIndex, setActiveRouteIndex] = useState(0);
+  const isProcessingClickRef = useRef(false);
 
   // Update map on mount to show all unassigned outlets
   useEffect(() => {
@@ -58,7 +59,8 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
       setMapHandlers({
         onMapClick: null, // Disable random map clicks
         onMarkerClick: async (marker) => {
-          if (selectedCenter) return; // Prevent clicking multiple times
+          if (isProcessingClickRef.current) return; // Prevent clicking while loading
+          isProcessingClickRef.current = true;
           const latLng = { lat: marker.lat, lng: marker.lng };
           setSelectedCenter(latLng);
           try {
@@ -74,11 +76,13 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
 
           } catch (err) {
             notifyError('Gagal mendapatkan outlet terdekat');
+          } finally {
+            isProcessingClickRef.current = false;
           }
         }
       });
     }
-  }, [step, formData.outletCount, setMapHandlers]);
+  }, [step, formData.outletCount, setMapHandlers, selectedCenter]);
 
   // Update map visual when selection or route changes
   useEffect(() => {
@@ -90,6 +94,8 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
         : nearestOutlets;
 
       const path = orderedOutlets.map(o => ({ lat: o.latitude, lng: o.longitude }));
+
+      const unassignedOutlets = outlets.filter(o => !o.clusterId || (o.cluster && o.cluster.deletedAt));
 
       setMapState(prev => ({
         ...prev,
@@ -105,20 +111,23 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
               url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
             }
           },
-          // Outlet Markers
-          ...nearestOutlets.map(o => ({
-            id: o.id,
-            lat: o.latitude,
-            lng: o.longitude,
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              fillColor: formData.colorHex,
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 2,
-              scale: 7
-            }
-          }))
+          // Outlet Markers (Keep GT/MT colors, highlight selected)
+          ...unassignedOutlets.map(o => {
+            const isSelected = nearestOutlets.some(no => no.id === o.id);
+            return {
+              id: o.id,
+              lat: o.latitude,
+              lng: o.longitude,
+              icon: {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                fillColor: o.type === 'GENERAL_TRADE' ? '#1e3a8a' : '#581c87',
+                fillOpacity: 0.8, // Do not make them transparent
+                strokeColor: isSelected ? '#ffffff' : 'transparent',
+                strokeWeight: isSelected ? 2 : 0,
+                scale: isSelected ? 7 : 5
+              }
+            };
+          })
         ],
         routes: [
           {

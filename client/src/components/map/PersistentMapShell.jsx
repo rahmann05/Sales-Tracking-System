@@ -4,26 +4,39 @@ import { configApi } from '../../services/api';
 import { LeafletFallbackRouteMap } from '../../pages/Dashboard/components/LeafletFallbackRouteMap';
 import '../../styles/components/PersistentMapShell.css';
 
-const DEFAULT_CENTER = { lat: -6.2, lng: 106.816666 };
+const DEFAULT_CENTER = { lat: -6.88498411526505, lng: 107.48995363176957 };
 
 /**
  * Load the Google Maps JS API exactly once.
  */
 const loadGoogleMapsScript = (apiKey) =>
   new Promise((resolve, reject) => {
-    if (window.google?.maps) return resolve(window.google.maps);
+    if (window.google?.maps?.Map) return resolve(window.google.maps);
+    window.__initGoogleMapsCallback = () => {
+      resolve(window.google.maps);
+      delete window.__initGoogleMapsCallback;
+    };
+
     const existing = document.getElementById('google-maps-script');
     if (existing) {
-      existing.addEventListener('load', () => resolve(window.google.maps));
+      if (window.google?.maps?.Map) {
+        return resolve(window.google.maps);
+      }
+      // If it exists but isn't loaded yet, wrap the existing callback
+      const prevCallback = window.__initGoogleMapsCallback;
+      window.__initGoogleMapsCallback = () => {
+        if (prevCallback) prevCallback();
+        resolve(window.google.maps);
+        delete window.__initGoogleMapsCallback;
+      };
       existing.addEventListener('error', reject);
       return;
     }
     const script = document.createElement('script');
     script.id = 'google-maps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async&callback=__initGoogleMapsCallback`;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve(window.google.maps);
     script.onerror = reject;
     document.head.appendChild(script);
   });
@@ -56,7 +69,7 @@ export const PersistentMapShell = () => {
   useEffect(() => {
     let mounted = true;
     const envKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    
+
     configApi
       .getByKey('MAPS_API_KEY')
       .then((res) => {
@@ -76,8 +89,9 @@ export const PersistentMapShell = () => {
     if (!apiKey || initRef.current || !containerRef.current) return;
     initRef.current = true;
 
-    loadGoogleMapsScript(apiKey)
-      .then(() => {
+    const initMapAsync = async () => {
+      try {
+        await loadGoogleMapsScript(apiKey);
         const map = new window.google.maps.Map(containerRef.current, {
           center: mapState?.center || DEFAULT_CENTER,
           zoom: mapState?.zoom || 11,
@@ -86,12 +100,13 @@ export const PersistentMapShell = () => {
           gestureHandling: 'greedy',
         });
         setMapInstance(map);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('[PersistentMapShell] Google Maps failed to load, switching to Leaflet fallback:', err);
         setLoadFailed(true);
         setFallback(true);
-      });
+      }
+    };
+    initMapAsync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
 

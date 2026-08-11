@@ -1,4 +1,14 @@
-import React, { createContext, useContext, useRef, useState, useCallback } from 'react';
+import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
+
+const DEFAULT_CENTER = { lat: -6.88498411526505, lng: 107.48995363176957 };
+
+const getInitialCenter = () => {
+    try {
+        const cached = localStorage.getItem('user_gps_location');
+        if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return DEFAULT_CENTER;
+};
 
 const MapContext = createContext();
 
@@ -12,13 +22,14 @@ export const MapProvider = ({ children }) => {
     const markersRef = useRef(new Map());   // Map<string|number, google.maps.Marker>
     const polylinesRef = useRef(new Map()); // Map<string|number, google.maps.Polyline>
     const clickListenerRef = useRef(null);
+    const gpsMarkerRef = useRef(null);
 
     const [isMapReady, setIsMapReady] = useState(false);
     const [useFallback, setUseFallback] = useState(false);
 
     // mapState driven by PersistentMapShell (center/zoom) — kept here so pages can read it
     const [mapState, setMapState] = useState({
-        center: { lat: -6.2, lng: 106.816666 },
+        center: getInitialCenter(),
         zoom: 11,
         markers: [],
         routes: [],
@@ -26,6 +37,50 @@ export const MapProvider = ({ children }) => {
 
     // 'hidden' | 'dashboard' | 'create-cluster' | 'route-map'
     const [mapMode, setMapMode] = useState('hidden');
+
+    useEffect(() => {
+        const updateGpsMarker = (location) => {
+            const map = mapInstanceRef.current;
+            if (!map || !window.google) return;
+
+            if (!gpsMarkerRef.current) {
+                gpsMarkerRef.current = new window.google.maps.Marker({
+                    position: location,
+                    map,
+                    title: 'Lokasi Anda (GPS)',
+                    icon: {
+                        url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' // Different icon for user GPS
+                    },
+                    zIndex: 1000 // Ensure it's on top
+                });
+            } else {
+                gpsMarkerRef.current.setPosition(location);
+            }
+        };
+
+        // Initialize from cache if map just became ready
+        if (isMapReady) {
+            try {
+                const cached = localStorage.getItem('user_gps_location');
+                if (cached) {
+                    const loc = JSON.parse(cached);
+                    updateGpsMarker(loc);
+                }
+            } catch (e) {}
+        }
+
+        const handleGpsUpdate = (e) => {
+            if (e.detail) {
+                setMapState(prev => ({ ...prev, center: e.detail }));
+                if (mapInstanceRef.current) {
+                    mapInstanceRef.current.panTo(e.detail);
+                }
+                updateGpsMarker(e.detail);
+            }
+        };
+        window.addEventListener('gps_location_updated', handleGpsUpdate);
+        return () => window.removeEventListener('gps_location_updated', handleGpsUpdate);
+    }, [isMapReady]);
 
     /** Called by PersistentMapShell when the underlying google map is created */
     const setMapInstance = useCallback((map) => {
