@@ -19,7 +19,7 @@ export const getOutlets = async (query = {}) => {
     }
     return await prisma.outlet.findMany({
       where,
-      include: { cluster: { select: { id: true, name: true, region: true } } },
+      include: { cluster: { select: { id: true, name: true, region: true, deletedAt: true } } },
       orderBy: { name: 'asc' },
     });
   }
@@ -30,7 +30,7 @@ export const getOutlets = async (query = {}) => {
     async () => {
       return await prisma.outlet.findMany({
         where: { deletedAt: null },
-        include: { cluster: { select: { id: true, name: true, region: true } } },
+        include: { cluster: { select: { id: true, name: true, region: true, deletedAt: true } } },
         orderBy: { name: 'asc' },
       });
     },

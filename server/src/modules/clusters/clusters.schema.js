@@ -24,6 +24,7 @@ export const getNearestOutletsSchema = z.object({
     lat: z.number(),
     lng: z.number(),
     count: z.number().int().min(1),
+    type: z.enum(['GENERAL_TRADE', 'MODERN_TRADE']).optional(),
   }),
 });
 

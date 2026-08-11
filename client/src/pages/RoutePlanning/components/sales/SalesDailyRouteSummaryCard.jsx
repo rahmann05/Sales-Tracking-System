@@ -67,11 +67,10 @@ export const SalesDailyRouteSummaryCard = ({
                   key={sales.salesId}
                   type="button"
                   onClick={() => onSelectSales && onSelectSales(sales)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                    isCurrent
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${isCurrent
                       ? 'bg-primary text-on-primary shadow-sm'
                       : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-                  }`}
+                    }`}
                 >
                   {sales.salesName}
                 </button>
@@ -94,11 +93,10 @@ export const SalesDailyRouteSummaryCard = ({
                 key={day}
                 type="button"
                 onClick={() => onSelectDay && onSelectDay(day)}
-                className={`px-3 py-1 rounded-full text-xs font-extrabold transition-all ${
-                  isDaySelected
+                className={`px-3 py-1 rounded-full text-xs font-extrabold transition-all ${isDaySelected
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                }`}
+                  }`}
               >
                 {day}
               </button>
@@ -109,34 +107,86 @@ export const SalesDailyRouteSummaryCard = ({
 
       {/* Sequence of stops (Filtered per Sales & Day) */}
       <div className="sales-stops-sequence-list">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
             Urutan Titik Kunjungan Hari {selectedDay} ({stops.length} Outlet):
           </h4>
           <span className="text-[11px] text-emerald-600 font-bold">100% Sesuai Rencana PJP</span>
         </div>
 
-        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-          {stops.map((stop, idx) => (
-            <div key={stop.id || idx} className="sales-stop-mini-item">
-              <div className="flex items-center gap-3">
-                <div className="sales-stop-seq-num">#{idx + 1}</div>
-                <div>
-                  <div className="font-bold text-on-surface text-sm">{stop.customerName || stop.outletName}</div>
-                  <div className="text-xs text-on-surface-variant flex items-center gap-1">
-                    <LuMapPin className="text-[11px] text-primary" />
-                    {stop.address}
+        {/* Separated GT and MT Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* General Trade Column */}
+          <div className="bg-surface-container-low rounded-xl border border-border-glass p-3">
+            <div className="flex items-center justify-between mb-3 border-b border-border-glass pb-2">
+              <h5 className="text-[11px] font-extrabold text-blue-600 flex items-center gap-1">
+                <LuStore /> GENERAL TRADE
+              </h5>
+              <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
+                {stops.filter(s => s.type === 'GENERAL_TRADE').length}
+              </span>
+            </div>
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {stops.filter(s => s.type === 'GENERAL_TRADE').length === 0 ? (
+                <div className="text-xs text-on-surface-variant text-center py-4 italic">Kosong</div>
+              ) : stops.filter(s => s.type === 'GENERAL_TRADE').map((stop, idx) => (
+                <div key={stop.id || idx} className="sales-stop-mini-item !border-blue-200/50 hover:!border-blue-400">
+                  <div className="flex items-center gap-3">
+                    <div className="sales-stop-seq-num !bg-blue-100 !text-blue-700">#{stop.sequence || idx + 1}</div>
+                    <div>
+                      <div className="font-bold text-on-surface text-sm">{stop.customerName || stop.outletName}</div>
+                      <div className="text-xs text-on-surface-variant flex items-center gap-1">
+                        <LuMapPin className="text-[11px] text-blue-500" />
+                        {stop.address}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-surface-container font-mono text-on-surface">
+                      {stop.callplanName || stop.callFrequency || 'F2'}
+                    </span>
                   </div>
                 </div>
-              </div>
-
-              <div className="text-right">
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-surface-container font-mono text-on-surface">
-                  {stop.callplanName || stop.callFrequency || 'F2'}
-                </span>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* Modern Trade Column */}
+          <div className="bg-surface-container-low rounded-xl border border-border-glass p-3">
+            <div className="flex items-center justify-between mb-3 border-b border-border-glass pb-2">
+              <h5 className="text-[11px] font-extrabold text-purple-600 flex items-center gap-1">
+                <LuStore /> MODERN TRADE
+              </h5>
+              <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold">
+                {stops.filter(s => s.type !== 'GENERAL_TRADE').length}
+              </span>
+            </div>
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {stops.filter(s => s.type !== 'GENERAL_TRADE').length === 0 ? (
+                <div className="text-xs text-on-surface-variant text-center py-4 italic">Kosong</div>
+              ) : stops.filter(s => s.type !== 'GENERAL_TRADE').map((stop, idx) => (
+                <div key={stop.id || idx} className="sales-stop-mini-item !border-purple-200/50 hover:!border-purple-400">
+                  <div className="flex items-center gap-3">
+                    <div className="sales-stop-seq-num !bg-purple-100 !text-purple-700">#{stop.sequence || idx + 1}</div>
+                    <div>
+                      <div className="font-bold text-on-surface text-sm">{stop.customerName || stop.outletName}</div>
+                      <div className="text-xs text-on-surface-variant flex items-center gap-1">
+                        <LuMapPin className="text-[11px] text-purple-500" />
+                        {stop.address}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-surface-container font-mono text-on-surface">
+                      {stop.callplanName || stop.callFrequency || 'F2'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

@@ -213,10 +213,10 @@ export const clustersApi = {
   },
   
   // New Map-based Builder endpoints
-  getNearestOutlets: async (lat, lng, count) => {
+  getNearestOutlets: async (lat, lng, count, type = null) => {
     return await request('/clusters/nearest-outlets', {
       method: 'POST',
-      body: JSON.stringify({ lat, lng, count }),
+      body: JSON.stringify({ lat, lng, count, type }),
     });
   },
   generateRoutes: async (outletIds) => {

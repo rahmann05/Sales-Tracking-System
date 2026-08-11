@@ -6,6 +6,7 @@ import { broadcastCacheInvalidation } from '../../config/socket.js';
 import { haversineKm } from './cluster-generator.service.js';
 
 export const getClusters = async () => {
+  // Trigger nodemon restart
   return await cacheGetOrFetch(
     CACHE_KEYS.ALL_CLUSTERS,
     async () => {
@@ -45,6 +46,7 @@ export const getClusterById = async (id) => {
 
 const invalidateClusterCache = (id = null) => {
   cacheInvalidate(CACHE_KEYS.ALL_CLUSTERS);
+  cacheInvalidate(CACHE_KEYS.ALL_OUTLETS);
   if (id) cacheInvalidate(CACHE_KEYS.CLUSTER_BY_ID(id));
   broadcastCacheInvalidation('clusters');
 };
@@ -72,7 +74,7 @@ export const deleteCluster = async (id) => {
 
 // --- NEW FULL PAGE BUILDER LOGIC ---
 
-export const getNearestOutlets = async (lat, lng, count) => {
+export const getNearestOutlets = async (lat, lng, count, type = null) => {
   // Ambil semua outlet (memanfaatkan cache jika ada)
   let allOutlets = await cacheGetOrFetch(
     CACHE_KEYS.ALL_OUTLETS,
@@ -85,8 +87,12 @@ export const getNearestOutlets = async (lat, lng, count) => {
     300
   );
 
-  // Filter outlet yang tidak memiliki lat/lng valid (seharusnya jarang)
-  let validOutlets = allOutlets.filter(o => o.latitude != null && o.longitude != null);
+  // Filter outlet yang tidak memiliki lat/lng valid dan sesuai type (jika diberikan)
+  let validOutlets = allOutlets.filter(o => 
+    o.latitude != null && 
+    o.longitude != null && 
+    (type ? o.type === type : true)
+  );
 
   // Hitung jarak haversine ke setiap outlet
   let withDistances = validOutlets.map(o => ({

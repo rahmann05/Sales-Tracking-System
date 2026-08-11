@@ -151,6 +151,7 @@ export const AppProvider = ({ children }) => {
                 sequence: s.sequence || idx + 1,
                 outletName: s.outlet?.name || '',
                 customerName: s.outlet?.name || '',
+                type: s.outlet?.type || 'MODERN_TRADE',
                 owner: s.outlet?.ownerName || s.outlet?.owner || '',
                 phone: s.outlet?.phone || '',
                 address: s.outlet?.address || '',

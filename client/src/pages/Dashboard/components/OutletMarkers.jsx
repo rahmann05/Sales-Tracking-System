@@ -11,7 +11,8 @@ export const OutletMarkers = ({ stops, selectedOutlet, onSelectOutlet, getMarker
         {stops.map((stop, idx) => {
             if (stop.latitude == null || stop.longitude == null) return null;
 
-            const colorHex = getClusterColorHex(stop.clusterName, stop.callplanName);
+            const typeColor = stop.type === 'GENERAL_TRADE' ? '#1e3a8a' : stop.type === 'MODERN_TRADE' ? '#581c87' : null;
+            const colorHex = typeColor || getClusterColorHex(stop.clusterName, stop.callplanName);
             const isSelected =
                 selectedOutlet &&
                 (selectedOutlet.id === stop.id || selectedOutlet.outletName === stop.outletName);

@@ -42,7 +42,13 @@ export const RouteMapView = () => {
     // 1. Draw Outlets
     if (outlets && outlets.length > 0) {
       outlets.forEach(o => {
-        const markerColor = o.clusterId ? '#dc2626' : '#6b7280'; // Red if clustered, gray if not
+        let markerColor = '#6b7280'; // default fallback
+        if (o.type === 'GENERAL_TRADE') {
+            markerColor = o.clusterId ? '#1e3a8a' : '#3b82f6'; // Dark blue if clustered, bright blue if not
+        } else {
+            markerColor = o.clusterId ? '#581c87' : '#a855f7'; // Dark purple if clustered, bright purple if not
+        }
+
         const marker = new window.google.maps.Marker({
           position: { lat: o.latitude, lng: o.longitude },
           map,

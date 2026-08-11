@@ -48,8 +48,8 @@ export const remove = async (req, res, next) => {
 
 export const getNearestOutlets = async (req, res, next) => {
   try {
-    const { lat, lng, count } = req.body;
-    const data = await clusterService.getNearestOutlets(lat, lng, count);
+    const { lat, lng, count, type } = req.body;
+    const data = await clusterService.getNearestOutlets(lat, lng, count, type);
     return successResponse(res, 200, data);
   } catch (error) {
     next(error);

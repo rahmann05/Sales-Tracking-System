@@ -81,16 +81,25 @@ export const DashboardPage = ({ searchQuery = '' }) => {
         return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
       };
 
-      const markersData = visibleOutlets.map(o => ({
-        id: o.id,
-        lat: o.latitude,
-        lng: o.longitude,
-        title: o.name,
-        icon: {
-          url: getSvgMarker(o.clusterId ? '#dc2626' : '#6b7280'),
-          anchor: window.google ? new window.google.maps.Point(16, 32) : { x: 16, y: 32 }
-        },
-      }));
+      const markersData = visibleOutlets.map(o => {
+        let markerColor = '#6b7280'; // default gray
+        if (o.type === 'GENERAL_TRADE') {
+            markerColor = o.clusterId ? '#1e3a8a' : '#3b82f6';
+        } else {
+            markerColor = o.clusterId ? '#581c87' : '#a855f7';
+        }
+
+        return {
+          id: o.id,
+          lat: o.latitude,
+          lng: o.longitude,
+          title: o.name,
+          icon: {
+            url: getSvgMarker(markerColor),
+            anchor: window.google ? new window.google.maps.Point(16, 32) : { x: 16, y: 32 }
+          },
+        };
+      });
       setMarkers(markersData);
     }
 

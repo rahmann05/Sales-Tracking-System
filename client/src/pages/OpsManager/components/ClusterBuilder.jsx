@@ -23,8 +23,8 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
   // Update map on mount to show all unassigned outlets
   useEffect(() => {
     if (step === 1 || step === 2) {
-      // Show all outlets that are not yet assigned to a cluster
-      const unassignedOutlets = outlets.filter(o => !o.clusterId);
+      // Show all outlets that are not yet assigned to an active cluster
+      const unassignedOutlets = outlets.filter(o => !o.clusterId || (o.cluster && o.cluster.deletedAt));
       setMapState(prev => ({
         ...prev,
         isVisible: true,
@@ -32,12 +32,13 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
           id: o.id,
           lat: o.latitude,
           lng: o.longitude,
+          type: o.type, // Store type to use in onMarkerClick
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: '#9ca3af', // Gray for unassigned
+            fillColor: o.type === 'GENERAL_TRADE' ? '#3b82f6' : '#a855f7',
             fillOpacity: 0.8,
             strokeWeight: 1,
-            scale: 5
+            scale: 6
           },
           ...o
         })),
@@ -51,14 +52,18 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
     };
   }, [step, outlets, setMapState, setMapHandlers]);
 
-  // Handle map clicks when in step 2
+  // Handle marker clicks when in step 2 to determine cluster type based on clicked outlet
   useEffect(() => {
     if (step === 2) {
       setMapHandlers({
-        onMapClick: async (latLng) => {
+        onMapClick: null, // Disable random map clicks
+        onMarkerClick: async (marker) => {
+          if (selectedCenter) return; // Prevent clicking multiple times
+          const latLng = { lat: marker.lat, lng: marker.lng };
           setSelectedCenter(latLng);
           try {
-            const res = await clustersApi.getNearestOutlets(latLng.lat, latLng.lng, formData.outletCount);
+            // Pass the clicked marker's type to fetch nearest outlets of the SAME type
+            const res = await clustersApi.getNearestOutlets(latLng.lat, latLng.lng, formData.outletCount, marker.type);
             const nearest = res.data || [];
             setNearestOutlets(nearest);
             
@@ -70,8 +75,7 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
           } catch (err) {
             notifyError('Gagal mendapatkan outlet terdekat');
           }
-        },
-        onMarkerClick: null
+        }
       });
     }
   }, [step, formData.outletCount, setMapHandlers]);

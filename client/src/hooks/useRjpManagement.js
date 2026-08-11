@@ -44,7 +44,8 @@ export const useRjpManagement = () => {
         name: o.name,
         outletCode: o.outletCode,
         address: o.address,
-        clusterName: o.cluster?.name || o.clusterName || '-',
+        clusterName: (!o.cluster || o.cluster.deletedAt) ? '-' : (o.cluster.name || o.clusterName || '-'),
+        type: o.type || 'MODERN_TRADE',
         latitude: Number(o.latitude),
         longitude: Number(o.longitude),
       })));
@@ -56,13 +57,23 @@ export const useRjpManagement = () => {
   // Computed Allocation Statistics
   const stats = useMemo(() => {
     const totalOutlets = coverageOutlets.length;
-    const totalAllocated = masterClusters.reduce((acc, c) => acc + (c.allocatedOutletsCount || 0), 0);
+    const gtOutlets = coverageOutlets.filter(o => o.type === 'GENERAL_TRADE');
+    const mtOutlets = coverageOutlets.filter(o => o.type !== 'GENERAL_TRADE');
+    
+    const totalAllocated = coverageOutlets.filter(o => o.clusterName !== '-').length;
+    const gtAllocated = gtOutlets.filter(o => o.clusterName !== '-').length;
+    const mtAllocated = mtOutlets.filter(o => o.clusterName !== '-').length;
+
     const unallocatedCount = Math.max(0, totalOutlets - totalAllocated);
     const allocationPercentage = totalOutlets > 0 ? Math.round((totalAllocated / totalOutlets) * 100) : 0;
 
     return {
       totalOutlets,
+      gtCount: gtOutlets.length,
+      mtCount: mtOutlets.length,
       totalAllocated,
+      gtAllocated,
+      mtAllocated,
       unallocatedCount,
       allocationPercentage,
       activeClustersCount: masterClusters.length,
@@ -98,7 +109,11 @@ export const useRjpManagement = () => {
   const handleDeleteCluster = async (id) => {
     try {
       await clustersApi.delete(id);
+      const clusterToDelete = masterClusters.find(c => c.id === id);
       setMasterClusters((prev) => prev.filter((c) => c.id !== id));
+      if (clusterToDelete) {
+        setCoverageOutlets((prev) => prev.map(o => o.clusterName === clusterToDelete.name ? { ...o, clusterName: '-' } : o));
+      }
     } catch (error) {
       console.error('Failed to delete cluster:', error);
       throw error;

@@ -134,6 +134,11 @@ model ClusterRoute {
   updatedAt       DateTime @updatedAt
 }
 
+enum OutletType {
+  GENERAL_TRADE
+  MODERN_TRADE
+}
+
 model Outlet {
   id                       String                @id @default(uuid())
   name                     String
@@ -149,6 +154,7 @@ model Outlet {
   creditLimit              Float?                @default(0)
   outstanding              Float?                @default(0)
   radiusMeters             Int?                  @default(50)
+  type                     OutletType            @default(MODERN_TRADE)
 
   lockStatus               OutletLockStatus      @default(NORMAL)
 

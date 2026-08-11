@@ -18,7 +18,11 @@ export const RjpAllocationStats = ({ stats }) => {
         </div>
         <div>
           <div className="text-2xl font-extrabold text-on-surface tracking-tight mb-1">{stats.totalOutlets} Toko</div>
-          <div className="text-xs text-on-surface-variant">Coverage Bandung Barat & Cimahi</div>
+          <div className="text-xs text-on-surface-variant flex items-center gap-2">
+            <span className="text-blue-600 font-bold">{stats.gtCount} GT</span>
+            <span className="text-border-glass">|</span>
+            <span className="text-purple-600 font-bold">{stats.mtCount} MT</span>
+          </div>
         </div>
       </div>
 
@@ -34,7 +38,11 @@ export const RjpAllocationStats = ({ stats }) => {
           <div className="text-2xl font-extrabold text-on-surface tracking-tight mb-1">
             {stats.totalAllocated} <span className="text-sm font-semibold text-emerald-600">({stats.allocationPercentage}%)</span>
           </div>
-          <div className="text-xs text-on-surface-variant">Sudah masuk master rute RJP</div>
+          <div className="text-xs text-on-surface-variant flex items-center gap-2">
+            <span className="text-blue-600 font-bold">{stats.gtAllocated} GT</span>
+            <span className="text-border-glass">|</span>
+            <span className="text-purple-600 font-bold">{stats.mtAllocated} MT</span>
+          </div>
         </div>
       </div>
 
@@ -48,7 +56,11 @@ export const RjpAllocationStats = ({ stats }) => {
         </div>
         <div>
           <div className="text-2xl font-extrabold text-on-surface tracking-tight mb-1">{stats.unallocatedCount} Toko</div>
-          <div className="text-xs text-on-surface-variant">Perlu penambahan klaster baru</div>
+          <div className="text-xs text-on-surface-variant flex items-center gap-2">
+            <span className="text-blue-600 font-bold">{stats.gtCount - stats.gtAllocated} GT</span>
+            <span className="text-border-glass">|</span>
+            <span className="text-purple-600 font-bold">{stats.mtCount - stats.mtAllocated} MT</span>
+          </div>
         </div>
       </div>
 
