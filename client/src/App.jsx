@@ -1,6 +1,8 @@
 import React from 'react';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AppProvider, useApp } from './context/AppContext';
+import { MapProvider } from './context/MapContext';
+import { MapDataProvider } from './context/MapDataContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { MobileHeader } from './components/layout/MobileHeader';
@@ -8,21 +10,26 @@ import { BottomNav } from './components/layout/BottomNav';
 import { LoginPage } from './pages/Login/LoginPage';
 import { AppRouter } from './components/AppRouter';
 import { useAuth } from './hooks/useAuth';
-import { useTabNavigation } from './hooks/useTabNavigation';
 import { useSearch } from './hooks/useSearch';
+import { PersistentMapShell } from './components/map/PersistentMapShell';
 
 /**
  * AppContent Component
  * Single Responsibility: Compose the app shell (layout + routing) for authenticated users.
+ *
+ * IMPORTANT: activeTab / setActiveTab come ONLY from AppContext so that any component
+ * (e.g. RoutePlanningPage) can call useApp().setActiveTab() and the router reacts.
  */
 const AppContent = () => {
-  const { user, setUserFromAuth } = useApp();
+  // Tab navigation lives in AppContext – do NOT create a second useState here
+  const { user, setUserFromAuth, activeTab, setActiveTab } = useApp();
   const { isAuthenticated, authLoading, authError, login, logout } = useAuth();
-  const { activeTab, setActiveTab, goToWorkspace } = useTabNavigation();
   const { searchQuery, setSearchQuery } = useSearch();
 
+  const goToWorkspace = () => setActiveTab('role-workspace');
+
   const handleLogin = async ({ email, password }) => {
-    const ok = await login(email, password); // autentikasi via backend PostgreSQL
+    const ok = await login(email, password);
     if (ok) {
       setUserFromAuth();
       goToWorkspace();
@@ -55,9 +62,10 @@ const AppContent = () => {
             onLogout={handleLogout}
           />
 
-          <main className="flex-1 relative overflow-y-auto bg-background pb-16 md:pb-8 min-h-0">
+          <main className="flex-1 relative overflow-y-auto bg-background pb-16 md:pb-8 min-h-0 pointer-events-none">
             <MobileHeader onLogout={handleLogout} />
             <ErrorBoundary>
+              <PersistentMapShell />
               <AppRouter
                 activeTab={activeTab}
                 searchQuery={searchQuery}
@@ -80,7 +88,11 @@ const AppContent = () => {
 export default function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <MapProvider>
+        <MapDataProvider>
+          <AppContent />
+        </MapDataProvider>
+      </MapProvider>
     </AppProvider>
   );
 }

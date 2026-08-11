@@ -3,7 +3,7 @@
 /* Dashboard Page & Subcomponent Styles (Desktop Floating Overlay & Mobile Extended Flow Layout) */
 
 .dashboard-wrapper {
-  @apply relative w-full h-full overflow-y-auto lg:overflow-hidden bg-background;
+  @apply relative w-full h-full overflow-y-auto lg:overflow-hidden bg-transparent pointer-events-none;
 }
 
 /* Desktop: Floating Cards Overlay on top of Full-screen Map */

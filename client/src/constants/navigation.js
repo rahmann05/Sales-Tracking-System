@@ -20,6 +20,7 @@ export const TAB_IDS = Object.freeze({
     ROLE_WORKSPACE: 'role-workspace',
     DASHBOARD: 'dashboard',
     ROUTE_PLANNING: 'route-planning',
+    CREATE_CLUSTER: 'create-cluster',
     TEAM_TRACKING: 'team-tracking',
     REPORTS: 'reports',
 });

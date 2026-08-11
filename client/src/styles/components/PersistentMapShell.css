@@ -1,0 +1,45 @@
+.persistent-map-shell {
+    transition: visibility 0.2s ease-in-out;
+}
+
+/* Saat di dashboard (fixed, mengambil ruang penuh di background) */
+.persistent-map-shell.map-mode-dashboard {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Saat di create-cluster (absolute, background untuk map-spacer) */
+.persistent-map-shell.map-mode-create-cluster {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Saat di route-map view (full overlay) */
+.persistent-map-shell.map-mode-route-map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Saat hidden */
+.persistent-map-shell.map-mode-hidden {
+    visibility: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+}

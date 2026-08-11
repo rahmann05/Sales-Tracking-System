@@ -31,6 +31,13 @@ const MapEffect = ({ selectedOutlet, selectedSales, salesLocation }) => {
   const map = useMap();
 
   useEffect(() => {
+    // Ensure map tiles load fully if container resizes shortly after mount
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 400);
+  }, [map]);
+
+  useEffect(() => {
     if (selectedOutlet?.latitude != null && selectedOutlet?.longitude != null) {
       map.flyTo([Number(selectedOutlet.latitude), Number(selectedOutlet.longitude)], 15, { duration: 1 });
     }

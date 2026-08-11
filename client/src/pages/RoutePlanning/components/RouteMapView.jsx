@@ -1,106 +1,63 @@
-import React, { useState, useMemo } from 'react';
-import { LuNavigation } from 'react-icons/lu';
-import { GoogleClusterRouteMap } from '../../Dashboard/components/GoogleClusterRouteMap';
+import React, { useEffect } from 'react';
+import { useMap } from '../../../context/MapContext';
+import { useMapData } from '../../../context/MapDataContext';
 import { useApp } from '../../../context/AppContext';
-import { getTodayNameId, filterStopsForToday } from '../../../utils/dateUtils';
 
-/**
- * RouteMapView Component
- * Single Responsibility: Interactive Google Map displaying all sales/team outlet markers and routes.
- * 1 File per Component
- */
 export const RouteMapView = () => {
-  const { salesStops = [], user } = useApp();
-  const [selectedFilter, setSelectedFilter] = useState('ALL');
-  const todayName = getTodayNameId();
+  const { setMapMode, setMarkers, clearMarkers, clearPolylines } = useMap();
+  const { outlets, clusters } = useMapData();
 
-  // Peta hanya menampilkan rute jadwal HARI INI (untuk semua role)
-  const todayStops = useMemo(() => filterStopsForToday(salesStops), [salesStops]);
+  const { user, activeRoutes = [] } = useApp();
 
-  // Role check: Only Supervisor, Operational Manager, and Admin can see options to switch to other teams / clusters / all teams
-  const isSupervisorOrManager = ['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role);
-  const isSalesRole = user?.role === 'SALES';
+  useEffect(() => {
+    setMapMode('route-map');
 
-  // Team/Sales filter options (only accessible to Supervisor & Manager)
-  const filterOptions = [
-    { id: 'ALL', name: 'Semua Tim (30 Outlet)', salesName: null },
-    { id: 'sales-1', name: 'Tim Cimahi - Budi Santoso', salesName: 'Budi Santoso' },
-    { id: 'sales-2', name: 'Tim Padalarang - Siti Rahma', salesName: 'Siti Rahma' },
-    { id: 'sales-3', name: 'Tim Lembang - Agus Wijaya', salesName: 'Agus Wijaya' },
-  ];
-
-  const currentOption = useMemo(() => {
-    return filterOptions.find((f) => f.id === selectedFilter) || filterOptions[0];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFilter]);
-
-  // Selected Sales object for GoogleClusterRouteMap (sudah terfilter hari ini)
-  const selectedSalesObj = useMemo(() => {
-    if (!isSupervisorOrManager || selectedFilter === 'ALL') return null;
-    const filteredStops = todayStops.filter((s) => s.assignedSalesName === currentOption.salesName);
-    return {
-      id: selectedFilter,
-      name: currentOption.salesName,
-      stops: filteredStops,
-    };
-  }, [isSupervisorOrManager, selectedFilter, todayStops, currentOption]);
-
-  const activeStops = useMemo(() => {
-    if (isSalesRole) {
-      return todayStops.filter((s) => !s.assignedSalesName || s.assignedSalesName === user?.name || s.assignedSalesName === 'Budi Santoso');
+    // Tampilkan outlet dan polyline rute cluster
+    if (outlets && outlets.length > 0) {
+      // Semua outlet untuk ADMIN/OPS, filter untuk SPV/SALES
+      let visibleOutlets = outlets;
+      
+      const markersData = visibleOutlets.map(o => ({
+        id: o.id,
+        lat: o.latitude,
+        lng: o.longitude,
+        title: o.name,
+        icon: o.clusterId ? 'http://maps.google.com/mapfiles/ms/icons/red-pushpin.png' : 'http://maps.google.com/mapfiles/ms/icons/gray-pushpin.png'
+      }));
+      setMarkers(markersData);
     }
-    if (selectedFilter === 'ALL') return todayStops;
-    return todayStops.filter((s) => s.assignedSalesName === currentOption.salesName);
-  }, [todayStops, selectedFilter, currentOption, isSalesRole, user]);
+
+    // Set Polylines for existing clusters
+    if (clusters && clusters.length > 0) {
+      const polylines = [];
+      clusters.forEach((cluster) => {
+        const activeRoute = cluster.routes?.find(r => r.isActive);
+        if (activeRoute && activeRoute.overviewPath && Array.isArray(activeRoute.overviewPath)) {
+          polylines.push({
+            id: `cluster-${cluster.id}`,
+            path: activeRoute.overviewPath,
+            color: cluster.color || '#3b82f6',
+            strokeWeight: 4,
+            strokeOpacity: 0.8,
+          });
+        }
+      });
+      if (polylines.length > 0) {
+        setPolylines(polylines);
+      }
+    }
+
+    return () => {
+      setMapMode('hidden');
+      clearMarkers();
+      clearPolylines();
+    };
+  }, [outlets, clusters, setMapMode, setMarkers, clearMarkers, setPolylines, clearPolylines]);
 
   return (
-    <div className="bg-surface border border-border-glass rounded-2xl overflow-hidden shadow-md">
-      {/* Map Header Overlay */}
-      <div className="p-4 bg-surface-container-low border-b border-border-glass flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl shrink-0">
-            <LuNavigation />
-          </div>
-          <div>
-            <h3 className="text-base font-extrabold text-on-surface">
-              {isSalesRole ? 'Peta Spasial Rute & Titik Outlet Kunjungan Anda' : 'Peta Spasial Rute & Titik Outlet Tim Sales'}
-            </h3>
-            <p className="text-xs text-on-surface-variant">
-              {isSalesRole
-                ? `Menampilkan ${activeStops.length} titik outlet jadwal hari ini (${todayName}) pada rute RJP klaster Anda`
-                : `Menampilkan ${activeStops.length} titik outlet jadwal hari ini (${todayName}) di wilayah Region Cimahi - Bandung Barat`}
-            </p>
-          </div>
-        </div>
-
-        {/* Team/Sales Filter Pills (Restricted to Supervisor & Operational Manager) */}
-        {isSupervisorOrManager && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-            {filterOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setSelectedFilter(opt.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${selectedFilter === opt.id
-                  ? 'bg-primary text-on-primary shadow-sm'
-                  : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-                  }`}
-              >
-                {opt.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Real Interactive Google Maps Container */}
-      <div className="w-full h-[540px] md:h-[600px] relative">
-        <GoogleClusterRouteMap
-          allStops={activeStops}
-          selectedSales={selectedSalesObj}
-          userRole={user?.role || 'SUPERVISOR'}
-        />
-      </div>
+    <div className="w-full h-full">
+      {/* PersistentMapShell handles the actual map rendering. 
+          This component just dictates the state and acts as an overlay or spacer if needed. */}
     </div>
   );
 };

@@ -211,6 +211,43 @@ export const clustersApi = {
       method: 'DELETE',
     });
   },
+  
+  // New Map-based Builder endpoints
+  getNearestOutlets: async (lat, lng, count) => {
+    return await request('/clusters/nearest-outlets', {
+      method: 'POST',
+      body: JSON.stringify({ lat, lng, count }),
+    });
+  },
+  generateRoutes: async (outletIds) => {
+    return await request('/clusters/generate-routes', {
+      method: 'POST',
+      body: JSON.stringify({ outletIds }),
+    });
+  },
+  createFull: async (data) => {
+    return await request('/clusters/full', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateOutlets: async (id, outletIds) => {
+    return await request(`/clusters/${id}/outlets`, {
+      method: 'PATCH',
+      body: JSON.stringify({ outletIds }),
+    });
+  },
+  updateRoutes: async (id, routes) => {
+    return await request(`/clusters/${id}/routes`, {
+      method: 'PATCH',
+      body: JSON.stringify({ routes }),
+    });
+  },
+  setActiveRoute: async (id, routeIndex) => {
+    return await request(`/clusters/${id}/routes/${routeIndex}/activate`, {
+      method: 'PATCH',
+    });
+  },
 };
 
 // ─── 8. Users API ────────────────────────────────────────────────────────────

@@ -70,6 +70,9 @@ export const AppProvider = ({ children }) => {
   // Live GPS Location
   const [currentLocation, setCurrentLocation] = useState(null);
 
+  // Global Tab Navigation State
+  const [activeTab, setActiveTab] = useState('role-workspace');
+
   // ─── Live Geolocation Tracking ─────────────────────────────────────────────
   useEffect(() => {
     if (!user) {
@@ -158,6 +161,8 @@ export const AppProvider = ({ children }) => {
                 regionName: p.cluster?.region || '',
                 dayOfWeek: p.dayOfWeek || '',
                 assignedSalesName: p.user?.name || '',
+                customerId: s.outlet?.outletCode || '',
+                outletCode: s.outlet?.outletCode || '',
                 status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
               }));
               const done = stops.filter((s) => s.status === 'VISITED').length;
@@ -325,6 +330,10 @@ export const AppProvider = ({ children }) => {
     setUser,
     setUserFromAuth,
     currentLocation,
+
+    // Global Tab Navigation
+    activeTab,
+    setActiveTab,
 
     // Shift Clock-In State
     shiftAttendance,

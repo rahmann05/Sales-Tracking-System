@@ -52,3 +52,12 @@ export const emitToUser = (userId, event, payload) => {
  * Get the initialized Socket.IO server instance.
  */
 export const getIo = () => io;
+
+/**
+ * Broadcast cache invalidation to all connected clients
+ * @param {string} dataType - e.g., 'outlets', 'clusters', 'users', 'routes'
+ */
+export const broadcastCacheInvalidation = (dataType) => {
+  if (!io) return;
+  io.emit('cache:invalidate', { dataType, timestamp: Date.now() });
+};

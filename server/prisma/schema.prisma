@@ -82,6 +82,8 @@ model User {
   clusterId             String?
   cluster               Cluster?             @relation(fields: [clusterId], references: [id])
 
+  assignedClusters      Cluster[]            @relation("ClusterAssignedSales")
+
   pjps                  Pjp[]
   pjpTemplates          PjpTemplate[]
   attendances           Attendance[]
@@ -101,15 +103,35 @@ model User {
 }
 
 model Cluster {
-  id        String    @id @default(uuid())
-  name      String
-  region    String
-  colorHex  String?
-  users     User[]
-  outlets   Outlet[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id              String         @id @default(uuid())
+  name            String
+  region          String
+  colorHex        String?
+  centerLat       Float?
+  centerLng       Float?
+  outletCount     Int?
+  assignedSalesId String?
+  assignedSales   User?          @relation("ClusterAssignedSales", fields: [assignedSalesId], references: [id])
+  users           User[]
+  outlets         Outlet[]
+  routes          ClusterRoute[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+}
+
+model ClusterRoute {
+  id              String   @id @default(uuid())
+  clusterId       String
+  cluster         Cluster  @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  routeIndex      Int
+  isActive        Boolean  @default(false)
+  totalDistanceKm Float
+  outletOrder     Json
+  overviewPath    Json?
+  startOutletId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Outlet {

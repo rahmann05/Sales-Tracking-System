@@ -12,6 +12,8 @@ import { TeamRouteChangesReport } from './components/TeamRouteChangesReport';
  * OpsManagerPage Component (Container Page for Operational Manager Role)
  * Single Responsibility: Orchestrate route compliance audits, reroute approvals,
  * team route change reports, and skip audit logs.
+ *
+ * NOTE: Cluster creation is done via Kelola Master RJP tab (RoutePlanningPage).
  */
 export const OpsManagerPage = () => {
   const {
@@ -35,7 +37,7 @@ export const OpsManagerPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative z-10">
       <OpsManagerHeader />
 
       {/* Section 0: Audit Kepatuhan Master RJP vs Deviasi Luar RJP */}

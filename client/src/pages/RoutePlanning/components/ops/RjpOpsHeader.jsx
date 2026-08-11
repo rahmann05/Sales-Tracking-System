@@ -7,7 +7,7 @@ import '../../../../styles/components/RjpOpsHeader.css';
  * Single Responsibility: Operational Manager Header Bar with Cluster Creation & Spreadsheet Import triggers.
  * 1 File = 1 Component
  */
-export const RjpOpsHeader = ({ onOpenCreateModal, onOpenImportModal }) => {
+export const RjpOpsHeader = ({ onNavigateCreateCluster, onOpenImportModal }) => {
   return (
     <div className="rjp-ops-header">
       <div className="rjp-ops-header-info">
@@ -34,7 +34,7 @@ export const RjpOpsHeader = ({ onOpenCreateModal, onOpenImportModal }) => {
 
         <button
           type="button"
-          onClick={onOpenCreateModal}
+          onClick={onNavigateCreateCluster}
           className="rjp-ops-btn-create"
           id="btn-create-cluster"
         >

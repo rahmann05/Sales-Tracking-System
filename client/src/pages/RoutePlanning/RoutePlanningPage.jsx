@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { OPS_MANAGER_ROLES, ROLES } from '../../constants/roles';
 import { RJP_ROLE_TAB_MAP } from '../../constants/routePlanning';
+import { TAB_IDS } from '../../constants/navigation';
 
 // Tab content components (child components per SRP)
 import { RjpRoleTabBar } from './components/RjpRoleTabBar';
@@ -10,7 +11,6 @@ import { MapDirectoryTab } from './components/MapDirectoryTab';
 import { RjpOpsHeader } from './components/ops/RjpOpsHeader';
 import { RjpAllocationStats } from './components/ops/RjpAllocationStats';
 import { MasterClusterTable } from './components/ops/MasterClusterTable';
-import { ClusterFormModal } from './components/ops/ClusterFormModal';
 import { SpreadsheetImportModal } from './components/ops/SpreadsheetImportModal';
 import { VehiclesHeader } from './components/ops/VehiclesHeader';
 import { VehicleSpecsTable } from './components/ops/VehicleSpecsTable';
@@ -34,7 +34,7 @@ import '../../styles/pages/RoutePlanning.css';
  * role Ops Manager / Supervisor / Sales. Logika seleksi didelegasikan ke hooks.
  */
 export const RoutePlanningPage = () => {
-  const { user, salesStops = [], rjpTeams = [] } = useApp();
+  const { user, salesStops = [], rjpTeams = [], setActiveTab: setGlobalActiveTab } = useApp();
 
   const isOpsOrAdmin = OPS_MANAGER_ROLES.includes(user?.role);
   const isSupervisor = user?.role === ROLES.SUPERVISOR;
@@ -58,13 +58,10 @@ export const RoutePlanningPage = () => {
     stats,
     isImportModalOpen,
     setIsImportModalOpen,
-    isCreateModalOpen: _isCreateModalOpen,
-    setIsCreateModalOpen: _setIsCreateModalOpen,
     isFormModalOpen,
     setIsFormModalOpen,
     editingCluster,
     setEditingCluster,
-    handleCreateCluster,
     handleUpdateCluster,
     handleDeleteCluster,
     handleImportSpreadsheet,
@@ -95,6 +92,16 @@ export const RoutePlanningPage = () => {
 
   const selection = useSalesRouteSelection({ user, matrixRows, salesStops });
 
+  // Navigasi ke CreateClusterPage
+  const navigateToCreateCluster = () => {
+    if (setGlobalActiveTab) {
+      setGlobalActiveTab(TAB_IDS.CREATE_CLUSTER);
+    } else {
+      // Fallback jika setActiveTab tidak tersedia di context
+      window.dispatchEvent(new CustomEvent('navigate-to-tab', { detail: TAB_IDS.CREATE_CLUSTER }));
+    }
+  };
+
   return (
     <div className="page-container">
       <RjpRoleTabBar tabs={allowedTabs} activeTab={activeTab} onSelectTab={setActiveTab} />
@@ -102,12 +109,12 @@ export const RoutePlanningPage = () => {
       {activeTab === 'OPS_MANAGER' && isOpsOrAdmin && (
         <div className="space-y-6">
           <RjpOpsHeader
-            onOpenCreateModal={() => setIsFormModalOpen(true)}
+            onNavigateCreateCluster={navigateToCreateCluster}
             onOpenImportModal={() => setIsImportModalOpen(true)}
           />
           <RjpAllocationStats stats={stats} />
-          <MasterClusterTable 
-            clusters={masterClusters} 
+          <MasterClusterTable
+            clusters={masterClusters}
             onEdit={(c) => { setEditingCluster(c); setIsFormModalOpen(true); }}
             onDelete={handleDeleteCluster}
           />
@@ -148,15 +155,6 @@ export const RoutePlanningPage = () => {
 
       {isOpsOrAdmin && (
         <>
-          <ClusterFormModal
-            isOpen={isFormModalOpen}
-            onClose={() => { setIsFormModalOpen(false); setEditingCluster(null); }}
-            onSubmit={(data) => {
-              if (data.id) handleUpdateCluster(data.id, data);
-              else handleCreateCluster(data);
-            }}
-            cluster={editingCluster}
-          />
           <SpreadsheetImportModal
             isOpen={isImportModalOpen}
             onClose={() => setIsImportModalOpen(false)}

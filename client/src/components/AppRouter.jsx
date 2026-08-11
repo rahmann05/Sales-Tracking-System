@@ -11,6 +11,7 @@ import {
 
 import { DashboardPage } from '../pages/Dashboard/DashboardPage';
 import { RoutePlanningPage } from '../pages/RoutePlanning/RoutePlanningPage';
+import { CreateClusterPage } from '../pages/RoutePlanning/CreateClusterPage';
 import { TeamTrackingPage } from '../pages/TeamTracking/TeamTrackingPage';
 import { ReportsPage } from '../pages/Reports/ReportsPage';
 import { SalesPage } from '../pages/Sales/SalesPage';
@@ -59,20 +60,32 @@ const ACCESS_CONTROL = {
         description:
             'Fitur Laporan hanya dapat diakses oleh Supervisor, Manajer Operasional, atau Admin Penjualan.',
     },
+    [TAB_IDS.CREATE_CLUSTER]: {
+        roles: ['ADMIN', 'MANAJER_OPERASIONAL'],
+        title: 'Akses Dibatasi (Access Denied)',
+        description:
+            'Hanya Admin atau Manajer Operasional yang dapat membuat cluster baru.',
+    },
 };
+
+/** Wrapper: full interactive layer (blocks map clicks) */
+const Interactive = ({ children }) => <div className="w-full h-full pointer-events-auto">{children}</div>;
+
+/** Wrapper: transparent overlay that lets map clicks through */
+const MapOverlay = ({ children }) => <div className="w-full h-full pointer-events-none">{children}</div>;
 
 /**
  * AppRouter Component
  * Single Responsibility: Route the activeTab to the correct page component
  * with built-in Role-Based Access Control (RBAC).
  */
-export const AppRouter = ({ activeTab, searchQuery, onGoBack }) => {
+export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapState, setMapHandlers }) => {
     const { user } = useApp();
     const role = user?.role;
 
     // Role workspace (home)
     if (activeTab === TAB_IDS.ROLE_WORKSPACE) {
-        return <RoleWorkspace role={role} />;
+        return <Interactive><RoleWorkspace role={role} /></Interactive>;
     }
 
     // Check RBAC for restricted tabs
@@ -90,14 +103,17 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack }) => {
     // Public tab routing
     switch (activeTab) {
         case TAB_IDS.DASHBOARD:
-            return <DashboardPage searchQuery={searchQuery} />;
+            return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
         case TAB_IDS.ROUTE_PLANNING:
-            return <RoutePlanningPage searchQuery={searchQuery} />;
+            return <Interactive><RoutePlanningPage searchQuery={searchQuery} /></Interactive>;
+        case TAB_IDS.CREATE_CLUSTER:
+            // Map spacer (left) is transparent, but control panel (right) must be clickable
+            return <Interactive><CreateClusterPage onGoBack={onGoBack} /></Interactive>;
         case TAB_IDS.TEAM_TRACKING:
-            return <TeamTrackingPage searchQuery={searchQuery} />;
+            return <Interactive><TeamTrackingPage searchQuery={searchQuery} /></Interactive>;
         case TAB_IDS.REPORTS:
-            return <ReportsPage searchQuery={searchQuery} />;
+            return <Interactive><ReportsPage searchQuery={searchQuery} /></Interactive>;
         default:
-            return <DashboardPage searchQuery={searchQuery} />;
+            return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
     }
 };
