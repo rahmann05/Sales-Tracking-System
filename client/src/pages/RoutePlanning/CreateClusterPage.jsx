@@ -46,12 +46,22 @@ export const CreateClusterPage = ({ onGoBack }) => {
     const nameManuallyEditedRef = useRef(false);
 
     const centerMarkerRef = useRef(null);
+    const processingClickRef = useRef(false); // Prevent multiple simultaneous center selections
+    const isGeneratingRef = useRef(false); // mirrors isGeneratingRoutes — readable in stale closures
+
+    // Sync isGeneratingRef with state so stable callbacks always see the latest value
+    useEffect(() => { isGeneratingRef.current = isGeneratingRoutes; }, [isGeneratingRoutes]);
 
     // Ref wrapper so markers always call the latest handleCenterSelection without stale closures
     const handleCenterSelectionRef = useRef(null);
-    const handleCenterSelectionStable = useCallback((coords) => {
-        if (handleCenterSelectionRef.current) handleCenterSelectionRef.current(coords);
-    }, []);
+
+    // CRITICAL: ALL click paths go through this function.
+    // We check the lock HERE (not only inside handleCenterSelection) so we are
+    // guaranteed to block even if the inner callback has a stale closure.
+    const handleCenterSelectionStable = useCallback((coords, type) => {
+        if (processingClickRef.current || isGeneratingRef.current) return; // Hard gate
+        if (handleCenterSelectionRef.current) handleCenterSelectionRef.current(coords, type);
+    }, []); // Empty deps — never recreated, always reads refs for freshness
 
     // Set map mode on mount, restore on unmount
     useEffect(() => {
@@ -78,35 +88,40 @@ export const CreateClusterPage = ({ onGoBack }) => {
     }, [allOutlets]);
 
     // handleCenterSelection: runs once per click (1 click = fetch outlets + generate 3 routes)
-    const handleCenterSelection = useCallback(async (coords) => {
-        setCenterPoint(coords);
-        panTo(coords.lat, coords.lng);
-
-        // Place center marker
-        const map = mapInstanceRef.current;
-        if (map && window.google) {
-            if (centerMarkerRef.current) centerMarkerRef.current.setMap(null);
-            centerMarkerRef.current = new window.google.maps.Marker({
-                position: coords,
-                map,
-                icon: {
-                    path: window.google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: clusterColor,
-                    fillOpacity: 0.9,
-                    strokeColor: '#ffffff',
-                    strokeWeight: 2,
-                },
-                title: 'Titik Pusat Cluster',
-                zIndex: 999,
-            });
-        }
-
-        // Fetch nearest outlets from server
-        let outlets = [];
+    const handleCenterSelection = useCallback(async (coords, type) => {
+        // Double-check the lock (handleCenterSelectionStable already checks, but be defensive)
+        if (processingClickRef.current || isGeneratingRef.current) return;
+        processingClickRef.current = true;
+        isGeneratingRef.current = true; // Also set ref immediately so stable wrapper blocks
+        
         try {
+            setCenterPoint(coords);
+            panTo(coords.lat, coords.lng);
+
+            // Place center marker
+            const map = mapInstanceRef.current;
+            if (map && window.google) {
+                if (centerMarkerRef.current) centerMarkerRef.current.setMap(null);
+                centerMarkerRef.current = new window.google.maps.Marker({
+                    position: coords,
+                    map,
+                    icon: {
+                        path: window.google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: clusterColor,
+                        fillOpacity: 0.9,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 2,
+                    },
+                    title: 'Titik Pusat Cluster',
+                    zIndex: 999,
+                });
+            }
+
+            // Fetch nearest outlets from server
+            let outlets = [];
             const poolSize = Math.max(outletCount * 2, 30);
-            const res = await clustersApi.getNearestOutlets(coords.lat, coords.lng, poolSize);
+            const res = await clustersApi.getNearestOutlets(coords.lat, coords.lng, poolSize, type);
             const pool = res?.data || [];
 
             if (pool.length > 0) {
@@ -117,101 +132,21 @@ export const CreateClusterPage = ({ onGoBack }) => {
                 ).slice(0, outletCount);
                 setSelectedOutlets(outlets);
             }
+
+            if (outlets.length === 0) return;
+
+            // Generate 3 route combinations from different starting points
+            setIsGeneratingRoutes(true);
+            clearPolylines();
+            setRoutes([]);
+            setActiveRouteIndex(-1);
+
         } catch (err) {
-            console.error('Failed to fetch nearest outlets:', err);
-            return;
-        }
-
-        if (outlets.length === 0) return;
-
-        // Generate 3 route combinations from different starting points
-        setIsGeneratingRoutes(true);
-        clearPolylines();
-        setRoutes([]);
-        setActiveRouteIndex(-1);
-
-        try {
-            // Pick 3 diverse start points from the selected outlets
-            const uniqueStarts = [];
-
-            // 1. If coords matches an outlet exactly, prioritize it as first start
-            const centerOutlet = outlets.find(o =>
-                Math.abs(o.latitude - coords.lat) < 0.0001 && Math.abs(o.longitude - coords.lng) < 0.0001
-            );
-            if (centerOutlet) uniqueStarts.push(centerOutlet);
-
-            // 2. Add extreme points for diversity
-            const sortedByLat = [...outlets].sort((a, b) => b.latitude - a.latitude);
-            const sortedByLng = [...outlets].sort((a, b) => a.longitude - b.longitude);
-            [sortedByLat[0], sortedByLat[sortedByLat.length - 1], sortedByLng[0]].forEach(p => {
-                if (p && !uniqueStarts.find(u => u.id === p.id)) uniqueStarts.push(p);
-            });
-
-            // 3. Fill up to 3 if needed
-            for (const o of outlets) {
-                if (uniqueStarts.length >= 3) break;
-                if (!uniqueStarts.find(u => u.id === o.id)) uniqueStarts.push(o);
-            }
-
-            const generatedRoutes = await Promise.all(uniqueStarts.map(async (startOutlet, index) => {
-                // Nearest-neighbor ordering starting from startOutlet
-                const remaining = [...outlets];
-                const ordered = [];
-                let current = remaining.splice(remaining.findIndex(o => o.id === startOutlet.id), 1)[0] || startOutlet;
-                ordered.push(current);
-                const dSq = (a, b) => Math.pow(a.latitude - b.latitude, 2) + Math.pow(a.longitude - b.longitude, 2);
-                while (remaining.length > 0) {
-                    let bestIdx = 0, bestDist = Infinity;
-                    for (let i = 0; i < remaining.length; i++) {
-                        const d = dSq(current, remaining[i]);
-                        if (d < bestDist) { bestDist = d; bestIdx = i; }
-                    }
-                    current = remaining.splice(bestIdx, 1)[0];
-                    ordered.push(current);
-                }
-
-                // OSRM Route API (more reliable than Trip API)
-                let overviewPath = null;
-                let totalDistanceKm = 0;
-                try {
-                    const coordStr = ordered.map(o => `${o.longitude},${o.latitude}`).join(';');
-                    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
-                    const res = await fetch(url);
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.routes && data.routes[0]) {
-                            overviewPath = data.routes[0].geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
-                            totalDistanceKm = Math.round((data.routes[0].distance / 1000) * 100) / 100;
-                        }
-                    } else {
-                        console.warn('OSRM Route API failed:', res.status);
-                    }
-                } catch (e) {
-                    console.warn('OSRM request failed:', e);
-                }
-
-                if (!overviewPath) {
-                    // Straight-line fallback
-                    overviewPath = ordered.map(o => ({ lat: Number(o.latitude), lng: Number(o.longitude) }));
-                    totalDistanceKm = 0;
-                }
-
-                return {
-                    routeIndex: index,
-                    isActive: false,
-                    totalDistanceKm,
-                    startOutletId: startOutlet.id,
-                    outletOrder: ordered.map((o, i) => ({ id: o.id, sequence: i + 1 })),
-                    overviewPath,
-                    fullOutlets: ordered,
-                };
-            }));
-
-            setRoutes(generatedRoutes);
-        } catch (err) {
-            console.error('Failed to generate routes:', err);
+            console.error('Failed to handle center selection or generate routes:', err);
         } finally {
             setIsGeneratingRoutes(false);
+            isGeneratingRef.current = false; // Release ref lock
+            processingClickRef.current = false; // Release lock
         }
     }, [clusterColor, outletCount, panTo, mapInstanceRef, clearPolylines]);
 
@@ -230,15 +165,15 @@ export const CreateClusterPage = ({ onGoBack }) => {
                 title: o.name,
                 icon: {
                     path: 0, // google.maps.SymbolPath.CIRCLE
-                    scale: 7,
-                    fillColor: o.clusterId ? '#6366f1' : '#f97316', // indigo = assigned, orange = free
-                    fillOpacity: 0.85,
+                    scale: 6,
+                    fillColor: o.type === 'GENERAL_TRADE' ? '#2563eb' : '#9333ea',
+                    fillOpacity: 0.9,
                     strokeColor: '#ffffff',
-                    strokeWeight: 1.5,
+                    strokeWeight: 1,
                 },
                 onClick: () => {
                     if (step === 2) {
-                        handleCenterSelectionStable({ lat: o.latitude, lng: o.longitude });
+                        handleCenterSelectionStable({ lat: o.latitude, lng: o.longitude }, o.type);
                     } else {
                         handleToggleOutlet(o.id);
                     }
@@ -248,11 +183,16 @@ export const CreateClusterPage = ({ onGoBack }) => {
     }, [allOutlets, setMarkers, handleToggleOutlet, step, handleCenterSelectionStable]);
 
     // Handle map click to pick center point (step 2)
+    // NOTE: We do NOT use addClickListener here — we only allow center selection
+    // by clicking an outlet marker. Clicking empty map is disabled to prevent
+    // accidental selections in open areas without outlets.
+    // (The outlet marker onClick goes through handleCenterSelectionStable which has the lock.)
     useEffect(() => {
-        if (step !== 2 || !isMapReady) return;
-        addClickListener(handleCenterSelectionStable);
+        if (step !== 2) {
+            removeClickListener();
+        }
         return () => removeClickListener();
-    }, [step, isMapReady, handleCenterSelectionStable, addClickListener, removeClickListener]);
+    }, [step, removeClickListener]);
 
     // Highlight selected outlets on map
     const highlightSelected = useCallback((outletList) => {
@@ -276,14 +216,14 @@ export const CreateClusterPage = ({ onGoBack }) => {
             onClick: () => {
                     // Allows clicking a selected marker to recalculate a new center from there
                     if (step === 2) {
-                        handleCenterSelectionStable({ lat: o.latitude, lng: o.longitude });
+                        handleCenterSelectionStable({ lat: o.latitude, lng: o.longitude }, o.type);
                     } else {
                         handleToggleOutlet(o.id);
                     }
                 },
         }));
 
-        // Replace all markers: background + selected on top
+        // Replace all markers: keep background GT/MT colors, highlight selected on top
         const bgMarkers = (allOutlets || [])
             .filter((o) => o.latitude != null && o.longitude != null)
             .map((o) => ({
@@ -293,14 +233,15 @@ export const CreateClusterPage = ({ onGoBack }) => {
                 title: o.name,
                 icon: {
                     path: 0,
-                    scale: 4,
-                    fillColor: o.clusterId ? '#94a3b8' : '#d1d5db',
-                    fillOpacity: 0.5,
-                    strokeWeight: 0,
+                    scale: 6,
+                    fillColor: o.type === 'GENERAL_TRADE' ? '#2563eb' : '#9333ea',
+                    fillOpacity: 0.9, // Keep full color — do NOT fade non-selected outlets
+                    strokeColor: '#ffffff',
+                    strokeWeight: 1,
                 },
                 onClick: () => {
                     if (step === 2) {
-                        handleCenterSelectionStable({ lat: o.latitude, lng: o.longitude });
+                        handleCenterSelectionStable({ lat: o.latitude, lng: o.longitude }, o.type);
                     } else {
                         handleToggleOutlet(o.id);
                     }

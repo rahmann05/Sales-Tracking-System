@@ -49,7 +49,7 @@ export const MapProvider = ({ children }) => {
                     map,
                     title: 'Lokasi Anda (GPS)',
                     icon: {
-                        url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' // Different icon for user GPS
+                        url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' // Different icon for user GPS
                     },
                     zIndex: 1000 // Ensure it's on top
                 });
@@ -117,6 +117,11 @@ export const MapProvider = ({ children }) => {
                 if (m.title !== undefined) existing.setTitle(m.title);
                 if (m.label !== undefined) existing.setLabel(m.label);
                 if (m.zIndex !== undefined) existing.setZIndex(m.zIndex);
+                // Always re-register onClick so stale step/handler closures are never stuck
+                if (typeof m.onClick === 'function') {
+                    window.google.maps.event.clearListeners(existing, 'click');
+                    existing.addListener('click', () => m.onClick(m));
+                }
             } else {
                 const marker = new window.google.maps.Marker({
                     position,
