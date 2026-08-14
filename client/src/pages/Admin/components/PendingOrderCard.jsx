@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { LuCheck, LuX } from 'react-icons/lu';
-import { FiAlertCircle } from 'react-icons/fi';
 import { OrderItemsTable } from './OrderItemsTable';
 import '../../../styles/components/PendingOrderCard.css';
 
 /**
- * PendingOrderCard Component (Single Responsibility: Order Card with Credit Limit & SKU Breakdown for Admin)
+ * PendingOrderCard Component (Single Responsibility: Order Card with SKU Breakdown for Admin)
  * 1 File per Component
  */
 export const PendingOrderCard = ({ order, onDecision }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
-
-  const isOverCredit = order.outstanding + order.totalAmount > order.creditLimit;
 
   return (
     <div
@@ -40,26 +37,19 @@ export const PendingOrderCard = ({ order, onDecision }) => {
         </span>
       </div>
 
-      {/* Credit Limit & Debt Check */}
+      {/* Debt Check & Total Order */}
       <div className="poc-credit-check">
         <div>
-          <span className="poc-credit-label">Limit Kredit Toko:</span>
-          <span className="poc-credit-value">Rp {order.creditLimit.toLocaleString('id-ID')}</span>
+          <span className="poc-credit-label">Piutang Toko Saat Ini:</span>
+          <span className="poc-credit-value">Rp {(order.outstanding || 0).toLocaleString('id-ID')}</span>
         </div>
         <div>
           <span className="poc-credit-label">Total Setelah Order Ini:</span>
-          <span className={`poc-credit-value ${isOverCredit ? 'over' : 'ok'}`}>
-            Rp {(order.outstanding + order.totalAmount).toLocaleString('id-ID')}
+          <span className="poc-credit-value ok">
+            Rp {((order.outstanding || 0) + (order.totalAmount || 0)).toLocaleString('id-ID')}
           </span>
         </div>
       </div>
-
-      {isOverCredit && (
-        <div className="poc-warning">
-          <FiAlertCircle className="poc-warning-icon" />
-          <span>Warning: Order ini melebihi Plafon Kredit Toko!</span>
-        </div>
-      )}
 
       {/* Items Breakdown */}
       <OrderItemsTable items={order.items} totalAmount={order.totalAmount} />
@@ -94,7 +84,7 @@ export const PendingOrderCard = ({ order, onDecision }) => {
                 type="text"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Contoh: Overlimit kredit / Stok kosong"
+                placeholder="Contoh: Stok kosong / Data order tidak lengkap"
                 className="poc-reject-input"
               />
               <div className="poc-reject-actions">

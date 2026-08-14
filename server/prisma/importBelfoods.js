@@ -137,7 +137,6 @@ async function main() {
             latitude: Number(k.latitude),
             longitude: Number(k.longitude),
             clusterId: cluster.id,
-            creditLimit: 15000000,
             outstanding: 0,
             radiusMeters: 50,
           },

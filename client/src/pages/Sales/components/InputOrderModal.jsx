@@ -70,15 +70,9 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-xs bg-surface-variant/40 p-3 rounded-2xl border border-border-glass">
-          <div>
-            <span className="text-on-surface-variant">Plafon Kredit:</span>
-            <p className="font-bold text-on-surface">Rp {stop.creditLimit.toLocaleString('id-ID')}</p>
-          </div>
-          <div>
-            <span className="text-on-surface-variant">Piutang Berjalan:</span>
-            <p className="font-bold text-amber-600">Rp {stop.outstanding.toLocaleString('id-ID')}</p>
-          </div>
+        <div className="text-xs bg-surface-variant/40 p-3 rounded-2xl border border-border-glass flex items-center justify-between">
+          <span className="text-on-surface-variant">Piutang Berjalan Outlet:</span>
+          <p className="font-bold text-amber-600">Rp {(stop.outstanding || 0).toLocaleString('id-ID')}</p>
         </div>
 
         <div className="space-y-3">

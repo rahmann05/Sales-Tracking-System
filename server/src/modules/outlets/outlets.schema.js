@@ -10,7 +10,6 @@ export const createOutletSchema = z.object({
     outletCode: z.string().optional(),
     ownerName: z.string().optional(),
     phone: z.string().optional(),
-    creditLimit: z.number().optional(),
     radiusMeters: z.number().optional(),
   }),
 });
@@ -25,7 +24,6 @@ export const updateOutletSchema = z.object({
     outletCode: z.string().optional(),
     ownerName: z.string().optional(),
     phone: z.string().optional(),
-    creditLimit: z.number().optional(),
     radiusMeters: z.number().optional(),
   }),
   params: z.object({

@@ -24,7 +24,7 @@ export const AdminApprovalHeader = () => {
             </span>
           </div>
           <p className="text-xs text-on-surface-variant">
-            Persetujuan Pesanan & Verifikasi Plafon Kredit Pelanggan
+            Persetujuan Pesanan & Verifikasi Pesanan Pelanggan
           </p>
         </div>
       </div>

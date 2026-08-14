@@ -8,7 +8,6 @@ describe('Outlet Lock & Unlock Flow Unit Tests', () => {
       id: 'outlet-pdl-03',
       name: 'Grosir Padalarang Indah',
       lockStatus: OUTLET_LOCK_STATUS.LOCKED,
-      creditLimit: 10000000,
       outstanding: 12000000,
     };
 

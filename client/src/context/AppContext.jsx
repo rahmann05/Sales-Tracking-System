@@ -122,7 +122,6 @@ export const AppProvider = ({ children }) => {
               latitude: Number(s.outlet?.latitude) || null,
               longitude: Number(s.outlet?.longitude) || null,
               radiusMeters: s.outlet?.radiusMeters || 0,
-              creditLimit: s.outlet?.creditLimit || 0,
               outstanding: s.outlet?.outstanding || 0,
               callplanName: res.data.callplanName || '',
               clusterName: res.data.clusterName || '',

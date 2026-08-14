@@ -42,7 +42,7 @@ const buildPriorityAuditStops = (todayPjps) => {
                 address: s.outlet?.address || 'Tidak ada data',
                 currentDistance: 0,
                 radiusMeters: s.outlet?.radiusMeters || 50,
-                spvVisitType: 'Audit Key Account & Plafon Kredit',
+                spvVisitType: 'Audit Key Account & Piutang',
                 assignedSales: pjp.user?.name || 'Sales',
             });
         }

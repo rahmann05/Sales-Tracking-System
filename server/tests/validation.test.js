@@ -62,7 +62,6 @@ describe('Zod Request Validation Schemas Unit Tests', () => {
           latitude: -6.8375,
           longitude: 107.4764,
           clusterId: '123e4567-e89b-12d3-a456-426614174000',
-          creditLimit: 15000000,
         },
       };
 

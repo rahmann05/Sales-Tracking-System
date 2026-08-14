@@ -160,7 +160,6 @@ model Outlet {
   outletCode               String?               @unique
   ownerName                String?
   phone                    String?
-  creditLimit              Float?                @default(0)
   outstanding              Float?                @default(0)
   radiusMeters             Int?                  @default(50)
   type                     OutletType            @default(MODERN_TRADE)

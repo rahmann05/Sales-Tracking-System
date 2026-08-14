@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ORDER_STATUS } from '../src/utils/constants.js';
 
-describe('Orders & Credit Limit Business Logic Unit Tests', () => {
+describe('Orders Business Logic Unit Tests', () => {
   it('should accurately calculate total order value from items', () => {
     const items = [
       { productId: 'prod-01', name: 'Minyak Goreng 2L', unitPrice: 34000, quantity: 10 },
@@ -21,21 +21,6 @@ describe('Orders & Credit Limit Business Logic Unit Tests', () => {
     assert.equal(processedItems[1].subtotal, 350000);
     assert.equal(processedItems[2].subtotal, 360000);
     assert.equal(totalValue, 1050000);
-  });
-
-  it('should validate order against outlet credit limit and outstanding balance', () => {
-    const outlet = {
-      id: 'outlet-01',
-      creditLimit: 10000000,
-      outstanding: 8500000,
-    };
-
-    const newOrderAmount = 2000000;
-    const remainingCredit = outlet.creditLimit - outlet.outstanding;
-    const exceedsCredit = newOrderAmount > remainingCredit;
-
-    assert.equal(remainingCredit, 1500000);
-    assert.equal(exceedsCredit, true);
   });
 
   it('should transition order status on Admin approval and update timestamps', () => {

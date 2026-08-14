@@ -8,7 +8,6 @@ import {
   LuMapPin, 
   LuTrash2, 
   LuPhone, 
-  LuCreditCard,
   LuX
 } from 'react-icons/lu';
 import { FiEdit, FiCheckCircle } from 'react-icons/fi';
@@ -36,7 +35,6 @@ export const OutletManagementPage = () => {
     clusterName: 'Klaster Belfoods Bandung Raya',
     ownerName: '',
     phone: '',
-    creditLimit: 15000000,
   });
 
   const fetchOutlets = async () => {
@@ -115,7 +113,6 @@ export const OutletManagementPage = () => {
               longitude: Number(formData.longitude),
               ownerName: formData.ownerName,
               phone: formData.phone,
-              creditLimit: Number(formData.creditLimit),
               cluster: { name: formData.clusterName },
             }
           : o
@@ -153,7 +150,6 @@ export const OutletManagementPage = () => {
       clusterName: o.cluster?.name || 'Klaster Belfoods Bandung Raya',
       ownerName: o.ownerName || '',
       phone: o.phone || '',
-      creditLimit: o.creditLimit || 15000000,
     });
   };
 
@@ -168,7 +164,7 @@ export const OutletManagementPage = () => {
           </div>
           <h2 className="text-xl font-black text-on-surface">Kelola Master Outlet & Titik Kunjungan</h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Kelola {outlets.length} database titik toko, koordinat GPS, dan limit kredit pelanggan
+            Kelola {outlets.length} database titik toko dan koordinat GPS pelanggan
           </p>
         </div>
 
@@ -184,7 +180,6 @@ export const OutletManagementPage = () => {
               clusterName: 'Klaster Belfoods Bandung Raya',
               ownerName: '',
               phone: '',
-              creditLimit: 15000000,
             });
             setIsAddModalOpen(true);
           }}
@@ -244,7 +239,6 @@ export const OutletManagementPage = () => {
                   <th className="py-3 px-4">Alamat</th>
                   <th className="py-3 px-4">Klaster</th>
                   <th className="py-3 px-4">Koordinat GPS</th>
-                  <th className="py-3 px-4 text-right">Limit Kredit</th>
                   <th className="py-3 px-4 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -265,9 +259,6 @@ export const OutletManagementPage = () => {
                     </td>
                     <td className="py-3 px-4 font-mono text-[11px] text-on-surface-variant">
                       {outlet.latitude?.toFixed(4)}, {outlet.longitude?.toFixed(4)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-on-surface">
-                      Rp {(outlet.creditLimit || 15000000).toLocaleString('id-ID')}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -367,29 +358,18 @@ export const OutletManagementPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <label className="font-bold text-on-surface">Klaster Wilayah</label>
-                  <select
-                    value={formData.clusterName}
-                    onChange={(e) => setFormData({ ...formData, clusterName: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
-                  >
-                    <option value="Klaster Belfoods Bandung Raya">Klaster Belfoods Bandung Raya</option>
-                    <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
-                    <option value="Klaster Padalarang (KBB)">Klaster Padalarang (KBB)</option>
-                    <option value="Klaster Lembang (KBB Utara)">Klaster Lembang (KBB Utara)</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-on-surface">Limit Kredit (Rp)</label>
-                  <input
-                    type="number"
-                    value={formData.creditLimit}
-                    onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="font-bold text-on-surface">Klaster Wilayah</label>
+                <select
+                  value={formData.clusterName}
+                  onChange={(e) => setFormData({ ...formData, clusterName: e.target.value })}
+                  className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
+                >
+                  <option value="Klaster Belfoods Bandung Raya">Klaster Belfoods Bandung Raya</option>
+                  <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
+                  <option value="Klaster Padalarang (KBB)">Klaster Padalarang (KBB)</option>
+                  <option value="Klaster Lembang (KBB Utara)">Klaster Lembang (KBB Utara)</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-glass">
@@ -480,29 +460,18 @@ export const OutletManagementPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <label className="font-bold text-on-surface">Klaster Wilayah</label>
-                  <select
-                    value={formData.clusterName}
-                    onChange={(e) => setFormData({ ...formData, clusterName: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
-                  >
-                    <option value="Klaster Belfoods Bandung Raya">Klaster Belfoods Bandung Raya</option>
-                    <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
-                    <option value="Klaster Padalarang (KBB)">Klaster Padalarang (KBB)</option>
-                    <option value="Klaster Lembang (KBB Utara)">Klaster Lembang (KBB Utara)</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-on-surface">Limit Kredit (Rp)</label>
-                  <input
-                    type="number"
-                    value={formData.creditLimit}
-                    onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="font-bold text-on-surface">Klaster Wilayah</label>
+                <select
+                  value={formData.clusterName}
+                  onChange={(e) => setFormData({ ...formData, clusterName: e.target.value })}
+                  className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
+                >
+                  <option value="Klaster Belfoods Bandung Raya">Klaster Belfoods Bandung Raya</option>
+                  <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
+                  <option value="Klaster Padalarang (KBB)">Klaster Padalarang (KBB)</option>
+                  <option value="Klaster Lembang (KBB Utara)">Klaster Lembang (KBB Utara)</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-glass">
