@@ -11,6 +11,7 @@ import {
     LuShieldCheck,
     LuFileCheck,
     LuBriefcase,
+    LuStore,
 } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 import { LuMapPin } from 'react-icons/lu';
@@ -23,6 +24,7 @@ export const TAB_IDS = Object.freeze({
     ROUTE_PLANNING: 'route-planning',
     CREATE_CLUSTER: 'create-cluster',
     TEAM_TRACKING: 'team-tracking',
+    OUTLET_MANAGEMENT: 'outlet-management',
     REPORTS: 'reports',
     OUTLET_VALIDATION: 'outlet-validation',
 });
@@ -68,6 +70,14 @@ export const getNavigationTabs = (role) => {
             id: TAB_IDS.TEAM_TRACKING,
             label: role === ROLES.SALES ? 'Tim & RJP Sales' : 'Tracking Tim Field',
             icon: LuUsers,
+        });
+    }
+
+    if ([ROLES.MANAJER_OPERASIONAL, ROLES.ADMIN, 'OPERATIONAL_MANAGER'].includes(role)) {
+        tabs.push({
+            id: TAB_IDS.OUTLET_MANAGEMENT,
+            label: 'Master Outlet',
+            icon: LuStore,
         });
     }
 

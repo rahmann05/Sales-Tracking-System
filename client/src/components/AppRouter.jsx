@@ -20,6 +20,7 @@ import { SupervisorPage } from '../pages/Supervisor/SupervisorPage';
 import { AdminApprovalPage } from '../pages/Admin/AdminApprovalPage';
 import { OpsManagerPage } from '../pages/OpsManager/OpsManagerPage';
 import { OutletValidationPage } from '../pages/OpsManager/OutletValidationPage';
+import { OutletManagementPage } from '../pages/OutletManagement/OutletManagementPage';
 
 /**
  * RoleWorkspace Component
@@ -55,6 +56,11 @@ const ACCESS_CONTROL = {
         roles: TEAM_TRACKING_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
         description: 'Halaman Tim dan RJP hanya dapat diakses oleh pengguna terdaftar.',
+    },
+    [TAB_IDS.OUTLET_MANAGEMENT]: {
+        roles: ['ADMIN', 'MANAJER_OPERASIONAL', 'OPERATIONAL_MANAGER'],
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Halaman Kelola Master Outlet hanya dapat diakses oleh Manajer Operasional atau Admin.',
     },
     [TAB_IDS.REPORTS]: {
         roles: REPORTS_ROLES,
@@ -118,6 +124,8 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             return <Interactive><CreateClusterPage onGoBack={onGoBack} /></Interactive>;
         case TAB_IDS.TEAM_TRACKING:
             return <Interactive><TeamTrackingPage searchQuery={searchQuery} /></Interactive>;
+        case TAB_IDS.OUTLET_MANAGEMENT:
+            return <Interactive><OutletManagementPage searchQuery={searchQuery} /></Interactive>;
         case TAB_IDS.REPORTS:
             return <Interactive><ReportsPage searchQuery={searchQuery} /></Interactive>;
         case TAB_IDS.OUTLET_VALIDATION:

@@ -7,6 +7,7 @@ import { SupervisorPerformanceAnalytics } from './components/SupervisorPerforman
 import { SupervisorTabBar } from './components/SupervisorTabBar';
 import { SupervisorApprovalsTab } from './components/SupervisorApprovalsTab';
 import { SupervisorIncidentsTab } from './components/SupervisorIncidentsTab';
+import { SpvDailySummaryTab } from './components/SpvDailySummaryTab';
 import { IncidentHandleModal } from './components/IncidentHandleModal';
 
 /**
@@ -21,6 +22,7 @@ export const SupervisorPage = () => {
     salesList = [],
     incidents = [],
     offPjpAttendances = [],
+    orders = [],
     handleSupervisorValidateOffPJP,
     handleSupervisorSkipOutlet,
     handleSupervisorDirectReroute,
@@ -83,6 +85,17 @@ export const SupervisorPage = () => {
           salesStops={salesStops}
           offPjpAttendances={offPjpAttendances}
           salesList={salesList}
+        />
+      )}
+
+      {activeTab === 'daily_summary' && (
+        <SpvDailySummaryTab
+          salesStops={salesStops}
+          salesList={salesList}
+          incidents={incidents}
+          orders={orders}
+          offPjpAttendances={offPjpAttendances}
+          user={user}
         />
       )}
 

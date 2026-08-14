@@ -302,6 +302,7 @@ export const AppProvider = ({ children }) => {
     setIncidents,
     salesStops,
     setSalesStops,
+    setOffPjpAttendances,
     addNotification,
   });
 

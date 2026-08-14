@@ -9,6 +9,25 @@ import { SelectedSalesMapHeader } from './SelectedSalesMapHeader';
 import { RouteProviderBadge } from './RouteProviderBadge';
 import { LuStore, LuMapPin, LuNavigation, LuExternalLink } from 'react-icons/lu';
 
+// Helper custom Leaflet live sales GPS icon generator
+const createSalesLivePinIcon = () => {
+  const svg = `
+    <div style="position:relative; width:42px; height:42px; display:flex; align-items:center; justify-content:center;">
+      <div style="position:absolute; width:40px; height:40px; border-radius:50%; background:#2563eb; opacity:0.35; animation:pulse 2s infinite;"></div>
+      <div style="width:32px; height:32px; border-radius:50%; background:#1d4ed8; border:3px solid #ffffff; box-shadow:0 4px 8px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; color:#ffffff; font-size:15px;">
+        🛵
+      </div>
+    </div>
+  `;
+  return L.divIcon({
+    className: 'custom-sales-live-marker',
+    html: svg,
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+    popupAnchor: [0, -22],
+  });
+};
+
 // Helper custom Leaflet pin icon generator
 const createCustomPinIcon = (color = '#2563eb', isSelected = false) => {
   const size = isSelected ? 34 : 26;
@@ -133,6 +152,27 @@ export const LeafletFallbackRouteMap = ({
               <p className="text-gray-600 text-[10px]">
                 {salesLocation?.accuracy ? 'Titik GPS Real-Time' : 'Titik Awal Keberangkatan Sales'}
               </p>
+            </div>
+          </Popup>
+        </Marker>
+
+        {/* Live Sales Field Rep GPS Position Pin */}
+        <Marker
+          position={[Number(salesLocation.lat), Number(salesLocation.lng)]}
+          icon={createSalesLivePinIcon()}
+        >
+          <Popup>
+            <div className="text-xs p-1.5 space-y-1 min-w-[160px]">
+              <div className="flex items-center gap-1.5 font-bold text-blue-700">
+                <span>🛵 Posisi Live Sales Rep</span>
+              </div>
+              <p className="font-bold text-gray-900 text-xs">
+                {selectedSales?.repName || 'Sales Field Rep (Aktif)'}
+              </p>
+              <div className="text-[10px] text-gray-500 space-y-0.5">
+                <div>Status: <span className="text-emerald-600 font-bold">Sedang di Rute</span></div>
+                <div>Koordinat: {salesLocation.lat.toFixed(4)}, {salesLocation.lng.toFixed(4)}</div>
+              </div>
             </div>
           </Popup>
         </Marker>

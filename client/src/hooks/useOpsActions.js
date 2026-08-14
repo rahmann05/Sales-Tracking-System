@@ -13,7 +13,8 @@ export const useOpsActions = ({
   setIncidents,
   salesStops,
   setSalesStops,
-  addNotification
+  setOffPjpAttendances,
+  addNotification,
 }) => {
 
   const handleCreateRjpTeam = async (payload) => {
@@ -55,8 +56,6 @@ export const useOpsActions = ({
           roleTarget: ['SALES', 'SUPERVISOR'],
         });
       } else {
-        // Technically, Ops Manager rejects it, so it should call routeChangesApi.rejectReroute()
-        // But for now, we map it to RESOLVED_SKIP if not approved, or simply call an API for reject
         setIncidents((prev) =>
           prev.map((i) => (i.id === incidentId ? { ...i, status: 'RESOLVED_SKIP' } : i))
         );
@@ -71,9 +70,34 @@ export const useOpsActions = ({
     }
   };
 
+  const handleOpsOverrideOffPjp = ({ attendanceId, newStatus, overrideReason }) => {
+    if (setOffPjpAttendances) {
+      setOffPjpAttendances((prev) =>
+        prev.map((a) =>
+          a.id === attendanceId
+            ? {
+                ...a,
+                validationStatus: newStatus,
+                opsOverrideNote: overrideReason || 'Override oleh Manajer Operasional',
+                opsOverrideBy: user?.name || 'Manajer Ops',
+                opsOverrideAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+              }
+            : a
+        )
+      );
+    }
+
+    addNotification({
+      title: 'Validasi Luar RJP Di-Override Manajer Operasional',
+      message: `Manajer Operasional ${user?.name || 'Manajer Ops'} mengubah status presensi toko luar RJP menjadi ${newStatus}. Alasan: ${overrideReason}`,
+      roleTarget: ['SUPERVISOR', 'SALES'],
+    });
+  };
+
   return {
     handleCreateRjpTeam,
     handleCreateMasterRoute,
     handleOpsManagerRerouteDecision,
+    handleOpsOverrideOffPjp,
   };
 };

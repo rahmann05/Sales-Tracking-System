@@ -137,6 +137,23 @@ export const outletsApi = {
     const query = new URLSearchParams(params).toString();
     return await request(`/outlets${query ? `?${query}` : ''}`);
   },
+  create: async (outletData) => {
+    return await request('/outlets', {
+      method: 'POST',
+      body: JSON.stringify(outletData),
+    });
+  },
+  update: async (id, outletData) => {
+    return await request(`/outlets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(outletData),
+    });
+  },
+  remove: async (id) => {
+    return await request(`/outlets/${id}`, {
+      method: 'DELETE',
+    });
+  },
   requestUnlock: async (outletId, reason) => {
     return await request(`/outlets/${outletId}/unlock-request`, {
       method: 'POST',
@@ -270,6 +287,23 @@ export const usersApi = {
   getAll: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return await request(`/users${query ? `?${query}` : ''}`);
+  },
+  create: async (userData) => {
+    return await request('/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  },
+  update: async (id, userData) => {
+    return await request(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(userData),
+    });
+  },
+  remove: async (id) => {
+    return await request(`/users/${id}`, {
+      method: 'DELETE',
+    });
   },
 };
 

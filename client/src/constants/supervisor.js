@@ -33,6 +33,7 @@ export const SPV_AUDIT_CHECKLIST_ITEMS = [
 export const SUPERVISOR_TABS = [
     { id: 'field_visit', label: 'Kunjungan & Absensi Lapangan (Utama)', icon: LuCompass },
     { id: 'performance', label: 'Monitoring Tim Sales', icon: LuTrendingUp },
+    { id: 'daily_summary', label: 'Rekap Harian', icon: LuFileText },
     { id: 'approvals', label: 'Antrean Approval', icon: LuCircleCheck },
     { id: 'incidents', label: 'Laporan Toko Tutup', icon: FiAlertCircle },
 ];
