@@ -4,6 +4,7 @@ import { notifySuccess } from '../../services/notificationService';
 import { SectionHeader } from '../../components/common/SectionHeader';
 import { OpsManagerHeader } from './components/OpsManagerHeader';
 import { OpsSalesComplianceAnalytics } from './components/OpsSalesComplianceAnalytics';
+import { OutletValidationPanel } from './components/OutletValidationPanel';
 import { RerouteApprovalInbox } from './components/RerouteApprovalInbox';
 import { SkipAuditLog } from './components/SkipAuditLog';
 import { TeamRouteChangesReport } from './components/TeamRouteChangesReport';
@@ -47,7 +48,17 @@ export const OpsManagerPage = () => {
         rjpTeams={rjpTeams}
       />
 
-      {/* Section 1: Inbox Approval Perubahan Rute */}
+      {/* Section 1: Validasi Data Outlet */}
+      <div className="section-block">
+        <SectionHeader
+          title="Validasi Data Outlet (Google Cross-Check)"
+          subtitle="Verifikasi keakuratan nama, alamat, dan koordinat outlet terhadap Google Maps & Google Places menggunakan 4-Signal Weighted Scoring"
+        />
+
+        <OutletValidationPanel />
+      </div>
+
+      {/* Section 2: Inbox Approval Perubahan Rute */}
       <div className="section-block">
         <SectionHeader
           title="Inbox Approval Perubahan Rute (Dari Supervisor)"

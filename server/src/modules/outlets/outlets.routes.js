@@ -7,6 +7,7 @@ import {
   handleApproveOrRejectUnlock,
   handleGetUnlockRequests,
 } from './outlet-lock.controller.js';
+import * as validationController from './outlet-validation.controller.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { createOutletSchema, updateOutletSchema, lockOutletSchema, unlockRequestSchema } from './outlets.schema.js';
@@ -14,6 +15,18 @@ import { createOutletSchema, updateOutletSchema, lockOutletSchema, unlockRequest
 const router = Router();
 
 router.use(authenticate);
+
+// ─── Validation ──────────────────────────────────────────────────────────────
+router.get(
+  '/validation-summary',
+  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  validationController.getValidationSummary
+);
+router.post(
+  '/:id/validate',
+  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  validationController.validateSingle
+);
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 router.get('/', outletController.getAll);
@@ -53,3 +66,4 @@ router.patch(
 );
 
 export default router;
+

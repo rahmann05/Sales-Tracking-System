@@ -11,4 +11,7 @@ export const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   attendanceRadiusMeters: parseFloat(process.env.ATTENDANCE_RADIUS_METERS || '100'),
+  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+  validationDistanceWarning: parseFloat(process.env.VALIDATION_DISTANCE_WARNING || '200'),
+  validationDistanceSuspect: parseFloat(process.env.VALIDATION_DISTANCE_SUSPECT || '500'),
 };

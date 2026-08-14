@@ -155,6 +155,16 @@ export const outletsApi = {
   },
 };
 
+// ─── 5b. Outlet Validation API ────────────────────────────────────────────────
+export const outletValidationApi = {
+  validateSingle: async (outletId) => {
+    return await request(`/outlets/${outletId}/validate`, { method: 'POST' });
+  },
+  getSummary: async () => {
+    return await request('/outlets/validation-summary');
+  },
+};
+
 // ─── 6. Route Changes / Incident API ──────────────────────────────────────────
 export const routeChangesApi = {
   reportClosed: async ({ pjpId, pjpStopId, reason, photoUrl }) => {
