@@ -24,6 +24,10 @@ export const ROUTE_PLANNING_ROLES = Object.freeze([
     ROLES.ADMIN,
 ]);
 
+export const OUTLET_VALIDATION_ROLES = Object.freeze([
+    ROLES.MANAJER_OPERASIONAL,
+]);
+
 /** Roles allowed to view Team Tracking */
 export const TEAM_TRACKING_ROLES = Object.freeze([
     ROLES.SALES,

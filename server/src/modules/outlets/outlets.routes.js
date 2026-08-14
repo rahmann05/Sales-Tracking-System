@@ -27,6 +27,11 @@ router.post(
   authorize('ADMIN', 'MANAJER_OPERASIONAL'),
   validationController.validateSingle
 );
+router.post(
+  '/:id/validate-nearby',
+  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  validationController.validateNearby
+);
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 router.get('/', outletController.getAll);

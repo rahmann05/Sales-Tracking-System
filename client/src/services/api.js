@@ -160,6 +160,9 @@ export const outletValidationApi = {
   validateSingle: async (outletId) => {
     return await request(`/outlets/${outletId}/validate`, { method: 'POST' });
   },
+  validateNearby: async (outletId) => {
+    return await request(`/outlets/${outletId}/validate-nearby`, { method: 'POST' });
+  },
   getSummary: async () => {
     return await request('/outlets/validation-summary');
   },

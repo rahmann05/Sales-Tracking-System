@@ -21,6 +21,19 @@ export const validateSingle = async (req, res, next) => {
 };
 
 /**
+ * POST /outlets/:id/validate-nearby
+ * Validate a single outlet specifically for nearby search (optional).
+ */
+export const validateNearby = async (req, res, next) => {
+  try {
+    const result = await validationService.validateNearby(req.params.id);
+    return successResponse(res, 200, result, 'Nearby Search selesai');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /outlets/validation-summary
  * Get validation status summary counts for all outlets.
  */

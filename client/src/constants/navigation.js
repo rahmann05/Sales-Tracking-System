@@ -13,7 +13,8 @@ import {
     LuBriefcase,
 } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
-import { ROLES, ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES } from './roles';
+import { LuMapPin } from 'react-icons/lu';
+import { ROLES, ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES, OUTLET_VALIDATION_ROLES } from './roles';
 
 /** Tab IDs used across the app */
 export const TAB_IDS = Object.freeze({
@@ -23,6 +24,7 @@ export const TAB_IDS = Object.freeze({
     CREATE_CLUSTER: 'create-cluster',
     TEAM_TRACKING: 'team-tracking',
     REPORTS: 'reports',
+    OUTLET_VALIDATION: 'outlet-validation',
 });
 
 /** Role-specific "home workspace" tab metadata */
@@ -71,6 +73,10 @@ export const getNavigationTabs = (role) => {
 
     if (REPORTS_ROLES.includes(role)) {
         tabs.push({ id: TAB_IDS.REPORTS, label: 'Laporan & Analitik', icon: FiBarChart2 });
+    }
+
+    if (OUTLET_VALIDATION_ROLES.includes(role)) {
+        tabs.push({ id: TAB_IDS.OUTLET_VALIDATION, label: 'Validasi Outlet', icon: LuMapPin });
     }
 
     return tabs;

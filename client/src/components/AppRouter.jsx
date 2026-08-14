@@ -6,6 +6,7 @@ import {
     ROUTE_PLANNING_ROLES,
     TEAM_TRACKING_ROLES,
     REPORTS_ROLES,
+    OUTLET_VALIDATION_ROLES,
     ROLES,
 } from '../constants/roles';
 
@@ -18,6 +19,7 @@ import { SalesPage } from '../pages/Sales/SalesPage';
 import { SupervisorPage } from '../pages/Supervisor/SupervisorPage';
 import { AdminApprovalPage } from '../pages/Admin/AdminApprovalPage';
 import { OpsManagerPage } from '../pages/OpsManager/OpsManagerPage';
+import { OutletValidationPage } from '../pages/OpsManager/OutletValidationPage';
 
 /**
  * RoleWorkspace Component
@@ -58,7 +60,12 @@ const ACCESS_CONTROL = {
         roles: REPORTS_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
         description:
-            'Fitur Laporan hanya dapat diakses oleh Supervisor, Manajer Operasional, atau Admin Penjualan.',
+            'Halaman Laporan dan Analitik hanya dapat diakses oleh Manajemen, Admin, dan Supervisor.',
+    },
+    [TAB_IDS.OUTLET_VALIDATION]: {
+        roles: OUTLET_VALIDATION_ROLES,
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Fitur Validasi Outlet hanya dapat diakses oleh Manajer Operasional.',
     },
     [TAB_IDS.CREATE_CLUSTER]: {
         roles: ['ADMIN', 'MANAJER_OPERASIONAL'],
@@ -113,6 +120,8 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             return <Interactive><TeamTrackingPage searchQuery={searchQuery} /></Interactive>;
         case TAB_IDS.REPORTS:
             return <Interactive><ReportsPage searchQuery={searchQuery} /></Interactive>;
+        case TAB_IDS.OUTLET_VALIDATION:
+            return <Interactive><OutletValidationPage /></Interactive>;
         default:
             return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
     }

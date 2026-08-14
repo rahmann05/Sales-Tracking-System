@@ -6,6 +6,7 @@ import {
 } from 'react-icons/lu';
 import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
 import { outletsApi, outletValidationApi } from '../../../services/api';
+import { NearbySearchModal } from './NearbySearchModal';
 import '../../../styles/components/OutletValidationPanel.css';
 
 /**
@@ -53,11 +54,11 @@ const getScoreColor = (score) => {
 
 // ─── Signal Detail Card ──────────────────────────────────────────────────────
 
-const SignalDetailCard = ({ signalKey, data }) => {
+const SignalDetailCard = ({ signalKey, data, outletId, onValidateNearby, isNearbyLoading, onOpenNearbyModal }) => {
   const cfg = SIGNAL_LABELS[signalKey];
-  if (!cfg || !data) return null;
+  if (!cfg) return null;
 
-  const scoreColor = getScoreColor(data.score);
+  const scoreColor = data ? getScoreColor(data.score) : { bg: 'transparent', text: 'inherit' };
 
   return (
     <div className="ovp-detail-card">
@@ -66,12 +67,14 @@ const SignalDetailCard = ({ signalKey, data }) => {
           <cfg.icon color={cfg.color} size={14} />
           {cfg.label}
         </span>
-        <span className="ovp-detail-signal-score" style={{ background: scoreColor.bg, color: scoreColor.text }}>
-          {data.skipped ? 'SKIP' : `${data.score}/100`}
-        </span>
+        {data && (
+          <span className="ovp-detail-signal-score" style={{ background: scoreColor.bg, color: scoreColor.text }}>
+            {data.skipped ? 'SKIP' : `${data.score}/100`}
+          </span>
+        )}
       </div>
 
-      {data.skipped ? (
+      {!data && signalKey !== 'nearbySearch' ? null : data?.skipped ? (
         <div className="ovp-detail-row-item">
           <span className="ovp-detail-label">Status:</span>
           <span className="ovp-detail-value" style={{ color: '#9ca3af', fontStyle: 'italic' }}>
@@ -211,40 +214,72 @@ const SignalDetailCard = ({ signalKey, data }) => {
 
           {/* Nearby Search details */}
           {signalKey === 'nearbySearch' && (
-            <>
-              {data.bestMatchName && (
-                <div className="ovp-detail-row-item">
-                  <span className="ovp-detail-label">Match Terbaik:</span>
-                  <span className="ovp-detail-value">{data.bestMatchName}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {!data ? (
+                <div style={{ textAlign: 'center', padding: '1rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', marginBottom: '0.75rem' }}>
+                    Data tempat terdekat belum ditarik dari Google API.
+                  </p>
+                  <button
+                    onClick={() => onValidateNearby(outletId)}
+                    disabled={isNearbyLoading}
+                    style={{
+                      background: 'var(--primary)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: isNearbyLoading ? 'not-allowed' : 'pointer',
+                      opacity: isNearbyLoading ? 0.7 : 1,
+                    }}
+                  >
+                    {isNearbyLoading ? 'Loading...' : 'Validasi dengan Nearby Search'}
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <div className="ovp-detail-row-item">
+                    <span className="ovp-detail-label">Match Terbaik:</span>
+                    <span className="ovp-detail-value">{data.topMatchName || data.bestMatchName || '-'}</span>
+                  </div>
+                  <div className="ovp-detail-row-item">
+                    <span className="ovp-detail-label">Kecocokan:</span>
+                    <span className={`ovp-detail-value ${data.nameSimilarity >= 0.5 || data.bestMatchSimilarity >= 0.5 ? 'match' : 'mismatch'}`}>
+                      {Math.round((data.nameSimilarity ?? data.bestMatchSimilarity ?? 0) * 100)}%
+                    </span>
+                  </div>
+                  <div className="ovp-detail-row-item">
+                    <span className="ovp-detail-label">Total Ditemukan:</span>
+                    <span className="ovp-detail-value">{data.placesList?.length ?? data.totalNearbyPlaces ?? 0} tempat</span>
+                  </div>
+                  
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <button
+                      onClick={() => onOpenNearbyModal(data)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--surface-container)',
+                        color: 'var(--primary)',
+                        border: '1px solid var(--border-glass)',
+                        padding: '0.5rem',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Lihat Detail
+                    </button>
+                  </div>
+                </>
               )}
-              {data.bestMatchSimilarity != null && (
-                <div className="ovp-detail-row-item">
-                  <span className="ovp-detail-label">Kecocokan:</span>
-                  <span className={`ovp-detail-value ${data.bestMatchSimilarity >= 0.5 ? 'match' : 'mismatch'}`}>
-                    {Math.round(data.bestMatchSimilarity * 100)}%
-                  </span>
-                </div>
-              )}
-              {data.totalNearbyPlaces != null && (
-                <div className="ovp-detail-row-item">
-                  <span className="ovp-detail-label">Tempat Terdekat:</span>
-                  <span className="ovp-detail-value">{data.totalNearbyPlaces} tempat</span>
-                </div>
-              )}
-              {data.nearbyPlaceNames?.length > 0 && (
-                <div className="ovp-detail-row-item">
-                  <span className="ovp-detail-label">Daftar:</span>
-                  <span className="ovp-detail-value" style={{ fontSize: '0.6875rem' }}>
-                    {data.nearbyPlaceNames.join(', ')}
-                  </span>
-                </div>
-              )}
-            </>
+            </div>
           )}
 
           {/* Error */}
-          {data.error && (
+          {data?.error && (
             <div className="ovp-detail-row-item">
               <span className="ovp-detail-label">Error:</span>
               <span className="ovp-detail-value mismatch">{data.error}</span>
@@ -259,6 +294,8 @@ const SignalDetailCard = ({ signalKey, data }) => {
 // ─── Map Preview Card ────────────────────────────────────────────────────────
 
 const MapPreviewCard = ({ outlet, details }) => {
+  const [map, setMap] = useState(null);
+
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
@@ -294,6 +331,7 @@ const MapPreviewCard = ({ outlet, details }) => {
         mapContainerStyle={{ width: '100%', height: '100%' }}
         center={center}
         zoom={19}
+        onLoad={(mapInstance) => setMap(mapInstance)}
         options={{
           disableDefaultUI: true,
           zoomControl: true,
@@ -334,6 +372,55 @@ const MapPreviewCard = ({ outlet, details }) => {
           />
         )}
       </GoogleMap>
+      
+      {/* Floating Action Buttons to Focus on Coords */}
+      <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 10 }}>
+        {googleCoords && (
+          <button
+            onClick={() => map?.panTo(googleCoords)}
+            title="Fokus ke Titik Google"
+            style={{
+              background: '#059669',
+              color: 'white',
+              border: 'none',
+              padding: '0.375rem 0.625rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
+          >
+            <LuCrosshair size={12} /> Google
+          </button>
+        )}
+        {hasDbCoords && (
+          <button
+            onClick={() => map?.panTo({ lat: parseFloat(outlet.latitude), lng: parseFloat(outlet.longitude) })}
+            title="Fokus ke Titik Database"
+            style={{
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              padding: '0.375rem 0.625rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
+          >
+            <LuCrosshair size={12} /> DB
+          </button>
+        )}
+      </div>
+
       <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(255,255,255,0.95)', padding: '0.625rem 0.875rem', borderRadius: '0.5rem', fontSize: '0.6875rem', fontWeight: '600', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', border: '1px solid var(--border-glass)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: '#059669', border: '2px solid white', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
@@ -352,20 +439,31 @@ const MapPreviewCard = ({ outlet, details }) => {
 
 // ─── Expanded Detail Row ─────────────────────────────────────────────────────
 
-const ExpandedDetail = ({ outlet }) => {
+const ExpandedDetail = ({ outlet, onValidateNearby, isNearbyLoading, onOpenNearbyModal }) => {
   const details = outlet.validationDetails;
   if (!details) return null;
 
   const signals = details.signals || {};
   const warnings = details.warnings || [];
+  
+  // Nearby search data may be top-level or inside signals depending on new/old format
+  const nearbySearchData = details.nearbySearch || signals.nearbySearch || null;
 
   return (
     <div className="ovp-detail-panel">
       {/* Signal Cards and Map */}
       <div className="ovp-detail-grid">
-        {Object.entries(SIGNAL_LABELS).map(([key]) => (
-          <SignalDetailCard key={key} signalKey={key} data={signals[key]} />
+        {['reverseGeocode', 'forwardGeocode', 'findPlace'].map((key) => (
+          <SignalDetailCard key={key} signalKey={key} data={signals[key]} outletId={outlet.id} />
         ))}
+        <SignalDetailCard 
+          signalKey="nearbySearch" 
+          data={nearbySearchData} 
+          outletId={outlet.id}
+          onValidateNearby={onValidateNearby}
+          isNearbyLoading={isNearbyLoading}
+          onOpenNearbyModal={onOpenNearbyModal}
+        />
         {/* Map always shown as part of the grid */}
         <MapPreviewCard outlet={outlet} details={details} />
       </div>
@@ -410,6 +508,11 @@ export const OutletValidationPanel = () => {
   const [filterType, setFilterType] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [validatingNearbyId, setValidatingNearbyId] = useState(null);
+  
+  // Modal state
+  const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
+  const [nearbyModalData, setNearbyModalData] = useState(null);
 
   // ─── Fetch Data ──────────────────────────────────────────────────────────
 
@@ -443,6 +546,14 @@ export const OutletValidationPanel = () => {
   // ─── Validate Single Outlet ──────────────────────────────────────────────
 
   const handleValidate = async (outletId) => {
+    const outlet = outlets.find((o) => o.id === outletId);
+    if (outlet && outlet.validationStatus !== 'UNVALIDATED') {
+      const confirmed = window.confirm(
+        'Toko ini sudah pernah divalidasi sebelumnya. Yakin ingin memvalidasi ulang (menggunakan kuota API baru)?'
+      );
+      if (!confirmed) return;
+    }
+
     setValidatingId(outletId);
     try {
       const res = await outletValidationApi.validateSingle(outletId);
@@ -475,6 +586,36 @@ export const OutletValidationPanel = () => {
       alert(`Validasi gagal: ${err.message}`);
     } finally {
       setValidatingId(null);
+    }
+  };
+
+  const handleValidateNearby = async (outletId) => {
+    setValidatingNearbyId(outletId);
+    try {
+      const res = await outletValidationApi.validateNearby(outletId);
+      const result = res.data;
+
+      // Update local state
+      setOutlets((prev) =>
+        prev.map((o) =>
+          o.id === outletId
+            ? {
+                ...o,
+                validationDetails: result.updatedOutlet.validationDetails,
+              }
+            : o
+        )
+      );
+
+      // Show modal immediately
+      setNearbyModalData(result.nearbySearch);
+      setIsNearbyModalOpen(true);
+      
+    } catch (err) {
+      console.error('[OutletValidationPanel] Nearby Search failed:', err);
+      alert(`Nearby Search gagal: ${err.message}`);
+    } finally {
+      setValidatingNearbyId(null);
     }
   };
 
@@ -761,7 +902,15 @@ export const OutletValidationPanel = () => {
                     {isExpanded && outlet.validationDetails && (
                       <tr className="ovp-detail-row">
                         <td colSpan={7}>
-                          <ExpandedDetail outlet={outlet} />
+                          <ExpandedDetail 
+                            outlet={outlet} 
+                            onValidateNearby={handleValidateNearby}
+                            isNearbyLoading={validatingNearbyId === outlet.id}
+                            onOpenNearbyModal={(data) => {
+                              setNearbyModalData(data);
+                              setIsNearbyModalOpen(true);
+                            }}
+                          />
                         </td>
                       </tr>
                     )}
@@ -819,6 +968,12 @@ export const OutletValidationPanel = () => {
           </div>
         </div>
       )}
+      
+      <NearbySearchModal 
+        isOpen={isNearbyModalOpen} 
+        onClose={() => setIsNearbyModalOpen(false)} 
+        nearbyData={nearbyModalData} 
+      />
     </div>
   );
 };

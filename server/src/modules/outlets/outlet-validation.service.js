@@ -15,10 +15,9 @@ import { broadcastCacheInvalidation } from '../../config/socket.js';
 
 // ─── Signal Weights ──────────────────────────────────────────────────────────
 const WEIGHTS = {
-  reverseGeocode: 0.20,
-  forwardGeocode: 0.25,
-  findPlace: 0.35,
-  nearbySearch: 0.20,
+  reverseGeocode: 0.25,
+  forwardGeocode: 0.35,
+  findPlace: 0.40,
 };
 
 // ─── Indonesian Store Name Prefixes to Strip ─────────────────────────────────
@@ -484,7 +483,7 @@ export const validateOutlet = async (outletId) => {
       data: incompleteResult,
     });
 
-    invalidateOutletCache();
+    // NOTE: No cache invalidation here - validation metadata changes don't affect map data
     return { ...incompleteResult, outlet };
   }
 
@@ -526,14 +525,6 @@ export const validateOutlet = async (outletId) => {
     warnings.push('Nama dan alamat kosong — Signal Find Place di-skip');
   }
 
-  // Signal 4: Nearby Search (needs lat/lng)
-  if (hasLatLng) {
-    signalPromises.nearbySearch = runNearbySearch(outlet.latitude, outlet.longitude, apiKey);
-    activeWeights.nearbySearch = WEIGHTS.nearbySearch;
-  } else {
-    warnings.push('Koordinat (lat/lng) kosong — Signal Nearby Search di-skip');
-  }
-
   // Await all signals concurrently
   const signalKeys = Object.keys(signalPromises);
   const signalResults = await Promise.all(Object.values(signalPromises));
@@ -554,9 +545,6 @@ export const validateOutlet = async (outletId) => {
   }
   if (rawResults.findPlace) {
     signalScores.findPlace = scoreFindPlace(rawResults.findPlace, outlet);
-  }
-  if (rawResults.nearbySearch) {
-    signalScores.nearbySearch = scoreNearbySearch(rawResults.nearbySearch, outlet);
   }
 
   // Calculate weighted confidence score
@@ -655,9 +643,64 @@ export const validateOutlet = async (outletId) => {
     data: updateData,
   });
 
-  invalidateOutletCache();
+  // NOTE: No cache invalidation - validation metadata doesn't affect map/cluster data
 
   return { ...updateData, outlet };
+};
+
+// ─── Separate Nearby Search Validation ──────────────────────────────────────
+
+/**
+ * Run Nearby Search separately and append the results to the outlet's validationDetails.
+ */
+export const validateNearby = async (outletId) => {
+  const outlet = await prisma.outlet.findUnique({ where: { id: outletId } });
+  if (!outlet) throw new AppError(404, 'Outlet tidak ditemukan');
+
+  const apiKey = config.googleMapsApiKey;
+  if (!apiKey) throw new AppError(500, 'Konfigurasi Google Maps API Key tidak ditemukan');
+
+  // Use the best available coordinates (prefer googleSuggested if already validated)
+  const lat = outlet.googleSuggestedLat ?? outlet.latitude;
+  const lng = outlet.googleSuggestedLng ?? outlet.longitude;
+
+  if (lat == null || lng == null) {
+    throw new AppError(400, 'Koordinat outlet tidak tersedia untuk Nearby Search');
+  }
+
+  const nearbyResult = await runNearbySearch(lat, lng, apiKey);
+  const scoredNearby = scoreNearbySearch(nearbyResult, outlet);
+
+  // Retrieve existing validationDetails to merge
+  let currentDetails = outlet.validationDetails || {};
+  if (typeof currentDetails === 'string') {
+    try {
+      currentDetails = JSON.parse(currentDetails);
+    } catch {
+      currentDetails = {};
+    }
+  }
+
+  // Store the full raw result for display, plus the score
+  currentDetails.nearbySearch = {
+    ...scoredNearby,
+    placesList: nearbyResult.places || [],
+  };
+
+  // Update in database
+  const updatedOutlet = await prisma.outlet.update({
+    where: { id: outletId },
+    data: {
+      validationDetails: currentDetails,
+    },
+  });
+
+  // NOTE: No cache invalidation - validationDetails is metadata, not map-relevant data
+
+  return {
+    nearbySearch: currentDetails.nearbySearch,
+    updatedOutlet,
+  };
 };
 
 // ─── Validation Summary ─────────────────────────────────────────────────────
