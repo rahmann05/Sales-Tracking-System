@@ -3,7 +3,7 @@
 /* Mobile Top Header / Hero Title Bar Styles (Non-Sticky Normal Flow) */
 
 .mobile-header-container {
-  @apply flex md:hidden items-center justify-between px-4 py-2 h-13 bg-white/90 backdrop-blur-xl border-b border-border-glass relative shrink-0 shadow-sm select-none w-full;
+  @apply flex md:hidden items-center justify-between px-4 py-2 h-13 bg-white/90 backdrop-blur-xl border-b border-border-glass relative shrink-0 shadow-sm select-none w-full pointer-events-auto z-30;
 }
 
 .mobile-brand-icon {

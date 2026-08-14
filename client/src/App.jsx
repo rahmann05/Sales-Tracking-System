@@ -77,9 +77,9 @@ const AppContent = () => {
             setSearchQuery={setSearchQuery}
             onLogout={handleLogout}
           />
+          <MobileHeader onLogout={handleLogout} />
 
           <main className="flex-1 relative overflow-y-auto bg-background pb-16 md:pb-8 min-h-0 pointer-events-none">
-            <MobileHeader onLogout={handleLogout} />
             <ErrorBoundary>
               <PersistentMapShell />
               <AppRouter
