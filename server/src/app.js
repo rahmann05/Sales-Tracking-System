@@ -34,7 +34,10 @@ const authLimiter = rateLimit({
 
 // ─── Security Middlewares ─────────────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: config.clientOrigin, credentials: true }));
+app.use(cors({ 
+  origin: config.env === 'development' ? true : config.clientOrigin, 
+  credentials: true 
+}));
 app.use(globalLimiter);
 
 // ─── Logging & Body Parsers ───────────────────────────────────────────────────

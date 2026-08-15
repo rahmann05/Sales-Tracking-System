@@ -11,7 +11,7 @@ const userSocketMap = new Map();
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: config.clientOrigin,
+      origin: config.env === 'development' ? true : config.clientOrigin,
       methods: ['GET', 'POST'],
       credentials: true,
     },

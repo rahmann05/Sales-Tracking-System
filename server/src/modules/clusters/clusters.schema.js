@@ -36,21 +36,22 @@ export const generateRoutesSchema = z.object({
 
 export const createFullClusterSchema = z.object({
   body: z.object({
-    name: z.string().min(2),
-    region: z.string().min(2),
+    name: z.string().min(2, 'Nama cluster minimal 2 karakter'),
+    region: z.string().min(2, 'Region minimal 2 karakter'),
     color: z.string().optional(),
+    colorHex: z.string().optional(),
     centerLat: z.number().nullable().optional(),
     centerLng: z.number().nullable().optional(),
     outletCount: z.number().int().optional(),
-    assignedSalesId: z.string().uuid().nullable().optional(),
+    assignedSalesId: z.string().nullable().optional(),
     outletIds: z.array(z.string()),
     routes: z.array(z.object({
-      routeIndex: z.number().int(),
-      isActive: z.boolean(),
-      totalDistanceKm: z.number(),
+      routeIndex: z.number().int().optional(),
+      isActive: z.boolean().optional(),
+      totalDistanceKm: z.number().optional(),
       outletOrder: z.any(), // Json
       overviewPath: z.any().optional(), // Json
-      startOutletId: z.string().uuid().nullable().optional(),
+      startOutletId: z.string().nullable().optional(),
     })).optional(),
   }),
 });

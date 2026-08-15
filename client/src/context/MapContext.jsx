@@ -205,6 +205,7 @@ export const MapProvider = ({ children }) => {
             const existing = polylinesRef.current.get(key);
             if (existing) {
                 existing.setOptions(opts);
+                existing.setPath(path);
             } else {
                 polylinesRef.current.set(key, new window.google.maps.Polyline(opts));
             }
@@ -216,6 +217,17 @@ export const MapProvider = ({ children }) => {
         for (const poly of polylinesRef.current.values()) poly.setMap(null);
         polylinesRef.current.clear();
     }, []);
+
+    // When Google Map instance becomes ready, sync any pending markers/routes stored in mapState
+    useEffect(() => {
+        if (!isMapReady || !mapInstanceRef.current || !window.google) return;
+        if (mapState.markers.length > 0 && markersRef.current.size === 0) {
+            setMarkers(mapState.markers);
+        }
+        if (mapState.routes.length > 0 && polylinesRef.current.size === 0) {
+            setPolylines(mapState.routes);
+        }
+    }, [isMapReady, mapState.markers, mapState.routes, setMarkers, setPolylines]);
 
     const panTo = useCallback((lat, lng, zoom) => {
         const center = { lat: Number(lat), lng: Number(lng) };

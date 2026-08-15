@@ -177,6 +177,12 @@ export const outletValidationApi = {
   validateSingle: async (outletId) => {
     return await request(`/outlets/${outletId}/validate`, { method: 'POST' });
   },
+  validateBatch: async ({ outletIds, filter, limit } = {}) => {
+    return await request('/outlets/batch-validate', {
+      method: 'POST',
+      body: JSON.stringify({ outletIds, filter, limit }),
+    });
+  },
   validateNearby: async (outletId) => {
     return await request(`/outlets/${outletId}/validate-nearby`, { method: 'POST' });
   },

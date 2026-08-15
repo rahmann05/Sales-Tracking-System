@@ -23,6 +23,11 @@ router.get(
   validationController.getValidationSummary
 );
 router.post(
+  '/batch-validate',
+  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  validationController.batchValidate
+);
+router.post(
   '/:id/validate',
   authorize('ADMIN', 'MANAJER_OPERASIONAL'),
   validationController.validateSingle

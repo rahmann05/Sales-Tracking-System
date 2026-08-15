@@ -288,11 +288,11 @@ export const ClusterControlPanel = ({
                     {step === 1 ? 'Batal' : 'Kembali'}
                 </button>
 
-                {step < 5 ? (
+                {step < WIZARD_STEPS.length ? (
                     <button
                         type="button"
                         onClick={onNext}
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all shadow-sm active:scale-95"
                     >
                         Lanjut
                     </button>
@@ -301,9 +301,16 @@ export const ClusterControlPanel = ({
                         type="button"
                         onClick={onSave}
                         disabled={isSaving}
-                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-5 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                        {isSaving ? 'Menyimpan…' : 'Simpan Cluster'}
+                        {isSaving ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span>Menyimpan…</span>
+                            </>
+                        ) : (
+                            <span>Simpan Cluster</span>
+                        )}
                     </button>
                 )}
             </div>

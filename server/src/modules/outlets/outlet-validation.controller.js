@@ -34,6 +34,20 @@ export const validateNearby = async (req, res, next) => {
 };
 
 /**
+ * POST /outlets/batch-validate
+ * Validate multiple outlets in batch.
+ */
+export const batchValidate = async (req, res, next) => {
+  try {
+    const { outletIds, filter, limit } = req.body || {};
+    const result = await validationService.batchValidateOutlets({ outletIds, filter, limit });
+    return successResponse(res, 200, result, `Validasi batch selesai: ${result.success} sukses, ${result.failed} gagal`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /outlets/validation-summary
  * Get validation status summary counts for all outlets.
  */
@@ -45,3 +59,4 @@ export const getValidationSummary = async (req, res, next) => {
     next(error);
   }
 };
+

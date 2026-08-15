@@ -107,81 +107,168 @@ export const getNearestOutlets = async (lat, lng, count, type = null) => {
   return withDistances.slice(0, count);
 };
 
+/**
+ * 2-Opt Local Search Optimizer for TSP path (eliminates intersecting lines and reduces total distance)
+ */
+const optimize2Opt = (initialRoute) => {
+  let bestRoute = [...initialRoute];
+  let improved = true;
+  let iterations = 0;
+
+  const calcDist = (route) => {
+    let d = 0;
+    for (let i = 0; i < route.length - 1; i++) {
+      const seg = haversineKm(route[i].latitude, route[i].longitude, route[i + 1].latitude, route[i + 1].longitude);
+      if (!isNaN(seg)) d += seg;
+    }
+    return d;
+  };
+
+  let bestDist = calcDist(bestRoute);
+
+  while (improved && iterations < 50) {
+    improved = false;
+    iterations++;
+
+    for (let i = 0; i < bestRoute.length - 1; i++) {
+      for (let k = i + 1; k < bestRoute.length; k++) {
+        const newRoute = [
+          ...bestRoute.slice(0, i),
+          ...bestRoute.slice(i, k + 1).reverse(),
+          ...bestRoute.slice(k + 1),
+        ];
+        const newDist = calcDist(newRoute);
+        if (newDist < bestDist - 0.005) {
+          bestRoute = newRoute;
+          bestDist = newDist;
+          improved = true;
+        }
+      }
+    }
+  }
+
+  return { route: bestRoute, distanceKm: bestDist };
+};
+
 export const generateClusterRoutes = async (outletIds) => {
-  if (!outletIds || outletIds.length === 0) return [];
+  if (!outletIds || !Array.isArray(outletIds) || outletIds.length === 0) return [];
   
   const outlets = await prisma.outlet.findMany({
-    where: { id: { in: outletIds } }
+    where: { 
+      id: { in: outletIds },
+      deletedAt: null,
+    }
   });
 
   if (outlets.length === 0) return [];
 
-  // Cari 3 titik terluar (sebagai titik awal berbeda untuk rute alternatif)
-  // Cara simple: 1. Paling Utara, 2. Paling Selatan, 3. Paling Barat (atau Timur)
-  let sortedByLat = [...outlets].sort((a, b) => b.latitude - a.latitude);
-  let sortedByLng = [...outlets].sort((a, b) => a.longitude - b.longitude);
+  // Convert lat/lng to Number and filter out invalid coordinates
+  const sanitizedOutlets = outlets.map(o => ({
+    ...o,
+    latitude: Number(o.latitude),
+    longitude: Number(o.longitude)
+  })).filter(o => o.latitude != null && o.longitude != null && !isNaN(o.latitude) && !isNaN(o.longitude));
 
-  const startPoints = [
-    sortedByLat[0], // Paling Utara
-    sortedByLat[sortedByLat.length - 1], // Paling Selatan
-    sortedByLng[0] // Paling Barat
-  ];
+  if (sanitizedOutlets.length === 0) return [];
 
-  const uniqueStartPoints = [];
-  startPoints.forEach(p => {
-    if (!uniqueStartPoints.find(u => u.id === p.id)) uniqueStartPoints.push(p);
-  });
-  // Jika kurang dari 3 titik (misal karena outlet sangat sedikit), fallback ambil random
-  while (uniqueStartPoints.length < 3 && uniqueStartPoints.length < outlets.length) {
-    let unselected = outlets.find(o => !uniqueStartPoints.find(u => u.id === o.id));
-    if (unselected) uniqueStartPoints.push(unselected);
+  if (sanitizedOutlets.length === 1) {
+    return [{
+      routeIndex: 0,
+      isActive: true,
+      totalDistanceKm: 0,
+      startOutletId: sanitizedOutlets[0].id,
+      outletOrder: [{ id: sanitizedOutlets[0].id, sequence: 1 }]
+    }];
   }
 
-  // Bangun 3 rute greedy nearest-neighbor dari masing-masing titik awal
-  const routes = uniqueStartPoints.map((startOutlet, index) => {
-    const remaining = [...outlets];
-    const ordered = [];
-    let current = remaining.splice(remaining.findIndex(o => o.id === startOutlet.id), 1)[0];
-    ordered.push(current);
-    
-    let totalDistanceKm = 0;
+  // Multi-Start Nearest Neighbor + 2-Opt Optimization across all candidate start outlets
+  const allCandidateRoutes = [];
 
-    while (remaining.length > 0) {
+  for (let s = 0; s < sanitizedOutlets.length; s++) {
+    const startOutlet = sanitizedOutlets[s];
+    const remaining = [...sanitizedOutlets];
+    const startIdx = remaining.findIndex(o => o.id === startOutlet.id);
+    const ordered = [];
+    let current = startIdx >= 0 ? remaining.splice(startIdx, 1)[0] : remaining.shift();
+    if (current) ordered.push(current);
+
+    while (remaining.length > 0 && current) {
       let bestIdx = 0;
       let bestDist = Infinity;
       for (let i = 0; i < remaining.length; i++) {
         const d = haversineKm(current.latitude, current.longitude, remaining[i].latitude, remaining[i].longitude);
-        if (d < bestDist) {
+        if (!isNaN(d) && d < bestDist) {
           bestDist = d;
           bestIdx = i;
         }
       }
-      totalDistanceKm += bestDist;
       current = remaining.splice(bestIdx, 1)[0];
-      ordered.push(current);
+      if (current) ordered.push(current);
     }
 
-    return {
-      routeIndex: index,
-      isActive: index === 0, // rute pertama aktif by default
-      totalDistanceKm: Math.round(totalDistanceKm * 100) / 100,
-      startOutletId: startOutlet.id,
-      outletOrder: ordered.map((o, idx) => ({ id: o.id, sequence: idx + 1 }))
-    };
-  });
+    // Apply 2-Opt local search on greedy route to untangle crossings and minimize distance
+    const optimized = optimize2Opt(ordered);
+
+    allCandidateRoutes.push({
+      startOutletId: optimized.route[0]?.id,
+      endOutletId: optimized.route[optimized.route.length - 1]?.id,
+      totalDistanceKm: Math.round(optimized.distanceKm * 100) / 100,
+      route: optimized.route,
+    });
+  }
+
+  // Sort candidate routes by shortest total distance (most optimal first)
+  allCandidateRoutes.sort((a, b) => a.totalDistanceKm - b.totalDistanceKm);
+
+  // Pick up to 3 diverse, distinct top routes
+  const distinctRoutes = [];
+  for (const cand of allCandidateRoutes) {
+    const isDuplicate = distinctRoutes.some(
+      r => r.startOutletId === cand.startOutletId && r.endOutletId === cand.endOutletId
+    );
+    if (!isDuplicate) {
+      distinctRoutes.push(cand);
+      if (distinctRoutes.length >= 3) break;
+    }
+  }
+
+  // If still less than 3, add reverse of the best route
+  if (distinctRoutes.length < 3 && distinctRoutes.length > 0) {
+    const best = distinctRoutes[0];
+    const reversedRoute = [...best.route].reverse();
+    distinctRoutes.push({
+      startOutletId: reversedRoute[0]?.id,
+      endOutletId: reversedRoute[reversedRoute.length - 1]?.id,
+      totalDistanceKm: best.totalDistanceKm,
+      route: reversedRoute,
+    });
+  }
+
+  // Format response matching schema
+  const routes = distinctRoutes.slice(0, 3).map((r, index) => ({
+    routeIndex: index,
+    isActive: index === 0,
+    totalDistanceKm: r.totalDistanceKm,
+    startOutletId: r.startOutletId,
+    outletOrder: r.route.map((o, idx) => ({ id: o.id, sequence: idx + 1 })),
+  }));
 
   return routes;
 };
 
 export const createClusterFull = async (data) => {
-  const { outletIds, routes, assignedSalesId, ...clusterData } = data;
+  const { outletIds, routes, assignedSalesId, color, colorHex, ...rest } = data;
+
+  const validSalesId = assignedSalesId && assignedSalesId.trim() !== '' ? assignedSalesId : null;
+  const clusterColorHex = colorHex || color || '#3b82f6';
 
   const result = await prisma.$transaction(async (tx) => {
     // 1. Create Cluster
     const cluster = await tx.cluster.create({
       data: {
-        ...clusterData,
-        assignedSalesId,
+        ...rest,
+        colorHex: clusterColorHex,
+        assignedSalesId: validSalesId,
         outletCount: outletIds?.length || 0,
       }
     });
@@ -196,9 +283,14 @@ export const createClusterFull = async (data) => {
 
     // 3. Create Routes
     if (routes && routes.length > 0) {
-      const routesData = routes.map(r => ({
-        ...r,
-        clusterId: cluster.id
+      const routesData = routes.map((r, i) => ({
+        clusterId: cluster.id,
+        routeIndex: r.routeIndex ?? i,
+        isActive: Boolean(r.isActive),
+        totalDistanceKm: Number(r.totalDistanceKm || 0),
+        outletOrder: r.outletOrder || [],
+        overviewPath: r.overviewPath || null,
+        startOutletId: r.startOutletId && r.startOutletId.trim() !== '' ? r.startOutletId : null,
       }));
       await tx.clusterRoute.createMany({ data: routesData });
     }

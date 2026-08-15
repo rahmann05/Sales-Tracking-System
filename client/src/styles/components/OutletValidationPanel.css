@@ -135,6 +135,32 @@
   background-color: rgba(0, 106, 106, 0.03);
 }
 
+.ovp-row.selected {
+  background-color: rgba(0, 106, 106, 0.07);
+}
+
+.ovp-selection-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(0, 106, 106, 0.08);
+  border-bottom: 1px solid rgba(0, 106, 106, 0.2);
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  animation: ovp-slide-down 0.2s ease;
+}
+
+.ovp-selection-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .ovp-td {
   padding: 0.625rem 0.5rem;
   font-size: 0.8125rem;
@@ -296,7 +322,7 @@
 
 .ovp-map-card {
   grid-column: 1 / -1;
-  height: 400px;
+  height: 500px;
   border-radius: 0.75rem;
   border: 1px solid var(--border-glass);
   overflow: hidden;

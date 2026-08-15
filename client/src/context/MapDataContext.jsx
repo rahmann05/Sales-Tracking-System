@@ -56,8 +56,9 @@ export const MapDataProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const socket = io('/', {
-      query: { userId: 'MAP_CLIENT' } // Generic identifier for broadcast
+    const socket = io({
+      transports: ['websocket', 'polling'],
+      query: { userId: 'MAP_CLIENT' }
     });
 
     socket.on('cache:invalidate', ({ dataType }) => {

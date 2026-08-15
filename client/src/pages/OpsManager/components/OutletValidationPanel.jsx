@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   LuShieldCheck, LuShieldAlert, LuShieldQuestion, LuShieldX, LuShieldOff,
   LuChevronDown, LuChevronUp, LuSearch, LuTriangleAlert, LuMapPin,
-  LuNavigation, LuGlobe, LuCrosshair
+  LuNavigation, LuGlobe, LuCrosshair, LuPlus, LuMinus
 } from 'react-icons/lu';
 import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
 import { outletsApi, outletValidationApi } from '../../../services/api';
@@ -192,6 +192,14 @@ const SignalDetailCard = ({ signalKey, data, outletId, onValidateNearby, isNearb
                   <span className="ovp-detail-value" style={{ fontSize: '0.6875rem', lineHeight: '1.2' }}>{data.googleAddress}</span>
                 </div>
               )}
+              {data.note && (
+                <div className="ovp-detail-row-item">
+                  <span className="ovp-detail-label">Catatan:</span>
+                  <span className="ovp-detail-value" style={{ color: data.isFarMismatch ? '#dc2626' : '#2563eb', fontWeight: 600 }}>
+                    {data.note}
+                  </span>
+                </div>
+              )}
               {data.googleLat != null && data.googleLng != null && (
                 <div style={{ marginTop: '0.75rem' }}>
                   <a 
@@ -254,25 +262,6 @@ const SignalDetailCard = ({ signalKey, data, outletId, onValidateNearby, isNearb
                     <span className="ovp-detail-label">Total Ditemukan:</span>
                     <span className="ovp-detail-value">{data.placesList?.length ?? data.totalNearbyPlaces ?? 0} tempat</span>
                   </div>
-                  
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <button
-                      onClick={() => onOpenNearbyModal(data)}
-                      style={{
-                        width: '100%',
-                        background: 'var(--surface-container)',
-                        color: 'var(--primary)',
-                        border: '1px solid var(--border-glass)',
-                        padding: '0.5rem',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Lihat Detail
-                    </button>
-                  </div>
                 </>
               )}
             </div>
@@ -295,11 +284,46 @@ const SignalDetailCard = ({ signalKey, data, outletId, onValidateNearby, isNearb
 
 const MapPreviewCard = ({ outlet, details }) => {
   const [map, setMap] = useState(null);
+  const [zoom, setZoom] = useState(18);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
   });
+
+  const hasDbCoords = outlet.latitude != null && outlet.longitude != null;
+  const fpDetails = details?.signals?.findPlace;
+  const fwDetails = details?.signals?.forwardGeocode;
+  
+  // Use Find Place or Forward Geocode coords for Google's point (only if within reasonable local radius)
+  const googleCoords = useMemo(() => {
+    if (fpDetails && fpDetails.googleLat != null && !fpDetails.isFarMismatch) {
+      return { lat: parseFloat(fpDetails.googleLat), lng: parseFloat(fpDetails.googleLng) };
+    }
+    if (fwDetails && fwDetails.googleLat != null && !fwDetails.outOfBounds) {
+      return { lat: parseFloat(fwDetails.googleLat), lng: parseFloat(fwDetails.googleLng) };
+    }
+    return null;
+  }, [
+    fpDetails?.googleLat,
+    fpDetails?.googleLng,
+    fpDetails?.isFarMismatch,
+    fwDetails?.googleLat,
+    fwDetails?.googleLng,
+    fwDetails?.outOfBounds,
+  ]);
+
+  const dbCoords = useMemo(() => {
+    if (!hasDbCoords) return null;
+    return { lat: parseFloat(outlet.latitude), lng: parseFloat(outlet.longitude) };
+  }, [outlet.latitude, outlet.longitude, hasDbCoords]);
+
+  // Primary anchor is always DB coords (outlet's actual location), memoized to prevent scroll re-center
+  const initialCenter = useMemo(() => {
+    if (dbCoords) return dbCoords;
+    if (googleCoords) return googleCoords;
+    return { lat: -6.9, lng: 107.6 };
+  }, [outlet.id]);
 
   if (!isLoaded) {
     return (
@@ -309,32 +333,28 @@ const MapPreviewCard = ({ outlet, details }) => {
     );
   }
 
-  const hasDbCoords = outlet.latitude != null && outlet.longitude != null;
-  const fpDetails = details?.signals?.findPlace;
-  const fwDetails = details?.signals?.forwardGeocode;
-  
-  // Use Find Place or Forward Geocode coords for Google's point
-  let googleCoords = null;
-  if (fpDetails && fpDetails.googleLat != null) {
-    googleCoords = { lat: parseFloat(fpDetails.googleLat), lng: parseFloat(fpDetails.googleLng) };
-  } else if (fwDetails && fwDetails.googleLat != null) {
-    googleCoords = { lat: parseFloat(fwDetails.googleLat), lng: parseFloat(fwDetails.googleLng) };
-  }
-
-  const center = googleCoords || (hasDbCoords ? { lat: parseFloat(outlet.latitude), lng: parseFloat(outlet.longitude) } : { lat: -6.9, lng: 107.6 });
-
   const svgMarkerPath = 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z';
 
   return (
     <div className="ovp-map-card">
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={center}
-        zoom={19}
+        center={initialCenter}
+        zoom={zoom}
         onLoad={(mapInstance) => setMap(mapInstance)}
+        onZoomChanged={() => {
+          if (map) {
+            const currentZoom = map.getZoom();
+            if (currentZoom && currentZoom !== zoom) {
+              setZoom(currentZoom);
+            }
+          }
+        }}
         options={{
           disableDefaultUI: true,
-          zoomControl: true,
+          zoomControl: false,
+          scrollwheel: true,
+          gestureHandling: 'greedy',
           clickableIcons: false,
           mapTypeId: 'roadmap',
         }}
@@ -355,9 +375,9 @@ const MapPreviewCard = ({ outlet, details }) => {
             zIndex={100}
           />
         )}
-        {hasDbCoords && (
+        {dbCoords && (
           <MarkerF
-            position={{ lat: parseFloat(outlet.latitude), lng: parseFloat(outlet.longitude) }}
+            position={dbCoords}
             title="Titik Awal Database"
             icon={{ 
               path: svgMarkerPath,
@@ -373,60 +393,116 @@ const MapPreviewCard = ({ outlet, details }) => {
         )}
       </GoogleMap>
       
-      {/* Floating Action Buttons to Focus on Coords */}
-      <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 10 }}>
-        {googleCoords && (
+      {/* Floating Action Buttons to Focus & Zoom */}
+      <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: '0.375rem', zIndex: 10 }}>
+        {/* Quick Focus Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          {googleCoords && (
+            <button
+              onClick={() => map?.panTo(googleCoords)}
+              title="Fokus ke Titik Google"
+              style={{
+                background: '#059669',
+                color: 'white',
+                border: 'none',
+                padding: '0.375rem 0.625rem',
+                borderRadius: '0.375rem',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            >
+              <LuCrosshair size={12} /> Google
+            </button>
+          )}
+          {dbCoords && (
+            <button
+              onClick={() => map?.panTo(dbCoords)}
+              title="Fokus ke Titik Database"
+              style={{
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                padding: '0.375rem 0.625rem',
+                borderRadius: '0.375rem',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            >
+              <LuCrosshair size={12} /> DB
+            </button>
+          )}
+        </div>
+
+        {/* Dedicated Zoom In / Zoom Out Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '0.375rem', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
           <button
-            onClick={() => map?.panTo(googleCoords)}
-            title="Fokus ke Titik Google"
+            onClick={() => {
+              const currentZ = map?.getZoom() || zoom;
+              const newZ = Math.min(currentZ + 1, 21);
+              setZoom(newZ);
+              map?.setZoom(newZ);
+            }}
+            title="Perbesar Peta (Zoom In)"
             style={{
-              background: '#059669',
-              color: 'white',
+              background: 'white',
+              color: 'var(--on-surface)',
               border: 'none',
-              padding: '0.375rem 0.625rem',
-              borderRadius: '0.375rem',
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              cursor: 'pointer',
+              borderBottom: '1px solid #e5e7eb',
+              width: 30,
+              height: 28,
               display: 'flex',
               alignItems: 'center',
-              gap: '0.375rem',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontWeight: 700
             }}
           >
-            <LuCrosshair size={12} /> Google
+            <LuPlus size={14} />
           </button>
-        )}
-        {hasDbCoords && (
           <button
-            onClick={() => map?.panTo({ lat: parseFloat(outlet.latitude), lng: parseFloat(outlet.longitude) })}
-            title="Fokus ke Titik Database"
+            onClick={() => {
+              const currentZ = map?.getZoom() || zoom;
+              const newZ = Math.max(currentZ - 1, 10);
+              setZoom(newZ);
+              map?.setZoom(newZ);
+            }}
+            title="Perkecil Peta (Zoom Out)"
             style={{
-              background: '#3b82f6',
-              color: 'white',
+              background: 'white',
+              color: 'var(--on-surface)',
               border: 'none',
-              padding: '0.375rem 0.625rem',
-              borderRadius: '0.375rem',
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              cursor: 'pointer',
+              width: 30,
+              height: 28,
               display: 'flex',
               alignItems: 'center',
-              gap: '0.375rem',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontWeight: 700
             }}
           >
-            <LuCrosshair size={12} /> DB
+            <LuMinus size={14} />
           </button>
-        )}
+        </div>
       </div>
 
       <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(255,255,255,0.95)', padding: '0.625rem 0.875rem', borderRadius: '0.5rem', fontSize: '0.6875rem', fontWeight: '600', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', border: '1px solid var(--border-glass)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: '#059669', border: '2px solid white', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
-          <span style={{ color: '#047857' }}>Titik Validasi Google</span>
-        </div>
-        {hasDbCoords && (
+        {googleCoords && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: '#059669', border: '2px solid white', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+            <span style={{ color: '#047857' }}>Titik Validasi Google</span>
+          </div>
+        )}
+        {dbCoords && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#3b82f6', border: '1px solid white', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
             <span style={{ color: '#2563eb' }}>Titik Awal Database</span>
@@ -439,7 +515,14 @@ const MapPreviewCard = ({ outlet, details }) => {
 
 // ─── Expanded Detail Row ─────────────────────────────────────────────────────
 
-const ExpandedDetail = ({ outlet, onValidateNearby, isNearbyLoading, onOpenNearbyModal }) => {
+const ExpandedDetail = ({ 
+  outlet, 
+  onValidateNearby, 
+  isNearbyLoading, 
+  onOpenNearbyModal,
+  onApplySuggestedCoords,
+  isApplyingCoords 
+}) => {
   const details = outlet.validationDetails;
   if (!details) return null;
 
@@ -468,16 +551,42 @@ const ExpandedDetail = ({ outlet, onValidateNearby, isNearbyLoading, onOpenNearb
         <MapPreviewCard outlet={outlet} details={details} />
       </div>
 
-      {/* Suggested Coordinates */}
+      {/* Suggested Coordinates with 1-Click Fix Action */}
       {outlet.googleSuggestedLat != null && (
-        <div className="ovp-suggested-coords">
-          <div className="ovp-suggested-label">
-            <LuMapPin style={{ display: 'inline', marginRight: 4 }} />
-            Koordinat yang Disarankan Google:
+        <div className="ovp-suggested-coords" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div>
+            <div className="ovp-suggested-label">
+              <LuMapPin style={{ display: 'inline', marginRight: 4 }} />
+              Koordinat yang Disarankan Google (Lokasi Sebenarnya):
+            </div>
+            <div className="ovp-suggested-value">
+              {outlet.googleSuggestedLat?.toFixed(7)}, {outlet.googleSuggestedLng?.toFixed(7)}
+            </div>
           </div>
-          <div className="ovp-suggested-value">
-            {outlet.googleSuggestedLat?.toFixed(7)}, {outlet.googleSuggestedLng?.toFixed(7)}
-          </div>
+          {onApplySuggestedCoords && (
+            <button
+              onClick={() => onApplySuggestedCoords(outlet.id, outlet.googleSuggestedLat, outlet.googleSuggestedLng)}
+              disabled={isApplyingCoords}
+              style={{
+                background: '#059669',
+                color: 'white',
+                border: 'none',
+                padding: '0.4rem 0.875rem',
+                borderRadius: '0.375rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: isApplyingCoords ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                boxShadow: '0 2px 4px rgba(5,150,105,0.2)'
+              }}
+              title="Perbarui koordinat database dengan titik Google ini dan validasi ulang"
+            >
+              <LuShieldCheck size={14} />
+              {isApplyingCoords ? 'Menyimpan...' : '✓ Terapkan ke Database & Validasi Ulang'}
+            </button>
+          )}
         </div>
       )}
 
@@ -509,6 +618,9 @@ export const OutletValidationPanel = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [validatingNearbyId, setValidatingNearbyId] = useState(null);
+  const [isBatchValidating, setIsBatchValidating] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [applyingCoordsId, setApplyingCoordsId] = useState(null);
   
   // Modal state
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
@@ -619,6 +731,89 @@ export const OutletValidationPanel = () => {
     }
   };
 
+  const handleApplySuggestedCoords = async (outletId, lat, lng) => {
+    const confirmed = window.confirm(
+      `Terapkan koordinat yang disarankan Google (${lat.toFixed(6)}, ${lng.toFixed(6)}) ke database dan validasi ulang outlet ini?`
+    );
+    if (!confirmed) return;
+
+    setApplyingCoordsId(outletId);
+    try {
+      await outletsApi.update(outletId, { latitude: lat, longitude: lng });
+      await handleValidate(outletId);
+      await fetchOutlets();
+    } catch (err) {
+      console.error('[OutletValidationPanel] Failed to apply coordinates:', err);
+      alert(`Gagal menerapkan koordinat: ${err.message}`);
+    } finally {
+      setApplyingCoordsId(null);
+    }
+  };
+
+  const handleBatchValidate = async (targetFilter = 'NEEDS_REVIEW') => {
+    const filterLabel = targetFilter === 'SUSPECT' ? 'semua outlet SUSPECT' : 'semua outlet yang butuh review (Suspect/Warning/Belum Validasi)';
+    const confirmed = window.confirm(
+      `Jalankan validasi batch untuk ${filterLabel} dengan algoritma perbaikan akurasi baru?`
+    );
+    if (!confirmed) return;
+
+    setIsBatchValidating(true);
+    try {
+      const res = await outletValidationApi.validateBatch({ filter: targetFilter, limit: 50 });
+      alert(`Validasi batch selesai: ${res.data?.success || 0} outlet berhasil divalidasi.`);
+      setSelectedIds(new Set());
+      await Promise.all([fetchOutlets(), fetchSummary()]);
+    } catch (err) {
+      console.error('[OutletValidationPanel] Batch validation failed:', err);
+      alert(`Validasi batch gagal: ${err.message}`);
+    } finally {
+      setIsBatchValidating(false);
+    }
+  };
+
+  // ─── Multi-Select Handlers ───────────────────────────────────────────────
+
+  const handleToggleSelect = (id, e) => {
+    e?.stopPropagation?.();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(new Set(filteredOutlets.map((o) => o.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleValidateSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    const confirmed = window.confirm(
+      `Jalankan validasi untuk ${count} outlet yang dipilih?`
+    );
+    if (!confirmed) return;
+
+    setIsBatchValidating(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const res = await outletValidationApi.validateBatch({ outletIds: ids });
+      alert(`Validasi selesai: ${res.data?.success || 0} dari ${count} outlet berhasil divalidasi.`);
+      setSelectedIds(new Set());
+      await Promise.all([fetchOutlets(), fetchSummary()]);
+    } catch (err) {
+      console.error('[OutletValidationPanel] Selected validation failed:', err);
+      alert(`Validasi gagal: ${err.message}`);
+    } finally {
+      setIsBatchValidating(false);
+    }
+  };
+
   // ─── Filter & Pagination ─────────────────────────────────────────────────
 
   const filteredOutlets = useMemo(() => {
@@ -650,6 +845,21 @@ export const OutletValidationPanel = () => {
     () => filteredOutlets.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
     [filteredOutlets, currentPage]
   );
+
+  const allPageSelected = paginatedOutlets.length > 0 && paginatedOutlets.every((o) => selectedIds.has(o.id));
+
+  const handleToggleSelectAllPage = (e) => {
+    e?.stopPropagation?.();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        paginatedOutlets.forEach((o) => next.delete(o.id));
+      } else {
+        paginatedOutlets.forEach((o) => next.add(o.id));
+      }
+      return next;
+    });
+  };
 
   // Reset page when filter changes
   useEffect(() => {
@@ -749,22 +959,95 @@ export const OutletValidationPanel = () => {
           })}
         </div>
 
-        {filterStatus && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
           <button
             className="ovp-validate-btn"
-            onClick={() => setFilterStatus(null)}
-            style={{ fontSize: '0.6875rem' }}
+            onClick={() => handleBatchValidate('NEEDS_REVIEW')}
+            disabled={isBatchValidating}
+            style={{ 
+              fontSize: '0.75rem', 
+              padding: '0.375rem 0.75rem',
+              background: isBatchValidating ? 'var(--surface-container-high)' : 'var(--primary)',
+              color: 'white',
+              opacity: isBatchValidating ? 0.7 : 1,
+              cursor: isBatchValidating ? 'not-allowed' : 'pointer'
+            }}
+            title="Validasi ulang outlet SUSPECT, WARNING, dan UNVALIDATED dengan algoritma lokasi baru"
           >
-            ✕ Hapus Filter
+            {isBatchValidating ? 'Memvalidasi Batch...' : '⚡ Validasi Ulang Batch'}
           </button>
-        )}
+
+          {filterStatus && (
+            <button
+              className="ovp-validate-btn"
+              onClick={() => setFilterStatus(null)}
+              style={{ fontSize: '0.6875rem' }}
+            >
+              ✕ Hapus Filter
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Multi-Select Action Banner */}
+      {selectedIds.size > 0 && (
+        <div className="ovp-selection-banner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ background: 'var(--primary)', color: 'white', padding: '0.125rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem', fontWeight: 700 }}>
+              {selectedIds.size}
+            </span>
+            <span>outlet dipilih untuk divalidasi</span>
+          </div>
+          <div className="ovp-selection-actions">
+            <button
+              className="ovp-validate-btn"
+              onClick={handleValidateSelected}
+              disabled={isBatchValidating}
+              style={{
+                background: '#059669',
+                color: 'white',
+                fontWeight: 700,
+                padding: '0.375rem 0.875rem',
+                fontSize: '0.75rem',
+                boxShadow: '0 2px 4px rgba(5,150,105,0.3)',
+              }}
+            >
+              {isBatchValidating ? 'Memvalidasi...' : `⚡ Validasi ${selectedIds.size} Outlet Terpilih`}
+            </button>
+            {filteredOutlets.length > selectedIds.size && (
+              <button
+                className="ovp-validate-btn"
+                onClick={handleSelectAllFiltered}
+                style={{ fontSize: '0.75rem', background: 'var(--surface-container-high)', color: 'var(--on-surface)' }}
+              >
+                Pilih Semua ({filteredOutlets.length})
+              </button>
+            )}
+            <button
+              className="ovp-validate-btn"
+              onClick={handleClearSelection}
+              style={{ fontSize: '0.75rem', background: 'transparent', color: 'var(--on-surface-variant)', border: '1px solid var(--border-glass)' }}
+            >
+              ✕ Batal Pilih
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="ovp-table-container">
         <table className="ovp-table">
           <thead>
             <tr>
+              <th className="ovp-th" style={{ width: 36, textAlign: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={allPageSelected}
+                  onChange={handleToggleSelectAllPage}
+                  title={allPageSelected ? 'Batalkan pilihan halaman ini' : 'Pilih semua di halaman ini'}
+                  style={{ cursor: 'pointer', width: 15, height: 15, accentColor: 'var(--primary)' }}
+                />
+              </th>
               <th className="ovp-th">Kode</th>
               <th className="ovp-th">Nama Toko</th>
               <th className="ovp-th">Alamat</th>
@@ -777,7 +1060,7 @@ export const OutletValidationPanel = () => {
           <tbody>
             {paginatedOutlets.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="ovp-empty">
                     <div className="ovp-empty-icon">
                       <LuSearch />
@@ -797,12 +1080,13 @@ export const OutletValidationPanel = () => {
                 const isExpanded = expandedId === outlet.id;
                 const isValidating = validatingId === outlet.id;
                 const confidence = outlet.validationConfidence;
+                const isSelected = selectedIds.has(outlet.id);
 
                 return (
                   <React.Fragment key={outlet.id}>
                     {/* Main Row */}
                     <tr
-                      className={`ovp-row ${isExpanded ? 'expanded' : ''}`}
+                      className={`ovp-row ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}`}
                       style={{ cursor: outlet.validationDetails ? 'pointer' : 'default' }}
                       onClick={() => {
                         if (outlet.validationDetails) {
@@ -810,6 +1094,14 @@ export const OutletValidationPanel = () => {
                         }
                       }}
                     >
+                      <td className="ovp-td" style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleToggleSelect(outlet.id, e)}
+                          style={{ cursor: 'pointer', width: 15, height: 15, accentColor: 'var(--primary)' }}
+                        />
+                      </td>
                       <td className="ovp-td">
                         <span className="ovp-code">{outlet.outletCode || '—'}</span>
                       </td>
@@ -901,7 +1193,7 @@ export const OutletValidationPanel = () => {
                     {/* Expanded Detail */}
                     {isExpanded && outlet.validationDetails && (
                       <tr className="ovp-detail-row">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <ExpandedDetail 
                             outlet={outlet} 
                             onValidateNearby={handleValidateNearby}
@@ -910,6 +1202,8 @@ export const OutletValidationPanel = () => {
                               setNearbyModalData(data);
                               setIsNearbyModalOpen(true);
                             }}
+                            onApplySuggestedCoords={handleApplySuggestedCoords}
+                            isApplyingCoords={applyingCoordsId === outlet.id}
                           />
                         </td>
                       </tr>
