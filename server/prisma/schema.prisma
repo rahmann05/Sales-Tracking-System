@@ -37,11 +37,7 @@ enum VisitStatus {
   SKIPPED
 }
 
-enum OrderStatus {
-  PENDING_APPROVAL
-  APPROVED
-  REJECTED
-}
+
 
 enum RouteChangeType {
   REROUTE
@@ -97,8 +93,6 @@ model User {
   pjpTemplates          PjpTemplate[]
   attendances           Attendance[]
   offPjpAttendances     OffPjpAttendance[]
-  ordersCreated         Order[]              @relation("OrderCreatedBy")
-  ordersApproved        Order[]              @relation("OrderApprovedBy")
   routeChangesReported  RouteChangeRequest[] @relation("RouteChangeReportedBy")
   routeChangesHandled   RouteChangeRequest[] @relation("RouteChangeHandledBy")
   routeChangesApproved  RouteChangeRequest[] @relation("RouteChangeApprovedBy")
@@ -185,19 +179,6 @@ model Outlet {
   deletedAt                DateTime?
 }
 
-model Product {
-  id          String      @id @default(uuid())
-  sku         String      @unique
-  name        String
-  price       Float
-  category    String?
-  stock       Int?        @default(0)
-  orderItems  OrderItem[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  deletedAt   DateTime?
-}
-
 model Pjp {
   id            String               @id @default(uuid())
   userId        String
@@ -223,7 +204,6 @@ model PjpStop {
   sequence     Int
   status       VisitStatus          @default(PENDING)
   attendances  Attendance[]
-  orders       Order[]
   routeChanges RouteChangeRequest[]
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
@@ -284,34 +264,6 @@ model OutletUnlockRequest {
   handledAt   DateTime?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
-}
-
-model Order {
-  id             String      @id @default(uuid())
-  pjpStopId      String
-  pjpStop        PjpStop     @relation(fields: [pjpStopId], references: [id])
-  createdBy      String
-  createdByUser  User        @relation("OrderCreatedBy", fields: [createdBy], references: [id])
-  items          OrderItem[]
-  totalValue     Float
-  paymentType    String?
-  status         OrderStatus @default(PENDING_APPROVAL)
-  approvedBy     String?
-  approvedByUser User?       @relation("OrderApprovedBy", fields: [approvedBy], references: [id])
-  approvedAt     DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-}
-
-model OrderItem {
-  id        String  @id @default(uuid())
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
-  unitPrice Float
-  subtotal  Float
 }
 
 model RouteChangeRequest {

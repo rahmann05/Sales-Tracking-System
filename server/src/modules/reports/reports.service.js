@@ -1,9 +1,9 @@
 import { prisma } from '../../config/prisma.js';
 import { buildDateRange } from '../../utils/pagination.js';
-import { ORDER_STATUS, PJP_STATUS, VISIT_STATUS } from '../../utils/constants.js';
+import { PJP_STATUS, VISIT_STATUS } from '../../utils/constants.js';
 
 /**
- * Overall dashboard summary: PJP, stops, orders, route changes.
+ * Overall dashboard summary: PJP, stops, route changes, registrations.
  * Supports optional date range filter via query.startDate / query.endDate.
  */
 export const getDashboardSummary = async (query = {}) => {
@@ -17,10 +17,9 @@ export const getDashboardSummary = async (query = {}) => {
     totalStops,
     visitedStops,
     skippedStops,
-    totalOrders,
-    approvedOrders,
-    pendingOrders,
-    approvedOrderValue,
+    totalRegistrations,
+    activeRegistrations,
+    pendingRegistrations,
     totalRouteChanges,
   ] = await Promise.all([
     prisma.pjp.count({ where: pjpWhere }),
@@ -28,13 +27,9 @@ export const getDashboardSummary = async (query = {}) => {
     prisma.pjpStop.count({ where: { pjp: pjpWhere } }),
     prisma.pjpStop.count({ where: { pjp: pjpWhere, status: VISIT_STATUS.VISITED } }),
     prisma.pjpStop.count({ where: { pjp: pjpWhere, status: VISIT_STATUS.SKIPPED } }),
-    prisma.order.count(),
-    prisma.order.count({ where: { status: ORDER_STATUS.APPROVED } }),
-    prisma.order.count({ where: { status: ORDER_STATUS.PENDING_APPROVAL } }),
-    prisma.order.aggregate({
-      where: { status: ORDER_STATUS.APPROVED },
-      _sum: { totalValue: true },
-    }),
+    prisma.customerRegistration.count({ where: { deletedAt: null } }),
+    prisma.customerRegistration.count({ where: { registrationStatus: 'REGISTERED_ACTIVE', deletedAt: null } }),
+    prisma.customerRegistration.count({ where: { registrationStatus: { in: ['SUBMITTED', 'SPV_APPROVED', 'OPS_APPROVED'] }, deletedAt: null } }),
     prisma.routeChangeRequest.count(),
   ]);
 
@@ -48,12 +43,12 @@ export const getDashboardSummary = async (query = {}) => {
       total: totalStops,
       visited: visitedStops,
       skipped: skippedStops,
+      realizationRate: totalStops > 0 ? ((visitedStops / totalStops) * 100).toFixed(1) + '%' : '0%',
     },
-    orders: {
-      total: totalOrders,
-      approved: approvedOrders,
-      pending: pendingOrders,
-      totalApprovedValue: approvedOrderValue._sum.totalValue ?? 0,
+    registrations: {
+      total: totalRegistrations,
+      active: activeRegistrations,
+      pending: pendingRegistrations,
     },
     routeChanges: {
       total: totalRouteChanges,
@@ -83,24 +78,26 @@ export const getSalesReport = async (query = {}) => {
       const pjpFilter = { userId: sales.id, type: 'SALES' };
       if (dateRange) pjpFilter.date = dateRange;
 
-      const [totalPjp, completedPjp, totalOrders, approvedOrders, approvedOrderValue] = await Promise.all([
+      const [totalPjp, completedPjp, totalStops, visitedStops, registrationsCount] = await Promise.all([
         prisma.pjp.count({ where: pjpFilter }),
         prisma.pjp.count({ where: { ...pjpFilter, status: PJP_STATUS.COMPLETED } }),
-        prisma.order.count({ where: { createdBy: sales.id } }),
-        prisma.order.count({ where: { createdBy: sales.id, status: ORDER_STATUS.APPROVED } }),
-        prisma.order.aggregate({
-          where: { createdBy: sales.id, status: ORDER_STATUS.APPROVED },
-          _sum: { totalValue: true },
-        }),
+        prisma.pjpStop.count({ where: { pjp: pjpFilter } }),
+        prisma.pjpStop.count({ where: { pjp: pjpFilter, status: VISIT_STATUS.VISITED } }),
+        prisma.customerRegistration.count({ where: { salesmanId: sales.id, deletedAt: null } }),
       ]);
+
+      const realizationRate = totalStops > 0 ? Math.round((visitedStops / totalStops) * 100) : 0;
 
       return {
         sales: { id: sales.id, name: sales.name, email: sales.email, cluster: sales.cluster },
         pjp: { total: totalPjp, completed: completedPjp },
-        orders: {
-          total: totalOrders,
-          approved: approvedOrders,
-          totalApprovedValue: approvedOrderValue._sum.totalValue ?? 0,
+        visits: {
+          totalStops,
+          visitedStops,
+          realizationRate: `${realizationRate}%`,
+        },
+        registrations: {
+          total: registrationsCount,
         },
       };
     })
@@ -110,7 +107,7 @@ export const getSalesReport = async (query = {}) => {
 };
 
 /**
- * Per-Outlet visit & order recap.
+ * Per-Outlet visit recap.
  */
 export const getOutletReport = async (query = {}) => {
   const { startDate, endDate, clusterId } = query;
@@ -134,14 +131,8 @@ export const getOutletReport = async (query = {}) => {
       const stopWhere = { outletId: outlet.id };
       if (dateRange) stopWhere.pjp = { date: dateRange };
 
-      const [totalVisits, totalOrders, approvedOrders, approvedOrderValue, closedReports] = await Promise.all([
+      const [totalVisits, closedReports] = await Promise.all([
         prisma.pjpStop.count({ where: { ...stopWhere, status: VISIT_STATUS.VISITED } }),
-        prisma.order.count({ where: { pjpStop: { outletId: outlet.id } } }),
-        prisma.order.count({ where: { pjpStop: { outletId: outlet.id }, status: ORDER_STATUS.APPROVED } }),
-        prisma.order.aggregate({
-          where: { pjpStop: { outletId: outlet.id }, status: ORDER_STATUS.APPROVED },
-          _sum: { totalValue: true },
-        }),
         prisma.pjpStop.count({ where: { ...stopWhere, status: VISIT_STATUS.CLOSED_REPORTED } }),
       ]);
 
@@ -149,11 +140,6 @@ export const getOutletReport = async (query = {}) => {
         outlet: { id: outlet.id, name: outlet.name, address: outlet.address, cluster: outlet.cluster },
         visits: totalVisits,
         closedReports,
-        orders: {
-          total: totalOrders,
-          approved: approvedOrders,
-          totalApprovedValue: approvedOrderValue._sum.totalValue ?? 0,
-        },
       };
     })
   );

@@ -101,9 +101,6 @@ const PJP_STOP_INCLUDE = {
     }
   },
   attendances: true,
-  orders: {
-    include: { items: { include: { product: true } } },
-  },
   routeChanges: true,
 };
 

@@ -224,74 +224,358 @@ async function main() {
     },
   });
 
-  // 4. Products (Full Catalog)
-  const productsData = [
-    { sku: 'SKU-001', name: 'Minyak Goreng Sawit 2L', category: 'Sembako', price: 34000, stock: 150 },
-    { sku: 'SKU-002', name: 'Gula Pasir Kristal 1kg', category: 'Sembako', price: 17500, stock: 300 },
-    { sku: 'SKU-003', name: 'Beras Premium Super 5kg', category: 'Sembako', price: 72000, stock: 80 },
-    { sku: 'SKU-004', name: 'Susu Kental Manis 370g', category: 'Minuman', price: 12500, stock: 220 },
-    { sku: 'SKU-005', name: 'Kopi Bubuk Murni 200g', category: 'Minuman', price: 21000, stock: 140 },
-  ];
+  const salesDedi = await prisma.user.upsert({
+    where: { email: 'dedi@sinaranugrah.com' },
+    update: {},
+    create: {
+      id: 'usr-sales-4',
+      name: 'Dedi Kurniawan',
+      email: 'dedi@sinaranugrah.com',
+      password: hashedPassword,
+      role: 'SALES',
+      clusterId: clusterCimahi.id,
+    },
+  });
 
-  for (const p of productsData) {
-    await prisma.product.upsert({
-      where: { sku: p.sku },
-      update: {},
-      create: p,
-    });
-  }
+  const salesRina = await prisma.user.upsert({
+    where: { email: 'rina@sinaranugrah.com' },
+    update: {},
+    create: {
+      id: 'usr-sales-5',
+      name: 'Rina Marlina',
+      email: 'rina@sinaranugrah.com',
+      password: hashedPassword,
+      role: 'SALES',
+      clusterId: clusterPadalarang.id,
+    },
+  });
 
-  // 5. Initial Today's PJPs (Scheduled for Sales)
+  // 4. Initial Today's PJPs and Historical Visits with Attendance
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Helper to upsert PJP cleanly with stops
-  const upsertPjpWithStops = async (pjpId, userId, outlets) => {
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Helper to upsert PJP cleanly with stops & attendances
+  const upsertPjpWithStops = async (pjpId, userId, outlets, completedCount = 0, pjpDate = today) => {
     // Delete existing stops for this seed PJP to avoid duplication
     await prisma.pjpStop.deleteMany({ where: { pjpId } });
 
-    await prisma.pjp.upsert({
+    const pjp = await prisma.pjp.upsert({
       where: { id: pjpId },
       update: {
         userId,
-        date: today,
+        date: pjpDate,
         type: 'SALES',
-        status: 'SCHEDULED',
+        status: completedCount >= outlets.length ? 'COMPLETED' : completedCount > 0 ? 'IN_PROGRESS' : 'SCHEDULED',
         stops: {
           create: outlets.map((o, idx) => ({
             outletId: o.id,
             sequence: idx + 1,
-            status: 'PENDING',
+            status: idx < completedCount ? 'VISITED' : 'PENDING',
           })),
         },
       },
       create: {
         id: pjpId,
         userId,
-        date: today,
+        date: pjpDate,
         type: 'SALES',
-        status: 'SCHEDULED',
+        status: completedCount >= outlets.length ? 'COMPLETED' : completedCount > 0 ? 'IN_PROGRESS' : 'SCHEDULED',
         stops: {
           create: outlets.map((o, idx) => ({
             outletId: o.id,
             sequence: idx + 1,
-            status: 'PENDING',
+            status: idx < completedCount ? 'VISITED' : 'PENDING',
           })),
         },
       },
+      include: { stops: true },
     });
+
+    // Create Attendances for visited stops
+    for (let i = 0; i < completedCount && i < pjp.stops.length; i++) {
+      const stop = pjp.stops[i];
+      const outlet = outlets[i];
+      await prisma.attendance.create({
+        data: {
+          pjpStopId: stop.id,
+          userId,
+          type: 'IN',
+          latitude: outlet.latitude || -6.8722,
+          longitude: outlet.longitude || 107.5423,
+          photoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=60',
+          timestamp: new Date(pjpDate.getTime() + (i * 30 + 480) * 60000), // 08:00 + 30 mins each
+        },
+      });
+      await prisma.attendance.create({
+        data: {
+          pjpStopId: stop.id,
+          userId,
+          type: 'OUT',
+          latitude: outlet.latitude || -6.8722,
+          longitude: outlet.longitude || 107.5423,
+          photoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=60',
+          timestamp: new Date(pjpDate.getTime() + (i * 30 + 500) * 60000), // + 20 mins
+        },
+      });
+    }
   };
 
-  await upsertPjpWithStops('pjp-budi-today', salesBudi.id, createdCimahiOutlets);
-  await upsertPjpWithStops('pjp-siti-today', salesSiti.id, createdPadalarangOutlets);
-  await upsertPjpWithStops('pjp-agus-today', salesAgus.id, createdLembangOutlets);
+  // Seed Today's PJPs for Sales Team
+  await upsertPjpWithStops('pjp-budi-today', salesBudi.id, createdCimahiOutlets, 5, today);
+  await upsertPjpWithStops('pjp-siti-today', salesSiti.id, createdPadalarangOutlets, 4, today);
+  await upsertPjpWithStops('pjp-agus-today', salesAgus.id, createdLembangOutlets, 3, today);
+  await upsertPjpWithStops('pjp-dedi-today', salesDedi.id, createdCimahiOutlets, 2, today);
+  await upsertPjpWithStops('pjp-rina-today', salesRina.id, createdPadalarangOutlets, 4, today);
 
-  // Seed PJP for other roles
-  await upsertPjpWithStops('pjp-admin-today', adminUser.id, createdCimahiOutlets);
-  await upsertPjpWithStops('pjp-ops-today', opsUser.id, createdPadalarangOutlets);
-  await upsertPjpWithStops('pjp-spv-today', spvUser.id, createdLembangOutlets);
+  // Seed Yesterday's Completed PJPs for Reports
+  await upsertPjpWithStops('pjp-budi-yest', salesBudi.id, createdCimahiOutlets, 10, yesterday);
+  await upsertPjpWithStops('pjp-siti-yest', salesSiti.id, createdPadalarangOutlets, 10, yesterday);
+  await upsertPjpWithStops('pjp-agus-yest', salesAgus.id, createdLembangOutlets, 9, yesterday);
 
-  console.log('[SUCCESS] Database seed completed with clean roles and 30 outlets.');
+  // Seed Off-PJP Attendance
+  await prisma.offPjpAttendance.upsert({
+    where: { id: 'off-pjp-1' },
+    update: {},
+    create: {
+      id: 'off-pjp-1',
+      userId: salesBudi.id,
+      outletName: 'Warung Barokah Bu Siti',
+      customerName: 'Ibu Siti',
+      phone: '0812-9876-5432',
+      address: 'Jl. Mahar Martanegara No. 50, Cimahi',
+      latitude: -6.8788,
+      longitude: 107.5412,
+      reason: 'Prospek outlet baru potensial & repeat order darurat',
+      status: 'PENDING',
+    },
+  });
+
+  await prisma.offPjpAttendance.upsert({
+    where: { id: 'off-pjp-2' },
+    update: {},
+    create: {
+      id: 'off-pjp-2',
+      userId: salesSiti.id,
+      outletName: 'Toko Kelontong Baraya',
+      customerName: 'Pak Dadan',
+      phone: '0813-7766-5544',
+      address: 'Jl. Raya Tagog No. 12, Padalarang',
+      latitude: -6.8365,
+      longitude: 107.4755,
+      reason: 'Kunjungan follow up komplain pengiriman produk',
+      status: 'APPROVED',
+      validatedBy: spvUser.id,
+      validatedAt: new Date(),
+    },
+  });
+
+  // 5. Seed Customer Registrations (Pengajuan Toko Baru)
+  const registrationsData = [
+    {
+      id: 'reg-sub-01',
+      name: 'Toko Sumber Barokah Cimahi',
+      ownerName: 'Hj. Aminah',
+      phone: '0812-3456-7890',
+      address: 'Jl. Kolonel Masturi No. 88, Cimahi',
+      locationType: 'PINGGIR_JALAN',
+      taxType: 'NON_PKP',
+      taxNumber: '3277014502850001',
+      taxName: 'Hj. Aminah',
+      taxAddress: 'Jl. Kolonel Masturi No. 88, Cimahi',
+      area: 'CIMAHI',
+      subAreaKecamatan: 'Cimahi Utara',
+      kelurahan: 'Cipageran',
+      city: 'CIMAHI',
+      division: 'UNICHARM',
+      channel: 'GENERAL_TRADE',
+      subChannel: 'TOKO_RETAIL',
+      channelTier: 'BRONZE_C',
+      paymentType: 'CASH',
+      cashMethod: 'TUNAI',
+      termOfPaymentDays: 0,
+      visitWeekSchedule: 'ALL_WEEK',
+      visitDays: 'SENIN,KAMIS',
+      latitude: -6.8655,
+      longitude: 107.5428,
+      salesmanId: salesBudi.id,
+      salesmanName: salesBudi.name,
+      registrationStatus: 'SUBMITTED',
+      createdAt: new Date(),
+    },
+    {
+      id: 'reg-sub-02',
+      name: 'Minimarket Baraya Padalarang',
+      ownerName: 'Pak Hendra',
+      phone: '0813-8899-7766',
+      address: 'Jl. Raya Padalarang No. 104, KBB',
+      locationType: 'PINGGIR_JALAN',
+      taxType: 'PKP',
+      taxNumber: '01.234.567.8-421.000',
+      taxName: 'PT Baraya Mitra Sejahtera',
+      taxAddress: 'Jl. Raya Padalarang No. 104, KBB',
+      area: 'KAB_BANDUNG_BARAT',
+      subAreaKecamatan: 'Padalarang',
+      kelurahan: 'Kertajaya',
+      city: 'KAB. BANDUNG BARAT',
+      division: 'BELFOODS',
+      channel: 'MODERN_TRADE',
+      subChannel: 'CHAIN_MINIMARKET',
+      channelTier: 'SILVER',
+      paymentType: 'TOP',
+      termOfPaymentDays: 14,
+      visitWeekSchedule: 'WEEK_GANJIL',
+      visitDays: 'SELASA,JUMAT',
+      latitude: -6.8378,
+      longitude: 107.4782,
+      salesmanId: salesSiti.id,
+      salesmanName: salesSiti.name,
+      registrationStatus: 'SUBMITTED',
+      createdAt: new Date(),
+    },
+    {
+      id: 'reg-spv-01',
+      name: 'Grosir Sembako Rezeki Lembang',
+      ownerName: 'H. Dudung',
+      phone: '0811-2233-4455',
+      address: 'Jl. Raya Lembang No. 45, Lembang',
+      locationType: 'DALAM_PASAR',
+      taxType: 'NON_PKP',
+      taxNumber: '3217015509780003',
+      taxName: 'H. Dudung',
+      taxAddress: 'Jl. Raya Lembang No. 45, Lembang',
+      area: 'KAB_BANDUNG_BARAT',
+      subAreaKecamatan: 'Lembang',
+      kelurahan: 'Kayuambon',
+      city: 'KAB. BANDUNG BARAT',
+      division: 'UNICHARM',
+      channel: 'GENERAL_TRADE',
+      subChannel: 'GROSIR',
+      channelTier: 'GOLD',
+      paymentType: 'TRANSFER',
+      termOfPaymentDays: 0,
+      visitWeekSchedule: 'ALL_WEEK',
+      visitDays: 'RABU,SABTU',
+      latitude: -6.8185,
+      longitude: 107.6172,
+      salesmanId: salesAgus.id,
+      salesmanName: salesAgus.name,
+      registrationStatus: 'SPV_APPROVED',
+      spvName: spvUser.name,
+      spvApprovedAt: new Date(),
+      createdAt: new Date(Date.now() - 86400000),
+    },
+    {
+      id: 'reg-ops-01',
+      name: 'Toko Aneka Snack Leuwigajah',
+      ownerName: 'Ibu Ratna',
+      phone: '0812-7788-9900',
+      address: 'Jl. Kerkof No. 22, Leuwigajah, Cimahi Selatan',
+      locationType: 'PINGGIR_JALAN',
+      taxType: 'NON_PKP',
+      taxNumber: '3277026607890002',
+      taxName: 'Ibu Ratna',
+      taxAddress: 'Jl. Kerkof No. 22, Leuwigajah',
+      area: 'CIMAHI',
+      subAreaKecamatan: 'Cimahi Selatan',
+      kelurahan: 'Leuwigajah',
+      city: 'CIMAHI',
+      division: 'GENERAL',
+      channel: 'GENERAL_TRADE',
+      subChannel: 'TOKO_RETAIL',
+      channelTier: 'BRONZE_B',
+      paymentType: 'CASH',
+      cashMethod: 'TUNAI',
+      termOfPaymentDays: 0,
+      visitWeekSchedule: 'ALL_WEEK',
+      visitDays: 'SENIN,KAMIS',
+      latitude: -6.8821,
+      longitude: 107.5451,
+      salesmanId: salesDedi.id,
+      salesmanName: salesDedi.name,
+      registrationStatus: 'OPS_APPROVED',
+      spvName: spvUser.name,
+      spvApprovedAt: new Date(Date.now() - 86400000),
+      opsManagerName: opsUser.name,
+      opsApprovedAt: new Date(),
+      createdAt: new Date(Date.now() - 86400000 * 2),
+    },
+    {
+      id: 'reg-act-01',
+      customerCode: 'PVC0088',
+      name: 'Minimarket Melati Cihanjuang',
+      ownerName: 'Pak Tommy',
+      phone: '0813-1122-3344',
+      address: 'Jl. Cihanjuang No. 120, Cimahi',
+      locationType: 'KOMPLEK_PERUMAHAN',
+      taxType: 'PKP',
+      taxNumber: '02.456.789.0-421.000',
+      taxName: 'PT Melati Retail Indonesia',
+      taxAddress: 'Jl. Cihanjuang No. 120, Cimahi',
+      area: 'CIMAHI',
+      subAreaKecamatan: 'Cimahi Utara',
+      kelurahan: 'Cihanjuang',
+      city: 'CIMAHI',
+      division: 'UNICHARM',
+      channel: 'MODERN_TRADE',
+      subChannel: 'LOKAL_MINIMARKET',
+      channelTier: 'SILVER',
+      paymentType: 'TOP',
+      termOfPaymentDays: 7,
+      visitWeekSchedule: 'ALL_WEEK',
+      visitDays: 'SENIN,RABU,JUMAT',
+      latitude: -6.8715,
+      longitude: 107.5488,
+      salesmanId: salesBudi.id,
+      salesmanName: salesBudi.name,
+      registrationStatus: 'REGISTERED_ACTIVE',
+      spvName: spvUser.name,
+      spvApprovedAt: new Date(Date.now() - 86400000 * 3),
+      opsManagerName: opsUser.name,
+      opsApprovedAt: new Date(Date.now() - 86400000 * 2),
+      adminName: adminUser.name,
+      adminRegisteredAt: new Date(Date.now() - 86400000),
+      createdAt: new Date(Date.now() - 86400000 * 4),
+    },
+    {
+      id: 'reg-rej-01',
+      name: 'Warung Bu Cici Ciburuy',
+      ownerName: 'Bu Cici',
+      phone: '0811-6677-8833',
+      address: 'Jl. Ciburuy No. 25, Padalarang',
+      locationType: 'PINGGIR_JALAN',
+      taxType: 'NON_PKP',
+      area: 'KAB_BANDUNG_BARAT',
+      subAreaKecamatan: 'Padalarang',
+      kelurahan: 'Ciburuy',
+      city: 'KAB. BANDUNG BARAT',
+      division: 'UNICHARM',
+      channel: 'GENERAL_TRADE',
+      subChannel: 'TOKO_RETAIL',
+      paymentType: 'CASH',
+      visitWeekSchedule: 'ALL_WEEK',
+      visitDays: 'SELASA',
+      latitude: -6.8315,
+      longitude: 107.4772,
+      salesmanId: salesRina.id,
+      salesmanName: salesRina.name,
+      registrationStatus: 'REJECTED',
+      rejectionNote: 'Toko telah tutup permanen saat verifikasi fisik',
+      createdAt: new Date(Date.now() - 86400000 * 2),
+    },
+  ];
+
+  for (const reg of registrationsData) {
+    await prisma.customerRegistration.upsert({
+      where: { id: reg.id },
+      update: reg,
+      create: reg,
+    });
+  }
+
+  console.log('[SUCCESS] Database seed completed with SPV team, attendance, visits, and customer registrations.');
 }
 
 main()
