@@ -67,14 +67,39 @@ const ensureTodayPjpForSales = async (userId) => {
       },
     },
     include: {
-      user: { select: { id: true, name: true, role: true } },
+      user: { 
+        select: { 
+          id: true, 
+          name: true, 
+          role: true,
+          cluster: {
+            select: {
+              id: true,
+              name: true,
+              region: true,
+              users: { select: { id: true, name: true, role: true } }
+            }
+          }
+        } 
+      },
       stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } },
     },
   });
 };
 
 const PJP_STOP_INCLUDE = {
-  outlet: true,
+  outlet: {
+    include: {
+      cluster: {
+        select: {
+          id: true,
+          name: true,
+          region: true,
+          users: { select: { id: true, name: true, role: true } }
+        }
+      }
+    }
+  },
   attendances: true,
   orders: {
     include: { items: { include: { product: true } } },
@@ -89,7 +114,21 @@ export const getTodayPjp = async (userId) => {
   let pjp = await prisma.pjp.findFirst({
     where: { userId, date: dayRange },
     include: {
-      user: { select: { id: true, name: true, role: true } },
+      user: { 
+        select: { 
+          id: true, 
+          name: true, 
+          role: true,
+          cluster: {
+            select: {
+              id: true,
+              name: true,
+              region: true,
+              users: { select: { id: true, name: true, role: true } }
+            }
+          }
+        } 
+      },
       stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } },
     },
   });
@@ -173,8 +212,7 @@ export const updatePjpStopDirectly = async (pjpId, stopId, updateData) => {
  */
 const generateTodayPjpsAllSales = async () => {
   const now = new Date();
-  const dayKey = JS_DAY_TO_KEY[now.getDay()];
-  if (dayKey === 'minggu') return 0; // Minggu libur
+  if (now.getDay() === 0) return 0; // Minggu libur (0 = Sunday)
 
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);

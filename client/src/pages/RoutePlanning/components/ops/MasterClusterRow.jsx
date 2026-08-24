@@ -39,14 +39,19 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
         </span>
       </td>
 
-      {/* Assigned Supervisor */}
+      {/* Sales Bertugas */}
       <td className="master-cluster-td">
-        <div className="master-cluster-spv">
-          <span className="master-cluster-spv-name flex items-center gap-1">
-            <LuUserCheck className="text-primary text-xs" />
-            {cluster.assignedSpvName}
-          </span>
-          <span className="master-cluster-spv-team">{cluster.spvTeamName}</span>
+        <div className="flex items-center gap-1.5 font-bold text-on-surface">
+          <LuUserCheck className="text-primary text-sm shrink-0" />
+          <span>{cluster.assignedSalesName || 'Belum Ditugaskan'}</span>
+        </div>
+      </td>
+
+      {/* Supervisor Wilayah */}
+      <td className="master-cluster-td">
+        <div className="flex items-center gap-1.5 text-xs text-on-surface-variant font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+          <span>{cluster.assignedSpvName || '-'}</span>
         </div>
       </td>
 

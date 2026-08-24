@@ -49,6 +49,26 @@ export const MapDataProvider = ({ children }) => {
     if (localStorage.getItem('token')) {
       fetchAllData();
     }
+
+    const handleAuthLogin = () => {
+      fetchAllData();
+    };
+
+    const handleAuthLogout = () => {
+      setOutlets([]);
+      setClusters([]);
+      setSalesUsers([]);
+    };
+
+    window.addEventListener('auth:login', handleAuthLogin);
+    window.addEventListener('auth:expired', handleAuthLogout);
+    window.addEventListener('auth:logout', handleAuthLogout);
+
+    return () => {
+      window.removeEventListener('auth:login', handleAuthLogin);
+      window.removeEventListener('auth:expired', handleAuthLogout);
+      window.removeEventListener('auth:logout', handleAuthLogout);
+    };
   }, [fetchAllData]);
 
   useEffect(() => {

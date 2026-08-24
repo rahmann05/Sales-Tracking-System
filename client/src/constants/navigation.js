@@ -68,7 +68,7 @@ export const getNavigationTabs = (role) => {
     if (TEAM_TRACKING_ROLES.includes(role)) {
         tabs.push({
             id: TAB_IDS.TEAM_TRACKING,
-            label: role === ROLES.SALES ? 'Tim & RJP Sales' : 'Tracking Tim Field',
+            label: role === ROLES.SUPERVISOR ? 'Tim & Sales Bawahan' : 'Manajemen Tim & Personel',
             icon: LuUsers,
         });
     }

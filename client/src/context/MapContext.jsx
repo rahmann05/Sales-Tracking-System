@@ -12,6 +12,13 @@ const getInitialCenter = () => {
 
 const MapContext = createContext();
 
+const GPS_BLUE_DOT_SVG = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="14" fill="#3B82F6" fill-opacity="0.3"/>
+  <circle cx="16" cy="16" r="7" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5"/>
+</svg>
+`)}`;
+
 /**
  * MapContext (Persistent Google Map Engine)
  * Single Responsibility: Hold the single google.maps.Map instance and expose
@@ -49,7 +56,9 @@ export const MapProvider = ({ children }) => {
                     map,
                     title: 'Lokasi Anda (GPS)',
                     icon: {
-                        url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' // Different icon for user GPS
+                        url: GPS_BLUE_DOT_SVG,
+                        scaledSize: new window.google.maps.Size(32, 32),
+                        anchor: new window.google.maps.Point(16, 16)
                     },
                     zIndex: 1000 // Ensure it's on top
                 });

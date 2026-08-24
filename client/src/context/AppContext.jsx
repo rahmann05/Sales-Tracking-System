@@ -111,27 +111,39 @@ export const AppProvider = ({ children }) => {
         if (user?.role === 'SALES') {
           const res = await pjpApi.getTodayPjp().catch(() => null);
           if (res?.data?.stops && res.data.stops.length > 0 && isMounted) {
-            const mappedStops = res.data.stops.map((s, idx) => ({
-              id: s.id,
-              sequence: s.sequence || idx + 1,
-              customerName: s.outlet?.name || '',
-              outletName: s.outlet?.name || '',
-              owner: s.outlet?.ownerName || s.outlet?.owner || '',
-              phone: s.outlet?.phone || '',
-              address: s.outlet?.address || '',
-              latitude: Number(s.outlet?.latitude) || null,
-              longitude: Number(s.outlet?.longitude) || null,
-              radiusMeters: s.outlet?.radiusMeters || 0,
-              outstanding: s.outlet?.outstanding || 0,
-              callplanName: res.data.callplanName || '',
-              clusterName: res.data.clusterName || '',
-              regionName: res.data.regionName || '',
-              dayOfWeek: res.data.dayOfWeek || '',
-              assignedSalesName: user?.name || '',
-              customerId: s.outlet?.outletCode || '',
-              outletCode: s.outlet?.outletCode || '',
-              status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
-            }));
+            const pjpData = res.data;
+            const cluster = pjpData.user?.cluster;
+            const spv = cluster?.users?.find(u => u.role === 'SUPERVISOR');
+            const mappedStops = pjpData.stops.map((s, idx) => {
+              const stopCluster = s.outlet?.cluster || cluster;
+              const spv = stopCluster?.users?.find(u => u.role === 'SUPERVISOR');
+              const area = stopCluster?.region || stopCluster?.name || (s.outlet?.address ? s.outlet.address.split(',').pop().trim() : '-');
+              return {
+                id: s.id,
+                sequence: s.sequence || idx + 1,
+                customerName: s.outlet?.name || '',
+                outletName: s.outlet?.name || '',
+                owner: s.outlet?.ownerName || s.outlet?.owner || '',
+                phone: s.outlet?.phone || '',
+                address: s.outlet?.address || '',
+                type: s.outlet?.type || 'MODERN_TRADE',
+                latitude: Number(s.outlet?.latitude) || null,
+                longitude: Number(s.outlet?.longitude) || null,
+                radiusMeters: s.outlet?.radiusMeters || 0,
+                outstanding: s.outlet?.outstanding || 0,
+                callplanName: pjpData.name || '',
+                callFrequency: s.callFrequency || (pjpData.weekType === 'ALL' ? 'F4' : 'F2'),
+                clusterName: stopCluster?.name || pjpData.clusterName || '',
+                regionName: stopCluster?.region || pjpData.regionName || area,
+                subDistrict: area,
+                supervisorName: spv?.name || '',
+                dayOfWeek: pjpData.dayOfWeek || '',
+                assignedSalesName: user?.name || '',
+                customerId: s.outlet?.outletCode || '',
+                outletCode: s.outlet?.outletCode || '',
+                status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
+              };
+            });
             setSalesStops(mappedStops);
           }
         }

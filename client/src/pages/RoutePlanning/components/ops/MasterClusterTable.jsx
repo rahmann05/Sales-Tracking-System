@@ -28,7 +28,8 @@ export const MasterClusterTable = ({ clusters = [], onEdit, onDelete }) => {
               <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Nama Cluster & Wilayah</th>
               <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Region</th>
               <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Kuota Outlet</th>
-              <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Supervisor Penanggung Jawab</th>
+              <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Sales Bertugas</th>
+              <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Supervisor Wilayah</th>
               <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Status</th>
               <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass text-center">Aksi</th>
             </tr>

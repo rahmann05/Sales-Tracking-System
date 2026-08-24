@@ -14,7 +14,9 @@ export const getClusters = async () => {
         where: { deletedAt: null },
         include: { 
           _count: { select: { outlets: true, users: true } },
-          routes: true
+          routes: true,
+          assignedSales: { select: { id: true, name: true, role: true } },
+          users: { select: { id: true, name: true, role: true } }
         },
         orderBy: { name: 'asc' },
       });
@@ -32,7 +34,8 @@ export const getClusterById = async (id) => {
         include: { 
           outlets: { where: { deletedAt: null } },
           routes: true,
-          assignedSales: { select: { id: true, name: true } }
+          assignedSales: { select: { id: true, name: true, role: true } },
+          users: { select: { id: true, name: true, role: true } }
         },
       });
       if (!cluster || cluster.deletedAt) {
@@ -52,13 +55,30 @@ const invalidateClusterCache = (id = null) => {
 };
 
 export const createCluster = async (data) => {
-  const result = await prisma.cluster.create({ data });
+  const result = await prisma.cluster.create({
+    data,
+    include: {
+      _count: { select: { outlets: true, users: true } },
+      routes: true,
+      assignedSales: { select: { id: true, name: true, role: true } },
+      users: { select: { id: true, name: true, role: true } }
+    },
+  });
   invalidateClusterCache();
   return result;
 };
 
 export const updateCluster = async (id, data) => {
-  const result = await prisma.cluster.update({ where: { id }, data });
+  const result = await prisma.cluster.update({
+    where: { id },
+    data,
+    include: {
+      _count: { select: { outlets: true, users: true } },
+      routes: true,
+      assignedSales: { select: { id: true, name: true, role: true } },
+      users: { select: { id: true, name: true, role: true } }
+    },
+  });
   invalidateClusterCache(id);
   return result;
 };
