@@ -21,6 +21,14 @@ import { AdminApprovalPage } from '../pages/Admin/AdminApprovalPage';
 import { OpsManagerPage } from '../pages/OpsManager/OpsManagerPage';
 import { OutletValidationPage } from '../pages/OpsManager/OutletValidationPage';
 import { OutletManagementPage } from '../pages/OutletManagement/OutletManagementPage';
+import { OutletRegistrationPage } from '../pages/OutletRegistration/OutletRegistrationPage';
+import { OutletApprovalPage } from '../pages/OutletApproval/OutletApprovalPage';
+import { OutletRegistrationReportPage } from '../pages/OutletRegistrationReport/OutletRegistrationReportPage';
+import { 
+    OUTLET_REGISTRATION_ROLES,
+    OUTLET_APPROVAL_ROLES,
+    OUTLET_REGISTRATION_REPORT_ROLES 
+} from '../constants/roles';
 
 /**
  * RoleWorkspace Component
@@ -51,6 +59,21 @@ const ACCESS_CONTROL = {
         title: 'Akses Dibatasi (Access Denied)',
         description:
             'Halaman Jadwal Master RJP hanya dapat diakses oleh Sales Field, Supervisor, dan Manajer Operasional.',
+    },
+    [TAB_IDS.OUTLET_REGISTRATION]: {
+        roles: OUTLET_REGISTRATION_ROLES,
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Halaman Registrasi Outlet hanya dapat diakses oleh Salesman dan manajemen.',
+    },
+    [TAB_IDS.OUTLET_APPROVAL]: {
+        roles: OUTLET_APPROVAL_ROLES,
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Halaman Persetujuan Outlet hanya dapat diakses oleh Supervisor dan Manajer Operasional.',
+    },
+    [TAB_IDS.OUTLET_REGISTRATION_REPORT]: {
+        roles: OUTLET_REGISTRATION_REPORT_ROLES,
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Halaman Laporan Registrasi Outlet hanya dapat diakses oleh Admin dan Manajer Operasional.',
     },
     [TAB_IDS.TEAM_TRACKING]: {
         roles: TEAM_TRACKING_ROLES,
@@ -117,6 +140,12 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
     switch (activeTab) {
         case TAB_IDS.DASHBOARD:
             return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
+        case TAB_IDS.OUTLET_REGISTRATION:
+            return <Interactive><OutletRegistrationPage /></Interactive>;
+        case TAB_IDS.OUTLET_APPROVAL:
+            return <Interactive><OutletApprovalPage /></Interactive>;
+        case TAB_IDS.OUTLET_REGISTRATION_REPORT:
+            return <Interactive><OutletRegistrationReportPage /></Interactive>;
         case TAB_IDS.ROUTE_PLANNING:
             return <Interactive><RoutePlanningPage searchQuery={searchQuery} /></Interactive>;
         case TAB_IDS.CREATE_CLUSTER:

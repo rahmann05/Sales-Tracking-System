@@ -338,3 +338,47 @@ export const configApi = {
   updateByKey: async (key, value) => request(`/config/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
 };
 
+// ─── 12. Customer Registrations API ───────────────────────────────────────────
+export const customerRegistrationsApi = {
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/customer-registrations${query ? `?${query}` : ''}`);
+  },
+  searchPlaces: async (q, lat, lng) => {
+    const params = new URLSearchParams({ q });
+    if (lat) params.append('lat', lat);
+    if (lng) params.append('lng', lng);
+    return await request(`/customer-registrations/search-places?${params.toString()}`);
+  },
+  reverseGeocode: async (lat, lng) => {
+    return await request(`/customer-registrations/reverse-geocode?lat=${lat}&lng=${lng}`);
+  },
+  getById: async (id) => {
+    return await request(`/customer-registrations/${id}`);
+  },
+  create: async (data) => {
+    return await request('/customer-registrations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  approve: async (id, note = '') => {
+    return await request(`/customer-registrations/${id}/approve`, {
+      method: 'PATCH',
+      body: JSON.stringify({ note }),
+    });
+  },
+  reject: async (id, reason) => {
+    return await request(`/customer-registrations/${id}/reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason }),
+    });
+  },
+  finalize: async (id, data) => {
+    return await request(`/customer-registrations/${id}/finalize`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+

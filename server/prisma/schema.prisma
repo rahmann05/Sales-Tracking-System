@@ -519,6 +519,10 @@ model CustomerRegistration {
   city                  String              @default("CIMAHI") // customerCity
   latitude              Float?              @default(0) // customerLatitude
   longitude             Float?              @default(0) // customerLongitude
+  placeId               String?             // Google Place ID (cth: ChIJN1t_tDeuEmsRUsoyG83frY4)
+  placeDetails          Json?               // Full Google Places API data (name, address, rating, category, phone, hours, plusCode, photo, url)
+  photoId               String?             // ID Khusus Foto Outlet (cth: PHOTO-20260824-8F9A1B)
+  photoUrl              String?             // Path / URL file foto di storage bucket folder
 
   // 4. Channel, Sub Channel & Tiering
   channel               ChannelType         @default(GENERAL_TRADE) // MODERN_TRADE (MT) / GENERAL_TRADE (GT)

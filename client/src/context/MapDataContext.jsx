@@ -77,8 +77,16 @@ export const MapDataProvider = ({ children }) => {
     if (!token) return;
 
     const socket = io({
-      transports: ['websocket', 'polling'],
-      query: { userId: 'MAP_CLIENT' }
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      query: { userId: 'MAP_CLIENT' },
+    });
+
+    socket.on('connect_error', (err) => {
+      // Suppress unhandled socket disconnect errors in dev
+      console.debug('[MapData Socket] Connection notice:', err.message);
     });
 
     socket.on('cache:invalidate', ({ dataType }) => {
@@ -90,7 +98,13 @@ export const MapDataProvider = ({ children }) => {
       setDataVersion(v => v + 1);
     });
 
-    return () => socket.disconnect();
+    return () => {
+      if (socket.connected) {
+        socket.disconnect();
+      } else {
+        socket.close();
+      }
+    };
   }, []);
 
   const invalidate = (dataType) => {
