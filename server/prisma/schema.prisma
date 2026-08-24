@@ -395,3 +395,171 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// TABEL BARU: FORM REGISTRASI OUTLET & IMPORT CUSTOMER PVMI (3NF UNIFIED MODEL)
+// ══════════════════════════════════════════════════════════════════════════════
+
+enum DivisiType {
+  UNICHARM
+  BELFOODS
+  GENERAL
+}
+
+enum OutletLocationType {
+  DALAM_PASAR
+  PINGGIR_JALAN
+  DALAM_GANG
+  KOMPLEK_PERUMAHAN
+}
+
+enum TaxType {
+  PKP
+  NON_PKP
+}
+
+enum AreaRegion {
+  CIMAHI
+  KAB_BANDUNG_BARAT
+  KAB_BANDUNG
+  KOTA_BANDUNG
+}
+
+enum ChannelType {
+  MODERN_TRADE   // MT
+  GENERAL_TRADE  // GT
+}
+
+enum SubChannelType {
+  // Modern Trade (MT)
+  HYPERMARKET
+  DRUGSTORE
+  NAT_SUPERMARKET
+  LOKAL_SUPERMARKET
+  CHAIN_MINIMARKET
+  LOKAL_MINIMARKET
+  PERKULAKAN
+
+  // General Trade (GT)
+  KOPERASI
+  BIDAN
+  OUTLET_MOTORIS
+  APOTIK
+  GROSIR
+  TOKO_RETAIL
+  BABY_SHOP
+}
+
+enum ChannelTier {
+  BRONZE_A
+  BRONZE_B
+  BRONZE_C
+  SILVER
+  GOLD
+}
+
+enum PaymentType {
+  CASH
+  TOP
+  TRANSFER
+}
+
+enum CashPaymentMethod {
+  TUNAI
+  GIRO
+  CEK
+}
+
+enum RegistrationStatus {
+  DRAFT               // Disimpan oleh salesman
+  SUBMITTED           // Diajukan oleh salesman
+  SPV_APPROVED        // Disetujui oleh SPV
+  OPS_APPROVED        // Disetujui oleh Ops Manager
+  REGISTERED_ACTIVE   // Di-input ke sistem & diberi Kode Outlet oleh Admin
+  REJECTED            // Ditolak (disertai alasan)
+}
+
+enum VisitWeekType {
+  WEEK_GANJIL  // Week 1
+  WEEK_GENAP   // Week 2
+  ALL_WEEK     // Setiap Minggu
+}
+
+model CustomerRegistration {
+  id                    String              @id @default(uuid())
+  customerCode          String?             @unique // Kode Outlet (diisi Admin / customerID di Excel, cth: PVC0001)
+  
+  // Organisasi & Divisi
+  division              DivisiType          @default(UNICHARM)
+  branch                String              @default("PADALARANG")
+  companyId             String?             // NS6083030001545 dari ERP
+  branchId              String?             // 1522743351512 dari ERP
+  divisionId            String?             // 1675645496290 dari ERP
+
+  // 1. Data Identitas Outlet
+  name                  String              // Nama Outlet / customerName (cth: JEMY TK.)
+  ownerName             String?             // Nama Pemilik
+  address               String              // Alamat Outlet / customerAddress1
+  address2              String?             // customerAddress2
+  address3              String?             // customerAddress3
+  phone                 String?             // No Telp / customerPhone
+  locationType          OutletLocationType  @default(PINGGIR_JALAN) // Lokasi Toko
+  mappingLocation       String?             // Catatan Mapping Lokasi / patokan fisik
+
+  // 2. Data Pajak & Legalitas (3NF Atomik)
+  taxType               TaxType             @default(NON_PKP) // PKP vs NON PKP
+  taxNumber             String?             // No NPWP / NIK
+  taxName               String?             // Nama Wajib Pajak / Nama KTP
+  taxAddress            String?             // Alamat NPWP / Alamat KTP
+  taxDocumentUrl        String?             // Foto Lampiran NPWP / KTP / SPPKP
+
+  // 3. Wilayah & Geografis
+  area                  AreaRegion          @default(CIMAHI) // Area
+  subAreaKecamatan      String?             // Sub Area / Kecamatan (subareaID)
+  kelurahan             String?             // Kelurahan / Desa
+  city                  String              @default("CIMAHI") // customerCity
+  latitude              Float?              @default(0) // customerLatitude
+  longitude             Float?              @default(0) // customerLongitude
+
+  // 4. Channel, Sub Channel & Tiering
+  channel               ChannelType         @default(GENERAL_TRADE) // MODERN_TRADE (MT) / GENERAL_TRADE (GT)
+  subChannel            SubChannelType      @default(TOKO_RETAIL) // Sub Channel (Retail, Grosir, Apotik, dll)
+  channelTier           ChannelTier         @default(BRONZE_C) // Bronze A, Bronze B, Bronze C
+
+  // 5. Syarat Pembayaran (Payment & Term of Payment)
+  paymentType           PaymentType         @default(CASH) // CASH, TOP, TRANSFER
+  cashMethod            CashPaymentMethod?  @default(TUNAI) // TUNAI, GIRO, CEK
+  termOfPaymentDays     Int                 @default(0) // 0 (Cash), 7, 14, 30 Hari
+  bankAccountInfo       String?             // Info Rekening Bank
+
+  // 6. Rencana Kunjungan (PJP Schedule)
+  visitWeekSchedule     VisitWeekType       @default(ALL_WEEK) // Week Ganjil, Genap, All Week
+  visitDays             String?             // Format hari: "SENIN,KAMIS" atau "SENIN"
+
+  // 7. Workflow Approval & Tracking
+  registrationStatus    RegistrationStatus  @default(REGISTERED_ACTIVE)
+  outletKnownBy         String?             // Nama & Jabatan Mengetahui Outlet
+  salesmanName          String?             // Nama Salesman yang mengajukan
+  salesmanId            String?             // ID Salesman (User ID jika ada)
+  spvName               String?             // Nama SPV yang menyetujui
+  spvApprovedAt         DateTime?
+  opsManagerName        String?             // Nama Ops Manager yang menyetujui
+  opsApprovedAt         DateTime?
+  adminName             String?             // Nama Admin yang menginput ke sistem
+  adminRegisteredAt     DateTime?
+  rejectionNote         String?             // Alasan penolakan (jika REJECTED)
+
+  // 8. Atribut Tambahan Master Excel ERP/ND6
+  marketSegmentId       String?             // marketSegmentID (cth: MS0000)
+  customerGroupId       String?             // customerGroupID
+  customerCategoryId    String?             // customerCategoryID
+  storeStatusId         String?             // storestatusID (cth: SS0000)
+  isActive              Boolean             @default(true) // customerStatus = 'A'
+  isBumn                Boolean             @default(false) // customerIsBUMN = 'N'
+  isContraBill          Boolean             @default(true) // isContraBill = 'Y'
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+}
+
+
