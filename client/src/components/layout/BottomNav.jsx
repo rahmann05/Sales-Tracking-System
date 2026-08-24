@@ -40,7 +40,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
       items.push({ id: 'route-planning', label: 'Master RJP', icon: LuNavigation });
     }
 
-    if (['SALES', 'SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role)) {
+    if (['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role)) {
       items.push({ id: 'team-tracking', label: 'Tim', icon: LuUsers });
     }
 

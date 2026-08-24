@@ -28,11 +28,13 @@ export const SalesViewTab = ({
             onSelectSales={onSelectSales}
             canSwitchSales={canSwitchSales}
         />
-        <SalesRollingScheduleView
-            userSchedule={currentSalesRow?.schedule || {}}
-            todayDay={selectedDay}
-            onSelectDay={onSelectDay}
-            salesName={currentSalesRow?.salesName}
-        />
+        {canSwitchSales && (
+            <SalesRollingScheduleView
+                userSchedule={currentSalesRow?.schedule || {}}
+                todayDay={selectedDay}
+                onSelectDay={onSelectDay}
+                salesName={currentSalesRow?.salesName}
+            />
+        )}
     </div>
 );

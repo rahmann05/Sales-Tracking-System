@@ -10,9 +10,10 @@ export const createClusterSchema = z.object({
 
 export const updateClusterSchema = z.object({
   body: z.object({
-    name: z.string().min(2).optional(),
-    region: z.string().min(2).optional(),
+    name: z.string().min(2, 'Nama cluster minimal 2 karakter').optional(),
+    region: z.string().min(2, 'Region minimal 2 karakter').optional(),
     colorHex: z.string().optional(),
+    assignedSalesId: z.string().uuid('ID sales tidak valid').nullable().optional(),
   }),
   params: z.object({
     id: z.string().uuid('ID tidak valid'),

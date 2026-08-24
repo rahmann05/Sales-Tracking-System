@@ -25,18 +25,25 @@ export const useRjpManagement = () => {
       if (!isMounted) return;
 
       const clusters = Array.isArray(clustersRes?.data) ? clustersRes.data : [];
-      setMasterClusters(clusters.map((c, idx) => ({
-        id: c.id,
-        code: c.code || `CLS-${idx + 1}`,
-        name: c.name,
-        region: c.region || '-',
-        subDistricts: c.subDistricts || [],
-        allocatedOutletsCount: c._count?.outlets ?? c.allocatedOutletsCount ?? 0,
-        assignedSpvName: c.assignedSpvName || '-',
-        spvTeamName: c.spvTeamName || '-',
-        status: c.status || 'ACTIVE',
-        createdAt: c.createdAt ? String(c.createdAt).split('T')[0] : '',
-      })));
+      setMasterClusters(clusters.map((c, idx) => {
+        const assignedPerson = c.users?.find((u) => u.role === 'SUPERVISOR') || c.assignedSales || c.users?.[0];
+        const assignedName = assignedPerson?.name || (c.assignedSpvName && c.assignedSpvName !== '-' ? c.assignedSpvName : 'Belum Ditugaskan');
+        return {
+          id: c.id,
+          code: c.code || `CLS-${idx + 1}`,
+          name: c.name,
+          region: c.region || 'Cimahi',
+          colorHex: c.colorHex || '#3B82F6',
+          subDistricts: c.subDistricts || [],
+          allocatedOutletsCount: c._count?.outlets ?? c.allocatedOutletsCount ?? 0,
+          assignedSalesId: c.assignedSalesId || assignedPerson?.id || null,
+          assignedSalesName: assignedPerson?.name || null,
+          assignedSpvName: assignedName,
+          spvTeamName: null,
+          status: c.status || 'ACTIVE',
+          createdAt: c.createdAt ? String(c.createdAt).split('T')[0] : '',
+        };
+      }));
 
       const outlets = Array.isArray(outletsRes?.data) ? outletsRes.data : [];
       setCoverageOutlets(outlets.map((o) => ({
@@ -96,7 +103,21 @@ export const useRjpManagement = () => {
   const handleUpdateCluster = async (id, updatedData) => {
     try {
       const res = await clustersApi.update(id, updatedData);
-      setMasterClusters((prev) => prev.map((c) => (c.id === id ? { ...c, ...res.data } : c)));
+      const updated = res.data;
+      setMasterClusters((prev) => prev.map((c) => {
+        if (c.id !== id) return c;
+        const spv = updated?.users?.find((u) => u.role === 'SUPERVISOR') || updated?.assignedSales;
+        const assignedName = spv?.name || updatedData.assignedSpvName || updatedData.assignedSalesName || c.assignedSpvName;
+        return {
+          ...c,
+          name: updated?.name ?? updatedData.name ?? c.name,
+          region: updated?.region ?? updatedData.region ?? c.region,
+          colorHex: updated?.colorHex ?? updatedData.colorHex ?? c.colorHex,
+          assignedSalesId: updated?.assignedSalesId ?? updatedData.assignedSalesId ?? c.assignedSalesId,
+          assignedSpvName: assignedName,
+          spvTeamName: null,
+        };
+      }));
       setIsFormModalOpen(false);
       setEditingCluster(null);
       return res.data;
@@ -145,10 +166,10 @@ export const useRjpManagement = () => {
       code: `CLS-IMP-${idx + 1}`,
       name: clusterName,
       region: 'Imported Region',
-      subDistricts: ['Area Import'],
+      subDistricts: [],
       allocatedOutletsCount: clusterGroups[clusterName].length,
-      assignedSpvName: 'Ahmad Subagja',
-      spvTeamName: 'Tim SPV Ahmad Subagja (Cimahi - KBB)',
+      assignedSpvName: '-',
+      spvTeamName: null,
       status: 'ACTIVE',
       createdAt: new Date().toISOString().split('T')[0],
     }));

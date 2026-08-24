@@ -7,11 +7,11 @@ import { TAB_IDS } from '../../constants/navigation';
 // Tab content components (child components per SRP)
 import { RjpRoleTabBar } from './components/RjpRoleTabBar';
 import { SalesViewTab } from './components/SalesViewTab';
-import { MapDirectoryTab } from './components/MapDirectoryTab';
 import { RjpOpsHeader } from './components/ops/RjpOpsHeader';
 import { RjpAllocationStats } from './components/ops/RjpAllocationStats';
 import { MasterClusterTable } from './components/ops/MasterClusterTable';
 import { SpreadsheetImportModal } from './components/ops/SpreadsheetImportModal';
+import { EditClusterModal } from './components/ops/EditClusterModal';
 
 import { RjpSpvHeader } from './components/spv/RjpSpvHeader';
 import { WeeklyRollingMatrixTable } from './components/spv/WeeklyRollingMatrixTable';
@@ -133,14 +133,21 @@ export const RoutePlanningPage = () => {
         />
       )}
 
-      {activeTab === 'MAP_DIRECTORY' && <MapDirectoryTab rjpTeams={rjpTeams} />}
-
       {isOpsOrAdmin && (
         <>
           <SpreadsheetImportModal
             isOpen={isImportModalOpen}
             onClose={() => setIsImportModalOpen(false)}
             onImportSuccess={handleImportSpreadsheet}
+          />
+          <EditClusterModal
+            isOpen={isFormModalOpen}
+            cluster={editingCluster}
+            onClose={() => {
+              setIsFormModalOpen(false);
+              setEditingCluster(null);
+            }}
+            onSave={handleUpdateCluster}
           />
         </>
       )}

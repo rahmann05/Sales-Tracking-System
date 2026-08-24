@@ -149,7 +149,7 @@ async function main() {
   }
 
   // 3. Users (Clean Roles)
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { email: 'admin@sinaranugrah.com' },
     update: {},
     create: {
@@ -161,7 +161,7 @@ async function main() {
     },
   });
 
-  await prisma.user.upsert({
+  const opsUser = await prisma.user.upsert({
     where: { email: 'ops@sinaranugrah.com' },
     update: {},
     create: {
@@ -173,7 +173,7 @@ async function main() {
     },
   });
 
-  await prisma.user.upsert({
+  const spvUser = await prisma.user.upsert({
     where: { email: 'spv@sinaranugrah.com' },
     update: {},
     create: {
@@ -285,6 +285,11 @@ async function main() {
   await upsertPjpWithStops('pjp-budi-today', salesBudi.id, createdCimahiOutlets);
   await upsertPjpWithStops('pjp-siti-today', salesSiti.id, createdPadalarangOutlets);
   await upsertPjpWithStops('pjp-agus-today', salesAgus.id, createdLembangOutlets);
+
+  // Seed PJP for other roles
+  await upsertPjpWithStops('pjp-admin-today', adminUser.id, createdCimahiOutlets);
+  await upsertPjpWithStops('pjp-ops-today', opsUser.id, createdPadalarangOutlets);
+  await upsertPjpWithStops('pjp-spv-today', spvUser.id, createdLembangOutlets);
 
   console.log('[SUCCESS] Database seed completed with clean roles and 30 outlets.');
 }

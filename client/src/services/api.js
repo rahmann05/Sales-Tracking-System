@@ -32,6 +32,11 @@ const request = async (endpoint, options = {}) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    if (response.status === 401) {
+      setAuthToken('');
+      localStorage.removeItem('authUser');
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+    }
     const errorMsg = data?.message || data?.errors?.[0]?.message || `Request failed (${response.status})`;
     const error = new Error(errorMsg);
     error.status = response.status;

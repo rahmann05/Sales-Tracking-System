@@ -30,7 +30,6 @@ export const OUTLET_VALIDATION_ROLES = Object.freeze([
 
 /** Roles allowed to view Team Tracking */
 export const TEAM_TRACKING_ROLES = Object.freeze([
-    ROLES.SALES,
     ROLES.SUPERVISOR,
     ROLES.MANAJER_OPERASIONAL,
     ROLES.ADMIN,
