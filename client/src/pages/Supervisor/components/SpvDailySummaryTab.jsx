@@ -14,8 +14,8 @@ import { Card } from '../../../components/common/Card';
 export const SpvDailySummaryTab = ({
   salesStops = [],
   salesList = [],
+  supervisorTeams = [],
   incidents = [],
-  orders = [],
   offPjpAttendances = [],
   user
 }) => {
@@ -36,11 +36,8 @@ export const SpvDailySummaryTab = ({
     const reroutedIncidents = incidents.filter((i) => i.status === 'RESOLVED_DIRECT_REROUTE' || i.status === 'RESOLVED_REROUTE_APPROVED');
     const rerouted = reroutedIncidents.length;
     
-    const todayOrders = orders.filter((o) => o.status !== 'REJECTED');
-    const totalOrderValue = todayOrders.reduce((sum, o) => sum + (o.totalAmount || o.totalValue || 0), 0);
-    
     // Average duration in minutes
-    const avgDurationMins = completed > 0 ? 22 : 0;
+    const avgDurationMins = completed > 0 ? 25 : 0;
     const complianceRate = totalTarget > 0 ? Math.min(100, Math.round(((completed + skipped + rerouted) / totalTarget) * 100)) : 0;
 
     return {
@@ -48,45 +45,46 @@ export const SpvDailySummaryTab = ({
       completed,
       skipped,
       rerouted,
-      totalOrdersCount: todayOrders.length,
-      totalOrderValue,
       avgDurationMins,
       complianceRate,
       skippedList: skippedIncidents,
       reroutedList: reroutedIncidents,
+      offPjpCount: offPjpAttendances.length,
     };
-  }, [salesStops, incidents, orders]);
+  }, [salesStops, incidents, offPjpAttendances]);
 
   // Breakdown per sales representative
   const salesSummary = useMemo(() => {
-    const defaultReps = [
-      { name: 'Budi Santoso', cluster: 'Klaster Cimahi Tengah', target: 8 },
-      { name: 'Siti Rahma', cluster: 'Klaster Padalarang', target: 7 },
-      { name: 'Agus Wijaya', cluster: 'Klaster Lembang', target: 7 },
-      { name: 'YULI', cluster: 'Klaster Belfoods Bandung', target: 7 },
-    ];
+    // Collect team from salesList or fallback to active team
+    const team = salesList && salesList.length > 0
+      ? salesList
+      : [
+          { id: 'usr-sales-1', name: 'Budi Santoso', cluster: 'Klaster Cimahi Tengah', target: 10 },
+          { id: 'usr-sales-2', name: 'Siti Rahma', cluster: 'Klaster Padalarang', target: 10 },
+          { id: 'usr-sales-3', name: 'Agus Wijaya', cluster: 'Klaster Lembang', target: 10 },
+          { id: 'usr-sales-4', name: 'Dedi Kurniawan', cluster: 'Klaster Cimahi Tengah', target: 10 },
+          { id: 'usr-sales-5', name: 'Rina Marlina', cluster: 'Klaster Padalarang', target: 10 },
+        ];
 
-    return defaultReps.map((rep) => {
-      const repStops = salesStops.filter((s) => s.assignedSalesName === rep.name);
+    return team.map((rep) => {
+      const repStops = salesStops.filter((s) => s.assignedSalesName === rep.name || s.userId === rep.id);
       const repCompleted = repStops.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime).length;
-      const repOrders = orders.filter((o) => o.salesName === rep.name);
-      const repOrderValue = repOrders.reduce((acc, curr) => acc + (curr.totalAmount || curr.totalValue || 0), 0);
-      const repSkipped = incidents.filter((i) => i.salesName === rep.name && (i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED')).length;
+      const repSkipped = incidents.filter((i) => (i.salesName === rep.name || i.userId === rep.id) && (i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED')).length;
 
-      const effectiveTarget = repStops.length > 0 ? repStops.length : rep.target;
+      const effectiveTarget = repStops.length > 0 ? repStops.length : (rep.target || 8);
       const progress = Math.min(100, Math.round((repCompleted / effectiveTarget) * 100));
 
       return {
-        ...rep,
+        id: rep.id,
+        name: rep.name,
+        cluster: rep.cluster?.name || rep.cluster || 'Klaster Terjadwal',
         actualTarget: effectiveTarget,
         completed: repCompleted,
         skipped: repSkipped,
-        orderCount: repOrders.length,
-        orderTotal: repOrderValue,
         progress,
       };
     });
-  }, [salesStops, orders, incidents]);
+  }, [salesStops, salesList, incidents]);
 
   return (
     <div className="space-y-6">
@@ -159,14 +157,14 @@ export const SpvDailySummaryTab = ({
 
         <Card className="!p-4 bg-purple-500/5 border-purple-500/20 rounded-2xl flex flex-col justify-between">
           <span className="text-[11px] font-bold text-purple-700 flex items-center gap-1.5">
-            <LuShoppingBag className="text-sm" /> Total Order
+            <LuStore className="text-sm" /> Off-PJP Presensi
           </span>
           <div className="mt-2">
-            <span className="text-lg font-black text-on-surface truncate block">
-              Rp {metrics.totalOrderValue.toLocaleString('id-ID')}
+            <span className="text-2xl font-black text-purple-600">
+              {metrics.offPjpCount}
             </span>
             <span className="text-[11px] text-on-surface-variant block mt-0.5">
-              {metrics.totalOrdersCount} Transaksi
+              Toko Luar Rute
             </span>
           </div>
         </Card>
@@ -205,8 +203,7 @@ export const SpvDailySummaryTab = ({
                 <th className="py-3 px-4 text-center">Target</th>
                 <th className="py-3 px-4 text-center">Selesai</th>
                 <th className="py-3 px-4 text-center">Skip</th>
-                <th className="py-3 px-4 text-center">Progres</th>
-                <th className="py-3 px-4 text-right">Order Masuk</th>
+                <th className="py-3 px-4 text-center">Progres Realisasi</th>
                 <th className="py-3 px-4 text-center">Status</th>
               </tr>
             </thead>
@@ -232,12 +229,6 @@ export const SpvDailySummaryTab = ({
                         />
                       </div>
                     </div>
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-on-surface">
-                    Rp {rep.orderTotal.toLocaleString('id-ID')}
-                    <span className="text-[10px] text-on-surface-variant block font-normal">
-                      ({rep.orderCount} order)
-                    </span>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <span

@@ -402,17 +402,23 @@ export const getRegistrations = async (query = {}, currentUser) => {
     where.salesmanId = currentUser.id;
   }
 
-  if (status !== 'ALL') where.registrationStatus = status;
-  if (area !== 'ALL') where.area = area;
-  if (channel !== 'ALL') where.channel = channel;
-  if (division !== 'ALL') where.division = division;
+  const cleanStatus = status && status !== 'ALL' && status !== 'undefined' ? status : null;
+  const cleanArea = area && area !== 'ALL' && area !== 'undefined' ? area : null;
+  const cleanChannel = channel && channel !== 'ALL' && channel !== 'undefined' ? channel : null;
+  const cleanDivision = division && division !== 'ALL' && division !== 'undefined' ? division : null;
+  const cleanSearch = search && search !== 'undefined' && search.trim() ? search.trim() : null;
 
-  if (search) {
+  if (cleanStatus) where.registrationStatus = cleanStatus;
+  if (cleanArea) where.area = cleanArea;
+  if (cleanChannel) where.channel = cleanChannel;
+  if (cleanDivision) where.division = cleanDivision;
+
+  if (cleanSearch) {
     where.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { address: { contains: search, mode: 'insensitive' } },
-      { customerCode: { contains: search, mode: 'insensitive' } },
-      { salesmanName: { contains: search, mode: 'insensitive' } },
+      { name: { contains: cleanSearch, mode: 'insensitive' } },
+      { address: { contains: cleanSearch, mode: 'insensitive' } },
+      { customerCode: { contains: cleanSearch, mode: 'insensitive' } },
+      { salesmanName: { contains: cleanSearch, mode: 'insensitive' } },
     ];
   }
 

@@ -252,7 +252,7 @@ export const clustersApi = {
       method: 'DELETE',
     });
   },
-  
+
   // New Map-based Builder endpoints
   getNearestOutlets: async (lat, lng, count, type) => {
     const body = { lat, lng, count };
@@ -341,7 +341,13 @@ export const configApi = {
 // ─── 12. Customer Registrations API ───────────────────────────────────────────
 export const customerRegistrationsApi = {
   getAll: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const cleanParams = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'undefined') {
+        cleanParams[k] = v;
+      }
+    });
+    const query = new URLSearchParams(cleanParams).toString();
     return await request(`/customer-registrations${query ? `?${query}` : ''}`);
   },
   searchPlaces: async (q, lat, lng) => {

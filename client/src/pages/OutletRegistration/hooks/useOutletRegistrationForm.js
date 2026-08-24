@@ -232,12 +232,27 @@ export const useOutletRegistrationForm = (onSuccess) => {
     setSubmitError('');
     setSubmitSuccess(null);
 
-    if (!formData.name.trim()) {
-      setSubmitError('Nama Outlet wajib diisi!');
-      return;
+    // Detailed Validation & Helpful Error Messages
+    const validationErrors = [];
+    if (!formData.name || formData.name.trim().length < 2) {
+      validationErrors.push('Nama Outlet wajib diisi minimal 2 karakter.');
     }
-    if (!formData.address.trim()) {
-      setSubmitError('Alamat Outlet wajib diisi!');
+    if (!formData.address || formData.address.trim().length < 3) {
+      validationErrors.push('Alamat Outlet wajib diisi.');
+    }
+    if (!formData.photoUrl) {
+      validationErrors.push('Foto fisik outlet wajib diambil langsung dari kamera.');
+    }
+    if (!formData.taxDocumentUrl) {
+      const docName = formData.taxType === 'PKP' ? 'NPWP' : 'KTP';
+      validationErrors.push(`Foto dokumen ${docName} wajib diambil langsung dari kamera.`);
+    }
+    if (!formData.visitDays || formData.visitDays.length === 0) {
+      validationErrors.push('Pilih minimal satu hari rencana kunjungan (PJP).');
+    }
+
+    if (validationErrors.length > 0) {
+      setSubmitError(validationErrors.join(' • '));
       return;
     }
 
@@ -258,7 +273,11 @@ export const useOutletRegistrationForm = (onSuccess) => {
       resetForm();
       if (onSuccess) onSuccess(res.data);
     } catch (err) {
-      setSubmitError(err.message || 'Gagal menyimpan pendaftaran outlet');
+      let message = err.message || 'Gagal menyimpan pengajuan pendaftaran outlet.';
+      if (err.errors && Array.isArray(err.errors)) {
+        message = err.errors.map((e) => e.message || e).join(' • ');
+      }
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
