@@ -14,6 +14,7 @@ import reportRoutes from '../modules/reports/reports.routes.js';
 import routingRoutes from '../modules/routing/routing.routes.js';
 import vehicleRoutes from '../modules/vehicles/vehicles.routes.js';
 import configRoutes from '../modules/config/config.routes.js';
+import customerRegistrationRoutes from '../modules/customer-registrations/customer-registrations.routes.js';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ v1Router.use('/reports', reportRoutes);
 v1Router.use('/routing', routingRoutes);
 v1Router.use('/vehicles', vehicleRoutes);
 v1Router.use('/config', configRoutes);
+v1Router.use('/customer-registrations', customerRegistrationRoutes);
 
 router.use('/v1', v1Router);
 

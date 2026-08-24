@@ -9,7 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/today', pjpController.getTodayPjp);
-router.get('/', authorize('SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'), pjpController.getAllPjps);
+router.get('/', authorize('SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN', 'SALES'), pjpController.getAllPjps);
 router.post('/generate', pjpController.generatePjps);
 router.get('/:id', pjpController.getPjpById);
 router.patch('/:id/stops/:stopId', authorize('MANAJER_OPERASIONAL', 'ADMIN'), validate(updateStopSchema), pjpController.updateStop);

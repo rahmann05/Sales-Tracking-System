@@ -12,10 +12,21 @@ import {
     LuFileCheck,
     LuBriefcase,
     LuStore,
+    LuUserPlus,
+    LuClipboardList,
 } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 import { LuMapPin } from 'react-icons/lu';
-import { ROLES, ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES, OUTLET_VALIDATION_ROLES } from './roles';
+import { 
+    ROLES, 
+    ROUTE_PLANNING_ROLES, 
+    TEAM_TRACKING_ROLES, 
+    REPORTS_ROLES, 
+    OUTLET_VALIDATION_ROLES,
+    OUTLET_REGISTRATION_ROLES,
+    OUTLET_APPROVAL_ROLES,
+    OUTLET_REGISTRATION_REPORT_ROLES
+} from './roles';
 
 /** Tab IDs used across the app */
 export const TAB_IDS = Object.freeze({
@@ -25,6 +36,9 @@ export const TAB_IDS = Object.freeze({
     CREATE_CLUSTER: 'create-cluster',
     TEAM_TRACKING: 'team-tracking',
     OUTLET_MANAGEMENT: 'outlet-management',
+    OUTLET_REGISTRATION: 'outlet-registration',
+    OUTLET_APPROVAL: 'outlet-approval',
+    OUTLET_REGISTRATION_REPORT: 'outlet-registration-report',
     REPORTS: 'reports',
     OUTLET_VALIDATION: 'outlet-validation',
 });
@@ -57,11 +71,38 @@ export const getNavigationTabs = (role) => {
 
     tabs.push({ id: TAB_IDS.DASHBOARD, label: 'Peta & Dashboard', icon: LuLayoutDashboard });
 
+    // Menu Registrasi Outlet untuk Sales
+    if (role === ROLES.SALES || OUTLET_REGISTRATION_ROLES.includes(role)) {
+        tabs.push({
+            id: TAB_IDS.OUTLET_REGISTRATION,
+            label: 'Registrasi Outlet',
+            icon: LuUserPlus,
+        });
+    }
+
     if (ROUTE_PLANNING_ROLES.includes(role)) {
         tabs.push({
             id: TAB_IDS.ROUTE_PLANNING,
             label: role === ROLES.SALES ? 'Jadwal Master RJP' : 'Kelola Master RJP',
             icon: LuNavigation,
+        });
+    }
+
+    // Menu Persetujuan Outlet untuk Supervisor & Ops Manager
+    if (OUTLET_APPROVAL_ROLES.includes(role) && role !== ROLES.SALES) {
+        tabs.push({
+            id: TAB_IDS.OUTLET_APPROVAL,
+            label: 'Persetujuan Outlet',
+            icon: LuFileCheck,
+        });
+    }
+
+    // Menu Laporan Registrasi Outlet untuk Admin
+    if (OUTLET_REGISTRATION_REPORT_ROLES.includes(role)) {
+        tabs.push({
+            id: TAB_IDS.OUTLET_REGISTRATION_REPORT,
+            label: 'Laporan Registrasi Outlet',
+            icon: LuClipboardList,
         });
     }
 

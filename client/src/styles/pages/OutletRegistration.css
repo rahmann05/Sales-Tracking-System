@@ -1,0 +1,144 @@
+/* Outlet Registration CSS */
+.outlet-reg-container {
+  padding: 1.5rem 1.5rem 8rem 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+.outlet-reg-header-card {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border-glass, rgba(226, 232, 240, 0.8));
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.outlet-reg-section-card {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border-glass, rgba(226, 232, 240, 0.8));
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+}
+
+.outlet-reg-section-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-on-surface, #1e293b);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border-glass, rgba(226, 232, 240, 0.8));
+}
+
+.outlet-reg-radio-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  border: 1.5px solid var(--color-border-glass, #e2e8f0);
+  background: var(--color-surface-container-low, #f8fafc);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.outlet-reg-radio-card:hover {
+  border-color: var(--color-primary, #4f46e5);
+  background: var(--color-surface, #ffffff);
+}
+
+.outlet-reg-radio-card.active {
+  border-color: var(--color-primary, #4f46e5);
+  background: rgba(79, 70, 229, 0.06);
+  box-shadow: 0 0 0 1px var(--color-primary, #4f46e5);
+}
+
+.outlet-reg-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border-glass, #cbd5e1);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-on-surface, #1e293b);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.outlet-reg-input:focus {
+  border-color: var(--color-primary, #4f46e5);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.outlet-reg-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-on-surface-variant, #64748b);
+  margin-bottom: 0.375rem;
+}
+
+.outlet-reg-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.875rem;
+  background: var(--color-primary, #4f46e5);
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.outlet-reg-btn-primary:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.outlet-reg-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.outlet-reg-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.875rem;
+  border: 1.5px solid var(--color-border-glass, #cbd5e1);
+  background: transparent;
+  color: var(--color-on-surface, #1e293b);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.outlet-reg-btn-outline:hover {
+  background: var(--color-surface-container, #f1f5f9);
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}

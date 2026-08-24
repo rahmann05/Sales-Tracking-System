@@ -52,3 +52,21 @@ export const OPS_MANAGER_ROLES = Object.freeze([
 export const FIELD_ROLES = Object.freeze([
     ROLES.SALES,
 ]);
+
+export const OUTLET_REGISTRATION_ROLES = Object.freeze([
+    ROLES.SALES,
+    ROLES.SUPERVISOR,
+    ROLES.MANAJER_OPERASIONAL,
+    ROLES.ADMIN,
+]);
+
+export const OUTLET_APPROVAL_ROLES = Object.freeze([
+    ROLES.SUPERVISOR,
+    ROLES.MANAJER_OPERASIONAL,
+    ROLES.ADMIN,
+]);
+
+export const OUTLET_REGISTRATION_REPORT_ROLES = Object.freeze([
+    ROLES.ADMIN,
+    ROLES.MANAJER_OPERASIONAL,
+]);
