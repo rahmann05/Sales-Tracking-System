@@ -150,7 +150,7 @@ export const useOutletRegistrationForm = (onSuccess) => {
     }
   };
 
-  // 4. Select Google Place: Lock Google Place data without changing typed name or GPS coordinates
+  // 4. Select Google Place: Lock Google Place data, auto-fill address (editable), without changing typed name or GPS
   const handleSelectGooglePlace = (place) => {
     setVerifiedPlace(place);
     setPlaceSearchResults([]);
@@ -159,7 +159,8 @@ export const useOutletRegistrationForm = (onSuccess) => {
       ...prev,
       // Nama toko diinput TIDAK dirubah (tetap seperti yang diketik user)
       name: prev.name,
-      address: prev.address || place.address,
+      // Alamat otomatis auto-fill dari data Google API, tapi sales bebas mengeditnya
+      address: place.address || prev.address,
       // Titik koordinat fisik saat ini tidak boleh dirubah oleh API Place
       latitude: prev.latitude,
       longitude: prev.longitude,
