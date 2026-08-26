@@ -27,3 +27,21 @@ export const getOutletReport = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getWeeklyReport = async (req, res, next) => {
+  try {
+    const data = await reportService.getWeeklyReport(req.query);
+    return successResponse(res, 200, data, 'Weekly Performance Report berhasil dimuat');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMtdReport = async (req, res, next) => {
+  try {
+    const data = await reportService.getMtdReport(req.query);
+    return successResponse(res, 200, data, 'Month-to-Date (MTD) Report berhasil dimuat');
+  } catch (error) {
+    next(error);
+  }
+};

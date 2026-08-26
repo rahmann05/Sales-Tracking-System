@@ -84,9 +84,13 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
         <button
           type="button"
           onClick={() => onReview(item)}
-          className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-bold shadow-xs hover:opacity-90 transition-all"
+          className={`px-3 py-1 rounded-lg text-xs font-bold shadow-xs hover:opacity-90 transition-all cursor-pointer ${
+            item.registrationStatus === 'SUBMITTED'
+              ? 'bg-primary text-white'
+              : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass'
+          }`}
         >
-          Tinjau
+          {item.registrationStatus === 'SUBMITTED' ? 'Tinjau' : 'Lihat Detail'}
         </button>
       </td>
     </tr>

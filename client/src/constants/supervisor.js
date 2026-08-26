@@ -32,6 +32,7 @@ export const SPV_AUDIT_CHECKLIST_ITEMS = [
 // Main workspace tabs for SupervisorPage
 export const SUPERVISOR_TABS = [
     { id: 'field_visit', label: 'Kunjungan & Absensi Lapangan (Utama)', icon: LuCompass },
+    { id: 'daily_call_monitor', label: 'Daily Call Monitor', icon: LuTrendingUp },
     { id: 'performance', label: 'Monitoring Tim Sales', icon: LuTrendingUp },
     { id: 'daily_summary', label: 'Rekap Harian', icon: LuFileText },
     { id: 'approvals', label: 'Antrean Approval', icon: LuCircleCheck },

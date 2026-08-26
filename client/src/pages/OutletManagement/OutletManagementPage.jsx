@@ -8,12 +8,17 @@ import {
   LuMapPin, 
   LuTrash2, 
   LuPhone, 
-  LuX
+  LuX,
+  LuIdCard,
+  LuDownload,
+  LuFileSpreadsheet
 } from 'react-icons/lu';
 import { FiEdit, FiCheckCircle } from 'react-icons/fi';
 import { Card } from '../../components/common/Card';
 import { outletsApi } from '../../services/api';
 import { notifySuccess } from '../../services/notificationService';
+import { exportImportNikExcel } from '../../utils/customerExport';
+import { NikManagementModal } from '../OutletRegistrationReport/components/NikManagementModal';
 
 export const OutletManagementPage = () => {
   const { user, addNotification } = useApp();
@@ -24,6 +29,7 @@ export const OutletManagementPage = () => {
   
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isNikModalOpen, setIsNikModalOpen] = useState(false);
   const [editingOutlet, setEditingOutlet] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -168,26 +174,46 @@ export const OutletManagementPage = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setFormData({
-              name: '',
-              outletCode: '',
-              address: '',
-              latitude: -6.8722,
-              longitude: 107.5423,
-              clusterName: 'Klaster Belfoods Bandung Raya',
-              ownerName: '',
-              phone: '',
-            });
-            setIsAddModalOpen(true);
-          }}
-          className="px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm hover:opacity-90 transition-all cursor-pointer w-fit shrink-0"
-        >
-          <LuPlus className="text-sm" />
-          <span>+ Tambah Outlet Baru</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsNikModalOpen(true)}
+            className="px-3.5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer w-fit shrink-0"
+            title="Kelola dan Input NIK 16-Digit Pemilik Toko"
+          >
+            <LuIdCard className="text-sm" />
+            <span>Kelola / Input NIK</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => exportImportNikExcel(outlets, `IMPORT_NIK_${new Date().toISOString().split('T')[0]}.xls`)}
+            className="px-3.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer w-fit shrink-0"
+            title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom)"
+          >
+            <LuFileSpreadsheet className="text-sm" />
+            <span>Ekspor IMPORT NIK</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                name: '',
+                outletCode: '',
+                address: '',
+                latitude: -6.8722,
+                longitude: 107.5423,
+                clusterName: 'Klaster Belfoods Bandung Raya',
+                ownerName: '',
+                phone: '',
+              });
+              setIsAddModalOpen(true);
+            }}
+            className="px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm hover:opacity-90 transition-all cursor-pointer w-fit shrink-0"
+          >
+            <LuPlus className="text-sm" />
+            <span>+ Tambah Outlet Baru</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter & Search Toolbar */}
@@ -493,6 +519,14 @@ export const OutletManagementPage = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Kelola & Input NIK */}
+      <NikManagementModal
+        isOpen={isNikModalOpen}
+        onClose={() => setIsNikModalOpen(false)}
+        customerList={outlets}
+        onDataUpdated={fetchOutlets}
+      />
     </div>
   );
 };

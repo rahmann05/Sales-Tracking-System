@@ -159,6 +159,8 @@ model Outlet {
   type                     OutletType            @default(MODERN_TRADE)
 
   lockStatus               OutletLockStatus      @default(NORMAL)
+  subChannel               String?               @default("RETAIL")
+  itineraryCode            String?               // Kode Itinerary / RJP (cth: SLD002W2)
 
   // ─── Validation Fields ────────────────────────────────────────────────────────
   validationStatus         OutletValidationStatus @default(UNVALIDATED)
@@ -210,18 +212,27 @@ model PjpStop {
 }
 
 model Attendance {
-  id        String         @id @default(uuid())
-  pjpStopId String
-  pjpStop   PjpStop        @relation(fields: [pjpStopId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User           @relation(fields: [userId], references: [id])
-  type      AttendanceType
-  latitude  Float
-  longitude Float
-  photoUrl  String?
-  timestamp DateTime       @default(now())
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id              String         @id @default(uuid())
+  pjpStopId       String
+  pjpStop         PjpStop        @relation(fields: [pjpStopId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  type            AttendanceType
+  latitude        Float
+  longitude       Float
+  photoUrl        String?        @db.Text
+  notes           String?
+  durationMinutes Float?
+  deviationMeters Float?
+  distanceWarning String?        // 'OK' | 'WARNING'
+  reason          String?        // Alasan non-EC (cth: salah barang, toko tutup, dll)
+  earlyReason     String?        // Alasan checkout dini (< 5 menit)
+  orderAmount     Float?         @default(0) // Nilai order Rp jika ada transaksi
+  skuSold         Int?           @default(0) // Jumlah SKU terjual
+  isEffectiveCall Boolean?       @default(false)
+  timestamp       DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model OffPjpAttendance {

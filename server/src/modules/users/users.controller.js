@@ -45,3 +45,21 @@ export const remove = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateLocation = async (req, res, next) => {
+  try {
+    const result = await userService.updateSalesLocation(req.user.id, req.body);
+    return successResponse(res, 200, result, 'Koordinat GPS berhasil diperbarui');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLiveLocations = async (req, res, next) => {
+  try {
+    const locations = await userService.getLiveSalesLocations();
+    return successResponse(res, 200, locations, 'Live lokasi sales berhasil diambil');
+  } catch (error) {
+    next(error);
+  }
+};

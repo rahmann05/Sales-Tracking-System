@@ -34,7 +34,7 @@ const authLimiter = rateLimit({
 });
 
 // ─── Security Middlewares ─────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ 
   origin: config.env === 'development' ? true : config.clientOrigin, 
   credentials: true 

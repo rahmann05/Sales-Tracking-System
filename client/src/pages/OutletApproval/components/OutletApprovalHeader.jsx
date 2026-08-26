@@ -1,5 +1,10 @@
 import React from 'react';
-import { LuFileCheck, LuSearch } from 'react-icons/lu';
+import { LuFileCheck, LuSearch, LuFileSpreadsheet, LuFileText } from 'react-icons/lu';
+import {
+  exportCustomerExcel,
+  exportCustomerNd6Txt,
+  exportCustomerSummaryTxt,
+} from '../../../utils/customerExport';
 
 const STATUS_FILTERS = [
   { id: 'SUBMITTED', label: 'Menunggu Approval' },
@@ -12,10 +17,11 @@ const STATUS_FILTERS = [
 
 /**
  * OutletApprovalHeader Component
- * Single Responsibility: Render approval page header, role info, search box, and status filter buttons.
+ * Single Responsibility: Render approval page header, role info, search box, export buttons, and status filter buttons.
  */
 export const OutletApprovalHeader = ({
   userRole,
+  items = [],
   searchQuery,
   onSearchChange,
   filterStatus,
@@ -43,8 +49,8 @@ export const OutletApprovalHeader = ({
           </p>
         </div>
 
-        {/* Search & Refresh */}
-        <div className="flex items-center gap-2">
+        {/* Search, Export, & Refresh */}
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs" />
             <input
@@ -52,9 +58,27 @@ export const OutletApprovalHeader = ({
               placeholder="Cari toko / sales..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="outlet-reg-input pl-8 py-1.5 text-xs w-48 sm:w-60"
+              className="outlet-reg-input pl-8 py-1.5 text-xs w-40 sm:w-52"
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => exportCustomerExcel(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.csv`)}
+            className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+            title="Ekspor ke Excel / CSV"
+          >
+            <LuFileSpreadsheet /> Excel
+          </button>
+          <button
+            type="button"
+            onClick={() => exportCustomerNd6Txt(items, `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`)}
+            className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+            title="Ekspor Format ND6 TXT"
+          >
+            <LuFileText /> ND6 TXT
+          </button>
+
           <button
             type="button"
             onClick={onRefresh}

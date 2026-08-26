@@ -11,6 +11,7 @@ import { LoginPage } from './pages/Login/LoginPage';
 import { AppRouter } from './components/AppRouter';
 import { useAuth } from './hooks/useAuth';
 import { useSearch } from './hooks/useSearch';
+import { usersApi } from './services/api';
 import { PersistentMapShell } from './components/map/PersistentMapShell';
 
 /**
@@ -30,19 +31,40 @@ const AppContent = () => {
 
   useEffect(() => {
     if (isAuthenticated && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
-          localStorage.setItem('user_gps_location', JSON.stringify(loc));
-          window.dispatchEvent(new CustomEvent('gps_location_updated', { detail: loc }));
-        },
-        (error) => {
-          console.error("GPS Error:", error);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+      const reportLocation = (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Math.round(position.coords.accuracy || 10),
+          speed: position.coords.speed || 0,
+          heading: position.coords.heading || 0,
+        };
+        const loc = { lat: coords.latitude, lng: coords.longitude };
+        localStorage.setItem('user_gps_location', JSON.stringify(loc));
+        window.dispatchEvent(new CustomEvent('gps_location_updated', { detail: loc }));
+
+        if (user?.role === 'SALES') {
+          usersApi.updateLocation(coords).catch(() => {});
+        }
+      };
+
+      navigator.geolocation.getCurrentPosition(reportLocation, console.error, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
+
+      const watchId = navigator.geolocation.watchPosition(reportLocation, console.error, {
+        enableHighAccuracy: true,
+        maximumAge: 30000,
+        timeout: 27000,
+      });
+
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+      };
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role]);
 
   const handleLogin = async ({ email, password }) => {
     const ok = await login(email, password);

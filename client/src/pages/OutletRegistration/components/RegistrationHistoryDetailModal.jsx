@@ -70,11 +70,16 @@ export const RegistrationHistoryDetailModal = ({ item, onClose }) => {
                   ID: {item.photoId || 'PHOTO-REG-LIVE'}
                 </span>
               </div>
-              <div className="relative w-full h-44 rounded-lg overflow-hidden border border-border-glass bg-black">
+              <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border-glass bg-slate-900 flex items-center justify-center">
                 <img
                   src={item.photoUrl}
                   alt="Foto Outlet"
+                  crossOrigin="anonymous"
                   className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = 'https://placehold.co/600x400/1e293b/94a3b8?text=Foto+Outlet+Tidak+Dapat+Dimuat';
+                  }}
                 />
               </div>
             </div>

@@ -14,6 +14,7 @@ import {
     LuStore,
     LuUserPlus,
     LuClipboardList,
+    LuPhoneCall,
 } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 import { LuMapPin } from 'react-icons/lu';
@@ -25,13 +26,15 @@ import {
     OUTLET_VALIDATION_ROLES,
     OUTLET_REGISTRATION_ROLES,
     OUTLET_APPROVAL_ROLES,
-    OUTLET_REGISTRATION_REPORT_ROLES
+    OUTLET_REGISTRATION_REPORT_ROLES,
+    DAILY_CALL_ROLES,
 } from './roles';
 
 /** Tab IDs used across the app */
 export const TAB_IDS = Object.freeze({
     ROLE_WORKSPACE: 'role-workspace',
     DASHBOARD: 'dashboard',
+    DAILY_CALL_MONITOR: 'daily-call-monitor',
     ROUTE_PLANNING: 'route-planning',
     CREATE_CLUSTER: 'create-cluster',
     TEAM_TRACKING: 'team-tracking',
@@ -103,6 +106,15 @@ export const getNavigationTabs = (role) => {
             id: TAB_IDS.OUTLET_REGISTRATION_REPORT,
             label: 'Laporan Registrasi Outlet',
             icon: LuClipboardList,
+        });
+    }
+
+    // Menu Daily Call Report & Monitoring
+    if (DAILY_CALL_ROLES.includes(role)) {
+        tabs.push({
+            id: TAB_IDS.DAILY_CALL_MONITOR,
+            label: 'Daily Call Monitor',
+            icon: LuPhoneCall,
         });
     }
 

@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
+import {
+  exportCustomerExcel,
+  exportCustomerNd6Txt,
+  exportCustomerSummaryTxt,
+  exportImportNikExcel,
+} from '../../../utils/customerExport';
 
 /**
  * useOutletRegistrationReport Hook
@@ -24,6 +30,7 @@ export const useOutletRegistrationReport = () => {
   // Modal states
   const [finalizeTarget, setFinalizeTarget] = useState(null);
   const [pdfTarget, setPdfTarget] = useState(null);
+  const [isNikModalOpen, setIsNikModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
 
@@ -79,96 +86,24 @@ export const useOutletRegistrationReport = () => {
     }
   };
 
-  // Export to CSV
+  // Export to Excel (Styled ND6 Master .xls)
   const exportToCSV = () => {
-    if (data.length === 0) {
-      alert('Tidak ada data untuk diekspor.');
-      return;
-    }
-
-    const headers = [
-      'Kode Outlet',
-      'Nama Outlet',
-      'Pemilik',
-      'Alamat',
-      'No Telp',
-      'Area',
-      'Kecamatan',
-      'Divisi',
-      'Channel',
-      'Sub Channel',
-      'Pajak',
-      'Payment',
-      'Jadwal Kunjungan',
-      'Salesman',
-      'Status',
-      'Tanggal Input',
-    ];
-
-    const rows = data.map((d) => [
-      d.customerCode || '-',
-      `"${(d.name || '').replace(/"/g, '""')}"`,
-      `"${(d.ownerName || '').replace(/"/g, '""')}"`,
-      `"${(d.address || '').replace(/"/g, '""')}"`,
-      d.phone || '-',
-      d.area,
-      d.subAreaKecamatan || '-',
-      d.division,
-      d.channel,
-      d.subChannel,
-      d.taxType,
-      d.paymentType,
-      `"${d.visitWeekSchedule} (${d.visitDays || ''})"`,
-      `"${(d.salesmanName || '').replace(/"/g, '""')}"`,
-      d.registrationStatus,
-      new Date(d.createdAt).toISOString().split('T')[0],
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Laporan_Registrasi_Outlet_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportCustomerExcel(data, `IMPORT_CUSTOMER_ND6_MASTER_${new Date().toISOString().split('T')[0]}.xls`);
   };
 
-  // Export to TXT
+  // Export to ND6 TXT Format
+  const exportToNd6TXT = () => {
+    exportCustomerNd6Txt(data, `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`);
+  };
+
+  // Export to Human Readable TXT
   const exportToTXT = () => {
-    if (data.length === 0) {
-      alert('Tidak ada data untuk diekspor.');
-      return;
-    }
+    exportCustomerSummaryTxt(data, `Ringkasan_Registrasi_Outlet_${new Date().toISOString().split('T')[0]}.txt`);
+  };
 
-    let txt = `========================================================================================\n`;
-    txt += `CV SINAR ANUGRAH FMCG DISTRIBUTOR - LAPORAN REGISTRASI OUTLET BARU\n`;
-    txt += `Tanggal Cetak: ${new Date().toLocaleString('id-ID')}\n`;
-    txt += `Total Record: ${data.length} Outlet\n`;
-    txt += `========================================================================================\n\n`;
-
-    data.forEach((d, idx) => {
-      txt += `[#${idx + 1}] KODE: ${d.customerCode || 'MENUNGGU KODE'} | STATUS: ${d.registrationStatus}\n`;
-      txt += `  Nama Outlet : ${d.name} (${d.division})\n`;
-      txt += `  Alamat      : ${d.address}, ${d.subAreaKecamatan || ''}, ${d.area}\n`;
-      txt += `  No Telp     : ${d.phone || '-'} | Pemilik: ${d.ownerName || '-'}\n`;
-      txt += `  Channel     : ${d.channel} - ${d.subChannel} (Tier: ${d.channelTier})\n`;
-      txt += `  Pajak       : ${d.taxType} (${d.taxNumber || '-'})\n`;
-      txt += `  Payment     : ${d.paymentType} ${d.termOfPaymentDays ? `(${d.termOfPaymentDays} Hari)` : ''}\n`;
-      txt += `  Jadwal PJP  : ${d.visitWeekSchedule} - Hari: ${d.visitDays || '-'}\n`;
-      txt += `  Salesman    : ${d.salesmanName || '-'} | SPV: ${d.spvName || '-'} | Ops: ${d.opsManagerName || '-'}\n`;
-      txt += `  Koordinat   : ${d.latitude}, ${d.longitude}\n`;
-      txt += `----------------------------------------------------------------------------------------\n`;
-    });
-
-    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Laporan_Registrasi_Outlet_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Export to Official IMPORT NIK Excel (.xls)
+  const exportToNikExcel = () => {
+    exportImportNikExcel(data, `IMPORT_NIK_${new Date().toISOString().split('T')[0]}.xls`);
   };
 
   return {
@@ -181,12 +116,16 @@ export const useOutletRegistrationReport = () => {
     setFinalizeTarget,
     pdfTarget,
     setPdfTarget,
+    isNikModalOpen,
+    setIsNikModalOpen,
     isProcessing,
     feedbackMsg,
     setFeedbackMsg,
     handleFinalize,
     exportToCSV,
+    exportToNd6TXT,
     exportToTXT,
+    exportToNikExcel,
     refreshData: loadReportData,
   };
 };

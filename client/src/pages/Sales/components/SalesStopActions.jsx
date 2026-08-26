@@ -2,6 +2,7 @@ import React from 'react';
 import { LuCamera, LuShoppingCart, LuLogOut } from 'react-icons/lu';
 import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { OutletLockBadge } from './OutletLockBadge';
+import { VisitDurationTimer } from './VisitDurationTimer';
 
 /**
  * SalesStopActions Component
@@ -44,9 +45,12 @@ export const SalesStopActions = ({
         </button>
       )}
 
-      {/* ARRIVED / IN_VISIT State: Input Order, Toko Tutup, and Absen Out */}
+      {/* ARRIVED / IN_VISIT State: Active Timer, Input Order, Toko Tutup, and Absen Out */}
       {stop.status === 'ARRIVED' && (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
+          {/* Active Visit Duration Tracker */}
+          <VisitDurationTimer startTime={stop.checkInTime || stop.inTimestamp} minMinutes={5} />
+
           <div className="flex items-center gap-2">
             <button
               type="button"

@@ -4,8 +4,15 @@ import { successResponse } from '../../utils/response.js';
 export const checkIn = async (req, res, next) => {
   try {
     const { pjpStopId } = req.params;
-    const { latitude, longitude, photoUrl } = req.body;
-    const data = await absensiService.checkIn(pjpStopId, req.user.id, parseFloat(latitude), parseFloat(longitude), photoUrl);
+    const { latitude, longitude, photoUrl, notes } = req.body;
+    const data = await absensiService.checkIn(
+      pjpStopId,
+      req.user.id,
+      parseFloat(latitude),
+      parseFloat(longitude),
+      photoUrl,
+      notes
+    );
     return successResponse(res, 201, data, 'Absen IN berhasil');
   } catch (error) {
     next(error);
@@ -15,8 +22,33 @@ export const checkIn = async (req, res, next) => {
 export const checkOut = async (req, res, next) => {
   try {
     const { pjpStopId } = req.params;
-    const { latitude, longitude, photoUrl } = req.body;
-    const data = await absensiService.checkOut(pjpStopId, req.user.id, parseFloat(latitude), parseFloat(longitude), photoUrl);
+    const {
+      latitude,
+      longitude,
+      photoUrl,
+      notes,
+      earlyReason,
+      reason,
+      orderAmount,
+      skuSold,
+      isEffectiveCall,
+    } = req.body;
+
+    const data = await absensiService.checkOut(
+      pjpStopId,
+      req.user.id,
+      parseFloat(latitude),
+      parseFloat(longitude),
+      photoUrl,
+      {
+        notes,
+        earlyReason,
+        reason,
+        orderAmount,
+        skuSold,
+        isEffectiveCall,
+      }
+    );
     return successResponse(res, 201, data, 'Absen OUT berhasil');
   } catch (error) {
     next(error);

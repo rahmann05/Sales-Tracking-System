@@ -41,6 +41,7 @@ export const OutletApprovalPage = () => {
       {/* 1. Header with Filters & Search */}
       <OutletApprovalHeader
         userRole={user?.role}
+        items={items}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         filterStatus={filterStatus}
@@ -74,6 +75,7 @@ export const OutletApprovalPage = () => {
       {selectedItem && (
         <OutletApprovalReviewModal
           item={selectedItem}
+          userRole={user?.role}
           isProcessing={isProcessing}
           onClose={() => setSelectedItem(null)}
           onApprove={handleApprove}

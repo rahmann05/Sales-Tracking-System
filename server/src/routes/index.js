@@ -13,6 +13,7 @@ import routingRoutes from '../modules/routing/routing.routes.js';
 import vehicleRoutes from '../modules/vehicles/vehicles.routes.js';
 import configRoutes from '../modules/config/config.routes.js';
 import customerRegistrationRoutes from '../modules/customer-registrations/customer-registrations.routes.js';
+import dailyCallRoutes from '../modules/daily-calls/daily-calls.routes.js';
 
 const router = Router();
 
@@ -33,6 +34,7 @@ v1Router.use('/routing', routingRoutes);
 v1Router.use('/vehicles', vehicleRoutes);
 v1Router.use('/config', configRoutes);
 v1Router.use('/customer-registrations', customerRegistrationRoutes);
+v1Router.use('/daily-calls', dailyCallRoutes);
 
 router.use('/v1', v1Router);
 

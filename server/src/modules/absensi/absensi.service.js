@@ -5,7 +5,7 @@ import { AppError } from '../../utils/errors.js';
 import { parsePagination, buildPaginatedResponse } from '../../utils/pagination.js';
 import { ATTENDANCE_TYPE, VISIT_STATUS, PJP_STATUS } from '../../utils/constants.js';
 
-export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl = null) => {
+export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null) => {
   const stop = await prisma.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: {
@@ -20,11 +20,14 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
     throw new AppError('Anda tidak berhak melakukan absensi pada PJP ini', 403);
   }
 
-  // Geolocation validation
+  // Geolocation calculation & validation
   const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
-  if (distance > config.attendanceRadiusMeters) {
+  const deviationMeters = Math.round(distance);
+  const distanceWarning = distance > config.attendanceRadiusMeters ? 'WARNING' : 'OK';
+
+  if (distance > config.attendanceRadiusMeters * 2) {
     throw new AppError(
-      `Posisi Anda (${Math.round(distance)}m) berada di luar radius toleransi outlet (${config.attendanceRadiusMeters}m)`,
+      `Posisi Anda (${Math.round(distance)}m) terlalu jauh dari outlet (${config.attendanceRadiusMeters}m). Harap dekati lokasi toko.`,
       422
     );
   }
@@ -54,16 +57,35 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
 
   const [attendance] = await prisma.$transaction([
     prisma.attendance.create({
-      data: { pjpStopId, userId, type: ATTENDANCE_TYPE.IN, latitude, longitude, photoUrl },
+      data: {
+        pjpStopId,
+        userId,
+        type: ATTENDANCE_TYPE.IN,
+        latitude,
+        longitude,
+        photoUrl,
+        notes,
+        deviationMeters,
+        distanceWarning,
+      },
     }),
-    prisma.pjpStop.update({ where: { id: pjpStopId }, data: { status: VISIT_STATUS.VISITED } }),
+    prisma.pjpStop.update({ where: { id: pjpStopId }, data: { status: VISIT_STATUS.ARRIVED } }),
     prisma.pjp.update({ where: { id: stop.pjpId }, data: { status: PJP_STATUS.IN_PROGRESS } }),
   ]);
 
   return attendance;
 };
 
-export const checkOut = async (pjpStopId, userId, latitude, longitude, photoUrl = null) => {
+export const checkOut = async (pjpStopId, userId, latitude, longitude, photoUrl = null, payload = {}) => {
+  const {
+    notes,
+    earlyReason,
+    reason,
+    orderAmount = 0,
+    skuSold = 0,
+    isEffectiveCall = false,
+  } = payload;
+
   const stop = await prisma.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: { outlet: true, attendances: true, pjp: true },
@@ -82,16 +104,51 @@ export const checkOut = async (pjpStopId, userId, latitude, longitude, photoUrl 
 
   // Geolocation validation
   const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
-  if (distance > config.attendanceRadiusMeters) {
+  const deviationMeters = Math.round(distance);
+  const distanceWarning = distance > config.attendanceRadiusMeters ? 'WARNING' : 'OK';
+
+  // Calculate Visit Duration in Minutes
+  const inTimestamp = new Date(existingIn.timestamp).getTime();
+  const outTimestamp = Date.now();
+  const durationMs = Math.max(0, outTimestamp - inTimestamp);
+  const durationMinutes = Math.round((durationMs / 60000) * 10) / 10;
+
+  // Minimum duration check (e.g. 5 minutes)
+  const MINIMUM_DURATION_MINS = 5;
+  if (durationMinutes < MINIMUM_DURATION_MINS && !earlyReason) {
     throw new AppError(
-      `Posisi Anda (${Math.round(distance)}m) berada di luar radius toleransi outlet (${config.attendanceRadiusMeters}m)`,
+      `Durasi kunjungan baru ${Math.floor(durationMinutes)} menit. Waktu minimal kunjungan toko adalah ${MINIMUM_DURATION_MINS} menit. Harap sertakan alasan jika checkout lebih awal.`,
       422
     );
   }
 
-  const attendance = await prisma.attendance.create({
-    data: { pjpStopId, userId, type: ATTENDANCE_TYPE.OUT, latitude, longitude, photoUrl },
-  });
+  const effective = isEffectiveCall || Number(orderAmount) > 0 || Number(skuSold) > 0;
+
+  const [attendance] = await prisma.$transaction([
+    prisma.attendance.create({
+      data: {
+        pjpStopId,
+        userId,
+        type: ATTENDANCE_TYPE.OUT,
+        latitude,
+        longitude,
+        photoUrl,
+        notes: notes || 'Kunjungan Selesai',
+        durationMinutes,
+        deviationMeters,
+        distanceWarning,
+        reason: reason || earlyReason || (effective ? null : 'Tidak Ada Order'),
+        earlyReason: durationMinutes < MINIMUM_DURATION_MINS ? (earlyReason || 'Checkout Lebih Awal') : null,
+        orderAmount: Number(orderAmount) || 0,
+        skuSold: Number(skuSold) || 0,
+        isEffectiveCall: effective,
+      },
+    }),
+    prisma.pjpStop.update({
+      where: { id: pjpStopId },
+      data: { status: VISIT_STATUS.COMPLETED },
+    }),
+  ]);
 
   // Check if all PJP stops are done
   const allStops = await prisma.pjpStop.findMany({

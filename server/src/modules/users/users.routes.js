@@ -8,6 +8,11 @@ const router = Router();
 
 router.use(authenticate);
 
+// Real-time GPS Location Tracking
+router.post('/location', userController.updateLocation);
+router.get('/live-locations', authorize('ADMIN', 'MANAJER_OPERASIONAL', 'SUPERVISOR', 'SALES'), userController.getLiveLocations);
+
+// User CRUD
 router.get('/', authorize('ADMIN', 'MANAJER_OPERASIONAL', 'SUPERVISOR', 'SALES'), userController.getAllUsers);
 router.get('/:id', userController.getUser);
 router.post('/', authorize('ADMIN', 'MANAJER_OPERASIONAL'), validate(createUserSchema), userController.create);

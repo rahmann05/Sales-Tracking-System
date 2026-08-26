@@ -9,6 +9,7 @@ import { SupervisorApprovalsTab } from './components/SupervisorApprovalsTab';
 import { SupervisorIncidentsTab } from './components/SupervisorIncidentsTab';
 import { SpvDailySummaryTab } from './components/SpvDailySummaryTab';
 import { IncidentHandleModal } from './components/IncidentHandleModal';
+import { DailyCallMonitorPage } from '../DailyCallMonitor/DailyCallMonitorPage';
 
 /**
  * SupervisorPage Component (Orchestrator)
@@ -79,6 +80,8 @@ export const SupervisorPage = () => {
       />
 
       {activeTab === 'field_visit' && <SupervisorFieldView />}
+
+      {activeTab === 'daily_call_monitor' && <DailyCallMonitorPage />}
 
       {activeTab === 'performance' && (
         <SupervisorPerformanceAnalytics

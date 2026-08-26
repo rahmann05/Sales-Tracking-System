@@ -8,6 +8,7 @@ import { GooglePlaceDetailCard } from '../../OutletRegistration/components/Googl
  */
 export const OutletApprovalReviewModal = ({
   item,
+  userRole,
   isProcessing = false,
   onClose,
   onApprove,
@@ -120,11 +121,16 @@ export const OutletApprovalReviewModal = ({
                     {item.photoId || 'PHOTO-REG-VERIFIED'}
                   </span>
                 </div>
-                <div className="relative h-32 rounded-xl overflow-hidden border border-border-glass bg-black">
+                <div className="relative h-36 rounded-xl overflow-hidden border border-border-glass bg-slate-900 flex items-center justify-center">
                   <img
                     src={item.photoUrl}
                     alt="Foto Toko"
+                    crossOrigin="anonymous"
                     className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = 'https://placehold.co/600x400/1e293b/94a3b8?text=Foto+Toko+Tidak+Dapat+Dimuat';
+                    }}
                   />
                 </div>
               </div>
@@ -159,33 +165,64 @@ export const OutletApprovalReviewModal = ({
         </div>
 
         {/* Approval Action Buttons */}
-        <div className="pt-3 border-t border-border-glass flex items-center justify-between gap-3">
+        <div className="pt-3 border-t border-border-glass flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <span className="text-xs text-on-surface-variant">
-            Status Saat Ini: <strong>{item.registrationStatus}</strong>
+            Status Saat Ini: <strong className="text-primary">{item.registrationStatus}</strong>
           </span>
 
           <div className="flex items-center gap-2">
-            {item.registrationStatus !== 'REJECTED' &&
-              item.registrationStatus !== 'REGISTERED_ACTIVE' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={onOpenReject}
-                    disabled={isProcessing}
-                    className="px-4 py-2 bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1"
-                  >
-                    <LuX /> Tolak Pengajuan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onApprove(item)}
-                    disabled={isProcessing}
-                    className="outlet-reg-btn-primary text-xs py-2 px-4"
-                  >
-                    <LuCheck /> {isProcessing ? 'Memproses...' : 'Setujui Pengajuan'}
-                  </button>
-                </>
-              )}
+            {/* 1. If item is already approved by SPV and user is SUPERVISOR */}
+            {userRole === 'SUPERVISOR' && item.registrationStatus === 'SPV_APPROVED' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-bold">
+                <LuCheck /> Telah Anda Setujui (Menunggu Ops Manager)
+              </span>
+            )}
+
+            {/* 2. If item is OPS_APPROVED */}
+            {item.registrationStatus === 'OPS_APPROVED' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold">
+                <LuCheck /> Telah Disetujui Manajer Operasional
+              </span>
+            )}
+
+            {/* 3. If item is REGISTERED_ACTIVE */}
+            {item.registrationStatus === 'REGISTERED_ACTIVE' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-bold">
+                <LuCheck /> Outlet Telah Terdaftar Aktif ({item.customerCode || 'Kode Resmi'})
+              </span>
+            )}
+
+            {/* 4. If item is REJECTED */}
+            {item.registrationStatus === 'REJECTED' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 text-red-600 border border-red-500/20 text-xs font-bold">
+                <LuX /> Pengajuan Telah Ditolak
+              </span>
+            )}
+
+            {/* 5. Can Take Action Buttons (When status is SUBMITTED for SPV, or SPV_APPROVED for Ops) */}
+            {((userRole === 'SUPERVISOR' && item.registrationStatus === 'SUBMITTED') ||
+              (userRole === 'MANAJER_OPERASIONAL' && (item.registrationStatus === 'SPV_APPROVED' || item.registrationStatus === 'SUBMITTED')) ||
+              (userRole === 'ADMIN' && item.registrationStatus !== 'REGISTERED_ACTIVE' && item.registrationStatus !== 'REJECTED') ||
+              (!userRole && item.registrationStatus === 'SUBMITTED')) && (
+              <>
+                <button
+                  type="button"
+                  onClick={onOpenReject}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <LuX /> Tolak Pengajuan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApprove(item)}
+                  disabled={isProcessing}
+                  className="outlet-reg-btn-primary text-xs py-2 px-4 cursor-pointer disabled:opacity-50"
+                >
+                  <LuCheck /> {isProcessing ? 'Memproses...' : 'Setujui Pengajuan'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

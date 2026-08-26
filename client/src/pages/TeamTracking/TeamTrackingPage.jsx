@@ -4,6 +4,7 @@ import { LuUsers, LuPlus, LuNavigation, LuShieldCheck, LuUserCheck, LuUserPlus }
 import { SpvTeamListTab } from './components/SpvTeamListTab';
 import { SalesListTab } from './components/SalesListTab';
 import { RjpTeamListTab } from './components/RjpTeamListTab';
+import { LiveSalesGpsTrackingTab } from './components/LiveSalesGpsTrackingTab';
 import { CreateRjpTeamModal } from './components/CreateRjpTeamModal';
 import { CreateUserModal } from './components/CreateUserModal';
 import { EditUserModal } from './components/EditUserModal';
@@ -170,18 +171,21 @@ export const TeamTrackingPage = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab('rjp-teams')}
+            onClick={() => setActiveTab('live-gps')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'rjp-teams'
-                ? 'bg-primary text-on-primary shadow-sm'
-                : 'bg-surface border border-border-glass text-on-surface-variant hover:bg-surface-variant/40'
+              activeTab === 'live-gps'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-surface border border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10'
             }`}
           >
-            <LuNavigation className="text-sm" />
-            <span>{isSupervisor ? `Tim RJP Tim Saya (${filteredRjpTeams.length})` : `Daftar Tim RJP (${filteredRjpTeams.length})`}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span>🛰️ Live GPS Tracking Sales</span>
           </button>
         </div>
       )}
+
+      {/* TAB 0: LIVE GPS TRACKING SALES */}
+      {activeTab === 'live-gps' && <LiveSalesGpsTrackingTab />}
 
       {/* TAB 1: DAFTAR TIM SUPERVISOR */}
       {activeTab === 'spv-teams' && <SpvTeamListTab filteredSupervisorTeams={filteredSupervisorTeams} />}

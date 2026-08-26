@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LuClipboardList, LuFileSpreadsheet, LuFileText, LuSettings, LuCheck } from 'react-icons/lu';
+import { LuClipboardList, LuFileSpreadsheet, LuFileText, LuSettings, LuCheck, LuIdCard } from 'react-icons/lu';
 import { configApi } from '../../../services/api';
 
 /**
@@ -9,7 +9,10 @@ import { configApi } from '../../../services/api';
 export const OutletReportHeader = ({
   totalCount,
   onExportCSV,
+  onExportNd6TXT,
   onExportTXT,
+  onExportNikExcel,
+  onOpenNikModal,
 }) => {
   const [activeDivision, setActiveDivision] = useState('BELFOODS');
   const [isUpdatingDiv, setIsUpdatingDiv] = useState(false);
@@ -76,25 +79,55 @@ export const OutletReportHeader = ({
             Laporan Pendaftaran & Approval Outlet
           </h1>
           <p className="text-xs text-on-surface-variant mt-1 m-0">
-            Modul pelaporan admin untuk ekspor data (Excel/CSV/TXT), cetak formulir resmi fisik, dan aktivasi ke master database
+            Modul pelaporan admin untuk ekspor data (Excel/CSV/TXT), kelola & input NIK KTP, cetak formulir resmi fisik, dan aktivasi ke master database
           </p>
         </div>
 
-        {/* Export Buttons */}
+        {/* Export & NIK Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          {onOpenNikModal && (
+            <button
+              type="button"
+              onClick={onOpenNikModal}
+              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              title="Kelola dan Input NIK 16-Digit Pemilik Toko"
+            >
+              <LuIdCard className="text-sm" /> Kelola / Input NIK
+            </button>
+          )}
+          {onExportNikExcel && (
+            <button
+              type="button"
+              onClick={onExportNikExcel}
+              className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom: Code, Name, NIK, Owner, Alamat, PKP, NPWP)"
+            >
+              <LuFileSpreadsheet /> Ekspor IMPORT NIK
+            </button>
+          )}
           <button
             type="button"
             onClick={onExportCSV}
-            className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Ekspor Laporan Master Tabel ke Excel (.xls)"
           >
-            <LuFileSpreadsheet /> Ekspor Excel / CSV
+            <LuFileSpreadsheet /> Ekspor Excel
+          </button>
+          <button
+            type="button"
+            onClick={onExportNd6TXT}
+            className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Ekspor Format Data Stream (TXT/Pipe)"
+          >
+            <LuFileText /> Ekspor TXT
           </button>
           <button
             type="button"
             onClick={onExportTXT}
-            className="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass transition-all"
+            className="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass transition-all cursor-pointer"
+            title="Ekspor Ringkasan Teks Terbaca"
           >
-            <LuFileText /> Ekspor TXT
+            <LuFileText /> Ringkasan TXT
           </button>
         </div>
       </div>

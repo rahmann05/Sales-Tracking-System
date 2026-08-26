@@ -6,6 +6,7 @@ import { OutletReportFilterBar } from './components/OutletReportFilterBar';
 import { OutletReportTable } from './components/OutletReportTable';
 import { AdminFinalizeModal } from './components/AdminFinalizeModal';
 import { OfficialFormPdfView } from './components/OfficialFormPdfView';
+import { NikManagementModal } from './components/NikManagementModal';
 import '../../styles/pages/OutletRegistration.css';
 
 /**
@@ -23,11 +24,15 @@ export const OutletRegistrationReportPage = () => {
     setFinalizeTarget,
     pdfTarget,
     setPdfTarget,
+    isNikModalOpen,
+    setIsNikModalOpen,
     isProcessing,
     feedbackMsg,
     handleFinalize,
     exportToCSV,
+    exportToNd6TXT,
     exportToTXT,
+    exportToNikExcel,
     refreshData,
   } = useOutletRegistrationReport();
 
@@ -37,7 +42,10 @@ export const OutletRegistrationReportPage = () => {
       <OutletReportHeader
         totalCount={data.length}
         onExportCSV={exportToCSV}
+        onExportNd6TXT={exportToNd6TXT}
         onExportTXT={exportToTXT}
+        onExportNikExcel={exportToNikExcel}
+        onOpenNikModal={() => setIsNikModalOpen(true)}
       />
 
       {/* 2. Feedback Message Toast */}
@@ -86,6 +94,14 @@ export const OutletRegistrationReportPage = () => {
           onClose={() => setPdfTarget(null)}
         />
       )}
+
+      {/* 7. NIK Management & Verification Modal */}
+      <NikManagementModal
+        isOpen={isNikModalOpen}
+        onClose={() => setIsNikModalOpen(false)}
+        customerList={data}
+        onDataUpdated={refreshData}
+      />
     </div>
   );
 };

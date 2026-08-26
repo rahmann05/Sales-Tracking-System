@@ -87,10 +87,10 @@ export const absensiApi = {
       body: JSON.stringify({ latitude, longitude, photoUrl, notes }),
     });
   },
-  checkOut: async (pjpStopId, { latitude, longitude, photoUrl, notes }) => {
+  checkOut: async (pjpStopId, payload = {}) => {
     return await request(`/absensi/${pjpStopId}/out`, {
       method: 'POST',
-      body: JSON.stringify({ latitude, longitude, photoUrl, notes }),
+      body: JSON.stringify(payload),
     });
   },
   submitOffPjp: async (payload) => {
@@ -293,11 +293,14 @@ export const clustersApi = {
   },
 };
 
-// ─── 8. Users API ────────────────────────────────────────────────────────────
+// ─── 8. Users & Live GPS Tracking API ─────────────────────────────────────────
 export const usersApi = {
   getAll: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return await request(`/users${query ? `?${query}` : ''}`);
+  },
+  getById: async (id) => {
+    return await request(`/users/${id}`);
   },
   create: async (userData) => {
     return await request('/users', {
@@ -315,6 +318,15 @@ export const usersApi = {
     return await request(`/users/${id}`, {
       method: 'DELETE',
     });
+  },
+  updateLocation: async (coords) => {
+    return await request('/users/location', {
+      method: 'POST',
+      body: JSON.stringify(coords),
+    });
+  },
+  getLiveLocations: async () => {
+    return await request('/users/live-locations');
   },
 };
 
@@ -385,6 +397,48 @@ export const customerRegistrationsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+};
+
+// ─── 13. Daily Calls & Monitoring API ─────────────────────────────────────────
+export const dailyCallsApi = {
+  getReport: async (params = {}) => {
+    const cleanParams = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'undefined') {
+        cleanParams[k] = v;
+      }
+    });
+    const query = new URLSearchParams(cleanParams).toString();
+    return await request(`/daily-calls${query ? `?${query}` : ''}`);
+  },
+};
+
+// ─── 14. ND6 Reports Suite API ───────────────────────────────────────────────
+export const reportsApi = {
+  getWeekly: async (params = {}) => {
+    const cleanParams = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'undefined') {
+        cleanParams[k] = v;
+      }
+    });
+    const query = new URLSearchParams(cleanParams).toString();
+    return await request(`/reports/weekly${query ? `?${query}` : ''}`);
+  },
+  getMtd: async (params = {}) => {
+    const cleanParams = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'undefined') {
+        cleanParams[k] = v;
+      }
+    });
+    const query = new URLSearchParams(cleanParams).toString();
+    return await request(`/reports/mtd${query ? `?${query}` : ''}`);
+  },
+  getDashboard: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/reports/dashboard${query ? `?${query}` : ''}`);
   },
 };
 

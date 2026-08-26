@@ -24,10 +24,12 @@ import { OutletManagementPage } from '../pages/OutletManagement/OutletManagement
 import { OutletRegistrationPage } from '../pages/OutletRegistration/OutletRegistrationPage';
 import { OutletApprovalPage } from '../pages/OutletApproval/OutletApprovalPage';
 import { OutletRegistrationReportPage } from '../pages/OutletRegistrationReport/OutletRegistrationReportPage';
+import { DailyCallMonitorPage } from '../pages/DailyCallMonitor/DailyCallMonitorPage';
 import { 
     OUTLET_REGISTRATION_ROLES,
     OUTLET_APPROVAL_ROLES,
-    OUTLET_REGISTRATION_REPORT_ROLES 
+    OUTLET_REGISTRATION_REPORT_ROLES,
+    DAILY_CALL_ROLES,
 } from '../constants/roles';
 
 /**
@@ -74,6 +76,11 @@ const ACCESS_CONTROL = {
         roles: OUTLET_REGISTRATION_REPORT_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
         description: 'Halaman Laporan Registrasi Outlet hanya dapat diakses oleh Admin dan Manajer Operasional.',
+    },
+    [TAB_IDS.DAILY_CALL_MONITOR]: {
+        roles: DAILY_CALL_ROLES,
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Halaman Daily Call Monitor hanya dapat diakses oleh Supervisor, Manajer Operasional, Admin, dan Sales.',
     },
     [TAB_IDS.TEAM_TRACKING]: {
         roles: TEAM_TRACKING_ROLES,
@@ -140,6 +147,8 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
     switch (activeTab) {
         case TAB_IDS.DASHBOARD:
             return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
+        case TAB_IDS.DAILY_CALL_MONITOR:
+            return <Interactive><DailyCallMonitorPage /></Interactive>;
         case TAB_IDS.OUTLET_REGISTRATION:
             return <Interactive><OutletRegistrationPage /></Interactive>;
         case TAB_IDS.OUTLET_APPROVAL:

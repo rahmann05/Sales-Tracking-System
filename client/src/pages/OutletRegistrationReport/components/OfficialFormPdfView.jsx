@@ -498,39 +498,24 @@ export const OfficialFormPdfView = ({ data, onClose }) => {
           </div>
         </div>
 
-        {/* Section 7: Mapping Lokasi & Lampiran Foto Outlet */}
+        {/* Section 7: Mapping Lokasi & Verifikasi Titik Outlet */}
         <div className="border-b border-black py-1.5">
           <div className="flex items-center justify-between font-bold text-[10px] mb-0.5">
-            <span>Mapping Lokasi & Bukti Foto Fisik :</span>
+            <span>Mapping Lokasi & Verifikasi Titik Outlet :</span>
             {data.photoId && (
               <span className="font-mono text-[9px] font-bold text-gray-800">
-                ID Foto: {data.photoId}
+                Ref. ID Foto: {data.photoId}
               </span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-2 border border-black p-1.5 text-[9.5px] bg-gray-50/50">
-            <div className="col-span-2 space-y-1">
-              <div className="font-medium">
-                {data.mappingLocation || 'Patokan fisik: Ruko depan jalan utama.'}
-              </div>
-              <div className="text-gray-600 font-mono text-[8.5px]">
-                Titik GPS: {data.latitude}, {data.longitude} | Area: {data.area} ({data.subAreaKecamatan || '-'})
-              </div>
+          <div className="border border-black p-2 text-[9.5px] bg-gray-50/50 space-y-1">
+            <div className="font-medium text-black">
+              Patokan / Mapping Lokasi: <strong>{data.mappingLocation || 'Ruko / Bangunan depan jalan utama.'}</strong>
             </div>
-            <div className="col-span-1 flex flex-col items-center justify-center border-l border-black/20 pl-2">
-              {data.photoUrl ? (
-                <div className="w-full h-16 rounded overflow-hidden border border-black bg-black">
-                  <img
-                    src={data.photoUrl}
-                    alt="Foto Outlet"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="text-[8px] text-gray-500 italic text-center">
-                  Foto Terlampir di Sistem
-                </div>
-              )}
+            <div className="text-gray-700 font-mono text-[8.5px] flex items-center justify-between">
+              <span>Koordinat GPS: {data.latitude || 0}, {data.longitude || 0}</span>
+              <span>Wilayah: {data.area} ({data.subAreaKecamatan || data.kelurahan || '-'})</span>
+              <span className="italic text-gray-600">Dokumentasi Foto Tersimpan di Database Digital</span>
             </div>
           </div>
         </div>

@@ -1,13 +1,4 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'outlet-photos');
-
-// Ensure storage bucket directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
 
 /**
  * Generate unique photo ID matching registration data
@@ -24,44 +15,27 @@ export const generatePhotoId = (prefix = 'PHOTO') => {
 };
 
 /**
- * Save base64 photo to uploads/outlet-photos/ folder and generate dedicated photoId
+ * Process and prepare photo to be stored directly in PostgreSQL database (Base64 Data URL)
+ * Completely eliminates filesystem disk usage (no uploads/ folder dependency).
  */
 export const saveOutletPhoto = async (photoBase64, prefix = 'PHOTO') => {
   if (!photoBase64 || typeof photoBase64 !== 'string') {
     return { photoId: null, photoUrl: null };
   }
 
-  // If it's already an existing relative URL, keep it
-  if (photoBase64.startsWith('/uploads/')) {
-    return {
-      photoId: generatePhotoId(prefix),
-      photoUrl: photoBase64,
-    };
+  const photoId = generatePhotoId(prefix);
+
+  // If already standard Data URL (data:image/...) or regular URL, store directly in database
+  let formattedDataUrl = photoBase64;
+  if (!photoBase64.startsWith('data:') && !photoBase64.startsWith('http')) {
+    formattedDataUrl = `data:image/jpeg;base64,${photoBase64}`;
   }
 
-  try {
-    const photoId = generatePhotoId(prefix);
-    const filename = `${photoId}.jpg`;
-    const filepath = path.join(UPLOAD_DIR, filename);
+  console.log(`[DatabasePhotoStorage] Photo ${photoId} prepared for direct PostgreSQL database storage`);
 
-    // Extract base64 payload
-    const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    await fs.promises.writeFile(filepath, buffer);
-
-    const photoUrl = `/uploads/outlet-photos/${filename}`;
-    console.log(`[PhotoStorage] Saved outlet photo: ${photoId} -> ${photoUrl} (${buffer.length} bytes)`);
-
-    return {
-      photoId,
-      photoUrl,
-      filename,
-      size: buffer.length,
-      createdAt: new Date().toISOString(),
-    };
-  } catch (err) {
-    console.error('[PhotoStorage] Failed to save photo to bucket:', err);
-    return { photoId: null, photoUrl: null };
-  }
+  return {
+    photoId,
+    photoUrl: formattedDataUrl,
+    createdAt: new Date().toISOString(),
+  };
 };

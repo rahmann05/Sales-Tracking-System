@@ -59,6 +59,9 @@ export const useSalesActions = ({
         longitude: payload.gpsLocation?.lng || 107.5423,
         photoUrl: payload.photoUrl || null,
         notes: payload.notes || 'Kunjungan Selesai',
+        earlyReason: payload.earlyReason || null,
+        reason: payload.reason || payload.earlyReason || null,
+        durationMinutes: payload.durationMinutes,
       });
 
       const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';

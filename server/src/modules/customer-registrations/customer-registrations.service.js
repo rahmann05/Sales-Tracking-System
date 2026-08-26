@@ -1,8 +1,27 @@
 import { prisma } from '../../config/prisma.js';
+import { Prisma } from '@prisma/client';
 import { AppError } from '../../utils/errors.js';
 import { parsePagination, buildPaginatedResponse } from '../../utils/pagination.js';
 import { ROLES } from '../../utils/constants.js';
 import { broadcastCacheInvalidation } from '../../config/socket.js';
+import { saveOutletPhoto } from './customer-photo.service.js';
+
+/**
+ * Filter out any fields that are not in the Prisma CustomerRegistration datamodel
+ */
+export const sanitizeRegistrationPayload = (raw = {}) => {
+  const allowed = Prisma?.CustomerRegistrationScalarFieldEnum
+    ? Object.keys(Prisma.CustomerRegistrationScalarFieldEnum)
+    : [];
+
+  const clean = {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (val !== undefined && (allowed.length === 0 || allowed.includes(key))) {
+      clean[key] = val;
+    }
+  }
+  return clean;
+};
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
@@ -312,19 +331,17 @@ export const validateGooglePlace = async (name, address, lat, lng) => {
   };
 };
 
-import { saveOutletPhoto } from './customer-photo.service.js';
-
 /**
  * 1. Create Outlet Registration (Salesman)
  */
 export const createRegistration = async (data, currentUser) => {
   const { latitude = 0, longitude = 0, name, address, photoUrl: incomingPhotoUrl } = data;
 
-  // 1. Process and save outlet photo to local storage bucket folder if provided
+  // 1. Process and store outlet photo directly in PostgreSQL
   let photoId = data.photoId || null;
   let photoUrl = incomingPhotoUrl || null;
 
-  if (incomingPhotoUrl && incomingPhotoUrl.startsWith('data:image')) {
+  if (incomingPhotoUrl) {
     const photoResult = await saveOutletPhoto(incomingPhotoUrl, 'PHOTO-REG');
     photoId = photoResult.photoId;
     photoUrl = photoResult.photoUrl;
@@ -333,19 +350,21 @@ export const createRegistration = async (data, currentUser) => {
   // 2. Run Google Place verification
   const placeValidation = await validateGooglePlace(name, address, latitude, longitude);
 
+  const cleanData = sanitizeRegistrationPayload({
+    ...data,
+    photoId,
+    photoUrl,
+    placeId: data.placeId || (placeValidation?.isPlaceFound ? 'PLACE-VERIFIED' : null),
+    placeDetails: data.placeDetails || placeValidation || null,
+    latitude: Number(latitude) || 0,
+    longitude: Number(longitude) || 0,
+    salesmanId: currentUser?.id,
+    salesmanName: currentUser?.name || 'Salesman',
+    registrationStatus: data.registrationStatus || 'SUBMITTED',
+  });
+
   const registration = await prisma.customerRegistration.create({
-    data: {
-      ...data,
-      photoId,
-      photoUrl,
-      placeId: data.placeId || (placeValidation?.isPlaceFound ? 'PLACE-VERIFIED' : null),
-      placeDetails: data.placeDetails || placeValidation || null,
-      latitude: Number(latitude) || 0,
-      longitude: Number(longitude) || 0,
-      salesmanId: currentUser.id,
-      salesmanName: currentUser.name,
-      registrationStatus: 'SUBMITTED',
-    },
+    data: cleanData,
   });
 
   // Kirim notifikasi ke SPV dan Manajer Operasional
@@ -584,18 +603,21 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   const registration = await prisma.customerRegistration.findUnique({ where: { id } });
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
-  const { customerCode, clusterId } = payload;
+  const finalCode = payload.outletCode || payload.customerCode || registration.customerCode;
+  if (!finalCode) {
+    throw new AppError('Kode outlet / customer code wajib diisi', 400);
+  }
 
   // Cek apakah kode outlet sudah ada di tabel Outlet
   const existingOutlet = await prisma.outlet.findFirst({
-    where: { outletCode: customerCode, deletedAt: null },
+    where: { outletCode: finalCode, deletedAt: null },
   });
   if (existingOutlet) {
-    throw new AppError(`Kode outlet "${customerCode}" sudah digunakan oleh toko "${existingOutlet.name}"`, 400);
+    throw new AppError(`Kode outlet "${finalCode}" sudah digunakan oleh toko "${existingOutlet.name}"`, 400);
   }
 
   // Tentukan Cluster: prioritaskan clusterId dari payload, atau cari cluster berdasarkan Area
-  let targetClusterId = clusterId;
+  let targetClusterId = payload.clusterId;
   if (!targetClusterId) {
     const matchedCluster = await prisma.cluster.findFirst({
       where: {
@@ -623,7 +645,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   const updatedRegistration = await prisma.customerRegistration.update({
     where: { id },
     data: {
-      customerCode,
+      customerCode: finalCode,
       registrationStatus: 'REGISTERED_ACTIVE',
       adminName: currentUser.name,
       adminRegisteredAt: new Date(),
@@ -634,7 +656,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   const outletType = registration.channel === 'MODERN_TRADE' ? 'MODERN_TRADE' : 'GENERAL_TRADE';
   const newOutlet = await prisma.outlet.create({
     data: {
-      outletCode,
+      outletCode: finalCode,
       name: registration.name,
       address: registration.address,
       latitude: registration.latitude || -6.8722,
@@ -657,8 +679,8 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
         userId: registration.salesmanId,
         type: 'OUTLET_REGISTERED_ACTIVE',
         title: 'Outlet Berhasil Terdaftar di Sistem',
-        message: `Outlet "${registration.name}" telah resmi didaftarkan dengan Kode Outlet: ${customerCode}. Outlet kini aktif dalam sistem.`,
-        payload: { registrationId: id, outletId: newOutlet.id, customerCode },
+        message: `Outlet "${registration.name}" telah resmi didaftarkan dengan Kode Outlet: ${finalCode}. Outlet kini aktif dalam sistem.`,
+        payload: { registrationId: id, outletId: newOutlet.id, customerCode: finalCode },
       },
     }).catch(() => null);
   }
