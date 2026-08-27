@@ -93,12 +93,12 @@ export const SuspiciousAttendanceTable = ({
       r.timeIn || '-',
       r.timeOut || '-',
       r.durationMinutes || 0,
-      r.durationMinutes < 5 ? '⚠️ < 5 Menit (Janggal)' : 'Normal',
+      r.durationMinutes < 5 ? '< 5 Menit (Janggal)' : 'Normal',
       r.deviationMeters || 0,
-      r.distanceWarning === 'WARNING' ? '🚨 Di Luar Radius (>50m)' : 'OK',
+      r.distanceWarning === 'WARNING' ? 'Di Luar Radius (>50m)' : 'OK',
       r.travelDistanceKm || 0,
       r.travelDurationMinutes || 0,
-      r.isTravelAnomaly ? '🚨 Jeda Travel Janggal' : 'Normal',
+      r.isTravelAnomaly ? 'Jeda Travel Janggal' : 'Normal',
       `"${[
         r.isDurationAnomaly ? 'Durasi <5m' : '',
         r.isDistanceAnomaly ? 'Deviasi GPS >50m' : '',
@@ -162,35 +162,35 @@ export const SuspiciousAttendanceTable = ({
           <button
             type="button"
             onClick={() => setFilterAnomalyType('TRAVEL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
               filterAnomalyType === 'TRAVEL'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
             }`}
           >
-            🚨 Jeda Travel
+            <LuCar className="text-xs" /> Jeda Travel
           </button>
           <button
             type="button"
             onClick={() => setFilterAnomalyType('DURATION')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
               filterAnomalyType === 'DURATION'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
             }`}
           >
-            ⚠️ Durasi &lt; 5m
+            <LuClock className="text-xs" /> Durasi &lt; 5m
           </button>
           <button
             type="button"
             onClick={() => setFilterAnomalyType('DISTANCE')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
               filterAnomalyType === 'DISTANCE'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
             }`}
           >
-            GPS &gt; 50m
+            <LuMapPin className="text-xs" /> Radius GPS &gt; 50m
           </button>
           <button
             type="button"
@@ -320,8 +320,8 @@ export const SuspiciousAttendanceTable = ({
                         {r.durationFormatted || `${r.durationMinutes}m`}
                       </div>
                       {isShort && (
-                        <div className="text-[10px] font-black text-rose-600 mt-0.5">
-                          ⚠️ Terlalu Singkat
+                        <div className="text-[10px] font-black text-rose-600 mt-0.5 inline-flex items-center gap-0.5">
+                          <LuClock className="text-[10px]" /> Terlalu Singkat
                         </div>
                       )}
                     </td>
@@ -339,8 +339,8 @@ export const SuspiciousAttendanceTable = ({
                         {r.deviationMeters || 0} m
                       </div>
                       {isFar && (
-                        <div className="text-[10px] font-bold text-amber-700 mt-0.5">
-                          🚨 Diluar Radius
+                        <div className="text-[10px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-0.5">
+                          <LuShieldAlert className="text-[10px]" /> Diluar Radius
                         </div>
                       )}
                     </td>
@@ -349,13 +349,15 @@ export const SuspiciousAttendanceTable = ({
                     <td className="py-3 px-3 max-w-[240px]">
                       <div className="space-y-1">
                         {isTravel && (
-                          <div className="p-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-[10.5px] text-rose-900 font-bold">
-                            🚨 {r.travelAnomalyReason}
+                          <div className="p-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-[10.5px] text-rose-900 font-bold flex items-center gap-1">
+                            <LuCar className="text-xs shrink-0" />
+                            <span>{r.travelAnomalyReason}</span>
                           </div>
                         )}
                         {isShort && (
-                          <div className="p-1 rounded-md bg-rose-500/10 text-rose-800 text-[10.5px] font-semibold">
-                            ⚠️ Durasi &lt;5m {r.earlyReason ? `: "${r.earlyReason}"` : ''}
+                          <div className="p-1 rounded-md bg-rose-500/10 text-rose-800 text-[10.5px] font-semibold flex items-center gap-1">
+                            <LuClock className="text-xs shrink-0" />
+                            <span>Durasi &lt;5m {r.earlyReason ? `: "${r.earlyReason}"` : ''}</span>
                           </div>
                         )}
                         {isFar && (

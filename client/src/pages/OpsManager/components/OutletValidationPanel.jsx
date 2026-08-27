@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   LuShieldCheck, LuShieldAlert, LuShieldQuestion, LuShieldX, LuShieldOff,
   LuChevronDown, LuChevronUp, LuSearch, LuTriangleAlert, LuMapPin,
-  LuNavigation, LuGlobe, LuCrosshair, LuPlus, LuMinus
+  LuNavigation, LuGlobe, LuCrosshair, LuPlus, LuMinus, LuZap, LuX, LuCheck
 } from 'react-icons/lu';
 import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
 import { outletsApi, outletValidationApi } from '../../../services/api';
@@ -584,7 +584,7 @@ const ExpandedDetail = ({
               title="Perbarui koordinat database dengan titik Google ini dan validasi ulang"
             >
               <LuShieldCheck size={14} />
-              {isApplyingCoords ? 'Menyimpan...' : '✓ Terapkan ke Database & Validasi Ulang'}
+              {isApplyingCoords ? 'Menyimpan...' : 'Terapkan ke Database & Validasi Ulang'}
             </button>
           )}
         </div>
@@ -974,16 +974,17 @@ export const OutletValidationPanel = () => {
             }}
             title="Validasi ulang outlet SUSPECT, WARNING, dan UNVALIDATED dengan algoritma lokasi baru"
           >
-            {isBatchValidating ? 'Memvalidasi Batch...' : '⚡ Validasi Ulang Batch'}
+            <LuZap size={13} style={{ display: 'inline', marginRight: 4 }} />
+            {isBatchValidating ? 'Memvalidasi Batch...' : 'Validasi Ulang Batch'}
           </button>
 
           {filterStatus && (
             <button
               className="ovp-validate-btn"
               onClick={() => setFilterStatus(null)}
-              style={{ fontSize: '0.6875rem' }}
+              style={{ fontSize: '0.6875rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
             >
-              ✕ Hapus Filter
+              <LuX size={12} /> Hapus Filter
             </button>
           )}
         </div>
@@ -1010,9 +1011,13 @@ export const OutletValidationPanel = () => {
                 padding: '0.375rem 0.875rem',
                 fontSize: '0.75rem',
                 boxShadow: '0 2px 4px rgba(5,150,105,0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4
               }}
             >
-              {isBatchValidating ? 'Memvalidasi...' : `⚡ Validasi ${selectedIds.size} Outlet Terpilih`}
+              <LuZap size={13} />
+              {isBatchValidating ? 'Memvalidasi...' : `Validasi ${selectedIds.size} Outlet Terpilih`}
             </button>
             {filteredOutlets.length > selectedIds.size && (
               <button
@@ -1026,9 +1031,9 @@ export const OutletValidationPanel = () => {
             <button
               className="ovp-validate-btn"
               onClick={handleClearSelection}
-              style={{ fontSize: '0.75rem', background: 'transparent', color: 'var(--on-surface-variant)', border: '1px solid var(--border-glass)' }}
+              style={{ fontSize: '0.75rem', background: 'transparent', color: 'var(--on-surface-variant)', border: '1px solid var(--border-glass)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
             >
-              ✕ Batal Pilih
+              <LuX size={12} /> Batal Pilih
             </button>
           </div>
         </div>

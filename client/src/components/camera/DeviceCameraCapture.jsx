@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { useGeofence } from '../../hooks/useGeofence';
 import { useDeviceCamera } from '../../hooks/useDeviceCamera';
 import { useLiveClock } from '../../hooks/useLiveClock';
+import { useApp } from '../../context/AppContext';
 import { cameraSnapshotService } from '../../services/cameraSnapshotService';
 import { nativeFileCaptureService } from '../../services/nativeFileCaptureService';
 
@@ -30,6 +31,10 @@ export const DeviceCameraCapture = ({
   buttonLabel = 'Jepret Foto Presensi (GPS Terverifikasi)',
 }) => {
   const canvasRef = useRef(null);
+  const { user } = useApp();
+
+  // Whitelist bypass: khusus akun sales@sinaranugrah.com diizinkan untuk absen di luar radius
+  const isBypassUser = user?.email === 'sales@sinaranugrah.com';
 
   // 1. Dedicated Live Clock Hook
   const { currentTime } = useLiveClock();
@@ -55,11 +60,20 @@ export const DeviceCameraCapture = ({
   } = useGeofence(targetLat, targetLng, maxRadiusMeters);
 
   const geofenceResult = isWithinGeofence();
+  const isOutsideRadius = Boolean(requireGps && targetLat != null && targetLng != null && geofenceResult && !geofenceResult.isInside);
+  const isBlockedByGeofence = isOutsideRadius && !isBypassUser;
 
   // Capture snapshot handler using cameraSnapshotService
   const handleCaptureSnapshot = () => {
     if (requireGps && !isGpsLocked) {
       alert('GPS belum terdeteksi. Pastikan GPS aktif dan izin lokasi diizinkan.');
+      return;
+    }
+
+    if (isBlockedByGeofence) {
+      alert(
+        `Presensi Ditolak! Posisi Anda (${geofenceResult?.distanceMeters ?? 0}m) berada di luar radius toko (${maxRadiusMeters}m). Harap dekati lokasi fisik toko untuk melakukan presensi.`
+      );
       return;
     }
 
@@ -83,6 +97,14 @@ export const DeviceCameraCapture = ({
       alert('GPS belum terdeteksi. Harap aktifkan izin lokasi.');
       return;
     }
+
+    if (isBlockedByGeofence) {
+      alert(
+        `Presensi Ditolak! Posisi Anda (${geofenceResult?.distanceMeters ?? 0}m) berada di luar radius toko (${maxRadiusMeters}m). Harap dekati lokasi fisik toko untuk melakukan presensi.`
+      );
+      return;
+    }
+
     const file = e.target.files?.[0];
     const dataUrl = await nativeFileCaptureService.readFileAsDataUrl(file);
     if (dataUrl) {
@@ -112,6 +134,8 @@ export const DeviceCameraCapture = ({
           outletName={outletName}
           maxRadiusMeters={maxRadiusMeters}
           geofenceResult={geofenceResult}
+          isBypassUser={isBypassUser}
+          isBlockedByGeofence={isBlockedByGeofence}
         />
       )}
 
@@ -150,6 +174,9 @@ export const DeviceCameraCapture = ({
           <CameraCaptureButton
             requireGps={requireGps}
             isGpsLocked={isGpsLocked}
+            isBlockedByGeofence={isBlockedByGeofence}
+            distanceMeters={geofenceResult?.distanceMeters ?? 0}
+            maxRadiusMeters={maxRadiusMeters}
             onCapture={handleCaptureSnapshot}
             label={buttonLabel}
           />

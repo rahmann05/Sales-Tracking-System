@@ -199,7 +199,7 @@ export const NikManagementModal = ({ isOpen, onClose, customerList = [], onDataU
                       : 'bg-surface-container text-emerald-700 hover:bg-emerald-500/10'
                   }`}
                 >
-                  🟢 NIK Lengkap ({validNikCount})
+                  NIK Lengkap ({validNikCount})
                 </button>
                 <button
                   type="button"
@@ -207,10 +207,10 @@ export const NikManagementModal = ({ isOpen, onClose, customerList = [], onDataU
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     filterNikStatus === 'NO_NIK'
                       ? 'bg-amber-600 text-white shadow-xs'
-                      : 'bg-surface-container text-amber-700 hover:bg-amber-500/10'
+                      : 'bg-surface-container text-amber-700 hover:bg-emerald-500/10'
                   }`}
                 >
-                  ⚠️ Belum Ada NIK ({customerList.length - validNikCount})
+                  Belum Ada NIK ({customerList.length - validNikCount})
                 </button>
               </div>
 
@@ -290,7 +290,7 @@ export const NikManagementModal = ({ isOpen, onClose, customerList = [], onDataU
                     </div>
 
                     <span className="text-xs text-primary font-black shrink-0">
-                      {isSelected ? 'Aktif ✏️' : 'Pilih &rarr;'}
+                      {isSelected ? 'Aktif' : 'Pilih \u2192'}
                     </span>
                   </div>
                 );

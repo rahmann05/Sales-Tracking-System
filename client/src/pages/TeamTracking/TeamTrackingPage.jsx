@@ -179,7 +179,8 @@ export const TeamTrackingPage = () => {
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-            <span>🛰️ Live GPS Tracking Sales</span>
+            <LuNavigation className="text-xs" />
+            <span>Live GPS Tracking Sales</span>
           </button>
         </div>
       )}

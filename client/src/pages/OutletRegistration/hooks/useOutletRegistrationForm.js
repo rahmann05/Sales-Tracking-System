@@ -226,7 +226,7 @@ export const useOutletRegistrationForm = (onSuccess) => {
     setSubmitSuccess(null);
     handleDetectGPS();
   };
-
+  
   const submitForm = async (e) => {
     if (e) e.preventDefault();
     setSubmitError('');

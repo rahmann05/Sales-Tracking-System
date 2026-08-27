@@ -20,14 +20,19 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
     throw new AppError('Anda tidak berhak melakukan absensi pada PJP ini', 403);
   }
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  const isBypassUser = user?.email === 'sales@sinaranugrah.com';
+
   // Geolocation calculation & validation
   const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
   const deviationMeters = Math.round(distance);
-  const distanceWarning = distance > config.attendanceRadiusMeters ? 'WARNING' : 'OK';
+  const maxRadius = stop.outlet.radiusMeters || config.attendanceRadiusMeters || 50;
+  const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
 
-  if (distance > config.attendanceRadiusMeters * 2) {
+  // Enforce Geofence: Block attendance if outside radius, except for testing account sales@sinaranugrah.com
+  if (!isBypassUser && distance > maxRadius) {
     throw new AppError(
-      `Posisi Anda (${Math.round(distance)}m) terlalu jauh dari outlet (${config.attendanceRadiusMeters}m). Harap dekati lokasi toko.`,
+      `Presensi ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius toko (${maxRadius}m). Harap dekati lokasi fisik outlet.`,
       422
     );
   }
@@ -69,7 +74,6 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
         distanceWarning,
       },
     }),
-    prisma.pjpStop.update({ where: { id: pjpStopId }, data: { status: VISIT_STATUS.ARRIVED } }),
     prisma.pjp.update({ where: { id: stop.pjpId }, data: { status: PJP_STATUS.IN_PROGRESS } }),
   ]);
 
@@ -102,10 +106,22 @@ export const checkOut = async (pjpStopId, userId, latitude, longitude, photoUrl 
   const existingOut = stop.attendances.find((a) => a.userId === userId && a.type === ATTENDANCE_TYPE.OUT);
   if (existingOut) throw new AppError('Anda sudah melakukan Absen OUT pada outlet ini', 409);
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  const isBypassUser = user?.email === 'sales@sinaranugrah.com';
+
   // Geolocation validation
   const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
   const deviationMeters = Math.round(distance);
-  const distanceWarning = distance > config.attendanceRadiusMeters ? 'WARNING' : 'OK';
+  const maxRadius = stop.outlet.radiusMeters || config.attendanceRadiusMeters || 50;
+  const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
+
+  // Enforce Geofence: Block checkout if outside radius, except for testing account sales@sinaranugrah.com
+  if (!isBypassUser && distance > maxRadius) {
+    throw new AppError(
+      `Absen OUT ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius toko (${maxRadius}m). Harap dekati lokasi fisik outlet.`,
+      422
+    );
+  }
 
   // Calculate Visit Duration in Minutes
   const inTimestamp = new Date(existingIn.timestamp).getTime();
@@ -146,7 +162,7 @@ export const checkOut = async (pjpStopId, userId, latitude, longitude, photoUrl 
     }),
     prisma.pjpStop.update({
       where: { id: pjpStopId },
-      data: { status: VISIT_STATUS.COMPLETED },
+      data: { status: VISIT_STATUS.VISITED },
     }),
   ]);
 

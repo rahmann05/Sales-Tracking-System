@@ -109,14 +109,7 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // Menu Daily Call Report & Monitoring
-    if (DAILY_CALL_ROLES.includes(role)) {
-        tabs.push({
-            id: TAB_IDS.DAILY_CALL_MONITOR,
-            label: 'Daily Call Monitor',
-            icon: LuPhoneCall,
-        });
-    }
+    // Daily Call Monitor diakses terpadu melalui Laporan & Analitik (Reports)
 
     if (TEAM_TRACKING_ROLES.includes(role)) {
         tabs.push({

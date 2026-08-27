@@ -8,6 +8,9 @@ import { LuCamera, LuLock } from 'react-icons/lu';
 export const CameraCaptureButton = ({
   requireGps,
   isGpsLocked,
+  isBlockedByGeofence = false,
+  distanceMeters = 0,
+  maxRadiusMeters = 50,
   onCapture,
   label = 'Jepret Foto Presensi (GPS Terverifikasi)',
 }) => {
@@ -24,11 +27,24 @@ export const CameraCaptureButton = ({
     );
   }
 
+  if (isBlockedByGeofence) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="w-full py-3 bg-rose-950/40 text-rose-300 border border-rose-500/40 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-not-allowed transition-all shadow-sm"
+      >
+        <LuLock className="text-base text-rose-400" />
+        <span>Di Luar Radius Toko ({distanceMeters}m &gt; {maxRadiusMeters}m) — Presensi Terkunci</span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={onCapture}
-      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.99]"
+      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
     >
       <LuCamera className="text-base" />
       <span>{label}</span>

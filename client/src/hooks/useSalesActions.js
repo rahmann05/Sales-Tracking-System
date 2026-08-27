@@ -18,20 +18,22 @@ export const useSalesActions = ({
   const handleSalesAbsenIn = async (stopId, payload = {}) => {
     try {
       // Call Backend API first
-      const response = await absensiApi.checkIn(stopId, {
+      await absensiApi.checkIn(stopId, {
         latitude: payload.gpsLocation?.lat || -6.8722,
         longitude: payload.gpsLocation?.lng || 107.5423,
         photoUrl: payload.photoUrl || null,
         notes: payload.notes || 'Kunjungan Rutin',
       });
 
-      const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      const now = new Date();
+      const timeNow = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
       setSalesStops((prev) =>
         prev.map((s) =>
           s.id === stopId
             ? {
                 ...s,
                 status: 'ARRIVED',
+                inTimestamp: now.toISOString(),
                 checkInTime: timeNow,
                 checkInPhoto: payload.photoUrl || null,
                 checkInGps: payload.gpsLocation || null,
@@ -47,6 +49,7 @@ export const useSalesActions = ({
         message: err.message,
         roleTarget: ['SALES'],
       });
+      throw err;
     }
   };
 
@@ -64,17 +67,20 @@ export const useSalesActions = ({
         durationMinutes: payload.durationMinutes,
       });
 
-      const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      const now = new Date();
+      const timeNow = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
       setSalesStops((prev) =>
         prev.map((s) =>
           s.id === stopId
             ? {
                 ...s,
                 status: 'VISITED',
+                outTimestamp: now.toISOString(),
                 checkOutTime: timeNow,
                 checkOutPhoto: payload.photoUrl || null,
                 checkOutGps: payload.gpsLocation || null,
                 checkOutNotes: payload.notes || 'Kunjungan Selesai',
+                durationMinutes: payload.durationMinutes,
               }
             : s
         )
@@ -86,6 +92,7 @@ export const useSalesActions = ({
         message: err.message,
         roleTarget: ['SALES'],
       });
+      throw err;
     }
   };
 

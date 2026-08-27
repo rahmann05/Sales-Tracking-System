@@ -38,7 +38,6 @@ export const TEAM_TRACKING_ROLES = Object.freeze([
 /** Roles allowed to view Reports */
 export const REPORTS_ROLES = Object.freeze([
     ROLES.SUPERVISOR,
-    ROLES.MANAJER_OPERASIONAL,
     ROLES.ADMIN,
 ]);
 
@@ -73,7 +72,5 @@ export const OUTLET_REGISTRATION_REPORT_ROLES = Object.freeze([
 
 export const DAILY_CALL_ROLES = Object.freeze([
     ROLES.SUPERVISOR,
-    ROLES.MANAJER_OPERASIONAL,
     ROLES.ADMIN,
-    ROLES.SALES,
 ]);

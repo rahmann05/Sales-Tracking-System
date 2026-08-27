@@ -412,8 +412,8 @@ export const ClusterBuilder = ({ mapState, setMapState, setMapHandlers, onClose 
                             }`}
                           >
                             <div className="flex justify-between items-center">
-                              <span className="font-medium text-sm">
-                                {activeRouteIndex === r.routeIndex && '✓ '} Rute {r.routeIndex + 1}
+                              <span className="font-medium text-sm flex items-center">
+                                {activeRouteIndex === r.routeIndex && <FaCheck className="inline mr-1.5 text-xs text-primary" />} Rute {r.routeIndex + 1}
                               </span>
                               {activeRouteIndex === r.routeIndex && (
                                 <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Aktif</span>

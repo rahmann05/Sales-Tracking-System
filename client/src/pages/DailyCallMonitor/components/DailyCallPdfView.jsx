@@ -158,7 +158,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-[8.5px]">
                     {r.reason ? <span className="text-red-700 font-bold">{r.reason}</span> : r.remark || '-'}
-                    {r.earlyReason && <div className="text-amber-800">⚠️ {r.earlyReason}</div>}
+                    {r.earlyReason && <div className="text-amber-800">[Dini: {r.earlyReason}]</div>}
                   </td>
                   <td className="p-1.5 text-center font-mono text-[8.5px] whitespace-nowrap">
                     {r.deviationMeters}m ({r.distanceWarning})

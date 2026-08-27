@@ -137,7 +137,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS' }) => {
             }`}
           >
             <LuUserCheck className="text-sm" />
-            <span>👤 Timeline & Rute Per Sales</span>
+            <span>Timeline & Rute Per Sales</span>
             <span
               className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
                 activeTableView === 'SALESMAN_TIMELINE' ? 'bg-white/20 text-white' : 'bg-surface-container'
@@ -158,7 +158,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS' }) => {
             }`}
           >
             <LuShieldAlert className="text-sm" />
-            <span>🚨 Tabel Khusus Absensi Janggal</span>
+            <span>Tabel Khusus Absensi Janggal</span>
             {totalAnomalies > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
                 {totalAnomalies} Temuan

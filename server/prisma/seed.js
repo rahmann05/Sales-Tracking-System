@@ -298,6 +298,11 @@ async function main() {
     for (let i = 0; i < completedCount && i < pjp.stops.length; i++) {
       const stop = pjp.stops[i];
       const outlet = outlets[i];
+      const duration = 15 + (i % 3) * 5; // 15, 20, 25 mins
+      const orderAmount = 250000 + i * 125000;
+      const skuCount = 2 + (i % 4);
+      const deviation = 10 + (i % 5) * 4; // 10m - 26m (well within 50m geofence)
+
       await prisma.attendance.create({
         data: {
           pjpStopId: stop.id,
@@ -306,9 +311,13 @@ async function main() {
           latitude: outlet.latitude || -6.8722,
           longitude: outlet.longitude || 107.5423,
           photoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=60',
-          timestamp: new Date(pjpDate.getTime() + (i * 30 + 480) * 60000), // 08:00 + 30 mins each
+          notes: 'Kunjungan Rutin & Cek Stok Toko',
+          deviationMeters: deviation,
+          distanceWarning: 'OK',
+          timestamp: new Date(pjpDate.getTime() + (i * 35 + 480) * 60000), // 08:00 + 35 mins each
         },
       });
+
       await prisma.attendance.create({
         data: {
           pjpStopId: stop.id,
@@ -317,7 +326,14 @@ async function main() {
           latitude: outlet.latitude || -6.8722,
           longitude: outlet.longitude || 107.5423,
           photoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=60',
-          timestamp: new Date(pjpDate.getTime() + (i * 30 + 500) * 60000), // + 20 mins
+          notes: 'Kunjungan Selesai & Transaksi Berhasil',
+          durationMinutes: duration,
+          deviationMeters: deviation,
+          distanceWarning: 'OK',
+          orderAmount: orderAmount,
+          skuSold: skuCount,
+          isEffectiveCall: true,
+          timestamp: new Date(pjpDate.getTime() + (i * 35 + 480 + duration) * 60000),
         },
       });
     }

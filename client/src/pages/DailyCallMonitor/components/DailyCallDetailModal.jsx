@@ -82,8 +82,18 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
           </div>
           <div>
             <span className="text-[10px] text-on-surface-variant font-semibold block">Effective Call (EC)</span>
-            <strong className={row.effectiveCall === 'Y' ? 'text-purple-600' : 'text-amber-600'}>
-              {row.effectiveCall === 'Y' ? '✅ Ya (Order Masuk)' : '❌ Tidak Ada Order'}
+            <strong className={`inline-flex items-center gap-1 ${row.effectiveCall === 'Y' ? 'text-purple-600' : 'text-amber-600'}`}>
+              {row.effectiveCall === 'Y' ? (
+                <>
+                  <LuCircleCheck className="text-xs text-purple-600" />
+                  <span>Ya (Order Masuk)</span>
+                </>
+              ) : (
+                <>
+                  <LuX className="text-xs text-amber-600" />
+                  <span>Tidak Ada Order</span>
+                </>
+              )}
             </strong>
           </div>
         </div>

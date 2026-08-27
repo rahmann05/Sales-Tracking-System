@@ -114,10 +114,33 @@ export const AppProvider = ({ children }) => {
             const pjpData = res.data;
             const cluster = pjpData.user?.cluster;
             const spv = cluster?.users?.find(u => u.role === 'SUPERVISOR');
+            const formatTime = (ts) => {
+              if (!ts) return null;
+              const d = new Date(ts);
+              return isNaN(d.getTime())
+                ? null
+                : d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+            };
+
             const mappedStops = pjpData.stops.map((s, idx) => {
               const stopCluster = s.outlet?.cluster || cluster;
               const spv = stopCluster?.users?.find(u => u.role === 'SUPERVISOR');
               const area = stopCluster?.region || stopCluster?.name || (s.outlet?.address ? s.outlet.address.split(',').pop().trim() : '-');
+              
+              const inAtt = s.attendances?.find((a) => a.type === 'IN');
+              const outAtt = s.attendances?.find((a) => a.type === 'OUT');
+
+              let stopStatus = 'PENDING';
+              if (outAtt || s.status === 'VISITED' || s.status === 'COMPLETED') {
+                stopStatus = 'VISITED';
+              } else if (inAtt || s.status === 'ARRIVED' || s.status === 'IN_VISIT') {
+                stopStatus = 'ARRIVED';
+              } else if (s.status === 'SKIPPED') {
+                stopStatus = 'SKIPPED';
+              } else if (s.status === 'CLOSED_REPORTED' || s.status === 'CLOSED') {
+                stopStatus = 'CLOSED';
+              }
+
               return {
                 id: s.id,
                 sequence: s.sequence || idx + 1,
@@ -129,7 +152,7 @@ export const AppProvider = ({ children }) => {
                 type: s.outlet?.type || 'MODERN_TRADE',
                 latitude: Number(s.outlet?.latitude) || null,
                 longitude: Number(s.outlet?.longitude) || null,
-                radiusMeters: s.outlet?.radiusMeters || 0,
+                radiusMeters: s.outlet?.radiusMeters || 50,
                 outstanding: s.outlet?.outstanding || 0,
                 callplanName: pjpData.name || '',
                 callFrequency: s.callFrequency || (pjpData.weekType === 'ALL' ? 'F4' : 'F2'),
@@ -141,7 +164,17 @@ export const AppProvider = ({ children }) => {
                 assignedSalesName: user?.name || '',
                 customerId: s.outlet?.outletCode || '',
                 outletCode: s.outlet?.outletCode || '',
-                status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
+                status: stopStatus,
+                inTimestamp: inAtt?.timestamp ? new Date(inAtt.timestamp).toISOString() : null,
+                outTimestamp: outAtt?.timestamp ? new Date(outAtt.timestamp).toISOString() : null,
+                checkInTime: formatTime(inAtt?.timestamp),
+                checkOutTime: formatTime(outAtt?.timestamp),
+                checkInPhoto: inAtt?.photoUrl || null,
+                checkOutPhoto: outAtt?.photoUrl || null,
+                checkInNotes: inAtt?.notes || null,
+                checkOutNotes: outAtt?.notes || null,
+                durationMinutes: outAtt?.durationMinutes || null,
+                deviationMeters: inAtt?.deviationMeters ?? null,
               };
             });
             setSalesStops(mappedStops);
@@ -156,27 +189,59 @@ export const AppProvider = ({ children }) => {
           if (pjps.length > 0 && isMounted) {
             const todayStr = new Date().toDateString();
             const todays = pjps.filter((p) => new Date(p.date).toDateString() === todayStr);
+            const formatTime = (ts) => {
+              if (!ts) return null;
+              const d = new Date(ts);
+              return isNaN(d.getTime())
+                ? null
+                : d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+            };
             const routes = todays.map((p) => {
-              const stops = (p.stops || []).map((s, idx) => ({
-                id: s.id,
-                sequence: s.sequence || idx + 1,
-                outletName: s.outlet?.name || '',
-                customerName: s.outlet?.name || '',
-                type: s.outlet?.type || 'MODERN_TRADE',
-                owner: s.outlet?.ownerName || s.outlet?.owner || '',
-                phone: s.outlet?.phone || '',
-                address: s.outlet?.address || '',
-                latitude: Number(s.outlet?.latitude) || null,
-                longitude: Number(s.outlet?.longitude) || null,
-                callplanName: p.name || '',
-                clusterName: p.cluster?.name || '',
-                regionName: p.cluster?.region || '',
-                dayOfWeek: p.dayOfWeek || '',
-                assignedSalesName: p.user?.name || '',
-                customerId: s.outlet?.outletCode || '',
-                outletCode: s.outlet?.outletCode || '',
-                status: s.status === 'VISITED' ? 'VISITED' : s.status === 'SKIPPED' ? 'SKIPPED' : 'PENDING',
-              }));
+              const stops = (p.stops || []).map((s, idx) => {
+                const inAtt = s.attendances?.find((a) => a.type === 'IN');
+                const outAtt = s.attendances?.find((a) => a.type === 'OUT');
+                let stopStatus = 'PENDING';
+                if (outAtt || s.status === 'VISITED' || s.status === 'COMPLETED') {
+                  stopStatus = 'VISITED';
+                } else if (inAtt || s.status === 'ARRIVED' || s.status === 'IN_VISIT') {
+                  stopStatus = 'ARRIVED';
+                } else if (s.status === 'SKIPPED') {
+                  stopStatus = 'SKIPPED';
+                } else if (s.status === 'CLOSED_REPORTED' || s.status === 'CLOSED') {
+                  stopStatus = 'CLOSED';
+                }
+                return {
+                  id: s.id,
+                  sequence: s.sequence || idx + 1,
+                  outletName: s.outlet?.name || '',
+                  customerName: s.outlet?.name || '',
+                  type: s.outlet?.type || 'MODERN_TRADE',
+                  owner: s.outlet?.ownerName || s.outlet?.owner || '',
+                  phone: s.outlet?.phone || '',
+                  address: s.outlet?.address || '',
+                  latitude: Number(s.outlet?.latitude) || null,
+                  longitude: Number(s.outlet?.longitude) || null,
+                  radiusMeters: s.outlet?.radiusMeters || 50,
+                  callplanName: p.name || '',
+                  clusterName: p.cluster?.name || '',
+                  regionName: p.cluster?.region || '',
+                  dayOfWeek: p.dayOfWeek || '',
+                  assignedSalesName: p.user?.name || '',
+                  customerId: s.outlet?.outletCode || '',
+                  outletCode: s.outlet?.outletCode || '',
+                  status: stopStatus,
+                  inTimestamp: inAtt?.timestamp ? new Date(inAtt.timestamp).toISOString() : null,
+                  outTimestamp: outAtt?.timestamp ? new Date(outAtt.timestamp).toISOString() : null,
+                  checkInTime: formatTime(inAtt?.timestamp),
+                  checkOutTime: formatTime(outAtt?.timestamp),
+                  checkInPhoto: inAtt?.photoUrl || null,
+                  checkOutPhoto: outAtt?.photoUrl || null,
+                  checkInNotes: inAtt?.notes || null,
+                  checkOutNotes: outAtt?.notes || null,
+                  durationMinutes: outAtt?.durationMinutes || null,
+                  deviationMeters: inAtt?.deviationMeters ?? null,
+                };
+              });
               const done = stops.filter((s) => s.status === 'VISITED').length;
               return {
                 id: p.id,

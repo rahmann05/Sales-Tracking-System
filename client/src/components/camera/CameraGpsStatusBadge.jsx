@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuMapPin, LuRefreshCw, LuCheck, LuNavigation } from 'react-icons/lu';
+import { LuMapPin, LuRefreshCw, LuCheck, LuNavigation, LuZap } from 'react-icons/lu';
 import { FiAlertCircle } from 'react-icons/fi';
 
 /**
@@ -16,18 +16,26 @@ export const CameraGpsStatusBadge = ({
   outletName,
   maxRadiusMeters,
   geofenceResult,
+  isBypassUser = false,
+  isBlockedByGeofence = false,
 }) => {
+  const isOutside = targetLat != null && targetLng != null && geofenceResult && !geofenceResult.isInside;
+
   return (
     <div
       className={`p-3 rounded-2xl border text-xs transition-all flex items-start gap-2.5 ${
-        isGpsLocked
+        isBlockedByGeofence
+          ? 'bg-rose-500/10 border-rose-500/30 text-rose-800'
+          : isGpsLocked
           ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800'
           : gpsError
           ? 'bg-rose-500/10 border-rose-500/30 text-rose-700'
           : 'bg-amber-500/10 border-amber-500/30 text-amber-800'
       }`}
     >
-      {isGpsLocked ? (
+      {isBlockedByGeofence ? (
+        <FiAlertCircle className="text-lg text-rose-600 shrink-0 mt-0.5" />
+      ) : isGpsLocked ? (
         <LuMapPin className="text-lg text-emerald-600 shrink-0 mt-0.5" />
       ) : gpsError ? (
         <FiAlertCircle className="text-lg text-rose-600 shrink-0 mt-0.5" />
@@ -42,20 +50,37 @@ export const CameraGpsStatusBadge = ({
               <span className="font-bold text-emerald-700 flex items-center gap-1">
                 <LuCheck className="text-sm" /> GPS Terdeteksi & Terkunci
               </span>
-              <span className="font-mono text-[11px] text-emerald-600">Akurasi: ±{userLocation.accuracy}m</span>
+              <div className="flex items-center gap-1.5">
+                {isBypassUser && isOutside && (
+                  <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 border border-purple-500/20 text-[10px] font-bold inline-flex items-center gap-1">
+                    <LuZap className="text-[10px]" /> Mode Bypass Radius
+                  </span>
+                )}
+                <span className="font-mono text-[11px] text-emerald-600">Akurasi: ±{userLocation.accuracy}m</span>
+              </div>
             </div>
             <p className="font-mono text-[11px] text-emerald-700 mt-0.5">
               Koordinat: {userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}
             </p>
             {targetLat != null && targetLng != null && (
-              <p className="text-[11px] font-medium text-emerald-800 mt-1 flex items-center gap-1">
+              <p
+                className={`text-[11px] font-semibold mt-1 flex items-center gap-1 ${
+                  isBlockedByGeofence
+                    ? 'text-rose-700'
+                    : geofenceResult?.isInside
+                    ? 'text-emerald-800'
+                    : 'text-purple-700'
+                }`}
+              >
                 <LuNavigation className="text-xs shrink-0" />
                 <span>
                   Jarak ke {outletName || 'Outlet'}:{' '}
                   <strong>{geofenceResult?.distanceMeters ?? 0}m</strong> (
                   {geofenceResult?.isInside
                     ? `Dalam Geofence ≤${maxRadiusMeters}m`
-                    : `Luar Geofence >${maxRadiusMeters}m`}
+                    : isBypassUser
+                    ? `Luar Geofence >${maxRadiusMeters}m (Diizinkan khusus testing)`
+                    : `Luar Geofence >${maxRadiusMeters}m — Presensi Ditutup`}
                   )
                 </span>
               </p>

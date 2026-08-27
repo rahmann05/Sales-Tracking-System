@@ -1,5 +1,4 @@
-import React from 'react';
-import { LuSearch, LuCalendar, LuUser, LuDownload, LuRefreshCw, LuFilter, LuPrinter } from 'react-icons/lu';
+import { LuSearch, LuCalendar, LuUser, LuDownload, LuRefreshCw, LuFilter, LuPrinter, LuPlus, LuHourglass, LuTriangleAlert, LuClock, LuShieldAlert, LuCheck } from 'react-icons/lu';
 
 /**
  * DailyCallFilterBar Component
@@ -21,14 +20,14 @@ export const DailyCallFilterBar = ({
   isLoading = false,
 }) => {
   const filterOptions = [
-    { key: 'ALL', label: 'Semua Kunjungan' },
-    { key: 'EFFECTIVE_CALL', label: 'Effective Call (EC)' },
-    { key: 'NON_EFFECTIVE_CALL', label: 'Non-EC (Tanpa Order)' },
-    { key: 'EXTRA_CALL', label: '➕ Extra Call' },
-    { key: 'SKIPPED', label: '⏳ Terlewat' },
-    { key: 'ANOMALY_TRAVEL', label: '🚨 Jeda Travel Janggal' },
-    { key: 'ANOMALY_DURATION', label: '⚠️ Durasi < 5 Menit' },
-    { key: 'ALL_ANOMALIES', label: '🚨 Semua Anomali' },
+    { key: 'ALL', label: 'Semua Kunjungan', icon: null },
+    { key: 'EFFECTIVE_CALL', label: 'Effective Call (EC)', icon: LuCheck },
+    { key: 'NON_EFFECTIVE_CALL', label: 'Non-EC (Tanpa Order)', icon: null },
+    { key: 'EXTRA_CALL', label: 'Extra Call', icon: LuPlus },
+    { key: 'SKIPPED', label: 'Terlewat', icon: LuHourglass },
+    { key: 'ANOMALY_TRAVEL', label: 'Jeda Travel Janggal', icon: LuTriangleAlert },
+    { key: 'ANOMALY_DURATION', label: 'Durasi < 5 Menit', icon: LuClock },
+    { key: 'ALL_ANOMALIES', label: 'Semua Anomali', icon: LuShieldAlert },
   ];
 
   return (
@@ -124,20 +123,24 @@ export const DailyCallFilterBar = ({
 
       {/* Bottom Filter Pills */}
       <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar">
-        {filterOptions.map((opt) => (
-          <button
-            key={opt.key}
-            type="button"
-            onClick={() => onSelectFilter(opt.key)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-              filterType === opt.key
-                ? 'bg-primary text-on-primary shadow-sm'
-                : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant border border-border-glass'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
+        {filterOptions.map((opt) => {
+          const Icon = opt.icon;
+          return (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => onSelectFilter(opt.key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                filterType === opt.key
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant border border-border-glass'
+              }`}
+            >
+              {Icon && <Icon className="text-xs" />}
+              <span>{opt.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

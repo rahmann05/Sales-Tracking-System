@@ -105,13 +105,21 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
             <span className="font-mono font-black text-primary text-sm">{formatTime(elapsedSecs)}</span>
           </div>
           <span
-            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
               !isEarlyCheckout
                 ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
             }`}
           >
-            {!isEarlyCheckout ? '✅ Standar Terpenuhi (≥ 5m)' : `⚠️ Sisa ${formatTime(remainingSecs)}`}
+            {!isEarlyCheckout ? (
+              <>
+                <FiCheckCircle className="text-xs" /> Standar Terpenuhi (≥ 5m)
+              </>
+            ) : (
+              <>
+                <FiAlertTriangle className="text-xs" /> Sisa {formatTime(remainingSecs)}
+              </>
+            )}
           </span>
         </div>
 

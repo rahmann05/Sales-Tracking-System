@@ -176,7 +176,7 @@ export const LiveSalesGpsTrackingTab = () => {
                   : 'bg-surface-container text-emerald-700 hover:bg-emerald-500/10'
               }`}
             >
-              🟢 Di Toko ({inVisitCount})
+              Di Toko ({inVisitCount})
             </button>
             <button
               type="button"
@@ -257,11 +257,11 @@ export const LiveSalesGpsTrackingTab = () => {
                       }`}
                     >
                       {isVisiting
-                        ? '🟢 Di Toko'
+                        ? 'Di Toko'
                         : isTraveling
-                        ? '🚗 Di Jalan'
+                        ? 'Di Jalan'
                         : s.isOnline
-                        ? '🟡 Online'
+                        ? 'Online'
                         : 'Offline'}
                     </span>
                   </div>

@@ -21,7 +21,7 @@ export const ReportTabBar = ({ activeTab, onSelectTab }) => {
       label: '2. Audit Absensi Janggal',
       subtitle: 'Tabel Khusus Durasi & GPS',
       icon: LuShieldAlert,
-      badge: '🚨 Audit',
+      badge: 'Audit',
       badgeColor: 'bg-rose-500/10 text-rose-600',
     },
     {

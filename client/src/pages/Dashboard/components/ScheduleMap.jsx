@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { LuCalendar } from 'react-icons/lu';
 import { clustersApi } from '../../../services/api';
 import { routingService } from '../../../services/routingService';
 import { useApp } from '../../../context/AppContext';
@@ -180,10 +181,10 @@ export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
       }}>
         {/* Hari dikunci ke hari ini untuk semua role */}
         <span style={{
-          ...selectStyle, cursor: 'default', display: 'inline-flex', alignItems: 'center',
+          ...selectStyle, cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: '6px',
           background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8',
         }} title="Peta hanya menampilkan rute jadwal hari ini">
-          📅 {todayLabel} (Hari Ini)
+          <LuCalendar style={{ fontSize: '13px' }} /> {todayLabel} (Hari Ini)
         </span>
         {isSupervisorOrManager && salesOptions.length > 0 && (
           <select style={selectStyle} value={salesId} onChange={(e) => setSalesId(e.target.value)} title="Sales">

@@ -14,8 +14,8 @@ const createSalesLivePinIcon = () => {
   const svg = `
     <div style="position:relative; width:42px; height:42px; display:flex; align-items:center; justify-content:center;">
       <div style="position:absolute; width:40px; height:40px; border-radius:50%; background:#2563eb; opacity:0.35; animation:pulse 2s infinite;"></div>
-      <div style="width:32px; height:32px; border-radius:50%; background:#1d4ed8; border:3px solid #ffffff; box-shadow:0 4px 8px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; color:#ffffff; font-size:15px;">
-        🛵
+      <div style="width:32px; height:32px; border-radius:50%; background:#1d4ed8; border:3px solid #ffffff; box-shadow:0 4px 8px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; color:#ffffff;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
       </div>
     </div>
   `;
@@ -164,7 +164,8 @@ export const LeafletFallbackRouteMap = ({
           <Popup>
             <div className="text-xs p-1.5 space-y-1 min-w-[160px]">
               <div className="flex items-center gap-1.5 font-bold text-blue-700">
-                <span>🛵 Posisi Live Sales Rep</span>
+                <LuNavigation className="text-xs shrink-0" />
+                <span>Posisi Live Sales Rep</span>
               </div>
               <p className="font-bold text-gray-900 text-xs">
                 {selectedSales?.repName || 'Sales Field Rep (Aktif)'}

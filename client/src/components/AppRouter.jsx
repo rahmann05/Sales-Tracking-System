@@ -80,7 +80,7 @@ const ACCESS_CONTROL = {
     [TAB_IDS.DAILY_CALL_MONITOR]: {
         roles: DAILY_CALL_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
-        description: 'Halaman Daily Call Monitor hanya dapat diakses oleh Supervisor, Manajer Operasional, Admin, dan Sales.',
+        description: 'Halaman Daily Call Monitor hanya dapat diakses oleh Admin dan Supervisor.',
     },
     [TAB_IDS.TEAM_TRACKING]: {
         roles: TEAM_TRACKING_ROLES,
@@ -96,7 +96,7 @@ const ACCESS_CONTROL = {
         roles: REPORTS_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
         description:
-            'Halaman Laporan dan Analitik hanya dapat diakses oleh Manajemen, Admin, dan Supervisor.',
+            'Halaman Laporan dan Analitik hanya dapat diakses oleh Admin dan Supervisor.',
     },
     [TAB_IDS.OUTLET_VALIDATION]: {
         roles: OUTLET_VALIDATION_ROLES,

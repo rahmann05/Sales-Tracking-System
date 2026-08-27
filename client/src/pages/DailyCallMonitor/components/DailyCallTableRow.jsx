@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuMapPin, LuClock, LuCamera, LuCircleCheck } from 'react-icons/lu';
+import { LuMapPin, LuClock, LuCamera, LuCircleCheck, LuPlus, LuHourglass, LuCar, LuShieldAlert, LuTriangleAlert } from 'react-icons/lu';
 
 /**
  * DailyCallTableRow Component
@@ -28,25 +28,27 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 3. Jam In / Out */}
-      <td className="py-3 px-3 whitespace-nowrap font-mono">
-        <div className="text-emerald-600 font-semibold">In: {row.timeIn}</div>
-        <div className="text-on-surface-variant">Out: {row.timeOut}</div>
+      <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px]">
+        <div className="font-bold text-on-surface">{row.timeIn} - {row.timeOut}</div>
+        <div className="text-[10px] text-on-surface-variant flex items-center gap-1">
+          <LuClock className="text-[10px]" />
+          <span>{row.durationFormatted} ({row.durationMinutes}m)</span>
+        </div>
       </td>
 
       {/* 4. Durasi */}
-      <td className="py-3 px-3 whitespace-nowrap">
-        <div className="flex items-center gap-1">
-          <span className="font-mono font-bold text-on-surface">{row.durationFormatted}</span>
-          {row.isDurationAnomaly && (
-            <span
-              className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 text-[10px] font-black"
-              title="Kunjungan < 5 menit"
-            >
-              &lt; 5m
-            </span>
-          )}
-        </div>
-        <span className="text-[10px] text-on-surface-variant">({row.durationMinutes} menit)</span>
+      <td className="py-3 px-3 whitespace-nowrap text-center">
+        {row.isDurationAnomaly ? (
+          <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 text-[10px] font-bold border border-rose-500/20 inline-flex items-center gap-1">
+            <LuTriangleAlert className="text-xs" /> &lt; 5 Menit
+          </span>
+        ) : isActual ? (
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold">
+            Normal
+          </span>
+        ) : (
+          <span className="text-on-surface-variant font-mono">-</span>
+        )}
       </td>
 
       {/* 5. Customer Code & Name */}
@@ -58,13 +60,13 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           <span className="font-bold text-on-surface">{row.customerName}</span>
 
           {row.isExtraCall && (
-            <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 text-[9.5px] font-black">
-              ➕ Extra
+            <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 text-[9.5px] font-black inline-flex items-center gap-0.5">
+              <LuPlus className="text-[9px]" /> Extra
             </span>
           )}
           {row.isSkipped && (
-            <span className="px-1.5 py-0.2 rounded bg-gray-500/10 text-gray-600 text-[9.5px] font-black">
-              ⏳ Terlewat
+            <span className="px-1.5 py-0.2 rounded bg-gray-500/10 text-gray-600 text-[9.5px] font-black inline-flex items-center gap-0.5">
+              <LuHourglass className="text-[9px]" /> Terlewat
             </span>
           )}
         </div>
@@ -74,12 +76,13 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
         </div>
         {row.prevStopName && (
           <div
-            className={`text-[9.5px] font-mono mt-0.5 ${
+            className={`text-[9.5px] font-mono mt-0.5 flex items-center gap-1 ${
               row.isTravelAnomaly ? 'text-rose-600 font-black' : 'text-on-surface-variant'
             }`}
           >
-            🚗 Dari "{row.prevStopName}": {row.travelDistanceKm}km ({row.travelDurationFormatted})
-            {row.isTravelAnomaly && ' 🚨'}
+            <LuCar className="text-[10px] shrink-0" />
+            <span>Dari "{row.prevStopName}": {row.travelDistanceKm}km ({row.travelDurationFormatted})</span>
+            {row.isTravelAnomaly && <LuShieldAlert className="text-[10px] text-rose-600 shrink-0" />}
           </div>
         )}
       </td>
@@ -141,8 +144,9 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       {/* 9. Reason & Remark */}
       <td className="py-3 px-3 max-w-[170px]">
         {row.isTravelAnomaly && (
-          <div className="text-[10px] font-bold text-rose-700 leading-tight mb-0.5">
-            🚨 {row.travelAnomalyReason}
+          <div className="text-[10px] font-bold text-rose-700 leading-tight mb-0.5 flex items-center gap-1">
+            <LuShieldAlert className="text-[10px] shrink-0" />
+            <span>{row.travelAnomalyReason}</span>
           </div>
         )}
         {row.reason ? (
@@ -155,8 +159,9 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           </div>
         )}
         {row.earlyReason && (
-          <div className="text-[10px] text-amber-700 font-semibold truncate" title={row.earlyReason}>
-            ⚠️ {row.earlyReason}
+          <div className="text-[10px] text-amber-700 font-semibold truncate flex items-center gap-1" title={row.earlyReason}>
+            <LuTriangleAlert className="text-[10px] shrink-0" />
+            <span>{row.earlyReason}</span>
           </div>
         )}
       </td>
