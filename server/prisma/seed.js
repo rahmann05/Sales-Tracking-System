@@ -161,17 +161,6 @@ async function main() {
     },
   });
 
-  const opsUser = await prisma.user.upsert({
-    where: { email: 'ops@sinaranugrah.com' },
-    update: {},
-    create: {
-      id: 'usr-ops-1',
-      name: 'Bambang Suroso',
-      email: 'ops@sinaranugrah.com',
-      password: hashedPassword,
-      role: 'MANAJER_OPERASIONAL',
-    },
-  });
 
   const spvUser = await prisma.user.upsert({
     where: { email: 'spv@sinaranugrah.com' },
@@ -405,7 +394,7 @@ async function main() {
       subAreaKecamatan: 'Cimahi Utara',
       kelurahan: 'Cipageran',
       city: 'CIMAHI',
-      division: 'UNICHARM',
+      divisionName: 'UNICHARM',
       channel: 'GENERAL_TRADE',
       subChannel: 'TOKO_RETAIL',
       channelTier: 'BRONZE_C',
@@ -436,7 +425,7 @@ async function main() {
       subAreaKecamatan: 'Padalarang',
       kelurahan: 'Kertajaya',
       city: 'KAB. BANDUNG BARAT',
-      division: 'BELFOODS',
+      divisionName: 'BELFOODS',
       channel: 'MODERN_TRADE',
       subChannel: 'CHAIN_MINIMARKET',
       channelTier: 'SILVER',
@@ -466,7 +455,7 @@ async function main() {
       subAreaKecamatan: 'Lembang',
       kelurahan: 'Kayuambon',
       city: 'KAB. BANDUNG BARAT',
-      division: 'UNICHARM',
+      divisionName: 'UNICHARM',
       channel: 'GENERAL_TRADE',
       subChannel: 'GROSIR',
       channelTier: 'GOLD',
@@ -498,7 +487,7 @@ async function main() {
       subAreaKecamatan: 'Cimahi Selatan',
       kelurahan: 'Leuwigajah',
       city: 'CIMAHI',
-      division: 'GENERAL',
+      divisionName: 'GENERAL',
       channel: 'GENERAL_TRADE',
       subChannel: 'TOKO_RETAIL',
       channelTier: 'BRONZE_B',
@@ -511,11 +500,9 @@ async function main() {
       longitude: 107.5451,
       salesmanId: salesDedi.id,
       salesmanName: salesDedi.name,
-      registrationStatus: 'OPS_APPROVED',
+      registrationStatus: 'SPV_APPROVED',
       spvName: spvUser.name,
       spvApprovedAt: new Date(Date.now() - 86400000),
-      opsManagerName: opsUser.name,
-      opsApprovedAt: new Date(),
       createdAt: new Date(Date.now() - 86400000 * 2),
     },
     {
@@ -534,7 +521,7 @@ async function main() {
       subAreaKecamatan: 'Cimahi Utara',
       kelurahan: 'Cihanjuang',
       city: 'CIMAHI',
-      division: 'UNICHARM',
+      divisionName: 'UNICHARM',
       channel: 'MODERN_TRADE',
       subChannel: 'LOKAL_MINIMARKET',
       channelTier: 'SILVER',
@@ -549,8 +536,6 @@ async function main() {
       registrationStatus: 'REGISTERED_ACTIVE',
       spvName: spvUser.name,
       spvApprovedAt: new Date(Date.now() - 86400000 * 3),
-      opsManagerName: opsUser.name,
-      opsApprovedAt: new Date(Date.now() - 86400000 * 2),
       adminName: adminUser.name,
       adminRegisteredAt: new Date(Date.now() - 86400000),
       createdAt: new Date(Date.now() - 86400000 * 4),
@@ -567,7 +552,7 @@ async function main() {
       subAreaKecamatan: 'Padalarang',
       kelurahan: 'Ciburuy',
       city: 'KAB. BANDUNG BARAT',
-      division: 'UNICHARM',
+      divisionName: 'UNICHARM',
       channel: 'GENERAL_TRADE',
       subChannel: 'TOKO_RETAIL',
       paymentType: 'CASH',
@@ -591,7 +576,42 @@ async function main() {
     });
   }
 
-  console.log('[SUCCESS] Database seed completed with SPV team, attendance, visits, and customer registrations.');
+  // 6. Products / SKU
+  const productsData = [
+    { id: 'prod-bf-001', sku: 'SKU-BF-001', name: 'Belfoods Royal Nugget 500g', price: 48000, stock: 150, code: 'BF-RN500' },
+    { id: 'prod-bf-002', sku: 'SKU-BF-002', name: 'Belfoods Favorite Sosis Ayam 375g', price: 27500, stock: 200, code: 'BF-SA375' },
+    { id: 'prod-bf-003', sku: 'SKU-BF-003', name: 'Belfoods Uenak Nugget 250g', price: 19000, stock: 300, code: 'BF-UN250' },
+    { id: 'prod-bf-004', sku: 'SKU-BF-004', name: 'Belfoods Crispy Chicken 500g', price: 52000, stock: 120, code: 'BF-CC500' },
+    { id: 'prod-bf-005', sku: 'SKU-BF-005', name: 'Belfoods Bakso Ayam 500g', price: 32000, stock: 180, code: 'BF-BA500' },
+    { id: 'prod-uc-001', sku: 'SKU-UC-001', name: 'MamyPoko Pants Standar M34', price: 58000, stock: 250, code: 'MP-M34' },
+    { id: 'prod-uc-002', sku: 'SKU-UC-002', name: 'MamyPoko Pants Standar L30', price: 59500, stock: 220, code: 'MP-L30' },
+    { id: 'prod-uc-003', sku: 'SKU-UC-003', name: 'MamyPoko Pants Standar XL26', price: 62000, stock: 180, code: 'MP-XL26' },
+    { id: 'prod-uc-004', sku: 'SKU-UC-004', name: 'Charm Extra Comfort Wing 23cm', price: 18500, stock: 400, code: 'CH-EC23' },
+    { id: 'prod-uc-005', sku: 'SKU-UC-005', name: 'Lifree Popok Perekat M18', price: 95000, stock: 90, code: 'LF-M18' },
+  ];
+
+  for (const prod of productsData) {
+    await prisma.product.upsert({
+      where: { sku: prod.sku },
+      update: { name: prod.name, price: prod.price, stock: prod.stock, code: prod.code },
+      create: prod,
+    });
+  }
+
+  // ── Divisions (Dinamis) ──────────────────────────────────────────────────────
+  const divisionsBelfoods = await prisma.division.upsert({
+    where: { name: 'BELFOODS' },
+    update: { isActive: true },
+    create: { name: 'BELFOODS', code: 'BFI', isActive: true },
+  });
+  const divisionsMix = await prisma.division.upsert({
+    where: { name: 'MIX' },
+    update: { isActive: true },
+    create: { name: 'MIX', code: 'MIX', isActive: true },
+  });
+  console.log('[SEED] Divisions seeded:', divisionsBelfoods.name, divisionsMix.name);
+
+  console.log('[SUCCESS] Database seed completed with SPV team, attendance, visits, customer registrations, and products.');
 }
 
 main()

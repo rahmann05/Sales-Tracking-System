@@ -47,11 +47,11 @@ const selectStyle = {
  * Hari dikunci ke hari ini untuk semua role (tidak bisa ganti hari).
  * Rute digambar mengikuti jalan via backend proxy (Google Directions → fallback OSRM).
  * Sumber data: GET /clusters (jadwal mingguan hasil generate).
- * Opsi menampilkan cluster lain hanya diizinkan untuk Supervisor & Manager Operasional.
+ * Opsi menampilkan cluster lain hanya diizinkan untuk Supervisor & Admin.
  */
 export const ScheduleMap = ({ salesOptions = [], defaultSalesId = '' }) => {
   const { user } = useApp();
-  const isSupervisorOrManager = ['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'].includes(user?.role);
+  const isSupervisorOrManager = ['SUPERVISOR', 'ADMIN'].includes(user?.role);
 
   // Hari SELALU hari ini — tidak dapat diubah oleh role manapun
   const day = getTodayDayKey();

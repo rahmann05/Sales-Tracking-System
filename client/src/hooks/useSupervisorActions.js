@@ -26,7 +26,7 @@ export const useSupervisorActions = ({
       addNotification({
         title: approved ? 'Absen Toko Luar RJP TERVALIDASI' : 'Absen Toko Luar RJP DITOLAK',
         message: `Supervisor ${user.name} mengubah status validasi absen toko luar RJP menjadi ${status}.`,
-        roleTarget: ['SALES', 'MANAJER_OPERASIONAL', 'ADMIN'],
+        roleTarget: ['SALES', 'ADMIN'],
       });
     } catch (err) {
       console.warn('[API] Validate Off PJP error:', err.message);
@@ -37,7 +37,6 @@ export const useSupervisorActions = ({
       });
     }
   };
-
 
   // Supervisor Action: Skip Outlet
   const handleSupervisorSkipOutlet = async (incidentId) => {
@@ -58,7 +57,7 @@ export const useSupervisorActions = ({
       addNotification({
         title: 'Info Skip Toko (Dari SPV)',
         message: `Supervisor ${user.name} menyetujui pengelewatan (Skip) outlet karena ${incident.reason || 'kendala'}.`,
-        roleTarget: ['MANAJER_OPERASIONAL', 'ADMIN'],
+        roleTarget: ['SUPERVISOR', 'ADMIN'],
       });
     } catch (err) {
       console.warn('[API] Skip Outlet error:', err.message);
@@ -76,12 +75,8 @@ export const useSupervisorActions = ({
       const incident = incidents.find((i) => i.id === incidentId);
       if (!incident) return;
 
-      // SPV submits reroute, then immediately approves it if authorized
       const res = await routeChangesApi.reroute(incidentId, replacementOutletId, reason);
-      // Depending on backend role permissions, SPV might need to call approveReroute explicitly
-      // await routeChangesApi.approveReroute(incidentId);
-
-      const newStop = res.data; // assuming backend returns the created PjpStop
+      const newStop = res.data;
 
       if (newStop && setSalesStops) {
         setSalesStops((prev) => [
@@ -105,8 +100,8 @@ export const useSupervisorActions = ({
 
       addNotification({
         title: 'Rute Dialihkan Langsung oleh Supervisor',
-        message: `Supervisor ${user.name} mengalihkan kunjungan.`,
-        roleTarget: ['SALES', 'MANAJER_OPERASIONAL', 'ADMIN'],
+        message: `Supervisor ${user.name} mengalihkan kunjungan langsung ke toko pengganti.`,
+        roleTarget: ['SALES', 'ADMIN'],
       });
     } catch (err) {
       console.warn('[API] Direct Reroute error:', err.message);
@@ -139,7 +134,7 @@ export const useSupervisorActions = ({
       addNotification({
         title: approved ? 'Kunjungan Toko Luar RJP Disetujui' : 'Kunjungan Toko Luar RJP Ditolak',
         message: `Supervisor ${user.name} ${approved ? 'menyetujui' : 'menolak'} kunjungan toko luar RJP.`,
-        roleTarget: ['SALES', 'MANAJER_OPERASIONAL', 'ADMIN'],
+        roleTarget: ['SALES', 'ADMIN'],
       });
     } catch (err) {
       console.warn('[API] Approve Off PJP error:', err.message);
@@ -151,40 +146,9 @@ export const useSupervisorActions = ({
     }
   };
 
-  // Supervisor Action: Request Reroute requiring Ops Manager Approval
-  const handleSupervisorRequestReroute = async ({ incidentId, replacementOutletId, reason }) => {
-    try {
-      const incident = incidents.find((i) => i.id === incidentId);
-      if (!incident) return;
-
-      await routeChangesApi.reroute(incidentId, replacementOutletId, reason);
-
-      setIncidents((prev) =>
-        prev.map((i) =>
-          i.id === incidentId
-            ? {
-                ...i,
-                status: 'RESOLVED_REROUTE_PENDING_OPS',
-                rerouteReason: reason,
-                spvName: user.name,
-              }
-            : i
-        )
-      );
-
-      addNotification({
-        title: 'Permohonan Approval Perubahan Rute',
-        message: `SPV ${user.name} mengajukan pengalihan rute. Menunggu approval Manajer Operasional.`,
-        roleTarget: ['MANAJER_OPERASIONAL', 'ADMIN'],
-      });
-    } catch (err) {
-      console.warn('[API] Request Reroute error:', err.message);
-      addNotification({
-        title: 'Gagal Mengajukan Reroute',
-        message: err.message,
-        roleTarget: ['SUPERVISOR'],
-      });
-    }
+  // Supervisor Action: Reroute (diserahkan sepenuhnya ke SPV tanpa eskalasi Ops)
+  const handleSupervisorRequestReroute = async (payload) => {
+    return handleSupervisorDirectReroute(payload);
   };
 
   // Supervisor Action: Approve Unlock Request
@@ -236,6 +200,24 @@ export const useSupervisorActions = ({
     }
   };
 
+  // Supervisor Action: Create RJP Team
+  const handleCreateRjpTeam = async (payload) => {
+    addNotification({
+      title: 'Fitur Belum Tersedia',
+      message: 'Pembuatan Tim RJP saat ini harus melalui sinkronisasi database secara langsung.',
+      roleTarget: ['SUPERVISOR', 'ADMIN'],
+    });
+  };
+
+  // Supervisor Action: Create Master Route
+  const handleCreateMasterRoute = async (payload) => {
+    addNotification({
+      title: 'Fitur Belum Tersedia',
+      message: 'Pembuatan Master Route saat ini harus melalui sinkronisasi database secara langsung.',
+      roleTarget: ['SUPERVISOR', 'ADMIN'],
+    });
+  };
+
   return {
     handleSupervisorValidateOffPJP,
     handleSupervisorSkipOutlet,
@@ -244,5 +226,7 @@ export const useSupervisorActions = ({
     handleSupervisorRequestReroute,
     handleApproveUnlockRequest,
     handleRejectUnlockRequest,
+    handleCreateRjpTeam,
+    handleCreateMasterRoute,
   };
 };

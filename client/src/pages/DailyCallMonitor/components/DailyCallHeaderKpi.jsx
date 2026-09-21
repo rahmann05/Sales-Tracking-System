@@ -29,62 +29,62 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
   const actualRate = totalPlanCalls > 0 ? Math.round((totalActualCalls / totalPlanCalls) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
       {/* 1. Plan vs Actual Calls */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs text-on-surface-variant font-semibold">Total Kunjungan</span>
-          <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
             <LuPhoneCall className="text-base" />
           </div>
         </div>
         <div className="flex items-baseline justify-between">
-          <div className="text-xl md:text-2xl font-black text-on-surface">
+          <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
             {totalActualCalls} <span className="text-xs font-normal text-on-surface-variant">/ {totalPlanCalls} Plan</span>
           </div>
-          <span className="text-xs font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-lg">
+          <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
             {actualRate}%
           </span>
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0">Realisasi Call Plan Hari Ini</p>
+        <p className="text-[11px] text-on-surface-variant m-0 truncate">Realisasi Call Plan Hari Ini</p>
       </div>
 
       {/* 2. Effective Calls (EC) */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs text-on-surface-variant font-semibold">Effective Call (EC)</span>
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
             <LuCircleCheck className="text-base" />
           </div>
         </div>
         <div className="flex items-baseline justify-between">
-          <div className="text-xl md:text-2xl font-black text-emerald-600">
+          <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
             {totalEffectiveCalls} <span className="text-xs font-normal text-on-surface-variant">Toko Order</span>
           </div>
-          <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+          <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
             {effectiveCallRate}
           </span>
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0">Kunjungan yang menghasilkan transaksi</p>
+        <p className="text-[11px] text-on-surface-variant m-0 truncate">Kunjungan transaksi berhasil</p>
       </div>
 
       {/* 3. Omzet Order of The Day */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs text-on-surface-variant font-semibold">Order Of The Day</span>
-          <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
             <LuShoppingBag className="text-base" />
           </div>
         </div>
         <div className="flex items-baseline justify-between">
-          <div className="text-lg md:text-xl font-black text-on-surface">
+          <div className="text-lg md:text-xl font-black text-on-surface tracking-tight">
             Rp {(totalOrderAmount || 0).toLocaleString('id-ID')}
           </div>
-          <span className="text-xs font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded-lg">
+          <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
             {totalSkuSold} SKU
           </span>
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0">Rata-rata durasi: {avgDurationMinutes} Menit</p>
+        <p className="text-[11px] text-on-surface-variant m-0 truncate">Rata-rata durasi: {avgDurationMinutes} Menit</p>
       </div>
 
       {/* 4. Monitoring Anomali */}
@@ -93,41 +93,29 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
         role="button"
         tabIndex={0}
         title="Klik untuk membuka Tabel Khusus Audit Absensi Janggal"
-        className={`border rounded-2xl p-4 shadow-sm space-y-2 cursor-pointer transition-all hover:scale-[1.01] ${
-          totalAnomalies > 0
-            ? 'bg-rose-500/5 border-rose-500/30 hover:bg-rose-500/10'
-            : 'bg-surface border-border-glass hover:bg-surface-container'
-        }`}
+        className="bg-surface border border-border-glass hover:bg-surface-container rounded-2xl p-4 shadow-xs space-y-2 cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between"
       >
         <div className="flex items-center justify-between">
           <span className="text-xs text-on-surface-variant font-semibold">Peringatan & Anomali</span>
-          <div
-            className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-              totalAnomalies > 0 ? 'bg-rose-500/15 text-rose-600' : 'bg-emerald-500/10 text-emerald-600'
-            }`}
-          >
+          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
             <FiAlertTriangle className="text-base" />
           </div>
         </div>
         <div className="flex items-baseline justify-between">
-          <div
-            className={`text-xl md:text-2xl font-black ${
-              totalAnomalies > 0 ? 'text-rose-600' : 'text-emerald-600'
-            }`}
-          >
+          <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
             {totalAnomalies} <span className="text-xs font-normal text-on-surface-variant">Kasus</span>
           </div>
           {totalAnomalies > 0 ? (
-            <span className="text-xs font-bold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg">
               Perlu Evaluasi &rarr;
             </span>
           ) : (
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold text-on-surface-variant bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               Normal
             </span>
           )}
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0">
+        <p className="text-[11px] text-on-surface-variant m-0 truncate">
           Durasi &lt; 5m: {totalDurationAnomalies} • Jarak &gt; 50m: {totalDistanceAnomalies}
         </p>
       </div>

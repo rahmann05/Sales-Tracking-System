@@ -9,7 +9,7 @@ import { LuFileText, LuInbox } from 'react-icons/lu';
 export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) => {
   if (isLoading) {
     return (
-      <div className="bg-surface border border-border-glass rounded-2xl p-12 text-center shadow-sm space-y-3">
+      <div className="p-12 text-center space-y-3">
         <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-xs text-on-surface-variant font-semibold">
           Memuat data rekapitulasi Daily Call...
@@ -20,7 +20,7 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
 
   if (!rows || rows.length === 0) {
     return (
-      <div className="bg-surface border border-border-glass rounded-2xl p-12 text-center shadow-sm space-y-3">
+      <div className="p-12 text-center space-y-3">
         <LuInbox className="text-4xl text-on-surface-variant/40 mx-auto" />
         <h4 className="text-sm font-bold text-on-surface">Tidak Ada Data Kunjungan</h4>
         <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
@@ -31,7 +31,7 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
   }
 
   return (
-    <div className="bg-surface border border-border-glass rounded-2xl shadow-sm overflow-hidden">
+    <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>

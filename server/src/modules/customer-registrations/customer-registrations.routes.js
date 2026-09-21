@@ -9,10 +9,10 @@ const router = express.Router();
 
 router.use(authenticate);
 
-// 1. Submit new registration (Sales, SPV, Ops, Admin)
+// 1. Submit new registration (Sales, SPV, Admin)
 router.post(
   '/',
-  authorize(ROLES.SALES, ROLES.SUPERVISOR, ROLES.MANAJER_OPERASIONAL, ROLES.ADMIN),
+  authorize(ROLES.SALES, ROLES.SUPERVISOR, ROLES.ADMIN),
   validate(schema.createRegistrationSchema),
   controller.createRegistration
 );
@@ -33,26 +33,26 @@ router.get(
 // 3. Get single registration by ID
 router.get('/:id', controller.getRegistrationById);
 
-// 4. Approve (Supervisor, Ops Manager, Admin)
+// 4. Approve (Supervisor, Admin)
 router.patch(
   '/:id/approve',
-  authorize(ROLES.SUPERVISOR, ROLES.MANAJER_OPERASIONAL, ROLES.ADMIN),
+  authorize(ROLES.SUPERVISOR, ROLES.ADMIN),
   validate(schema.approveRegistrationSchema),
   controller.approveRegistration
 );
 
-// 5. Reject (Supervisor, Ops Manager, Admin)
+// 5. Reject (Supervisor, Admin)
 router.patch(
   '/:id/reject',
-  authorize(ROLES.SUPERVISOR, ROLES.MANAJER_OPERASIONAL, ROLES.ADMIN),
+  authorize(ROLES.SUPERVISOR, ROLES.ADMIN),
   validate(schema.rejectRegistrationSchema),
   controller.rejectRegistration
 );
 
-// 6. Finalize & register active outlet (Admin, Ops Manager)
+// 6. Finalize & register active outlet (Supervisor, Admin)
 router.post(
   '/:id/finalize',
-  authorize(ROLES.ADMIN, ROLES.MANAJER_OPERASIONAL),
+  authorize(ROLES.ADMIN, ROLES.SUPERVISOR),
   validate(schema.finalizeRegistrationSchema),
   controller.finalizeAndRegister
 );

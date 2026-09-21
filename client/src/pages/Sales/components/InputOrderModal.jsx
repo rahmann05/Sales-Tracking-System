@@ -43,9 +43,12 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
     }
 
     const itemsPayload = orderItems.map((item) => ({
+      productId: item.product.id,
       productName: item.product.name,
+      quantity: item.qty,
       qty: item.qty,
       price: item.product.price,
+      unitPrice: item.product.price,
       subtotal: item.product.price * item.qty,
     }));
 

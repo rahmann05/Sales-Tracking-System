@@ -150,7 +150,7 @@ export const useSalesActions = ({
       addNotification({
         title: 'Laporan Toko Tutup Masuk',
         message: `Sales ${user.name} melaporkan bahwa toko tutup. Alasan: ${reason}.`,
-        roleTarget: ['SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'],
+        roleTarget: ['SUPERVISOR', 'ADMIN'],
       });
     } catch (err) {
       console.warn('[API] Report closed sync error:', err.message);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 /**
  * Custom Hook: useRouteFilter
@@ -9,19 +9,33 @@ export function useRouteFilter(initialRoutes = []) {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [query, setQuery] = useState('');
 
+  // Keep internal routes state synchronized when initialRoutes changes
+  useEffect(() => {
+    setRoutes(initialRoutes);
+  }, [initialRoutes]);
+
   const filterByStatus = useCallback((status) => {
     setFilterStatus(status);
   }, []);
 
   const filteredRoutes = useMemo(() => {
-    return routes.filter((route) => {
+    const q = (query || '').toLowerCase().trim();
+    return (routes || []).filter((route) => {
+      const name = String(route.name || '').toLowerCase();
+      const id = String(route.id || '').toLowerCase();
+      const repName = String(route.repName || '').toLowerCase();
+      const region = String(route.region || '').toLowerCase();
+
       const matchesQuery =
-        route.name.toLowerCase().includes(query.toLowerCase()) ||
-        route.id.toLowerCase().includes(query.toLowerCase()) ||
-        route.repName.toLowerCase().includes(query.toLowerCase());
+        !q ||
+        name.includes(q) ||
+        id.includes(q) ||
+        repName.includes(q) ||
+        region.includes(q);
 
       const matchesStatus =
-        filterStatus === 'ALL' || route.status.toUpperCase() === filterStatus.toUpperCase();
+        filterStatus === 'ALL' ||
+        String(route.status || '').toUpperCase() === filterStatus.toUpperCase();
 
       return matchesQuery && matchesStatus;
     });
@@ -37,3 +51,4 @@ export function useRouteFilter(initialRoutes = []) {
     filterByStatus,
   };
 }
+

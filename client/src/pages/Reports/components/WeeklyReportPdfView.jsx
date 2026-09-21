@@ -226,11 +226,11 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
           </div>
 
           <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Disetujui Oleh (Manajemen),</span>
+            <span className="text-gray-500 font-bold block mb-12">Disetujui Oleh (Admin Penjualan),</span>
             <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( Bambang Suroso / Maria Ulfah )
+              ( Maria Ulfah )
             </div>
-            <span className="text-[8.5px] text-gray-500">Manajer Operasional / Admin</span>
+            <span className="text-[8.5px] text-gray-500">Admin Penjualan</span>
           </div>
         </div>
       </div>

@@ -8,6 +8,12 @@ import {
     REPORTS_ROLES,
     OUTLET_VALIDATION_ROLES,
     ROLES,
+    OUTLET_REGISTRATION_ROLES,
+    OUTLET_APPROVAL_ROLES,
+    OUTLET_REGISTRATION_REPORT_ROLES,
+    DAILY_CALL_ROLES,
+    DELIVERY_MANAGEMENT_ROLES,
+    DELIVERY_FIELD_ROLES,
 } from '../constants/roles';
 
 import { DashboardPage } from '../pages/Dashboard/DashboardPage';
@@ -18,19 +24,20 @@ import { ReportsPage } from '../pages/Reports/ReportsPage';
 import { SalesPage } from '../pages/Sales/SalesPage';
 import { SupervisorPage } from '../pages/Supervisor/SupervisorPage';
 import { AdminApprovalPage } from '../pages/Admin/AdminApprovalPage';
-import { OpsManagerPage } from '../pages/OpsManager/OpsManagerPage';
-import { OutletValidationPage } from '../pages/OpsManager/OutletValidationPage';
+import { OutletValidationPage } from '../pages/OutletValidation/OutletValidationPage';
 import { OutletManagementPage } from '../pages/OutletManagement/OutletManagementPage';
 import { OutletRegistrationPage } from '../pages/OutletRegistration/OutletRegistrationPage';
 import { OutletApprovalPage } from '../pages/OutletApproval/OutletApprovalPage';
 import { OutletRegistrationReportPage } from '../pages/OutletRegistrationReport/OutletRegistrationReportPage';
 import { DailyCallMonitorPage } from '../pages/DailyCallMonitor/DailyCallMonitorPage';
-import { 
-    OUTLET_REGISTRATION_ROLES,
-    OUTLET_APPROVAL_ROLES,
-    OUTLET_REGISTRATION_REPORT_ROLES,
-    DAILY_CALL_ROLES,
-} from '../constants/roles';
+
+// Delivery Management Pages
+import { WarehousePage } from '../pages/Warehouse/WarehousePage';
+import { DriverPage } from '../pages/Driver/DriverPage';
+import { PackingListManager } from '../pages/Warehouse/components/PackingListManager';
+import { DeliveryRouteBuilder } from '../pages/Warehouse/components/DeliveryRouteBuilder';
+import { DeliveryMonitor } from '../pages/Warehouse/components/DeliveryMonitor';
+import { DriverRouteMap } from '../pages/Driver/components/DriverRouteMap';
 
 /**
  * RoleWorkspace Component
@@ -44,8 +51,10 @@ const RoleWorkspace = ({ role }) => {
             return <SupervisorPage />;
         case ROLES.ADMIN:
             return <AdminApprovalPage />;
-        case ROLES.MANAJER_OPERASIONAL:
-            return <OpsManagerPage />;
+        case ROLES.KEPALA_GUDANG:
+            return <WarehousePage />;
+        case ROLES.SUPIR:
+            return <DriverPage />;
         default:
             return <SalesPage />;
     }
@@ -60,7 +69,7 @@ const ACCESS_CONTROL = {
         roles: ROUTE_PLANNING_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
         description:
-            'Halaman Jadwal Master RJP hanya dapat diakses oleh Sales Field, Supervisor, dan Manajer Operasional.',
+            'Halaman Jadwal Master RJP hanya dapat diakses oleh Sales Field, Supervisor, dan Admin.',
     },
     [TAB_IDS.OUTLET_REGISTRATION]: {
         roles: OUTLET_REGISTRATION_ROLES,
@@ -70,12 +79,12 @@ const ACCESS_CONTROL = {
     [TAB_IDS.OUTLET_APPROVAL]: {
         roles: OUTLET_APPROVAL_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
-        description: 'Halaman Persetujuan Outlet hanya dapat diakses oleh Supervisor dan Manajer Operasional.',
+        description: 'Halaman Persetujuan Outlet hanya dapat diakses oleh Supervisor dan Admin.',
     },
     [TAB_IDS.OUTLET_REGISTRATION_REPORT]: {
         roles: OUTLET_REGISTRATION_REPORT_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
-        description: 'Halaman Laporan Registrasi Outlet hanya dapat diakses oleh Admin dan Manajer Operasional.',
+        description: 'Halaman Laporan Registrasi Outlet hanya dapat diakses oleh Supervisor dan Admin.',
     },
     [TAB_IDS.DAILY_CALL_MONITOR]: {
         roles: DAILY_CALL_ROLES,
@@ -88,9 +97,9 @@ const ACCESS_CONTROL = {
         description: 'Halaman Tim dan RJP hanya dapat diakses oleh pengguna terdaftar.',
     },
     [TAB_IDS.OUTLET_MANAGEMENT]: {
-        roles: ['ADMIN', 'MANAJER_OPERASIONAL', 'OPERATIONAL_MANAGER'],
+        roles: ['ADMIN', 'SUPERVISOR'],
         title: 'Akses Dibatasi (Access Denied)',
-        description: 'Halaman Kelola Master Outlet hanya dapat diakses oleh Manajer Operasional atau Admin.',
+        description: 'Halaman Kelola Master Outlet hanya dapat diakses oleh Supervisor atau Admin.',
     },
     [TAB_IDS.REPORTS]: {
         roles: REPORTS_ROLES,
@@ -101,13 +110,34 @@ const ACCESS_CONTROL = {
     [TAB_IDS.OUTLET_VALIDATION]: {
         roles: OUTLET_VALIDATION_ROLES,
         title: 'Akses Dibatasi (Access Denied)',
-        description: 'Fitur Validasi Outlet hanya dapat diakses oleh Manajer Operasional.',
+        description: 'Fitur Validasi Outlet dapat diakses oleh Supervisor dan Admin.',
     },
     [TAB_IDS.CREATE_CLUSTER]: {
-        roles: ['ADMIN', 'MANAJER_OPERASIONAL'],
+        roles: ['ADMIN', 'SUPERVISOR'],
         title: 'Akses Dibatasi (Access Denied)',
         description:
-            'Hanya Admin atau Manajer Operasional yang dapat membuat cluster baru.',
+            'Hanya Admin atau Supervisor yang dapat membuat cluster baru.',
+    },
+    // Delivery Management Access Control
+    [TAB_IDS.DELIVERY_PACKING_LIST]: {
+        roles: [...DELIVERY_MANAGEMENT_ROLES],
+        title: 'Akses Dibatasi',
+        description: 'Halaman Packing List hanya dapat diakses oleh Kepala Gudang.',
+    },
+    [TAB_IDS.DELIVERY_ROUTES]: {
+        roles: [...DELIVERY_MANAGEMENT_ROLES],
+        title: 'Akses Dibatasi',
+        description: 'Halaman Rute Pengiriman hanya dapat diakses oleh Kepala Gudang.',
+    },
+    [TAB_IDS.DELIVERY_MONITOR]: {
+        roles: [...DELIVERY_MANAGEMENT_ROLES],
+        title: 'Akses Dibatasi',
+        description: 'Halaman Monitor Pengiriman hanya dapat diakses oleh Kepala Gudang.',
+    },
+    [TAB_IDS.DELIVERY_DRIVER_MAP]: {
+        roles: [...DELIVERY_FIELD_ROLES],
+        title: 'Akses Dibatasi',
+        description: 'Halaman Peta Pengiriman hanya dapat diakses oleh Supir.',
     },
 };
 
@@ -168,6 +198,17 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             return <Interactive><ReportsPage searchQuery={searchQuery} /></Interactive>;
         case TAB_IDS.OUTLET_VALIDATION:
             return <Interactive><OutletValidationPage /></Interactive>;
+
+        // Delivery Management Tabs
+        case TAB_IDS.DELIVERY_PACKING_LIST:
+            return <Interactive><PackingListManager /></Interactive>;
+        case TAB_IDS.DELIVERY_ROUTES:
+            return <Interactive><DeliveryRouteBuilder /></Interactive>;
+        case TAB_IDS.DELIVERY_MONITOR:
+            return <Interactive><DeliveryMonitor /></Interactive>;
+        case TAB_IDS.DELIVERY_DRIVER_MAP:
+            return <Interactive><DriverRouteMap /></Interactive>;
+
         default:
             return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
     }

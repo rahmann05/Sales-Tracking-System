@@ -54,11 +54,11 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
 
   describe('authorize Middleware', () => {
     it('should grant access when user has matching role', () => {
-      const req = { user: { role: 'MANAJER_OPERASIONAL' } };
+      const req = { user: { role: 'SUPERVISOR' } };
       const res = {};
       let nextCalled = false;
 
-      const authMiddleware = authorize('ADMIN', 'MANAJER_OPERASIONAL');
+      const authMiddleware = authorize('ADMIN', 'SUPERVISOR');
       authMiddleware(req, res, (err) => {
         if (!err) nextCalled = true;
       });
@@ -71,7 +71,7 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
       const res = {};
       let caughtError = null;
 
-      const authMiddleware = authorize('SUPERVISOR', 'MANAJER_OPERASIONAL');
+      const authMiddleware = authorize('ADMIN', 'SUPERVISOR');
       authMiddleware(req, res, (err) => {
         caughtError = err;
       });

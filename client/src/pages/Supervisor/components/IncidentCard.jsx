@@ -4,51 +4,51 @@ import { FiAlertCircle } from 'react-icons/fi';
 
 /**
  * IncidentCard Component
- * Single Responsibility: Individual Closed Outlet Incident Row for SPV in a full-width 1-row layout.
+ * Single Responsibility: Symmetrical, Apple-Editorial closed outlet incident row for Supervisor.
  */
 export const IncidentCard = ({ incident, onHandleIncident }) => {
   return (
-    <div className="bg-surface border border-border-glass rounded-2xl p-5 shadow-sm hover:border-primary/30 transition-all w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="bg-surface border border-border-glass rounded-2xl p-4 sm:p-5 shadow-xs hover:border-border-glass/80 transition-all w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
       {/* Left: Thumbnail & Info */}
       <div className="flex items-start gap-4 flex-1 min-w-0">
         {/* Photo Proof */}
         {incident.photoUrl && (
-          <div className="relative rounded-xl overflow-hidden aspect-video border border-border-glass w-28 md:w-36 shrink-0 bg-surface-variant/40 shadow-inner">
+          <div className="relative rounded-xl overflow-hidden aspect-video border border-border-glass w-24 sm:w-32 shrink-0 bg-surface-container shadow-inner">
             <img src={incident.photoUrl} alt="Bukti Tutup" className="w-full h-full object-cover" />
           </div>
         )}
 
         <div className="space-y-1.5 flex-1 min-w-0">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 uppercase">
-              {incident.reason}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface border border-border-glass uppercase tracking-wider">
+              {incident.reason || 'KENDALA TOKO'}
             </span>
             <span
-              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                 incident.status === 'PENDING_SPV'
-                  ? 'bg-amber-500/10 text-amber-600'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200/60'
                   : incident.status === 'RESOLVED_SKIP'
-                  ? 'bg-emerald-500/10 text-emerald-600'
-                  : 'bg-blue-500/10 text-blue-600'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200/60'
+                  : 'bg-surface-container text-on-surface border-border-glass'
               }`}
             >
-              {incident.status}
+              {incident.status === 'PENDING_SPV' ? 'Menunggu Keputusan' : incident.status}
             </span>
             <span className="text-xs font-mono text-on-surface-variant flex items-center gap-1">
-              <LuClock className="text-xs text-primary" />
+              <LuClock className="text-xs text-on-surface-variant" />
               {incident.reportedAt}
             </span>
           </div>
 
-          <h4 className="font-bold text-on-surface text-base tracking-tight">{incident.outletName}</h4>
-          <p className="text-xs text-on-surface-variant flex items-center gap-1">
-            <LuMapPin className="text-primary text-xs shrink-0" />
-            <span>{incident.address || 'Bandung Barat'}</span>
+          <h4 className="font-bold text-on-surface text-sm sm:text-base tracking-tight m-0">{incident.outletName}</h4>
+          <p className="text-xs text-on-surface-variant flex items-center gap-1 m-0">
+            <LuMapPin className="text-on-surface-variant text-xs shrink-0" />
+            <span className="truncate">{incident.address || 'Bandung Barat'}</span>
           </p>
 
-          <p className="text-xs text-on-surface flex items-center gap-1.5 pt-0.5">
-            <LuUser className="text-xs text-primary shrink-0" />
-            <span>Dilaporkan oleh Sales: <strong className="font-semibold">{incident.salesName}</strong></span>
+          <p className="text-xs text-on-surface flex items-center gap-1.5 m-0 pt-0.5">
+            <LuUser className="text-xs text-on-surface-variant shrink-0" />
+            <span>Dilaporkan oleh: <strong className="font-semibold">{incident.salesName}</strong></span>
           </p>
         </div>
       </div>
@@ -59,16 +59,16 @@ export const IncidentCard = ({ incident, onHandleIncident }) => {
           <button
             type="button"
             onClick={() => onHandleIncident(incident)}
-            className="px-5 py-2.5 bg-primary text-on-primary font-semibold text-xs rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-sm"
+            className="w-full sm:w-auto px-4 py-2.5 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
           >
-            <FiAlertCircle className="text-base" />
-            <span>Ambil Keputusan SPV (Skip vs Reroute)</span>
+            <FiAlertCircle className="text-sm shrink-0" />
+            <span>Ambil Keputusan (Skip vs Reroute)</span>
           </button>
         ) : (
-          <div className="text-xs text-on-surface-variant italic bg-surface-variant/30 px-3 py-2 rounded-xl text-center border border-border-glass">
+          <div className="text-xs text-on-surface-variant bg-surface-container/60 px-3.5 py-2 rounded-xl text-center border border-border-glass">
             {incident.status === 'RESOLVED_SKIP'
-              ? 'Instruksi Skip disetujui SPV (Manajer Ter-notifikasi)'
-              : `Reroute diajukan (${incident.newOutletName || 'Toko Pengganti'})`}
+              ? 'Instruksi Skip disetujui SPV'
+              : `Reroute disetujui SPV (${incident.newOutletName || 'Toko Pengganti'})`}
           </div>
         )}
       </div>

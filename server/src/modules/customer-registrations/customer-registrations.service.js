@@ -367,11 +367,11 @@ export const createRegistration = async (data, currentUser) => {
     data: cleanData,
   });
 
-  // Kirim notifikasi ke SPV dan Manajer Operasional
+  // Kirim notifikasi ke SPV dan Admin
   try {
     const managers = await prisma.user.findMany({
       where: {
-        role: { in: [ROLES.SUPERVISOR, ROLES.MANAJER_OPERASIONAL, ROLES.ADMIN] },
+        role: { in: [ROLES.SUPERVISOR, ROLES.ADMIN] },
         deletedAt: null,
       },
     });
@@ -471,7 +471,6 @@ export const getRegistrations = async (query = {}, currentUser) => {
     TOTAL: total,
     SUBMITTED: 0,
     SPV_APPROVED: 0,
-    OPS_APPROVED: 0,
     REGISTERED_ACTIVE: 0,
     REJECTED: 0,
   };
@@ -510,23 +509,18 @@ export const approveRegistration = async (id, note, currentUser) => {
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
   const isSupervisor = currentUser.role === ROLES.SUPERVISOR;
-  const isOpsManager = currentUser.role === ROLES.MANAJER_OPERASIONAL;
   const isAdmin = currentUser.role === ROLES.ADMIN;
 
-  if (!isSupervisor && !isOpsManager && !isAdmin) {
+  if (!isSupervisor && !isAdmin) {
     throw new AppError('Anda tidak memiliki wewenang untuk menyetujui pengajuan ini', 403);
   }
 
-  const updateData = {};
-  if (isSupervisor) {
-    updateData.spvName = currentUser.name;
-    updateData.spvApprovedAt = new Date();
-    updateData.registrationStatus = 'SPV_APPROVED';
-  } else if (isOpsManager || isAdmin) {
-    updateData.opsManagerName = currentUser.name;
-    updateData.opsApprovedAt = new Date();
-    updateData.registrationStatus = 'OPS_APPROVED';
-  }
+  const updateData = {
+    spvId: currentUser.id,
+    spvName: currentUser.name,
+    spvApprovedAt: new Date(),
+    registrationStatus: 'SPV_APPROVED',
+  };
 
   const updated = await prisma.customerRegistration.update({
     where: { id },
@@ -558,10 +552,9 @@ export const rejectRegistration = async (id, reason, currentUser) => {
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
   const isSupervisor = currentUser.role === ROLES.SUPERVISOR;
-  const isOpsManager = currentUser.role === ROLES.MANAJER_OPERASIONAL;
   const isAdmin = currentUser.role === ROLES.ADMIN;
 
-  if (!isSupervisor && !isOpsManager && !isAdmin) {
+  if (!isSupervisor && !isAdmin) {
     throw new AppError('Anda tidak memiliki wewenang untuk menolak pengajuan ini', 403);
   }
 
@@ -591,13 +584,12 @@ export const rejectRegistration = async (id, reason, currentUser) => {
 };
 
 /**
- * 6. Finalize and Register Active Outlet (Admin)
- * Aturan: Jika sudah disetujui salah satu (SPV_APPROVED atau OPS_APPROVED) atau Admin langsung,
- * Admin dapat memprosesnya untuk langsung disimpan di tabel Outlet aktif!
+ * 6. Finalize and Register Active Outlet (Supervisor or Admin)
+ * Aturan: Jika sudah disetujui (SPV_APPROVED), Supervisor atau Admin dapat mendaftarkan outlet ke sistem aktif.
  */
 export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
-  if (currentUser.role !== ROLES.ADMIN && currentUser.role !== ROLES.MANAJER_OPERASIONAL) {
-    throw new AppError('Hanya Admin atau Manajer Operasional yang dapat mendaftarkan outlet ke sistem aktif', 403);
+  if (currentUser.role !== ROLES.ADMIN && currentUser.role !== ROLES.SUPERVISOR) {
+    throw new AppError('Hanya Admin atau Supervisor yang dapat mendaftarkan outlet ke sistem aktif', 403);
   }
 
   const registration = await prisma.customerRegistration.findUnique({ where: { id } });

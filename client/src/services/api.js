@@ -136,6 +136,34 @@ export const ordersApi = {
   },
 };
 
+// ─── 4b. Products API ─────────────────────────────────────────────────────────
+export const productsApi = {
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/products${query ? `?${query}` : ''}`);
+  },
+  getById: async (id) => {
+    return await request(`/products/${id}`);
+  },
+  create: async (data) => {
+    return await request('/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (id, data) => {
+    return await request(`/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+  remove: async (id) => {
+    return await request(`/products/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 // ─── 5. Outlets & Lock/Unlock API ─────────────────────────────────────────────
 export const outletsApi = {
   getAll: async (params = {}) => {
@@ -299,6 +327,9 @@ export const usersApi = {
     const query = new URLSearchParams(params).toString();
     return await request(`/users${query ? `?${query}` : ''}`);
   },
+  getUsers: async (params = {}) => {
+    return await usersApi.getAll(params);
+  },
   getById: async (id) => {
     return await request(`/users/${id}`);
   },
@@ -342,6 +373,7 @@ export const vehiclesApi = {
   create: async (data) => request('/vehicles', { method: 'POST', body: JSON.stringify(data) }),
   update: async (id, data) => request(`/vehicles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: async (id) => request(`/vehicles/${id}`, { method: 'DELETE' }),
+  recordMaintenance: async (id, data) => request(`/vehicles/${id}/maintenance`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ─── 11. Config API ───────────────────────────────────────────────────────────
@@ -441,4 +473,93 @@ export const reportsApi = {
     return await request(`/reports/dashboard${query ? `?${query}` : ''}`);
   },
 };
+// ─── 15. Divisions API ──────────────────────────────────────────────────────
+export const divisionsApi = {
+  getAll: async ({ includeInactive = false } = {}) => {
+    const query = includeInactive ? '?includeInactive=true' : '';
+    return await request(`/divisions${query}`);
+  },
+  create: async ({ name, code }) => {
+    return await request('/divisions', {
+      method: 'POST',
+      body: JSON.stringify({ name, code }),
+    });
+  },
+  update: async (id, data) => {
+    return await request(`/divisions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id) => {
+    return await request(`/divisions/${id}`, { method: 'DELETE' });
+  },
+};
 
+// ─── 16. Delivery Management API ─────────────────────────────────────────────
+export const deliveryApi = {
+  // Packing Lists
+  getPackingLists: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/delivery/packing-lists${query ? `?${query}` : ''}`);
+  },
+  getPackingListById: async (id) => {
+    return await request(`/delivery/packing-lists/${id}`);
+  },
+  createPackingList: async (data) => {
+    return await request('/delivery/packing-lists', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  deletePackingList: async (id) => {
+    return await request(`/delivery/packing-lists/${id}`, { method: 'DELETE' });
+  },
+
+  // Delivery Routes
+  getDeliveryRoutes: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/delivery/routes${query ? `?${query}` : ''}`);
+  },
+  getDeliveryRouteById: async (id) => {
+    return await request(`/delivery/routes/${id}`);
+  },
+  createDeliveryRoute: async (data) => {
+    return await request('/delivery/routes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateRouteStatus: async (id, status) => {
+    return await request(`/delivery/routes/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+  deleteDeliveryRoute: async (id) => {
+    return await request(`/delivery/routes/${id}`, { method: 'DELETE' });
+  },
+
+  // Driver Attendance
+  submitDriverAttendance: async (stopId, data) => {
+    return await request(`/delivery/stops/${stopId}/attendance`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateStopStatus: async (stopId, data) => {
+    return await request(`/delivery/stops/${stopId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Dashboard & Utility
+  getDashboard: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return await request(`/delivery/dashboard${query ? `?${query}` : ''}`);
+  },
+  getDrivers: async () => {
+    return await request('/delivery/drivers');
+  },
+};

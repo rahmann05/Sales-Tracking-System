@@ -78,31 +78,44 @@ export const submitReroute = async (supervisorId, requestId, replacementOutletId
   if (!replacementOutlet || replacementOutlet.deletedAt) {
     throw new AppError('Outlet pengganti tidak ditemukan', 404);
   }
+  const maxSeq = Math.max(...(request.pjp?.stops?.map((s) => s.sequence) || [0]), 0);
 
-  const updatedRequest = await prisma.routeChangeRequest.update({
-    where: { id: requestId },
-    data: {
-      type: ROUTE_CHANGE_TYPE.REROUTE,
-      handledBy: supervisorId,
-      replacementOutletId,
-      status: ROUTE_CHANGE_STATUS.PENDING_APPROVAL,
-    },
-    include: { replacementOutlet: true },
-  });
+  const [updatedRequest, newPjpStop] = await prisma.$transaction([
+    prisma.routeChangeRequest.update({
+      where: { id: requestId },
+      data: {
+        type: ROUTE_CHANGE_TYPE.REROUTE,
+        handledBy: supervisorId,
+        approvedBy: supervisorId,
+        replacementOutletId,
+        status: ROUTE_CHANGE_STATUS.APPROVED,
+      },
+      include: { replacementOutlet: true },
+    }),
+    prisma.pjpStop.create({
+      data: {
+        pjpId: request.pjpId,
+        outletId: replacementOutletId,
+        sequence: maxSeq + 1,
+        status: 'PENDING',
+      },
+      include: { outlet: true },
+    }),
+  ]);
 
-  await createBulkNotificationByRoles(
-    [ROLES.MANAJER_OPERASIONAL],
-    NOTIFICATION_TYPES.REROUTE_APPROVAL_REQUIRED,
-    'Permintaan Approval Reroute',
-    `Supervisor mengajukan pengalihan rute dari outlet "${request.pjpStop.outlet.name}" ke "${replacementOutlet.name}". Perlu persetujuan Anda.`,
-    { routeChangeRequestId: updatedRequest.id }
+  await createNotification(
+    request.reportedBy,
+    NOTIFICATION_TYPES.REROUTE_APPROVED,
+    'Perubahan Rute Disetujui',
+    `Reroute ke outlet "${replacementOutlet.name}" disetujui oleh Supervisor dan ditambahkan ke rute Anda.`,
+    { pjpId: request.pjpId }
   );
 
   return updatedRequest;
 };
 
 /**
- * Step 2b - Supervisor chooses SKIP. No manager approval needed.
+ * Step 2b - Supervisor chooses SKIP.
  */
 export const submitSkip = async (supervisorId, requestId) => {
   const request = await prisma.routeChangeRequest.findUnique({
@@ -126,14 +139,6 @@ export const submitSkip = async (supervisorId, requestId) => {
       data: { status: VISIT_STATUS.SKIPPED },
     }),
   ]);
-
-  await createBulkNotificationByRoles(
-    [ROLES.MANAJER_OPERASIONAL],
-    NOTIFICATION_TYPES.SKIP_OUTLET_INFO,
-    'Informasi Skip Outlet',
-    `Supervisor menginstruksikan skip outlet "${request.pjpStop.outlet.name}" (tanpa approval).`,
-    { routeChangeRequestId: updatedRequest.id }
-  );
 
   await createNotification(
     request.reportedBy,
@@ -217,7 +222,7 @@ export const rejectReroute = async (managerId, requestId) => {
     request.reportedBy,
     NOTIFICATION_TYPES.REROUTE_REJECTED,
     'Perubahan Rute Ditolak',
-    `Permintaan reroute untuk outlet "${request.pjpStop.outlet.name}" ditolak oleh Manajer Operasional.`,
+    `Permintaan reroute untuk outlet "${request.pjpStop.outlet.name}" ditolak oleh Supervisor.`,
     { pjpId: request.pjpId }
   );
 

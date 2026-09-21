@@ -14,6 +14,10 @@ import vehicleRoutes from '../modules/vehicles/vehicles.routes.js';
 import configRoutes from '../modules/config/config.routes.js';
 import customerRegistrationRoutes from '../modules/customer-registrations/customer-registrations.routes.js';
 import dailyCallRoutes from '../modules/daily-calls/daily-calls.routes.js';
+import orderRoutes from '../modules/orders/orders.routes.js';
+import productRoutes from '../modules/products/products.routes.js';
+import divisionRoutes from '../modules/divisions/divisions.routes.js';
+import deliveryRoutes from '../modules/delivery/delivery.routes.js';
 
 const router = Router();
 
@@ -35,6 +39,10 @@ v1Router.use('/vehicles', vehicleRoutes);
 v1Router.use('/config', configRoutes);
 v1Router.use('/customer-registrations', customerRegistrationRoutes);
 v1Router.use('/daily-calls', dailyCallRoutes);
+v1Router.use('/orders', orderRoutes);
+v1Router.use('/products', productRoutes);
+v1Router.use('/divisions', divisionRoutes);
+v1Router.use('/delivery', deliveryRoutes);
 
 router.use('/v1', v1Router);
 

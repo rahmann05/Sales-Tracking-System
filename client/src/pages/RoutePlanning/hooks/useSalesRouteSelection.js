@@ -34,17 +34,16 @@ export const useSalesRouteSelection = ({ user, matrixRows = [], salesStops = [] 
             };
         }
 
-        if (selectedSalesPerson) {
-            const found = matrixRows.find(
-                (r) => r.salesId === selectedSalesPerson.salesId || r.salesName === selectedSalesPerson.salesName
-            );
-            if (found) return found;
-        }
-
-        const userMatch = matrixRows.find(
-            (r) => r.salesName?.toLowerCase() === user?.name?.toLowerCase() || r.salesId === user?.id
+    // Supervisor/Admin: cari berdasarkan selectedSalesPerson, fallback ke sales pertama
+    if (selectedSalesPerson) {
+        const found = matrixRows.find(
+            (r) => r.salesId === selectedSalesPerson.salesId || r.salesName === selectedSalesPerson.salesName
         );
-        return userMatch || matrixRows[0] || null;
+        if (found) return found;
+    }
+
+    // Jangan gunakan user SPV sebagai fallback — tampilkan sales pertama dalam tim
+    return matrixRows[0] || null;
     }, [matrixRows, selectedSalesPerson, user, isSales, salesStops]);
 
     const dailyScheduleInfo = useMemo(() => {

@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LuNavigation } from 'react-icons/lu';
 import { FiXCircle } from 'react-icons/fi';
+import { useApp } from '../../../context/AppContext';
 
 /**
  * CreateRjpTeamModal Component (Single Responsibility: Modal for creating RJP Teams)
  * 1 File per Component
  */
 export const CreateRjpTeamModal = ({ user, isSupervisor, onClose, onSubmit }) => {
+  const { clusters } = useApp();
   const [newRjpName, setNewRjpName] = useState('Tim RJP Padalarang & Ngamprah');
   const [newRjpSpv, setNewRjpSpv] = useState(user.role === 'SUPERVISOR' ? user.name : 'Ahmad Subagja');
-  const [newRjpCluster, setNewRjpCluster] = useState('Klaster Cimahi & Bandung Barat');
+  const [newRjpCluster, setNewRjpCluster] = useState('');
   const [newRjpMembers, setNewRjpMembers] = useState('Budi Santoso, Siti Rahma');
   const [newRjpRoutes, setNewRjpRoutes] = useState(8);
+
+  useEffect(() => {
+    if (clusters?.length > 0 && !newRjpCluster) {
+      setNewRjpCluster(clusters[0].name);
+    }
+  }, [clusters]);
 
   const handleSubmit = () => {
     if (!newRjpName) {
@@ -34,7 +42,7 @@ export const CreateRjpTeamModal = ({ user, isSupervisor, onClose, onSubmit }) =>
         <div className="modal-header">
           <div>
             <h3 className="section-title">Buat Tim RJP / Kunjungan Baru</h3>
-            <p className="card-subtitle">Wewenang: Manajer Operasional & Supervisor</p>
+            <p className="card-subtitle">Wewenang: Supervisor & Admin</p>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant">
             <FiXCircle className="text-xl" />
@@ -77,15 +85,15 @@ export const CreateRjpTeamModal = ({ user, isSupervisor, onClose, onSubmit }) =>
           </div>
 
           <div className="space-y-1">
-            <label className="label-bold">Klaster Wilayah RJP:</label>
+            <label className="label-bold">Klaster Wilayah RJP (Definisi Supervisor):</label>
             <select
               value={newRjpCluster}
               onChange={(e) => setNewRjpCluster(e.target.value)}
-              className="form-select"
+              className="form-select text-xs"
             >
-              <option value="Klaster Cimahi & Bandung Barat">Klaster Cimahi & Bandung Barat</option>
-              <option value="Klaster Lembang & Parongpong">Klaster Lembang & Parongpong</option>
-              <option value="Klaster Padalarang & Batujajar">Klaster Padalarang & Batujajar</option>
+              {clusters.map((c) => (
+                <option key={c.id} value={c.name}>{c.name} ({c.region})</option>
+              ))}
             </select>
           </div>
 

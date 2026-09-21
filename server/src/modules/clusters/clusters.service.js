@@ -6,7 +6,6 @@ import { broadcastCacheInvalidation } from '../../config/socket.js';
 import { haversineKm } from './cluster-generator.service.js';
 
 export const getClusters = async () => {
-  // Trigger nodemon restart
   return await cacheGetOrFetch(
     CACHE_KEYS.ALL_CLUSTERS,
     async () => {
@@ -16,6 +15,7 @@ export const getClusters = async () => {
           _count: { select: { outlets: true, users: true } },
           routes: true,
           assignedSales: { select: { id: true, name: true, role: true } },
+          supervisor: { select: { id: true, name: true, role: true } },
           users: { select: { id: true, name: true, role: true } }
         },
         orderBy: { name: 'asc' },
@@ -35,6 +35,7 @@ export const getClusterById = async (id) => {
           outlets: { where: { deletedAt: null } },
           routes: true,
           assignedSales: { select: { id: true, name: true, role: true } },
+          supervisor: { select: { id: true, name: true, role: true } },
           users: { select: { id: true, name: true, role: true } }
         },
       });
@@ -55,27 +56,64 @@ const invalidateClusterCache = (id = null) => {
 };
 
 export const createCluster = async (data) => {
+  const { name, region, colorHex, assignedSalesId, assignedSpvId, supervisorId, centerLat, centerLng, outletCount } = data;
+  const createPayload = { name, region };
+  if (colorHex !== undefined) createPayload.colorHex = colorHex;
+  if (centerLat !== undefined) createPayload.centerLat = centerLat;
+  if (centerLng !== undefined) createPayload.centerLng = centerLng;
+  if (outletCount !== undefined) createPayload.outletCount = outletCount;
+  if (assignedSalesId) createPayload.assignedSalesId = assignedSalesId;
+  const finalSpvId = supervisorId || assignedSpvId;
+  if (finalSpvId) createPayload.supervisorId = finalSpvId;
+
   const result = await prisma.cluster.create({
-    data,
+    data: createPayload,
     include: {
       _count: { select: { outlets: true, users: true } },
       routes: true,
       assignedSales: { select: { id: true, name: true, role: true } },
+      supervisor: { select: { id: true, name: true, role: true } },
       users: { select: { id: true, name: true, role: true } }
     },
   });
+  if (assignedSalesId) {
+    await prisma.user.update({
+      where: { id: assignedSalesId },
+      data: { clusterId: result.id }
+    }).catch(e => console.warn('[createCluster] User cluster sync notice:', e.message));
+  }
   invalidateClusterCache();
   return result;
 };
 
 export const updateCluster = async (id, data) => {
+  const { name, region, colorHex, centerLat, centerLng, outletCount, assignedSalesId, assignedSpvId, supervisorId } = data;
+  const updatePayload = {};
+  if (name !== undefined) updatePayload.name = name;
+  if (region !== undefined) updatePayload.region = region;
+  if (colorHex !== undefined) updatePayload.colorHex = colorHex;
+  if (centerLat !== undefined) updatePayload.centerLat = centerLat;
+  if (centerLng !== undefined) updatePayload.centerLng = centerLng;
+  if (outletCount !== undefined) updatePayload.outletCount = outletCount;
+  if (assignedSalesId !== undefined) updatePayload.assignedSalesId = assignedSalesId || null;
+  const finalSpvId = supervisorId !== undefined ? supervisorId : assignedSpvId;
+  if (finalSpvId !== undefined) updatePayload.supervisorId = finalSpvId || null;
+
+  if (assignedSalesId) {
+    await prisma.user.update({
+      where: { id: assignedSalesId },
+      data: { clusterId: id }
+    }).catch(e => console.warn('[updateCluster] User cluster sync notice:', e.message));
+  }
+
   const result = await prisma.cluster.update({
     where: { id },
-    data,
+    data: updatePayload,
     include: {
       _count: { select: { outlets: true, users: true } },
       routes: true,
       assignedSales: { select: { id: true, name: true, role: true } },
+      supervisor: { select: { id: true, name: true, role: true } },
       users: { select: { id: true, name: true, role: true } }
     },
   });
@@ -277,9 +315,10 @@ export const generateClusterRoutes = async (outletIds) => {
 };
 
 export const createClusterFull = async (data) => {
-  const { outletIds, routes, assignedSalesId, color, colorHex, ...rest } = data;
+  const { outletIds, routes, assignedSalesId, assignedSpvId, supervisorId, color, colorHex, ...rest } = data;
 
   const validSalesId = assignedSalesId && assignedSalesId.trim() !== '' ? assignedSalesId : null;
+  const finalSpvId = supervisorId || assignedSpvId || null;
   const clusterColorHex = colorHex || color || '#3b82f6';
 
   const result = await prisma.$transaction(async (tx) => {
@@ -289,6 +328,7 @@ export const createClusterFull = async (data) => {
         ...rest,
         colorHex: clusterColorHex,
         assignedSalesId: validSalesId,
+        supervisorId: finalSpvId,
         outletCount: outletIds?.length || 0,
       }
     });
@@ -317,6 +357,13 @@ export const createClusterFull = async (data) => {
 
     return cluster;
   });
+
+  if (validSalesId) {
+    await prisma.user.update({
+      where: { id: validSalesId },
+      data: { clusterId: result.id }
+    }).catch(e => console.warn('[createClusterFull] User cluster sync notice:', e.message));
+  }
 
   // Invalidate Caches
   invalidateClusterCache();

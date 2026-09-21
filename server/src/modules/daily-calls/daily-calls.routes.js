@@ -7,10 +7,10 @@ const router = Router();
 
 router.use(authenticate);
 
-// Accessible by Supervisor, Ops Manager, and Admin (and Sales for personal tracking)
+// Accessible by Supervisor and Admin (and Sales for personal tracking)
 router.get(
   '/',
-  authorize(ROLES.SALES, ROLES.SUPERVISOR, ROLES.MANAJER_OPERASIONAL, ROLES.ADMIN),
+  authorize(ROLES.SALES, ROLES.SUPERVISOR, ROLES.ADMIN),
   controller.getDailyCalls
 );
 

@@ -10,40 +10,29 @@ export const ReportTabBar = ({ activeTab, onSelectTab }) => {
   const tabs = [
     {
       id: 'DAILY',
-      label: '1. Daily Call Real-Time',
-      subtitle: 'Absensi & Kunjungan Harian',
+      label: '1. Laporan Harian Real-Time',
+      subtitle: 'Kunjungan, Rute Kronologis & Audit Anomali',
       icon: LuPhoneCall,
-      badge: 'Real-Time',
-      badgeColor: 'bg-blue-500/10 text-blue-600',
-    },
-    {
-      id: 'ANOMALIES',
-      label: '2. Audit Absensi Janggal',
-      subtitle: 'Tabel Khusus Durasi & GPS',
-      icon: LuShieldAlert,
-      badge: 'Audit',
-      badgeColor: 'bg-rose-500/10 text-rose-600',
+      badge: 'Harian',
     },
     {
       id: 'WEEKLY',
-      label: '3. Rekap Mingguan (WTD)',
+      label: '2. Rekap Mingguan (WTD)',
       subtitle: 'Matriks 6 Hari Kerja (Senin-Sabtu)',
       icon: LuCalendarRange,
-      badge: 'Weekly',
-      badgeColor: 'bg-emerald-500/10 text-emerald-600',
+      badge: 'Mingguan',
     },
     {
       id: 'MTD',
-      label: '4. Month-to-Date (MTD)',
-      subtitle: 'Target Bulanan & Pertumbuhan LMA',
+      label: '3. Pencapaian Bulanan (MTD)',
+      subtitle: 'Target vs Realisasi & Pertumbuhan LMA',
       icon: LuTrendingUp,
-      badge: 'Monthly',
-      badgeColor: 'bg-purple-500/10 text-purple-600',
+      badge: 'Bulanan',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -55,17 +44,17 @@ export const ReportTabBar = ({ activeTab, onSelectTab }) => {
             onClick={() => onSelectTab(tab.id)}
             className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-start justify-between gap-2.5 ${
               isActive
-                ? 'bg-primary text-on-primary border-primary shadow-md scale-[1.01]'
+                ? 'bg-primary text-on-primary border-primary shadow-sm scale-[1.01]'
                 : 'bg-surface border-border-glass text-on-surface hover:border-primary/40 hover:bg-surface-variant/20'
             }`}
           >
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2">
-                <Icon className={`text-base shrink-0 ${tab.id === 'ANOMALIES' && !isActive ? 'text-rose-600' : ''}`} />
-                <span className="font-extrabold text-xs sm:text-sm tracking-tight">{tab.label}</span>
+                <Icon className={`text-base shrink-0 ${isActive ? 'text-on-primary' : 'text-primary'}`} />
+                <span className="font-black text-xs sm:text-sm tracking-tight truncate">{tab.label}</span>
               </div>
               <p
-                className={`text-[11px] m-0 leading-tight ${
+                className={`text-[11px] m-0 leading-tight truncate ${
                   isActive ? 'text-on-primary/80' : 'text-on-surface-variant'
                 }`}
               >
@@ -74,8 +63,8 @@ export const ReportTabBar = ({ activeTab, onSelectTab }) => {
             </div>
 
             <span
-              className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
-                isActive ? 'bg-white/20 text-white' : tab.badgeColor
+              className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 border ${
+                isActive ? 'bg-white/20 text-white border-white/30' : 'bg-surface-container text-on-surface-variant border-border-glass'
               }`}
             >
               {tab.badge}

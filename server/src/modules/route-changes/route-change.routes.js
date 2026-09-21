@@ -11,8 +11,8 @@ router.use(authenticate);
 router.post('/', authorize('SALES'), validate(reportClosedSchema), routeChangeController.reportClosed);
 router.post('/:id/reroute', authorize('SUPERVISOR'), validate(rerouteSchema), routeChangeController.reroute);
 router.post('/:id/skip', authorize('SUPERVISOR'), validate(skipSchema), routeChangeController.skip);
-router.patch('/:id/approve', authorize('MANAJER_OPERASIONAL'), routeChangeController.approve);
-router.patch('/:id/reject', authorize('MANAJER_OPERASIONAL'), routeChangeController.reject);
-router.get('/', authorize('SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'), routeChangeController.getAll);
+router.patch('/:id/approve', authorize('SUPERVISOR', 'ADMIN'), routeChangeController.approve);
+router.patch('/:id/reject', authorize('SUPERVISOR', 'ADMIN'), routeChangeController.reject);
+router.get('/', authorize('SUPERVISOR', 'ADMIN'), routeChangeController.getAll);
 
 export default router;

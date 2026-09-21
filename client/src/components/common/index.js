@@ -16,3 +16,4 @@ export { Input } from './Input';
 export { SectionHeader } from './SectionHeader';
 export { SignatureCanvas } from './SignatureCanvas';
 export { StatusMonitor } from './StatusMonitor';
+export { PageHeader } from './PageHeader';

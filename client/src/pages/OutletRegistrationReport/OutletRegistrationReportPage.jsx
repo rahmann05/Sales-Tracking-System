@@ -62,20 +62,25 @@ export const OutletRegistrationReportPage = () => {
         </div>
       )}
 
-      {/* 3. Filter Bar */}
-      <OutletReportFilterBar
-        filters={filters}
-        onUpdateFilter={updateFilter}
-        onReset={() => {}}
-      />
+      {/* 3. Unified Workspace: Filter & Report Table */}
+      <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-border-glass bg-surface-container/30">
+          <OutletReportFilterBar
+            filters={filters}
+            onUpdateFilter={updateFilter}
+            onReset={() => {}}
+            embedded
+          />
+        </div>
 
-      {/* 4. Master Report Table */}
-      <OutletReportTable
-        data={data}
-        isLoading={isLoading}
-        onOpenPdf={setPdfTarget}
-        onOpenFinalize={setFinalizeTarget}
-      />
+        <OutletReportTable
+          data={data}
+          isLoading={isLoading}
+          onOpenPdf={setPdfTarget}
+          onOpenFinalize={setFinalizeTarget}
+          embedded
+        />
+      </div>
 
       {/* 5. Admin Finalize & Activation Modal */}
       {finalizeTarget && (

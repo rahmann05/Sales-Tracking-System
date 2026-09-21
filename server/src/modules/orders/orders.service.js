@@ -111,7 +111,7 @@ export const getOrderById = async (id, currentUser) => {
   if (!order) throw new AppError('Order tidak ditemukan', 404);
 
   const isOwner = order.createdBy === currentUser.id;
-  const isPrivileged = [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.MANAJER_OPERASIONAL].includes(currentUser.role);
+  const isPrivileged = [ROLES.ADMIN, ROLES.SUPERVISOR].includes(currentUser.role);
   if (!isOwner && !isPrivileged) throw new AppError('Anda tidak memiliki akses ke order ini', 403);
 
   return order;

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PageHeader } from '../../components/common/PageHeader';
 import { ReportTabBar } from './components/ReportTabBar';
 import { DailyCallMonitorPage } from '../DailyCallMonitor/DailyCallMonitorPage';
 import { WeeklyReportView } from './components/WeeklyReportView';
@@ -16,26 +17,20 @@ export const ReportsPage = () => {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-24">
       {/* 1. Suite Header Banner */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-primary mb-1">
-            <LuFileSpreadsheet className="text-sm" />
-            <span className="tracking-wider uppercase">CV. SINAR ANUGRAH • ND6 DISTRIBUTION MANAGEMENT</span>
-          </div>
-          <h2 className="text-xl md:text-2xl font-black text-on-surface tracking-tight m-0">
-            Pusat Laporan Distribusi (ND6 Reporting Suite)
-          </h2>
-          <p className="text-xs text-on-surface-variant m-0 mt-0.5">
-            Analisis terpadu alur distribusi dari absensi harian real-time, rekap performa mingguan, hingga evaluasi Month-to-Date (MTD) vs target.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <span className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-bold flex items-center gap-1.5">
-            <LuLayers /> Standar Distribusi ND6
+      <PageHeader
+        badge={
+          <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
+            <LuFileSpreadsheet className="text-sm" /> ND6 DISTRIBUTION REPORTING SUITE
           </span>
-        </div>
-      </div>
+        }
+        title="Pusat Laporan Distribusi & Analitik Penjualan"
+        subtitle="Analisis terpadu alur distribusi dari absensi harian real-time, rekap performa mingguan (WTD), hingga evaluasi pencapaian Month-to-Date (MTD) vs target penjualan."
+        actions={
+          <span className="px-3.5 py-2 rounded-xl bg-surface border border-border-glass text-primary text-xs font-mono font-bold flex items-center gap-2 shadow-xs">
+            <LuLayers className="text-sm" /> Standar Distribusi ND6
+          </span>
+        }
+      />
 
       {/* 2. ND6 Report Mode Navigation Tabs */}
       <ReportTabBar activeTab={activeTab} onSelectTab={setActiveTab} />
@@ -43,13 +38,7 @@ export const ReportsPage = () => {
       {/* 3. Tab Content */}
       {activeTab === 'DAILY' && (
         <div className="pt-1">
-          <DailyCallMonitorPage initialTableView="ALL_VISITS" />
-        </div>
-      )}
-
-      {activeTab === 'ANOMALIES' && (
-        <div className="pt-1">
-          <DailyCallMonitorPage initialTableView="ANOMALIES_ONLY" />
+          <DailyCallMonitorPage initialTableView="ALL_VISITS" showHeader={false} />
         </div>
       )}
 

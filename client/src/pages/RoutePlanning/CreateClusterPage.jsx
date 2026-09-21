@@ -4,7 +4,7 @@ import { useMapData } from '../../context/MapDataContext';
 import { useApp } from '../../context/AppContext';
 import { clustersApi } from '../../services/api';
 import { routingService } from '../../services/routingService';
-import { ClusterControlPanel } from './components/ops/ClusterControlPanel';
+import { ClusterControlPanel } from './components/master/ClusterControlPanel';
 import { TAB_IDS } from '../../constants/navigation';
 import '../../styles/pages/CreateClusterPage.css';
 
@@ -461,7 +461,7 @@ export const CreateClusterPage = ({ onGoBack }) => {
             addNotification?.({
                 title: 'Cluster Dibuat',
                 message: `Cluster "${clusterName}" berhasil dibuat dengan ${selectedOutlets.length} outlet.`,
-                roleTarget: 'MANAJER_OPERASIONAL',
+                roleTarget: ['SUPERVISOR', 'ADMIN'],
             });
 
             invalidate?.('clusters');

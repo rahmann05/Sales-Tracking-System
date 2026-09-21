@@ -18,7 +18,7 @@ router.use(authenticate);
 router.post('/:pjpStopId/in', authorize('SALES'), validate(checkInSchema), absensiController.checkIn);
 router.post('/:pjpStopId/out', authorize('SALES'), validate(checkOutSchema), absensiController.checkOut);
 router.get('/history', absensiController.history);
-router.get('/pjp/:pjpId', authorize('SUPERVISOR', 'MANAJER_OPERASIONAL', 'ADMIN'), absensiController.getPjpRecap);
+router.get('/pjp/:pjpId', authorize('SUPERVISOR', 'ADMIN'), absensiController.getPjpRecap);
 
 // ─── Absensi Off-PJP (Kunjungan Toko Luar RJP) ───────────────────────────────
 router.post(
@@ -34,7 +34,7 @@ router.get(
 );
 router.patch(
   '/off-pjp/:id/validate',
-  authorize('SUPERVISOR', 'ADMIN', 'MANAJER_OPERASIONAL'),
+  authorize('SUPERVISOR', 'ADMIN'),
   validate(validateOffPjpSchema),
   handleValidateOffPjpAttendance
 );

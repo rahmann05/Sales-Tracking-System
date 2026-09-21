@@ -11,10 +11,10 @@ router.use(authenticate);
 // Get config by key
 router.get('/:key', configController.getConfig);
 
-// Upsert config by key (only ADMIN or MANAJER_OPERASIONAL)
+// Upsert config by key (only ADMIN or SUPERVISOR)
 router.put(
   '/:key',
-  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  authorize('ADMIN', 'SUPERVISOR'),
   validate(configSchema.updateConfigSchema),
   configController.updateConfig
 );

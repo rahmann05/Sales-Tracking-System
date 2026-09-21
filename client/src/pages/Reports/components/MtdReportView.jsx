@@ -171,86 +171,86 @@ export const MtdReportView = () => {
   return (
     <div className="space-y-5">
       {/* 1. Top Summary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
         {/* Working Days Card */}
-        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">Hari Kerja Berjalan</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <LuCalendar className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div className="text-xl md:text-2xl font-black text-on-surface">
+            <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
               {period.workingDaysElapsed} <span className="text-xs font-normal text-on-surface-variant">/ {period.totalWorkingDays} Hari</span>
             </div>
-            <span className="text-xs font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               {period.workingDaysRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">Progress bulan {period.monthName} {period.year}</p>
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">Progress {period.monthName} {period.year}</p>
         </div>
 
         {/* Target vs Actual MTD */}
-        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">Pencapaian Target MTD</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <LuTarget className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div className="text-lg md:text-xl font-black text-on-surface">
+            <div className="text-lg md:text-xl font-black text-on-surface tracking-tight">
               Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')}
             </div>
-            <span className="text-xs font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               {summary.overallAchievementRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">
             Target: Rp {(summary.monthlyTargetAmount || 0).toLocaleString('id-ID')}
           </p>
         </div>
 
         {/* MTD vs LMA (Growth) */}
-        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">MTD vs LMA (Bulan Lalu)</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <LuTrendingUp className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div className="text-lg md:text-xl font-black text-emerald-600">
+            <div className="text-lg md:text-xl font-black text-on-surface tracking-tight">
               {summary.mtdToLmaRate}
             </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               MoM Growth
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">
             LMA: Rp {(summary.lastMonthActual || 0).toLocaleString('id-ID')}
           </p>
         </div>
 
         {/* Call & EC Compliance */}
-        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">Call & Effective Call</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <LuCircleCheck className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div className="text-xl md:text-2xl font-black text-on-surface">
-              {summary.mtdEffectiveCallRate} <span className="text-xs font-normal text-on-surface-variant">EC Rate</span>
+            <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
+              {summary.mtdEffectiveCallRate} <span className="text-xs font-normal text-on-surface-variant">EC</span>
             </div>
-            <span className="text-xs font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               Call: {summary.mtdCallComplianceRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">
-            Total {summary.totalMtdEffectiveCalls} toko order ({summary.totalMtdSkuSold} SKU)
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">
+            {summary.totalMtdEffectiveCalls} toko order ({summary.totalMtdSkuSold} SKU)
           </p>
         </div>
       </div>
@@ -283,86 +283,29 @@ export const MtdReportView = () => {
         </div>
       )}
 
-      {/* 3. Filter Bar */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* 3. Unified Workspace Card: Header + Filters + MTD Breakdown Table */}
+      <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
+        {/* Workspace Card Header */}
+        <div className="p-4 sm:p-5 border-b border-border-glass bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Bulan Periode
-            </label>
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="w-full p-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
-            >
-              {MONTH_OPTIONS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+            <h3 className="text-sm font-bold text-on-surface tracking-tight m-0 flex items-center gap-2">
+              Matriks Pencapaian Month-to-Date (MTD)
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container border border-border-glass text-on-surface-variant">
+                {reportData.period?.monthName || ''} {year}
+              </span>
+            </h3>
+            <p className="text-xs text-on-surface-variant m-0 mt-0.5">
+              Evaluasi target vs realisasi, perbandingan LMA, dan kinerja sales per klaster
+            </p>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Tahun
-            </label>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full p-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
-            >
-              {[2025, 2026, 2027].map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Pilih Salesman
-            </label>
-            <div className="relative flex items-center">
-              <LuUser className="absolute left-3 text-on-surface-variant text-sm" />
-              <select
-                value={salesmanId}
-                onChange={(e) => setSalesmanId(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
-              >
-                <option value="">Semua Salesman (Tim)</option>
-                {salesTeam.map((sales) => (
-                  <option key={sales.id} value={sales.id}>
-                    {sales.name} ({sales.cluster?.name || 'Klaster Terjadwal'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Cari Salesman
-            </label>
-            <div className="relative flex items-center">
-              <LuSearch className="absolute left-3 text-on-surface-variant text-sm" />
-              <input
-                type="text"
-                placeholder="Ketik nama salesman..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-end gap-2">
+          {/* Utility Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={loadData}
               disabled={isLoading}
-              className="p-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
+              className="p-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
               title="Refresh Data"
             >
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
@@ -371,7 +314,7 @@ export const MtdReportView = () => {
             <button
               type="button"
               onClick={exportToCsv}
-              className="flex-1 py-2 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+              className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <LuDownload /> Excel
             </button>
@@ -379,16 +322,90 @@ export const MtdReportView = () => {
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
-              className="flex-1 py-2 px-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+              className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <LuPrinter /> Cetak PDF
             </button>
           </div>
         </div>
-      </div>
 
-      {/* 4. Salesman MTD Breakdown Table */}
-      <div className="bg-surface border border-border-glass rounded-2xl shadow-sm overflow-hidden">
+        {/* Workspace Toolbar: Filter Controls */}
+        <div className="p-4 border-b border-border-glass bg-surface-container/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                Bulan Periode
+              </label>
+              <select
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+                className="w-full p-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              >
+                {MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                Tahun
+              </label>
+              <select
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="w-full p-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              >
+                {[2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                Pilih Salesman
+              </label>
+              <div className="relative flex items-center">
+                <LuUser className="absolute left-3 text-on-surface-variant text-sm" />
+                <select
+                  value={salesmanId}
+                  onChange={(e) => setSalesmanId(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                >
+                  <option value="">Semua Salesman (Tim)</option>
+                  {salesTeam.map((sales) => (
+                    <option key={sales.id} value={sales.id}>
+                      {sales.name} ({sales.cluster?.name || 'Klaster Terjadwal'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                Cari Salesman
+              </label>
+              <div className="relative flex items-center">
+                <LuSearch className="absolute left-3 text-on-surface-variant text-sm" />
+                <input
+                  type="text"
+                  placeholder="Ketik nama salesman..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Workspace Body: Salesman MTD Breakdown Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>

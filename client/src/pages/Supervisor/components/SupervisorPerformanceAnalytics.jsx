@@ -28,7 +28,7 @@ export const SupervisorPerformanceAnalytics = ({ salesStops = [], offPjpAttendan
     pjpApi.getAllPjps()
       .then((res) => {
         if (!isMounted) return;
-        const pjps = Array.isArray(res?.data) ? res.data : [];
+        const pjps = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
         const todayStr = new Date().toDateString();
         setTodayPjps(pjps.filter((p) => new Date(p.date).toDateString() === todayStr));
       })

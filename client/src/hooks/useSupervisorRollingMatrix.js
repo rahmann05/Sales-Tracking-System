@@ -21,16 +21,20 @@ export const useSupervisorRollingMatrix = () => {
     pjpApi.getAllPjps()
       .then((res) => {
         if (!isMounted) return;
-        const pjps = Array.isArray(res?.data) ? res.data : [];
+        const pjps = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
         const bySales = {};
         pjps.forEach((p) => {
           const sid = p.userId || p.user?.id;
           if (!sid) return;
+          // Matriks rolling ini khusus untuk sales lapangan (bukan supervisor)
+          if (p.user?.role && p.user.role !== 'SALES') return;
+
           if (!bySales[sid]) {
+            const spvName = p.user?.cluster?.supervisor?.name || p.user?.spvName || 'Ahmad Subagja';
             bySales[sid] = {
               salesId: sid,
               salesName: p.user?.name || 'Sales',
-              spvName: p.user?.spvName || '-',
+              spvName,
               primaryCluster: p.user?.cluster?.name || p.cluster?.name || '-',
               schedule: {},
             };

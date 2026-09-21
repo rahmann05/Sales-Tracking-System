@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LuUserPlus, LuX, LuMail, LuLock, LuShield, LuMapPin, LuUser } from 'react-icons/lu';
+import { useApp } from '../../../context/AppContext';
 
 export const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
+  const { clusters } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     role: 'SALES',
-    cluster: 'Klaster Cimahi Tengah',
+    cluster: '',
+    clusterId: '',
     spvName: 'Ahmad Subagja',
     phone: '',
   });
+
+  useEffect(() => {
+    if (clusters?.length > 0 && !formData.cluster) {
+      setFormData((prev) => ({
+        ...prev,
+        cluster: clusters[0].name,
+        clusterId: clusters[0].id,
+      }));
+    }
+  }, [clusters]);
 
   if (!isOpen) return null;
 
@@ -114,14 +127,17 @@ export const CreateUserModal = ({ isOpen, onClose, onSubmit }) => {
                 <LuMapPin className="text-primary" /> Penugasan Klaster
               </label>
               <select
-                value={formData.cluster}
-                onChange={(e) => setFormData({ ...formData, cluster: e.target.value })}
-                className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+                value={formData.clusterId || formData.cluster}
+                onChange={(e) => {
+                  const chosen = clusters.find(c => c.id === e.target.value || c.name === e.target.value);
+                  setFormData({ ...formData, clusterId: chosen?.id, cluster: chosen?.name });
+                }}
+                className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 text-xs"
               >
-                <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
-                <option value="Klaster Padalarang">Klaster Padalarang (KBB)</option>
-                <option value="Klaster Lembang">Klaster Lembang (KBB Utara)</option>
-                <option value="Klaster Belfoods Bandung Raya">Klaster Belfoods Bandung Raya</option>
+                <option value="" disabled>-- Pilih Klaster Penugasan --</option>
+                {clusters.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.region})</option>
+                ))}
               </select>
             </div>
           </div>

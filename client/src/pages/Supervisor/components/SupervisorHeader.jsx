@@ -15,7 +15,7 @@ export const SupervisorHeader = ({
   activeTab = 'my_rjp',
   onSelectTab = () => {},
 }) => {
-  const { user, salesStops = [] } = useApp();
+  const { user, salesStops = [], clusters = [] } = useApp();
   const completedTeamStops = salesStops.filter((s) => s.status === 'COMPLETED' || s.status === 'ORDERED').length;
 
   return (
@@ -40,7 +40,7 @@ export const SupervisorHeader = ({
           </div>
           <p className="text-xs text-on-surface-variant flex items-center gap-1.5">
             <LuStore className="text-xs text-primary shrink-0" />
-            <span>Supervisi 3 Tim RJP (Cimahi, Padalarang, Lembang) • 30 Master Outlet</span>
+            <span>Supervisi {clusters.length > 0 ? `${clusters.length} Tim Klaster (${clusters.map((c) => c.name).join(', ')})` : 'Tim RJP Operasional'} • {clusters.reduce((acc, c) => acc + (c.allocatedOutletsCount || c.outletCount || c._count?.outlets || 0), 0) || 30} Master Outlet</span>
           </p>
         </div>
       </div>

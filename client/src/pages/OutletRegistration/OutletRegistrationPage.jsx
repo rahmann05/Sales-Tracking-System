@@ -85,7 +85,7 @@ export const OutletRegistrationPage = () => {
               <div>
                 <strong>Pengajuan Berhasil Disubmit!</strong>
                 <p className="text-xs m-0 mt-0.5">
-                  Pengajuan pendaftaran outlet &quot;{submitSuccess.name}&quot; telah dikirimkan ke Supervisor dan Manajer Operasional untuk persetujuan.
+                  Pengajuan pendaftaran outlet &quot;{submitSuccess.name}&quot; telah dikirimkan ke Supervisor untuk persetujuan.
                 </p>
               </div>
             </div>

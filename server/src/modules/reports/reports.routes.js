@@ -9,29 +9,29 @@ router.use(authenticate);
 
 router.get(
   '/dashboard',
-  authorize(ROLES.ADMIN, ROLES.MANAJER_OPERASIONAL, ROLES.SUPERVISOR),
+  authorize(ROLES.ADMIN, ROLES.SUPERVISOR),
   reportController.getDashboard
 );
 router.get(
   '/sales',
-  authorize(ROLES.ADMIN, ROLES.MANAJER_OPERASIONAL, ROLES.SUPERVISOR),
+  authorize(ROLES.ADMIN, ROLES.SUPERVISOR),
   reportController.getSalesReport
 );
 router.get(
   '/outlets',
-  authorize(ROLES.ADMIN, ROLES.MANAJER_OPERASIONAL, ROLES.SUPERVISOR),
+  authorize(ROLES.ADMIN, ROLES.SUPERVISOR),
   reportController.getOutletReport
 );
 
 // ND6 Reports Suite: Weekly & Month-to-Date (MTD)
 router.get(
   '/weekly',
-  authorize(ROLES.ADMIN, ROLES.MANAJER_OPERASIONAL, ROLES.SUPERVISOR, ROLES.SALES),
+  authorize(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.SALES),
   reportController.getWeeklyReport
 );
 router.get(
   '/mtd',
-  authorize(ROLES.ADMIN, ROLES.MANAJER_OPERASIONAL, ROLES.SUPERVISOR, ROLES.SALES),
+  authorize(ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.SALES),
   reportController.getMtdReport
 );
 

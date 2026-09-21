@@ -553,17 +553,13 @@ export const OfficialFormPdfView = ({ data, onClose }) => {
                   </div>
                 </td>
 
-                {/* 3. Menyetujui (SPV & Ops Manager) */}
+                {/* 3. Menyetujui (SPV) */}
                 <td className="border border-black p-2 h-20 align-bottom text-left">
                   <div className="border-t border-dotted border-gray-400 pt-1 space-y-0.5">
                     <div>
                       Nama: <strong>{data.spvName || '________________'}</strong>
                     </div>
                     <div className="text-[8.5px]">Jabatan : SPV</div>
-                    <div>
-                      Nama: <strong>{data.opsManagerName || '________________'}</strong>
-                    </div>
-                    <div className="text-[8.5px]">Jabatan : Ops. Manager</div>
                   </div>
                 </td>
 

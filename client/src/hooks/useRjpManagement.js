@@ -26,8 +26,9 @@ export const useRjpManagement = () => {
 
       const clusters = Array.isArray(clustersRes?.data) ? clustersRes.data : [];
       setMasterClusters(clusters.map((c, idx) => {
-        const assignedPerson = c.users?.find((u) => u.role === 'SUPERVISOR') || c.assignedSales || c.users?.[0];
-        const assignedName = assignedPerson?.name || (c.assignedSpvName && c.assignedSpvName !== '-' ? c.assignedSpvName : 'Belum Ditugaskan');
+        const assignedSales = c.assignedSales || c.users?.find((u) => u.role === 'SALES');
+        const supervisor = c.supervisor || c.users?.find((u) => u.role === 'SUPERVISOR');
+        const spvName = supervisor?.name || (c.assignedSpvName && c.assignedSpvName !== '-' ? c.assignedSpvName : 'Ahmad Subagja');
         return {
           id: c.id,
           code: c.code || `CLS-${idx + 1}`,
@@ -36,10 +37,10 @@ export const useRjpManagement = () => {
           colorHex: c.colorHex || '#3B82F6',
           subDistricts: c.subDistricts || [],
           allocatedOutletsCount: c._count?.outlets ?? c.allocatedOutletsCount ?? 0,
-          assignedSalesId: c.assignedSalesId || assignedPerson?.id || null,
-          assignedSalesName: assignedPerson?.name || null,
-          assignedSpvName: assignedName,
-          spvTeamName: null,
+          assignedSalesId: c.assignedSalesId || assignedSales?.id || null,
+          assignedSalesName: assignedSales?.name || 'Belum Ditugaskan',
+          assignedSpvName: spvName,
+          spvTeamName: `Tim SPV ${spvName}`,
           status: c.status || 'ACTIVE',
           createdAt: c.createdAt ? String(c.createdAt).split('T')[0] : '',
         };

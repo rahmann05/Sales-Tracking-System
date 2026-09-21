@@ -15,10 +15,6 @@ const STATUS_BADGE_MAP = {
     label: 'Disetujui SPV',
     cls: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
   },
-  OPS_APPROVED: {
-    label: 'Disetujui Ops Manager',
-    cls: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  },
   REGISTERED_ACTIVE: {
     label: 'Aktif di Sistem',
     cls: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',

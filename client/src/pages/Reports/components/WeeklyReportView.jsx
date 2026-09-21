@@ -184,157 +184,109 @@ export const WeeklyReportView = () => {
   return (
     <div className="space-y-5">
       {/* 1. Top Summary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">Total Kunjungan Mingguan</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <LuPhoneCall className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div className="text-xl md:text-2xl font-black text-on-surface">
+            <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
               {summary.totalActualCalls} <span className="text-xs font-normal text-on-surface-variant">/ {summary.totalPlanCalls} Plan</span>
             </div>
-            <span className="text-xs font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               {summary.callComplianceRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">Kepatuhan rute 6 hari kerja</p>
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">Kepatuhan rute 6 hari kerja</p>
         </div>
 
-        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">Effective Call (EC)</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <LuCircleCheck className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div className="text-xl md:text-2xl font-black text-emerald-600">
+            <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
               {summary.totalEffectiveCalls} <span className="text-xs font-normal text-on-surface-variant">Toko Order</span>
             </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               {summary.effectiveCallRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">Rasio toko menghasilkan pesanan</p>
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">Rasio toko menghasilkan pesanan</p>
         </div>
 
-        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-2">
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">Omzet Mingguan (WTD)</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <LuShoppingBag className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div className="text-lg md:text-xl font-black text-on-surface">
+            <div className="text-lg md:text-xl font-black text-on-surface tracking-tight">
               Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')}
             </div>
-            <span className="text-xs font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
               {summary.totalSkuSold} SKU
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">Rata-rata durasi: {summary.avgDurationMinutes} Menit/toko</p>
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">Rata-rata durasi: {summary.avgDurationMinutes} Menit/toko</p>
         </div>
 
-        <div
-          className={`border rounded-2xl p-4 shadow-sm space-y-2 ${
-            summary.totalAnomalies > 0 ? 'bg-rose-500/5 border-rose-500/30' : 'bg-surface border-border-glass'
-          }`}
-        >
+        <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs text-on-surface-variant font-semibold">Anomali Lapangan</span>
-            <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                summary.totalAnomalies > 0 ? 'bg-rose-500/15 text-rose-600' : 'bg-emerald-500/10 text-emerald-600'
-              }`}
-            >
+            <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
               <FiAlertTriangle className="text-base" />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <div
-              className={`text-xl md:text-2xl font-black ${
-                summary.totalAnomalies > 0 ? 'text-rose-600' : 'text-emerald-600'
-              }`}
-            >
+            <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
               {summary.totalAnomalies} <span className="text-xs font-normal text-on-surface-variant">Kasus</span>
             </div>
-            <span
-              className={`text-xs font-bold px-2 py-0.5 rounded-lg ${
-                summary.totalAnomalies > 0 ? 'bg-rose-500/10 text-rose-600' : 'bg-emerald-500/10 text-emerald-600'
-              }`}
-            >
-              {summary.totalAnomalies > 0 ? 'Perlu Evaluasi' : 'Normal'}
-            </span>
+            {summary.totalAnomalies > 0 ? (
+              <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg">
+                Perlu Evaluasi
+              </span>
+            ) : (
+              <span className="text-xs font-bold text-on-surface-variant bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
+                Normal
+              </span>
+            )}
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0">Total kunjungan &lt; 5m atau deviasi radius</p>
+          <p className="text-[11px] text-on-surface-variant m-0 truncate">Total kunjungan &lt; 5m atau deviasi radius</p>
         </div>
       </div>
 
-      {/* 2. Filter Bar */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* 2. Unified Workspace Card: Header + Filters + Matrix Table */}
+      <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
+        {/* Workspace Card Header */}
+        <div className="p-4 sm:p-5 border-b border-border-glass bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Tanggal Mulai (Senin)
-            </label>
-            <div className="relative flex items-center">
-              <LuCalendarRange className="absolute left-3 text-on-surface-variant text-sm" />
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
+            <h3 className="text-sm font-bold text-on-surface tracking-tight m-0 flex items-center gap-2">
+              Matriks Kinerja Mingguan (WTD)
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container border border-border-glass text-on-surface-variant">
+                6 Hari Kerja (Senin - Sabtu)
+              </span>
+            </h3>
+            <p className="text-xs text-on-surface-variant m-0 mt-0.5">
+              Evaluasi kepatuhan rute, efektivitas call, dan realisasi omzet harian per salesman
+            </p>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Pilih Salesman
-            </label>
-            <div className="relative flex items-center">
-              <LuUser className="absolute left-3 text-on-surface-variant text-sm" />
-              <select
-                value={salesmanId}
-                onChange={(e) => setSalesmanId(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
-              >
-                <option value="">Semua Salesman (Tim)</option>
-                {salesTeam.map((sales) => (
-                  <option key={sales.id} value={sales.id}>
-                    {sales.name} ({sales.cluster?.name || 'Klaster Terjadwal'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Cari Nama Salesman
-            </label>
-            <div className="relative flex items-center">
-              <LuSearch className="absolute left-3 text-on-surface-variant text-sm" />
-              <input
-                type="text"
-                placeholder="Ketik nama salesman..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-end gap-2">
+          {/* Utility Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={loadData}
               disabled={isLoading}
-              className="p-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
+              className="p-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
               title="Refresh Data"
             >
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
@@ -343,7 +295,7 @@ export const WeeklyReportView = () => {
             <button
               type="button"
               onClick={exportToCsv}
-              className="flex-1 py-2 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+              className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <LuDownload /> Excel
             </button>
@@ -351,16 +303,71 @@ export const WeeklyReportView = () => {
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
-              className="flex-1 py-2 px-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+              className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <LuPrinter /> Cetak PDF
             </button>
           </div>
         </div>
-      </div>
 
-      {/* 3. Day-by-Day Performance Matrix Table */}
-      <div className="bg-surface border border-border-glass rounded-2xl shadow-sm overflow-hidden">
+        {/* Workspace Toolbar: Filter Controls */}
+        <div className="p-4 border-b border-border-glass bg-surface-container/30">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                Tanggal Mulai (Senin)
+              </label>
+              <div className="relative flex items-center">
+                <LuCalendarRange className="absolute left-3 text-on-surface-variant text-sm" />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                Pilih Salesman
+              </label>
+              <div className="relative flex items-center">
+                <LuUser className="absolute left-3 text-on-surface-variant text-sm" />
+                <select
+                  value={salesmanId}
+                  onChange={(e) => setSalesmanId(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                >
+                  <option value="">Semua Salesman (Tim)</option>
+                  {salesTeam.map((sales) => (
+                    <option key={sales.id} value={sales.id}>
+                      {sales.name} ({sales.cluster?.name || 'Klaster Terjadwal'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                Cari Nama Salesman
+              </label>
+              <div className="relative flex items-center">
+                <LuSearch className="absolute left-3 text-on-surface-variant text-sm" />
+                <input
+                  type="text"
+                  placeholder="Ketik nama salesman..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Workspace Body: Day-by-Day Performance Matrix Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>

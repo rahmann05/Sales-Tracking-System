@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useApp } from '../../../context/AppContext';
 import {
   LuCheck,
   LuLock,
@@ -23,12 +24,7 @@ const LOCATION_OPTIONS = [
   { id: 'KOMPLEK_PERUMAHAN', label: 'KOMPLEK / PERUMAHAN' },
 ];
 
-const AREA_OPTIONS = [
-  { id: 'CIMAHI', label: 'CIMAHI' },
-  { id: 'KAB_BANDUNG_BARAT', label: 'KAB. BANDUNG BARAT' },
-  { id: 'KAB_BANDUNG', label: 'KAB. BANDUNG' },
-  { id: 'KOTA_BANDUNG', label: 'KOTA BANDUNG' },
-];
+
 
 const MT_SUB_CHANNELS = [
   { id: 'HYPERMARKET', label: 'HYPERMARKET' },
@@ -78,6 +74,7 @@ export const PhysicalDocumentForm = ({
   onReset,
   isSubmitting = false,
 }) => {
+  const { clusters, divisions } = useApp();
   const [isKtpCameraOpen, setIsKtpCameraOpen] = useState(false);
   const [isOutletCameraOpen, setIsOutletCameraOpen] = useState(false);
 
@@ -137,7 +134,7 @@ export const PhysicalDocumentForm = ({
           <div className="text-right">
             <span className="text-[10px] font-bold text-on-surface-variant block">DIVISI:</span>
             <span className="text-xs font-black text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/30">
-              {formData.division === 'BELFOODS' ? 'BELFOODS (BFI)' : formData.division}
+              {formData.divisionName || formData.division || '-'}
             </span>
           </div>
         </div>
@@ -148,13 +145,24 @@ export const PhysicalDocumentForm = ({
         <div className="flex items-center gap-2">
           <span className="w-20 text-on-surface-variant shrink-0">DIVISI :</span>
           <select
-            value={formData.division}
-            onChange={(e) => updateField('division', e.target.value)}
+            value={formData.division || formData.divisionName || ''}
+            onChange={(e) => {
+              const selectedDiv = divisions.find(d => d.name === e.target.value);
+              updateField('division', e.target.value);
+              updateField('divisionName', e.target.value);
+              if (selectedDiv) updateField('divisionId', selectedDiv.id);
+            }}
             className="flex-1 px-2.5 py-1 bg-surface font-black text-xs rounded-lg border border-border-glass text-primary focus:border-primary outline-none cursor-pointer"
           >
-            <option value="UNICHARM">UNICHARM</option>
-            <option value="BELFOODS">BELFOODS</option>
-            <option value="GENERAL">GENERAL FMCG</option>
+            {divisions.length > 0 ? divisions.map((div) => (
+              <option key={div.id} value={div.name}>{div.name}</option>
+            )) : (
+              // Fallback sementara jika divisions belum termuat
+              <>
+                <option value="BELFOODS">BELFOODS</option>
+                <option value="MIX">MIX</option>
+              </>
+            )}
           </select>
         </div>
         <div className="flex items-center gap-2">
@@ -566,14 +574,17 @@ export const PhysicalDocumentForm = ({
       {/* ─── BOX 4: AREA & WILAYAH ────────────────────────────────────────────── */}
       <div className="border border-slate-700/80 rounded-xl overflow-hidden divide-y divide-slate-700/60 bg-surface">
         <div className="p-2.5 flex flex-wrap items-center gap-3">
-          <span className="w-28 text-xs font-black shrink-0">AREA :</span>
+          <span className="w-28 text-xs font-black shrink-0">AREA / CLUSTER :</span>
           <div className="flex flex-wrap items-center gap-4">
-            {AREA_OPTIONS.map((a) => {
-              const isChecked = formData.area === a.id;
+            {clusters.length > 0 ? clusters.map((cluster) => {
+              const isChecked = formData.clusterId === cluster.id || formData.area === cluster.name;
               return (
                 <label
-                  key={a.id}
-                  onClick={() => updateField('area', a.id)}
+                  key={cluster.id}
+                  onClick={() => {
+                    updateField('clusterId', cluster.id);
+                    updateField('area', cluster.name);
+                  }}
                   className="flex items-center gap-1.5 text-xs font-bold cursor-pointer select-none"
                 >
                   <div
@@ -583,10 +594,12 @@ export const PhysicalDocumentForm = ({
                   >
                     {isChecked && <LuCheck className="text-xs" />}
                   </div>
-                  <span>{a.label}</span>
+                  <span>{cluster.name}</span>
                 </label>
               );
-            })}
+            }) : (
+              <span className="text-xs text-on-surface-variant italic">Memuat cluster...</span>
+            )}
           </div>
         </div>
 

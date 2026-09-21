@@ -1,6 +1,6 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import * as vehicleService from './vehicles.service.js';
-import { createVehicleSchema, updateVehicleSchema } from './vehicles.schema.js';
+import { createVehicleSchema, updateVehicleSchema, recordMaintenanceSchema } from './vehicles.schema.js';
 
 export const getVehicles = asyncHandler(async (req, res) => {
   const vehicles = await vehicleService.getVehicles();
@@ -44,5 +44,17 @@ export const deleteVehicle = asyncHandler(async (req, res) => {
   res.json({
     status: 'success',
     message: 'Kendaraan berhasil dihapus',
+  });
+});
+
+export const recordMaintenance = asyncHandler(async (req, res) => {
+  const validated = recordMaintenanceSchema.parse({
+    body: req.body,
+    params: { id: req.params.id }
+  });
+  const result = await vehicleService.recordMaintenance(validated.params.id, validated.body);
+  res.status(201).json({
+    status: 'success',
+    data: result,
   });
 });

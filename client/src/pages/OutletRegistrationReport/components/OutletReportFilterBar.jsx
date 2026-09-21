@@ -1,5 +1,6 @@
 import React from 'react';
 import { LuSearch, LuListFilter } from 'react-icons/lu';
+import { useApp } from '../../../context/AppContext';
 
 /**
  * OutletReportFilterBar Component
@@ -9,10 +10,12 @@ export const OutletReportFilterBar = ({
   filters,
   onUpdateFilter,
   onReset,
+  embedded = false,
 }) => {
+  const { clusters } = useApp();
   return (
-    <div className="outlet-reg-section-card mb-4 p-4">
-      <div className="flex items-center gap-2 mb-3">
+    <div className={embedded ? 'space-y-3' : 'outlet-reg-section-card mb-4 p-4'}>
+      <div className="flex items-center gap-2 mb-2">
         <LuListFilter className="text-primary text-sm" />
         <span className="text-xs font-extrabold text-on-surface">Filter Laporan Registrasi</span>
       </div>
@@ -44,25 +47,25 @@ export const OutletReportFilterBar = ({
             <option value="ALL">Semua Status</option>
             <option value="SUBMITTED">SUBMITTED</option>
             <option value="SPV_APPROVED">SPV_APPROVED</option>
-            <option value="OPS_APPROVED">OPS_APPROVED</option>
             <option value="REGISTERED_ACTIVE">REGISTERED_ACTIVE</option>
             <option value="REJECTED">REJECTED</option>
           </select>
         </div>
 
-        {/* Area */}
+        {/* Area / Klaster */}
         <div>
-          <label className="outlet-reg-label">Area</label>
+          <label className="outlet-reg-label">Klaster Wilayah</label>
           <select
             value={filters.area}
             onChange={(e) => onUpdateFilter('area', e.target.value)}
             className="outlet-reg-input text-xs py-1.5"
           >
-            <option value="ALL">Semua Area</option>
-            <option value="CIMAHI">Cimahi</option>
-            <option value="KAB_BANDUNG_BARAT">Kab. Bandung Barat</option>
-            <option value="KAB_BANDUNG">Kab. Bandung</option>
-            <option value="KOTA_BANDUNG">Kota Bandung</option>
+            <option value="ALL">Semua Klaster</option>
+            {clusters && clusters.length > 0 && (
+              clusters.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))
+            )}
           </select>
         </div>
 

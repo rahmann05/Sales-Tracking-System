@@ -5,7 +5,7 @@ export const createUserSchema = z.object({
     name: z.string().min(2, 'Nama minimal 2 karakter'),
     email: z.string().email('Format email tidak valid'),
     password: z.string().min(6, 'Password minimal 6 karakter'),
-    role: z.enum(['SALES', 'SUPERVISOR', 'ADMIN', 'MANAJER_OPERASIONAL'], {
+    role: z.enum(['SALES', 'SUPERVISOR', 'ADMIN'], {
       errorMap: () => ({ message: 'Role tidak valid' }),
     }),
     clusterId: z.string().uuid('clusterId harus berformat UUID').optional(),
@@ -17,7 +17,7 @@ export const updateUserSchema = z.object({
     name: z.string().min(2).optional(),
     email: z.string().email().optional(),
     password: z.string().min(6).optional(),
-    role: z.enum(['SALES', 'SUPERVISOR', 'ADMIN', 'MANAJER_OPERASIONAL']).optional(),
+    role: z.enum(['SALES', 'SUPERVISOR', 'ADMIN']).optional(),
     clusterId: z.string().uuid().optional().nullable(),
   }),
   params: z.object({

@@ -7,11 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ══════════════════════════════════════════════════════════════════════════════
+
 enum Role {
   SALES
   SUPERVISOR
   ADMIN
-  MANAJER_OPERASIONAL
+  KEPALA_GUDANG
+  SUPIR
+}
+
+enum DeliveryStatus {
+  DRAFT
+  READY
+  IN_TRANSIT
+  COMPLETED
+  PARTIAL
+}
+
+enum DeliveryStopStatus {
+  PENDING
+  DELIVERED
+  REJECTED
+  PARTIAL_REJECT
 }
 
 enum PjpStatus {
@@ -37,8 +57,6 @@ enum VisitStatus {
   SKIPPED
 }
 
-
-
 enum RouteChangeType {
   REROUTE
   SKIP
@@ -50,6 +68,12 @@ enum RouteChangeStatus {
   APPROVED
   REJECTED
   ACKNOWLEDGED
+}
+
+enum UnlockStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
 }
 
 enum AttendanceType {
@@ -78,17 +102,122 @@ enum OutletValidationStatus {
   INCOMPLETE
 }
 
+// Trade Channel: digunakan bersama oleh Outlet dan CustomerRegistration
+enum ChannelType {
+  MODERN_TRADE
+  GENERAL_TRADE
+}
+
+enum SubChannelType {
+  // Modern Trade (MT)
+  HYPERMARKET
+  DRUGSTORE
+  NAT_SUPERMARKET
+  LOKAL_SUPERMARKET
+  CHAIN_MINIMARKET
+  LOKAL_MINIMARKET
+  OTHER_MT
+
+  // General Trade (GT)
+  GROSIR
+  SEMI_GROSIR
+  TOKO_KELONTONG
+  WARUNG
+  TOKO_LISTRIK
+  INSTITUSI
+  TOKO_RETAIL
+  OTHER_GT
+
+  // Specialized / FMCG Channels
+  PERKULAKAN
+  KOPERASI
+  BIDAN
+  OUTLET_MOTORIS
+  APOTIK
+  BABY_SHOP
+}
+
+enum ChannelTier {
+  TIER_1_TOP
+  TIER_2_MIDDLE
+  TIER_3_BOTTOM
+  GOLD
+  SILVER
+  BRONZE
+  BRONZE_A
+  BRONZE_B
+  BRONZE_C
+}
+
+enum PaymentType {
+  CASH
+  TOP
+  TRANSFER
+}
+
+enum CashPaymentMethod {
+  TUNAI
+  GIRO
+  CEK
+}
+
+enum VisitWeekType {
+  WEEK_1_3
+  WEEK_2_4
+  ALL_WEEK
+  WEEK_GANJIL
+  WEEK_GENAP
+}
+
+enum RegistrationStatus {
+  DRAFT
+  SUBMITTED
+  SPV_APPROVED
+  REGISTERED_ACTIVE
+  REJECTED
+}
+
+// DivisiType enum dihapus — diganti dengan model Division yang dinamis (dikelola Admin)
+
+enum OutletLocationType {
+  DALAM_PASAR
+  PINGGIR_JALAN
+  DALAM_GANG
+  KOMPLEK_PERUMAHAN
+}
+
+enum TaxType {
+  PKP
+  NON_PKP
+}
+
+
+enum OrderStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// USER & CLUSTER MODELS
+// ══════════════════════════════════════════════════════════════════════════════
+
 model User {
-  id                    String               @id @default(uuid())
-  name                  String
-  email                 String               @unique
-  password              String
-  role                  Role
-  clusterId             String?
-  cluster               Cluster?             @relation(fields: [clusterId], references: [id])
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  password String
+  role     Role
 
-  assignedClusters      Cluster[]            @relation("ClusterAssignedSales")
+  // Cluster tempat user bertugas (primary cluster)
+  clusterId String?
+  cluster   Cluster? @relation("UserPrimaryCluster", fields: [clusterId], references: [id])
 
+  // Clusters di mana user ini adalah sales yang ditugaskan (Cluster.assignedSalesId)
+  assignedClusters   Cluster[] @relation("ClusterAssignedSales")
+  supervisedClusters Cluster[] @relation("ClusterSupervisor")
+
+  // Relasi operasional
   pjps                  Pjp[]
   pjpTemplates          PjpTemplate[]
   attendances           Attendance[]
@@ -99,116 +228,182 @@ model User {
   notifications         Notification[]
   unlockRequestsCreated OutletUnlockRequest[] @relation("UnlockRequestedBy")
   unlockRequestsHandled OutletUnlockRequest[] @relation("UnlockHandledBy")
+  ordersCreated         Order[]              @relation("OrderCreatedBy")
+  ordersApproved        Order[]              @relation("OrderApprovedBy")
 
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  deletedAt             DateTime?
+  // CustomerRegistration FKs
+  registrationsSubmitted CustomerRegistration[] @relation("RegistrationSalesman")
+  registrationsApproved  CustomerRegistration[] @relation("RegistrationSpv")
+  registrationsActivated CustomerRegistration[] @relation("RegistrationAdmin")
+
+  // Delivery Management Relations (Kepala Gudang & Supir)
+  packingListsCreated    PackingList[]          @relation("PackingListCreatedBy")
+  deliveryRoutesAssigned DeliveryRoute[]        @relation("DeliveryRouteDriver")
+  deliveryRoutesCreated  DeliveryRoute[]        @relation("DeliveryRouteCreatedBy")
+  deliveryAttendances    DeliveryAttendance[]   @relation("DeliveryAttendanceDriver")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([role])
+  @@index([clusterId])
 }
 
 model Cluster {
-  id              String         @id @default(uuid())
+  id              String  @id @default(uuid())
   name            String
   region          String
   colorHex        String?
   centerLat       Float?
   centerLng       Float?
-  outletCount     Int?
+  outletCount     Int?    @default(0)
+
+  // Sales penanggung jawab cluster
   assignedSalesId String?
-  assignedSales   User?          @relation("ClusterAssignedSales", fields: [assignedSalesId], references: [id])
-  users           User[]
-  outlets         Outlet[]
-  routes          ClusterRoute[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  deletedAt       DateTime?
+  assignedSales   User?   @relation("ClusterAssignedSales", fields: [assignedSalesId], references: [id])
+
+  // Supervisor yang membawahi cluster ini
+  supervisorId String?
+  supervisor   User?   @relation("ClusterSupervisor", fields: [supervisorId], references: [id])
+
+  // Users yang primary clusternya adalah cluster ini
+  users   User[]   @relation("UserPrimaryCluster")
+  outlets Outlet[]
+  routes  ClusterRoute[]
+
+  // Registrasi outlet yang diarahkan ke cluster ini
+  customerRegistrations CustomerRegistration[] @relation("RegistrationCluster")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([deletedAt])
+  @@index([assignedSalesId])
 }
 
 model ClusterRoute {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   clusterId       String
-  cluster         Cluster  @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  cluster         Cluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
   routeIndex      Int
-  isActive        Boolean  @default(false)
+  isActive        Boolean @default(false)
   totalDistanceKm Float
   outletOrder     Json
   overviewPath    Json?
   startOutletId   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([clusterId])
+  @@index([clusterId, isActive])
 }
 
-enum OutletType {
-  GENERAL_TRADE
-  MODERN_TRADE
-}
+// ══════════════════════════════════════════════════════════════════════════════
+// OUTLET MODEL
+// ══════════════════════════════════════════════════════════════════════════════
 
 model Outlet {
-  id                       String                @id @default(uuid())
-  name                     String
-  address                  String
-  latitude                 Float
-  longitude                Float
-  clusterId                String
-  cluster                  Cluster               @relation(fields: [clusterId], references: [id])
+  id        String @id @default(uuid())
+  name      String
+  address   String
+  latitude  Float
+  longitude Float
 
-  outletCode               String?               @unique
-  ownerName                String?
-  phone                    String?
-  outstanding              Float?                @default(0)
-  radiusMeters             Int?                  @default(50)
-  type                     OutletType            @default(MODERN_TRADE)
+  // Relasi ke Cluster (FK mandatory)
+  clusterId String
+  cluster   Cluster @relation(fields: [clusterId], references: [id])
 
-  lockStatus               OutletLockStatus      @default(NORMAL)
-  subChannel               String?               @default("RETAIL")
-  itineraryCode            String?               // Kode Itinerary / RJP (cth: SLD002W2)
+  outletCode    String? @unique
+  ownerName     String?
+  phone         String?
+  outstanding   Float?  @default(0)
+  radiusMeters  Int?    @default(50)
+  itineraryCode String?
 
-  // ─── Validation Fields ────────────────────────────────────────────────────────
-  validationStatus         OutletValidationStatus @default(UNVALIDATED)
-  validationConfidence     Float?
-  validatedAt              DateTime?
-  validationDetails        Json?
-  googleSuggestedLat       Float?
-  googleSuggestedLng       Float?
+  // Trade Channel & SubChannel — synchronized with CustomerRegistration
+  channel    ChannelType    @default(GENERAL_TRADE)
+  type       ChannelType    @default(GENERAL_TRADE)
+  subChannel SubChannelType @default(TOKO_RETAIL)
 
-  pjpStops                 PjpStop[]
-  pjpTemplateStops         PjpTemplateStop[]
-  offPjpAttendances        OffPjpAttendance[]
-  routeChangesReplacement  RouteChangeRequest[]  @relation("ReplacementOutlet")
-  unlockRequests           OutletUnlockRequest[]
+  lockStatus       OutletLockStatus       @default(NORMAL)
+  validationStatus OutletValidationStatus @default(UNVALIDATED)
 
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  deletedAt                DateTime?
+  // Geolokasi & Validasi
+  validationConfidence Float?
+  validatedAt          DateTime?
+  validationDetails    Json?
+  googleSuggestedLat   Float?
+  googleSuggestedLng   Float?
+
+  // Relasi operasional
+  pjpStops                PjpStop[]
+  pjpTemplateStops        PjpTemplateStop[]
+  offPjpAttendances       OffPjpAttendance[]
+  routeChangesReplacement RouteChangeRequest[] @relation("ReplacementOutlet")
+  unlockRequests          OutletUnlockRequest[]
+
+  // Delivery Management Relations
+  packingLists   PackingList[]
+  invoices       Invoice[]
+  deliveryStops  DeliveryStop[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([clusterId])
+  @@index([channel])
+  @@index([type])
+  @@index([deletedAt])
+  @@index([validationStatus])
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// PJP (PLAN JOURNEY PLAN) MODELS
+// ══════════════════════════════════════════════════════════════════════════════
+
 model Pjp {
-  id            String               @id @default(uuid())
-  userId        String
-  user          User                 @relation(fields: [userId], references: [id])
-  date          DateTime
-  status        PjpStatus            @default(SCHEDULED)
-  type          PjpType
-  sourcePjpId   String?
-  sourcePjp     Pjp?                 @relation("PjpSourceHistory", fields: [sourcePjpId], references: [id])
-  derivedPjps   Pjp[]                @relation("PjpSourceHistory")
-  stops         PjpStop[]
-  routeChanges  RouteChangeRequest[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  date        DateTime
+  status      PjpStatus @default(SCHEDULED)
+  type        PjpType
+  sourcePjpId String?
+  sourcePjp   Pjp?      @relation("PjpSourceHistory", fields: [sourcePjpId], references: [id])
+  derivedPjps Pjp[]     @relation("PjpSourceHistory")
+  stops       PjpStop[]
+  routeChanges RouteChangeRequest[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+  @@index([status])
 }
 
 model PjpStop {
-  id           String               @id @default(uuid())
-  pjpId        String
-  pjp          Pjp                  @relation(fields: [pjpId], references: [id], onDelete: Cascade)
-  outletId     String
-  outlet       Outlet               @relation(fields: [outletId], references: [id])
-  sequence     Int
-  status       VisitStatus          @default(PENDING)
+  id       String      @id @default(uuid())
+  pjpId    String
+  pjp      Pjp         @relation(fields: [pjpId], references: [id], onDelete: Cascade)
+  outletId String
+  outlet   Outlet      @relation(fields: [outletId], references: [id])
+  sequence Int
+  status   VisitStatus @default(PENDING)
+
   attendances  Attendance[]
   routeChanges RouteChangeRequest[]
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  orders       Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pjpId])
+  @@index([outletId])
+  @@index([pjpId, status])
 }
 
 model Attendance {
@@ -224,57 +419,66 @@ model Attendance {
   notes           String?
   durationMinutes Float?
   deviationMeters Float?
-  distanceWarning String?        // 'OK' | 'WARNING'
-  reason          String?        // Alasan non-EC (cth: salah barang, toko tutup, dll)
-  earlyReason     String?        // Alasan checkout dini (< 5 menit)
-  orderAmount     Float?         @default(0) // Nilai order Rp jika ada transaksi
-  skuSold         Int?           @default(0) // Jumlah SKU terjual
+  distanceWarning String?        @default("OK")
+  reason          String?
+  earlyReason     String?
+  orderAmount     Float?         @default(0)
+  skuSold         Int?           @default(0)
   isEffectiveCall Boolean?       @default(false)
   timestamp       DateTime       @default(now())
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+
+  @@index([pjpStopId])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([userId, timestamp])
 }
 
 model OffPjpAttendance {
-  id              String       @id @default(uuid())
-  userId          String
-  user            User         @relation(fields: [userId], references: [id])
+  id           String       @id @default(uuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  outletId     String?
+  outlet       Outlet?      @relation(fields: [outletId], references: [id])
+  outletName   String
+  customerName String?
+  phone        String?
+  address      String
+  latitude     Float
+  longitude    Float
+  photoUrl     String?
+  reason       String
+  status       OffPjpStatus @default(PENDING)
+  validatedBy  String?
+  validatedAt  DateTime?
+  rejectionNote String?
 
-  outletId        String?
-  outlet          Outlet?      @relation(fields: [outletId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  outletName      String
-  customerName    String?
-  phone           String?
-  address         String
-
-  latitude        Float
-  longitude       Float
-  photoUrl        String?
-  reason          String
-
-  status          OffPjpStatus @default(PENDING)
-  validatedBy     String?
-  validatedAt     DateTime?
-  rejectionNote   String?
-
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  @@index([userId])
+  @@index([status])
+  @@index([outletId])
 }
 
 model OutletUnlockRequest {
-  id          String           @id @default(uuid())
-  outletId    String
-  outlet      Outlet           @relation(fields: [outletId], references: [id])
-  requestedBy String
+  id              String       @id @default(uuid())
+  outletId        String
+  outlet          Outlet       @relation(fields: [outletId], references: [id])
+  requestedBy     String
   requestedByUser User         @relation("UnlockRequestedBy", fields: [requestedBy], references: [id])
-  reason      String
-  status      RouteChangeStatus @default(PENDING_APPROVAL)
-  handledBy   String?
-  handledByUser User?          @relation("UnlockHandledBy", fields: [handledBy], references: [id])
-  handledAt   DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  reason          String
+  status          UnlockStatus @default(PENDING_APPROVAL)
+  handledBy       String?
+  handledByUser   User?        @relation("UnlockHandledBy", fields: [handledBy], references: [id])
+  handledAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([outletId])
+  @@index([status])
 }
 
 model RouteChangeRequest {
@@ -295,8 +499,13 @@ model RouteChangeRequest {
   status              RouteChangeStatus
   approvedBy          String?
   approvedByUser      User?             @relation("RouteChangeApprovedBy", fields: [approvedBy], references: [id])
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pjpId])
+  @@index([pjpStopId])
+  @@index([status])
 }
 
 model Notification {
@@ -309,6 +518,9 @@ model Notification {
   payload   Json?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId])
 }
 
 model PjpTemplate {
@@ -318,23 +530,27 @@ model PjpTemplate {
   dayOfWeek Int
   weekType  WeekType
   stops     PjpTemplateStop[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@unique([userId, dayOfWeek, weekType])
+  @@index([userId])
 }
 
 model PjpTemplateStop {
   id            String      @id @default(uuid())
   pjpTemplateId String
-  pjpTemplate   PjpTemplate @relation(fields: [pjpTemplateId], references: [id])
+  pjpTemplate   PjpTemplate @relation(fields: [pjpTemplateId], references: [id], onDelete: Cascade)
   outletId      String
   outlet        Outlet      @relation(fields: [outletId], references: [id])
   sequence      Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
 
+  @@index([pjpTemplateId])
+  @@index([outletId])
+}
 
 model Vehicle {
   id                String    @id @default(uuid())
@@ -346,10 +562,39 @@ model Vehicle {
   fuelType          String
   fuelPricePerLiter Float
   isActive          Boolean   @default(true)
+  condition         VehicleCondition @default(AVAILABLE)
+  totalKm                 Float    @default(0)
+  lastOilChangeKm         Float    @default(0)
+  lastOilFilterChangeKm   Float    @default(0)
+  lastBrakePadChangeKm    Float    @default(0)
   
+  deliveryRoutes    DeliveryRoute[]
+  serviceRecords    VehicleServiceRecord[]
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
+}
+
+enum VehicleCondition {
+  AVAILABLE
+  IN_SERVICE
+  BROKEN
+}
+
+model VehicleServiceRecord {
+  id                String   @id @default(uuid())
+  vehicleId         String
+  vehicle           Vehicle  @relation(fields: [vehicleId], references: [id])
+  serviceDate       DateTime
+  workshopName      String
+  serviceType       String
+  cost              Float
+  odometerAtService Int
+  notes             String?  @db.Text
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model SystemConfig {
@@ -359,174 +604,299 @@ model SystemConfig {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TABEL BARU: FORM REGISTRASI OUTLET & IMPORT CUSTOMER PVMI (3NF UNIFIED MODEL)
+// CUSTOMER REGISTRATION (NOO)
 // ══════════════════════════════════════════════════════════════════════════════
 
-enum DivisiType {
-  UNICHARM
-  BELFOODS
-  GENERAL
-}
+// ══════════════════════════════════════════════════════════════════════════════
+// DIVISION MODEL (Dinamis, dikelola Admin)
+// ══════════════════════════════════════════════════════════════════════════════
 
-enum OutletLocationType {
-  DALAM_PASAR
-  PINGGIR_JALAN
-  DALAM_GANG
-  KOMPLEK_PERUMAHAN
-}
+model Division {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String?  @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-enum TaxType {
-  PKP
-  NON_PKP
-}
-
-enum AreaRegion {
-  CIMAHI
-  KAB_BANDUNG_BARAT
-  KAB_BANDUNG
-  KOTA_BANDUNG
-}
-
-enum ChannelType {
-  MODERN_TRADE   // MT
-  GENERAL_TRADE  // GT
-}
-
-enum SubChannelType {
-  // Modern Trade (MT)
-  HYPERMARKET
-  DRUGSTORE
-  NAT_SUPERMARKET
-  LOKAL_SUPERMARKET
-  CHAIN_MINIMARKET
-  LOKAL_MINIMARKET
-  PERKULAKAN
-
-  // General Trade (GT)
-  KOPERASI
-  BIDAN
-  OUTLET_MOTORIS
-  APOTIK
-  GROSIR
-  TOKO_RETAIL
-  BABY_SHOP
-}
-
-enum ChannelTier {
-  BRONZE_A
-  BRONZE_B
-  BRONZE_C
-  SILVER
-  GOLD
-}
-
-enum PaymentType {
-  CASH
-  TOP
-  TRANSFER
-}
-
-enum CashPaymentMethod {
-  TUNAI
-  GIRO
-  CEK
-}
-
-enum RegistrationStatus {
-  DRAFT               // Disimpan oleh salesman
-  SUBMITTED           // Diajukan oleh salesman
-  SPV_APPROVED        // Disetujui oleh SPV
-  OPS_APPROVED        // Disetujui oleh Ops Manager
-  REGISTERED_ACTIVE   // Di-input ke sistem & diberi Kode Outlet oleh Admin
-  REJECTED            // Ditolak (disertai alasan)
-}
-
-enum VisitWeekType {
-  WEEK_GANJIL  // Week 1
-  WEEK_GENAP   // Week 2
-  ALL_WEEK     // Setiap Minggu
+  customerRegistrations CustomerRegistration[]
 }
 
 model CustomerRegistration {
-  id                    String              @id @default(uuid())
-  customerCode          String?             @unique // Kode Outlet (diisi Admin / customerID di Excel, cth: PVC0001)
-  
-  // Organisasi & Divisi
-  division              DivisiType          @default(UNICHARM)
-  branch                String              @default("PADALARANG")
-  companyId             String?             // NS6083030001545 dari ERP
-  branchId              String?             // 1522743351512 dari ERP
-  divisionId            String?             // 1675645496290 dari ERP
+  id           String  @id @default(uuid())
+  customerCode String? @unique
+
+  // Divisi — relasi dinamis ke model Division
+  divisionId   String?
+  divisionRef  Division? @relation(fields: [divisionId], references: [id])
+  // Tetap simpan nama divisi sebagai snapshot untuk historical display
+  divisionName String?   @default("BELFOODS")
+
+  branch     String  @default("PADALARANG")
+  companyId  String?
+  branchId   String?
 
   // 1. Data Identitas Outlet
-  name                  String              // Nama Outlet / customerName (cth: JEMY TK.)
-  ownerName             String?             // Nama Pemilik
-  address               String              // Alamat Outlet / customerAddress1
-  address2              String?             // customerAddress2
-  address3              String?             // customerAddress3
-  phone                 String?             // No Telp / customerPhone
-  locationType          OutletLocationType  @default(PINGGIR_JALAN) // Lokasi Toko
-  mappingLocation       String?             // Catatan Mapping Lokasi / patokan fisik
+  name            String
+  ownerName       String?
+  address         String
+  address2        String?
+  address3        String?
+  phone           String?
+  locationType    OutletLocationType @default(PINGGIR_JALAN)
+  mappingLocation String?
 
-  // 2. Data Pajak & Legalitas (3NF Atomik)
-  taxType               TaxType             @default(NON_PKP) // PKP vs NON PKP
-  taxNumber             String?             // No NPWP / NIK
-  taxName               String?             // Nama Wajib Pajak / Nama KTP
-  taxAddress            String?             // Alamat NPWP / Alamat KTP
-  taxDocumentUrl        String?             // Foto Lampiran NPWP / KTP / SPPKP
+  // 2. Data Pajak & Legalitas
+  taxType        TaxType @default(NON_PKP)
+  taxNumber      String?
+  taxName        String?
+  taxAddress     String?
+  taxDocumentUrl String?
 
-  // 3. Wilayah & Geografis
-  area                  AreaRegion          @default(CIMAHI) // Area
-  subAreaKecamatan      String?             // Sub Area / Kecamatan (subareaID)
-  kelurahan             String?             // Kelurahan / Desa
-  city                  String              @default("CIMAHI") // customerCity
-  latitude              Float?              @default(0) // customerLatitude
-  longitude             Float?              @default(0) // customerLongitude
-  placeId               String?             // Google Place ID (cth: ChIJN1t_tDeuEmsRUsoyG83frY4)
-  placeDetails          Json?               // Full Google Places API data (name, address, rating, category, phone, hours, plusCode, photo, url)
-  photoId               String?             // ID Khusus Foto Outlet (cth: PHOTO-20260824-8F9A1B)
-  photoUrl              String?             // Path / URL file foto di storage bucket folder
+  // 3. Wilayah & Geografis (bukan hardcoded enum, terhubung ke Cluster dan fleksibel)
+  area             String  @default("")
+  subAreaKecamatan String?
+  kelurahan        String?
+  city             String     @default("")
+  latitude         Float?     @default(0)
+  longitude        Float?     @default(0)
+  placeId          String?
+  placeDetails     Json?
+  photoId          String?
+  photoUrl         String?
 
-  // 4. Channel, Sub Channel & Tiering
-  channel               ChannelType         @default(GENERAL_TRADE) // MODERN_TRADE (MT) / GENERAL_TRADE (GT)
-  subChannel            SubChannelType      @default(TOKO_RETAIL) // Sub Channel (Retail, Grosir, Apotik, dll)
-  channelTier           ChannelTier         @default(BRONZE_C) // Bronze A, Bronze B, Bronze C
+  // 4. Trade Channel & Tiering (sama dengan Outlet)
+  channel     ChannelType    @default(GENERAL_TRADE)
+  subChannel  SubChannelType @default(TOKO_RETAIL)
+  channelTier ChannelTier   @default(BRONZE_C)
 
-  // 5. Syarat Pembayaran (Payment & Term of Payment)
-  paymentType           PaymentType         @default(CASH) // CASH, TOP, TRANSFER
-  cashMethod            CashPaymentMethod?  @default(TUNAI) // TUNAI, GIRO, CEK
-  termOfPaymentDays     Int                 @default(0) // 0 (Cash), 7, 14, 30 Hari
-  bankAccountInfo       String?             // Info Rekening Bank
+  // 5. Syarat Pembayaran
+  paymentType       PaymentType        @default(CASH)
+  cashMethod        CashPaymentMethod? @default(TUNAI)
+  termOfPaymentDays Int                @default(0)
+  bankAccountInfo   String?
 
-  // 6. Rencana Kunjungan (PJP Schedule)
-  visitWeekSchedule     VisitWeekType       @default(ALL_WEEK) // Week Ganjil, Genap, All Week
-  visitDays             String?             // Format hari: "SENIN,KAMIS" atau "SENIN"
+  // 6. Rencana Kunjungan
+  visitWeekSchedule VisitWeekType @default(ALL_WEEK)
+  visitDays         String?
 
   // 7. Workflow Approval & Tracking
-  registrationStatus    RegistrationStatus  @default(REGISTERED_ACTIVE)
-  outletKnownBy         String?             // Nama & Jabatan Mengetahui Outlet
-  salesmanName          String?             // Nama Salesman yang mengajukan
-  salesmanId            String?             // ID Salesman (User ID jika ada)
-  spvName               String?             // Nama SPV yang menyetujui
-  spvApprovedAt         DateTime?
-  opsManagerName        String?             // Nama Ops Manager yang menyetujui
-  opsApprovedAt         DateTime?
-  adminName             String?             // Nama Admin yang menginput ke sistem
-  adminRegisteredAt     DateTime?
-  rejectionNote         String?             // Alasan penolakan (jika REJECTED)
+  registrationStatus RegistrationStatus @default(SUBMITTED)
+  outletKnownBy      String?
+  rejectionNote      String?
 
-  // 8. Atribut Tambahan Master Excel ERP/ND6
-  marketSegmentId       String?             // marketSegmentID (cth: MS0000)
-  customerGroupId       String?             // customerGroupID
-  customerCategoryId    String?             // customerCategoryID
-  storeStatusId         String?             // storestatusID (cth: SS0000)
-  isActive              Boolean             @default(true) // customerStatus = 'A'
-  isBumn                Boolean             @default(false) // customerIsBUMN = 'N'
-  isContraBill          Boolean             @default(true) // isContraBill = 'Y'
+  // Snapshot nama untuk historical log dan query
+  salesmanName String?
+  spvName      String?
+  adminName    String?
 
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  deletedAt             DateTime?
+  // Relasi Foreign Key
+  salesmanId   String?
+  salesman     User?     @relation("RegistrationSalesman", fields: [salesmanId], references: [id])
+
+  spvId        String?
+  spv          User?     @relation("RegistrationSpv", fields: [spvId], references: [id])
+  spvApprovedAt DateTime?
+
+  adminId           String?
+  admin             User?     @relation("RegistrationAdmin", fields: [adminId], references: [id])
+  adminRegisteredAt DateTime?
+
+  clusterId String?
+  cluster   Cluster?  @relation("RegistrationCluster", fields: [clusterId], references: [id])
+
+  // 8. Atribut Master ERP/ND6
+  marketSegmentId    String?
+  customerGroupId    String?
+  customerCategoryId String?
+  storeStatusId      String?
+  isActive           Boolean @default(true)
+  isBumn             Boolean @default(false)
+  isContraBill       Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([salesmanId])
+  @@index([spvId])
+  @@index([adminId])
+  @@index([clusterId])
+  @@index([registrationStatus])
+  @@index([registrationStatus, deletedAt])
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ORDERS & PRODUCTS
+// ══════════════════════════════════════════════════════════════════════════════
 
+model Product {
+  id         String      @id @default(uuid())
+  sku        String      @unique
+  name       String
+  price      Float
+  stock      Int         @default(100)
+  code       String?
+  orderItems OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  deletedAt  DateTime?
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  pjpStopId      String
+  pjpStop        PjpStop     @relation(fields: [pjpStopId], references: [id], onDelete: Cascade)
+  createdBy      String
+  createdByUser  User        @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  approvedBy     String?
+  approvedByUser User?       @relation("OrderApprovedBy", fields: [approvedBy], references: [id])
+  approvedAt     DateTime?
+  totalValue     Float
+  paymentType    PaymentType @default(CASH)
+  status         OrderStatus @default(PENDING_APPROVAL)
+  items          OrderItem[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  @@index([pjpStopId])
+  @@index([status])
+  @@index([createdBy])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DELIVERY MANAGEMENT (Kepala Gudang & Supir)
+// ══════════════════════════════════════════════════════════════════════════════
+
+model PackingList {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  outletId      String
+  outlet        Outlet   @relation(fields: [outletId], references: [id])
+  totalCartons  Int      @default(0)
+  totalWeight   Float?
+  notes         String?
+  invoices      Invoice[]
+  deliveryStops DeliveryStop[]
+  createdById   String
+  createdBy     User     @relation("PackingListCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([outletId])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model Invoice {
+  id            String      @id @default(uuid())
+  invoiceNumber String      @unique
+  packingListId String
+  packingList   PackingList @relation(fields: [packingListId], references: [id], onDelete: Cascade)
+  outletId      String
+  outlet        Outlet      @relation(fields: [outletId], references: [id])
+  totalAmount   Float?
+  totalCartons  Int         @default(1)
+  notes         String?
+  isDelivered   Boolean     @default(false)
+  deliveredAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([packingListId])
+  @@index([outletId])
+  @@index([invoiceNumber])
+}
+
+model DeliveryRoute {
+  id           String         @id @default(uuid())
+  code         String         @unique
+  date         DateTime
+  vehicleId    String
+  vehicle      Vehicle        @relation(fields: [vehicleId], references: [id])
+  driverId     String
+  driver       User           @relation("DeliveryRouteDriver", fields: [driverId], references: [id])
+  status       DeliveryStatus @default(DRAFT)
+  totalCartons Int            @default(0)
+  totalWeight  Float?
+  notes        String?
+  totalDistanceKm    Float?
+  fuelConsumedLiters Float?
+  stops        DeliveryStop[]
+  createdById  String
+  createdBy    User           @relation("DeliveryRouteCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([date])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([status])
+  @@index([driverId, date])
+  @@index([createdById])
+}
+
+model DeliveryStop {
+  id              String             @id @default(uuid())
+  deliveryRouteId String
+  deliveryRoute   DeliveryRoute      @relation(fields: [deliveryRouteId], references: [id], onDelete: Cascade)
+  packingListId   String
+  packingList     PackingList        @relation(fields: [packingListId], references: [id])
+  outletId        String
+  outlet          Outlet             @relation(fields: [outletId], references: [id])
+  sequence        Int
+  status          DeliveryStopStatus @default(PENDING)
+  arrivedAt       DateTime?
+  completedAt     DateTime?
+  latitude        Float?
+  longitude       Float?
+  photoUrl        String?            @db.Text
+  rejectReason    String?
+  rejectedCartons Int?               @default(0)
+  notes           String?
+  attendances     DeliveryAttendance[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([deliveryRouteId])
+  @@index([packingListId])
+  @@index([outletId])
+  @@index([status])
+}
+
+model DeliveryAttendance {
+  id             String         @id @default(uuid())
+  deliveryStopId String
+  deliveryStop   DeliveryStop   @relation(fields: [deliveryStopId], references: [id], onDelete: Cascade)
+  driverId       String
+  driver         User           @relation("DeliveryAttendanceDriver", fields: [driverId], references: [id])
+  type           AttendanceType
+  latitude       Float
+  longitude      Float
+  photoUrl       String?        @db.Text
+  notes          String?
+  timestamp      DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([deliveryStopId])
+  @@index([driverId])
+  @@index([timestamp])
+}

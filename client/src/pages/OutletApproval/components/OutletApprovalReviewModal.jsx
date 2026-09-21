@@ -171,37 +171,29 @@ export const OutletApprovalReviewModal = ({
           </span>
 
           <div className="flex items-center gap-2">
-            {/* 1. If item is already approved by SPV and user is SUPERVISOR */}
-            {userRole === 'SUPERVISOR' && item.registrationStatus === 'SPV_APPROVED' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-bold">
-                <LuCheck /> Telah Anda Setujui (Menunggu Ops Manager)
+            {/* 1. If item is already approved by SPV */}
+            {item.registrationStatus === 'SPV_APPROVED' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-600 border border-blue-500/20 text-xs font-bold">
+                <LuCheck /> Telah Disetujui SPV (Menunggu Aktivasi Admin)
               </span>
             )}
 
-            {/* 2. If item is OPS_APPROVED */}
-            {item.registrationStatus === 'OPS_APPROVED' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold">
-                <LuCheck /> Telah Disetujui Manajer Operasional
-              </span>
-            )}
-
-            {/* 3. If item is REGISTERED_ACTIVE */}
+            {/* 2. If item is REGISTERED_ACTIVE */}
             {item.registrationStatus === 'REGISTERED_ACTIVE' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-bold">
                 <LuCheck /> Outlet Telah Terdaftar Aktif ({item.customerCode || 'Kode Resmi'})
               </span>
             )}
 
-            {/* 4. If item is REJECTED */}
+            {/* 3. If item is REJECTED */}
             {item.registrationStatus === 'REJECTED' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 text-red-600 border border-red-500/20 text-xs font-bold">
                 <LuX /> Pengajuan Telah Ditolak
               </span>
             )}
 
-            {/* 5. Can Take Action Buttons (When status is SUBMITTED for SPV, or SPV_APPROVED for Ops) */}
+            {/* 4. Can Take Action Buttons (When status is SUBMITTED for SPV, or pending for Admin) */}
             {((userRole === 'SUPERVISOR' && item.registrationStatus === 'SUBMITTED') ||
-              (userRole === 'MANAJER_OPERASIONAL' && (item.registrationStatus === 'SPV_APPROVED' || item.registrationStatus === 'SUBMITTED')) ||
               (userRole === 'ADMIN' && item.registrationStatus !== 'REGISTERED_ACTIVE' && item.registrationStatus !== 'REJECTED') ||
               (!userRole && item.registrationStatus === 'SUBMITTED')) && (
               <>

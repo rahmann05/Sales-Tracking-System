@@ -7,7 +7,6 @@ export const ROLES = /** @type {const} */ ({
   SALES: 'SALES',
   SUPERVISOR: 'SUPERVISOR',
   ADMIN: 'ADMIN',
-  MANAJER_OPERASIONAL: 'MANAJER_OPERASIONAL',
 });
 
 export const PJP_STATUS = /** @type {const} */ ({

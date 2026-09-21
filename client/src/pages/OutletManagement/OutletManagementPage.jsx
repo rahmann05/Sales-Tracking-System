@@ -15,14 +15,16 @@ import {
 } from 'react-icons/lu';
 import { FiEdit, FiCheckCircle } from 'react-icons/fi';
 import { Card } from '../../components/common/Card';
-import { outletsApi } from '../../services/api';
+import { outletsApi, clustersApi } from '../../services/api';
 import { notifySuccess } from '../../services/notificationService';
 import { exportImportNikExcel } from '../../utils/customerExport';
 import { NikManagementModal } from '../OutletRegistrationReport/components/NikManagementModal';
+import { PageHeader } from '../../components/common/PageHeader';
 
 export const OutletManagementPage = () => {
-  const { user, addNotification } = useApp();
+  const { user, addNotification, clusters: appClusters, fetchClusters } = useApp();
   const [outlets, setOutlets] = useState([]);
+  const [clusterList, setClusterList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCluster, setSelectedCluster] = useState('ALL');
@@ -37,8 +39,8 @@ export const OutletManagementPage = () => {
     address: '',
     latitude: -6.8722,
     longitude: 107.5423,
-    clusterId: 'cluster-belfoods-01',
-    clusterName: 'Klaster Belfoods Bandung Raya',
+    clusterId: '',
+    clusterName: '',
     ownerName: '',
     phone: '',
   });
@@ -46,9 +48,21 @@ export const OutletManagementPage = () => {
   const fetchOutlets = async () => {
     try {
       setLoading(true);
-      const res = await outletsApi.getAll();
-      const list = Array.isArray(res) ? res : res?.data || [];
+      const [outletsRes, clustersRes] = await Promise.all([
+        outletsApi.getAll(),
+        clustersApi.getAll().catch(() => ({ data: [] })),
+      ]);
+      const list = Array.isArray(outletsRes) ? outletsRes : outletsRes?.data || [];
+      const cList = Array.isArray(clustersRes) ? clustersRes : clustersRes?.data || [];
       setOutlets(list);
+      setClusterList(cList);
+      if (cList.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          clusterId: prev.clusterId || cList[0].id,
+          clusterName: prev.clusterName || cList[0].name,
+        }));
+      }
     } catch (err) {
       console.warn('[OutletManagement] Fetch error:', err.message);
     } finally {
@@ -82,11 +96,14 @@ export const OutletManagementPage = () => {
 
   const handleSaveAdd = async (e) => {
     e.preventDefault();
+    const chosen = clusterList.find(c => c.id === formData.clusterId || c.name === formData.clusterName) || clusterList[0];
     const newEntry = {
       ...formData,
       id: `outlet-${Date.now()}`,
       outletCode: formData.outletCode || `OUT-${Math.floor(1000 + Math.random() * 9000)}`,
-      cluster: { name: formData.clusterName },
+      clusterId: chosen?.id,
+      clusterName: chosen?.name,
+      cluster: { id: chosen?.id, name: chosen?.name },
     };
 
     setOutlets((prev) => [newEntry, ...prev]);
@@ -96,7 +113,7 @@ export const OutletManagementPage = () => {
     addNotification({
       title: 'Master Outlet Baru Ditambahkan',
       message: `Outlet "${newEntry.name}" telah didaftarkan ke sistem oleh ${user.name}.`,
-      roleTarget: ['OPERATIONAL_MANAGER', 'SUPERVISOR'],
+      roleTarget: ['SUPERVISOR', 'ADMIN'],
     });
 
     outletsApi.create(newEntry).catch((err) => {
@@ -107,6 +124,7 @@ export const OutletManagementPage = () => {
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!editingOutlet) return;
+    const chosen = clusterList.find(c => c.id === formData.clusterId || c.name === formData.clusterName) || clusterList[0];
 
     setOutlets((prev) =>
       prev.map((o) =>
@@ -119,7 +137,8 @@ export const OutletManagementPage = () => {
               longitude: Number(formData.longitude),
               ownerName: formData.ownerName,
               phone: formData.phone,
-              cluster: { name: formData.clusterName },
+              clusterId: chosen?.id,
+              cluster: { id: chosen?.id, name: chosen?.name },
             }
           : o
       )
@@ -129,7 +148,10 @@ export const OutletManagementPage = () => {
     setEditingOutlet(null);
     notifySuccess(`Data outlet berhasil diperbarui.`);
 
-    outletsApi.update(updatedId, formData).catch((err) => {
+    outletsApi.update(updatedId, {
+      ...formData,
+      clusterId: chosen?.id,
+    }).catch((err) => {
       console.warn('[API] Update outlet error:', err.message);
     });
   };
@@ -161,94 +183,96 @@ export const OutletManagementPage = () => {
 
   return (
     <div className="page-container space-y-6 pb-24">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface p-5 rounded-3xl border border-border-glass">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-primary mb-1">
-            <LuStore className="text-sm" />
-            <span>MASTER DATA OUTLET & TOKO</span>
+      {/* Standardized Header */}
+      <PageHeader
+        badge={
+          <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
+            <LuStore className="text-sm" /> MASTER DATA OUTLET & TOKO
+          </span>
+        }
+        title="Kelola Master Outlet & Titik Kunjungan"
+        subtitle={`Database resmi ${outlets.length} titik toko pelanggan, pemetaan koordinat GPS presisi, serta pengelolaan NIK 16-digit pemilik toko.`}
+        stats={[
+          { label: 'Total Outlet', value: `${outlets.length} Toko`, color: 'emerald' },
+          { label: 'Filter Kluster', value: selectedCluster === 'ALL' ? 'Semua Kluster' : selectedCluster, color: 'blue' },
+        ]}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setIsNikModalOpen(true)}
+              className="px-3.5 py-2.5 bg-surface border border-border-glass hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer w-fit shrink-0"
+              title="Kelola dan Input NIK 16-Digit Pemilik Toko"
+            >
+              <LuIdCard className="text-sm" />
+              <span>Kelola NIK</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => exportImportNikExcel(outlets, `IMPORT_NIK_${new Date().toISOString().split('T')[0]}.xls`)}
+              className="px-3.5 py-2.5 bg-surface border border-border-glass hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer w-fit shrink-0"
+              title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom)"
+            >
+              <LuFileSpreadsheet className="text-sm" />
+              <span>Ekspor IMPORT NIK</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFormData({
+                  name: '',
+                  outletCode: '',
+                  address: '',
+                  latitude: -6.8722,
+                  longitude: 107.5423,
+                  clusterName: 'Klaster Belfoods Bandung Raya',
+                  ownerName: '',
+                  phone: '',
+                });
+                setIsAddModalOpen(true);
+              }}
+              className="px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs hover:bg-primary/90 transition-all cursor-pointer w-fit shrink-0"
+            >
+              <LuPlus className="text-sm" />
+              <span>+ Tambah Outlet Baru</span>
+            </button>
           </div>
-          <h2 className="text-xl font-black text-on-surface">Kelola Master Outlet & Titik Kunjungan</h2>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Kelola {outlets.length} database titik toko dan koordinat GPS pelanggan
-          </p>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setIsNikModalOpen(true)}
-            className="px-3.5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer w-fit shrink-0"
-            title="Kelola dan Input NIK 16-Digit Pemilik Toko"
-          >
-            <LuIdCard className="text-sm" />
-            <span>Kelola / Input NIK</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => exportImportNikExcel(outlets, `IMPORT_NIK_${new Date().toISOString().split('T')[0]}.xls`)}
-            className="px-3.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer w-fit shrink-0"
-            title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom)"
-          >
-            <LuFileSpreadsheet className="text-sm" />
-            <span>Ekspor IMPORT NIK</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFormData({
-                name: '',
-                outletCode: '',
-                address: '',
-                latitude: -6.8722,
-                longitude: 107.5423,
-                clusterName: 'Klaster Belfoods Bandung Raya',
-                ownerName: '',
-                phone: '',
-              });
-              setIsAddModalOpen(true);
-            }}
-            className="px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm hover:opacity-90 transition-all cursor-pointer w-fit shrink-0"
-          >
-            <LuPlus className="text-sm" />
-            <span>+ Tambah Outlet Baru</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filter & Search Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative flex-1">
-          <LuSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari toko berdasarkan nama, kode, atau alamat..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-surface border border-border-glass text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-sm"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <LuFilter className="text-on-surface-variant text-sm shrink-0" />
-          <select
-            value={selectedCluster}
-            onChange={(e) => setSelectedCluster(e.target.value)}
-            className="py-2.5 px-3 rounded-2xl bg-surface border border-border-glass text-xs text-on-surface font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-sm"
-          >
-            <option value="ALL">Semua Klaster ({outlets.length})</option>
-            {clusters.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Table Card */}
+      {/* Unified Master Outlet Workspace Card */}
       <Card className="!p-0 rounded-3xl border border-border-glass overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-border-glass flex items-center justify-between">
-          <span className="text-xs font-bold text-on-surface">
-            Menampilkan {filteredOutlets.length} outlet dari total {outlets.length} toko
+        {/* Workspace Toolbar: Search & Filter */}
+        <div className="p-4 border-b border-border-glass bg-surface-container/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <LuSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari toko berdasarkan nama, kode, atau alamat..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-border-glass text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-xs"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <LuFilter className="text-on-surface-variant text-sm shrink-0" />
+            <select
+              value={selectedCluster}
+              onChange={(e) => setSelectedCluster(e.target.value)}
+              className="py-2.5 px-3 rounded-xl bg-surface border border-border-glass text-xs text-on-surface font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-xs"
+            >
+              <option value="ALL">Semua Klaster ({outlets.length})</option>
+              {clusters.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="px-4 py-2.5 bg-surface border-b border-border-glass flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-on-surface-variant">
+            Menampilkan <strong className="text-on-surface">{filteredOutlets.length}</strong> dari total {outlets.length} outlet
           </span>
         </div>
 
@@ -385,16 +409,19 @@ export const OutletManagementPage = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-on-surface">Klaster Wilayah</label>
+                <label className="font-bold text-on-surface">Klaster Wilayah (Definisi Supervisor)</label>
                 <select
-                  value={formData.clusterName}
-                  onChange={(e) => setFormData({ ...formData, clusterName: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
+                  value={formData.clusterId || ''}
+                  onChange={(e) => {
+                    const chosen = clusterList.find(c => c.id === e.target.value);
+                    setFormData({ ...formData, clusterId: e.target.value, clusterName: chosen?.name || '' });
+                  }}
+                  className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface text-xs"
                 >
-                  <option value="Klaster Belfoods Bandung Raya">Klaster Belfoods Bandung Raya</option>
-                  <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
-                  <option value="Klaster Padalarang (KBB)">Klaster Padalarang (KBB)</option>
-                  <option value="Klaster Lembang (KBB Utara)">Klaster Lembang (KBB Utara)</option>
+                  <option value="" disabled>-- Pilih Klaster Wilayah --</option>
+                  {clusterList.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.region})</option>
+                  ))}
                 </select>
               </div>
 
@@ -487,16 +514,19 @@ export const OutletManagementPage = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-on-surface">Klaster Wilayah</label>
+                <label className="font-bold text-on-surface">Klaster Wilayah (Definisi Supervisor)</label>
                 <select
-                  value={formData.clusterName}
-                  onChange={(e) => setFormData({ ...formData, clusterName: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface"
+                  value={formData.clusterId || ''}
+                  onChange={(e) => {
+                    const chosen = clusterList.find(c => c.id === e.target.value);
+                    setFormData({ ...formData, clusterId: e.target.value, clusterName: chosen?.name || '' });
+                  }}
+                  className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface text-xs"
                 >
-                  <option value="Klaster Belfoods Bandung Raya">Klaster Belfoods Bandung Raya</option>
-                  <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
-                  <option value="Klaster Padalarang (KBB)">Klaster Padalarang (KBB)</option>
-                  <option value="Klaster Lembang (KBB Utara)">Klaster Lembang (KBB Utara)</option>
+                  <option value="" disabled>-- Pilih Klaster Wilayah --</option>
+                  {clusterList.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.region})</option>
+                  ))}
                 </select>
               </div>
 

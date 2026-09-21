@@ -11,7 +11,6 @@ export { useGeofence } from './useGeofence';
 export { useLiveClock } from './useLiveClock';
 export { useLogisticsDispatch } from './useLogisticsDispatch';
 export { useModal } from './useModal';
-export { useOpsActions } from './useOpsActions';
 export { useOutletLockStatus } from './useOutletLockStatus';
 export { useRjpManagement } from './useRjpManagement';
 export { useRouteFilter } from './useRouteFilter';

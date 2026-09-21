@@ -23,7 +23,7 @@ export const RouteCard = ({ route, isSelected, onClick }) => {
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
             <span className="text-xs font-extrabold text-on-surface">
-              {route.name}
+              {route.clusterName ? route.clusterName : (route.name || 'Rute Harian')}
             </span>
             <Badge status={route.status} />
           </div>
@@ -34,9 +34,9 @@ export const RouteCard = ({ route, isSelected, onClick }) => {
 
         <div className="flex items-center justify-between text-xs text-on-surface-variant mt-2">
           <div className="flex items-center gap-2">
-            <Avatar src={route.avatar} name={route.repName} size="sm" />
+            <Avatar src={route.avatar} name={route.repName || route.name} size="sm" />
             <span className="font-semibold text-on-surface">
-              {route.repName}
+              {route.repName || route.name}
             </span>
           </div>
 

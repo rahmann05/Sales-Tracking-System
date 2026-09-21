@@ -7,13 +7,9 @@ import { LuShieldCheck, LuUsers, LuNavigation } from 'react-icons/lu';
  */
 
 export const RJP_ROLE_TAB_MAP = {
-    OPS: [
-        { id: 'OPS_MANAGER', shortLabel: 'Master Ops', label: 'Operational Manager (Master Region & Quota)', icon: LuShieldCheck },
-        { id: 'SPV_ROLLING', shortLabel: 'Supervisor', label: 'Supervisor (Matriks Rolling)', icon: LuUsers },
-        { id: 'SALES_VIEW', shortLabel: 'Pratinjau Sales', label: 'Pratinjau Sales (Rute Harian & TSP)', icon: LuNavigation },
-    ],
     SPV: [
-        { id: 'SPV_ROLLING', shortLabel: 'Matriks Rolling', label: 'Supervisor (Matriks Rolling Mingguan)', icon: LuUsers },
+        { id: 'MASTER_CLUSTER', shortLabel: 'Master Kluster', label: 'Master Kluster & Alokasi Region RJP', icon: LuShieldCheck },
+        { id: 'SPV_ROLLING', shortLabel: 'Matriks Rolling', label: 'Matriks Rolling Mingguan', icon: LuUsers },
         { id: 'SALES_VIEW', shortLabel: 'Pratinjau Sales', label: 'Pratinjau Rute Sales Harian & TSP', icon: LuNavigation },
     ],
     SALES: [

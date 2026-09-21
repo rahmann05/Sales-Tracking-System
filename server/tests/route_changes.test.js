@@ -49,7 +49,7 @@ describe('Route Changes & Incident Management Unit Tests', () => {
     assert.equal(approvedSkip.notificationType, NOTIFICATION_TYPES.ROUTE_SKIP_ACKNOWLEDGED);
   });
 
-  it('should require Operational Manager approval for REROUTE with replacement outlet', () => {
+  it('should approve REROUTE with replacement outlet by Supervisor', () => {
     const rerouteRequest = {
       id: 'rc-02',
       type: ROUTE_CHANGE_TYPE.REROUTE,
@@ -60,16 +60,16 @@ describe('Route Changes & Incident Management Unit Tests', () => {
       reason: 'Toko awal tutup, dialihkan ke toko pengganti terdekat',
     };
 
-    // Operational Manager approves reroute
+    // Supervisor approves reroute
     const approvedReroute = {
       ...rerouteRequest,
       status: ROUTE_CHANGE_STATUS.APPROVED,
-      approvedByRole: 'MANAJER_OPERASIONAL',
+      approvedByRole: 'SUPERVISOR',
       notificationType: NOTIFICATION_TYPES.REROUTE_APPROVED,
     };
 
     assert.equal(approvedReroute.status, ROUTE_CHANGE_STATUS.APPROVED);
-    assert.equal(approvedReroute.approvedByRole, 'MANAJER_OPERASIONAL');
+    assert.equal(approvedReroute.approvedByRole, 'SUPERVISOR');
     assert.equal(approvedReroute.replacementOutletId, 'outlet-cmh-08');
   });
 });

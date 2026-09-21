@@ -27,3 +27,15 @@ export const updateVehicleSchema = z.object({
     id: z.string().uuid('ID tidak valid'),
   }),
 });
+
+export const recordMaintenanceSchema = z.object({
+  body: z.object({
+    serviceType: z.enum(['GANTI_OLI', 'GANTI_FILTER_OLI', 'GANTI_KANVAS_REM', 'LAINNYA']),
+    odometerAtService: z.number().min(0),
+    cost: z.number().min(0).optional(),
+    serviceDate: z.string().datetime().optional(),
+  }),
+  params: z.object({
+    id: z.string().uuid('ID kendaraan tidak valid'),
+  }),
+});

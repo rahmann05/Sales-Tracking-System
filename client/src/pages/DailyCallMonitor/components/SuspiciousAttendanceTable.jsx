@@ -9,6 +9,7 @@ import {
   LuExternalLink,
   LuCircleCheck,
   LuNavigation,
+  LuCar,
 } from 'react-icons/lu';
 import { FiAlertTriangle } from 'react-icons/fi';
 

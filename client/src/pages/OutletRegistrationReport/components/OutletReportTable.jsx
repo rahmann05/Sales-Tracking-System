@@ -10,9 +10,10 @@ export const OutletReportTable = ({
   isLoading = false,
   onOpenPdf,
   onOpenFinalize,
+  embedded = false,
 }) => {
   return (
-    <div className="outlet-reg-section-card p-0 overflow-hidden">
+    <div className={embedded ? 'overflow-hidden' : 'outlet-reg-section-card p-0 overflow-hidden'}>
       {isLoading ? (
         <div className="py-16 text-center text-xs text-on-surface-variant">
           Memuat data laporan registrasi outlet...

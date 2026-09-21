@@ -10,13 +10,13 @@ router.use(authenticate);
 
 // Real-time GPS Location Tracking
 router.post('/location', userController.updateLocation);
-router.get('/live-locations', authorize('ADMIN', 'MANAJER_OPERASIONAL', 'SUPERVISOR', 'SALES'), userController.getLiveLocations);
+router.get('/live-locations', authorize('ADMIN', 'SUPERVISOR', 'SALES'), userController.getLiveLocations);
 
 // User CRUD
-router.get('/', authorize('ADMIN', 'MANAJER_OPERASIONAL', 'SUPERVISOR', 'SALES'), userController.getAllUsers);
+router.get('/', authorize('ADMIN', 'SUPERVISOR', 'SALES'), userController.getAllUsers);
 router.get('/:id', userController.getUser);
-router.post('/', authorize('ADMIN', 'MANAJER_OPERASIONAL'), validate(createUserSchema), userController.create);
-router.patch('/:id', authorize('ADMIN', 'MANAJER_OPERASIONAL'), validate(updateUserSchema), userController.update);
-router.delete('/:id', authorize('ADMIN', 'MANAJER_OPERASIONAL'), userController.remove);
+router.post('/', authorize('ADMIN', 'SUPERVISOR'), validate(createUserSchema), userController.create);
+router.patch('/:id', authorize('ADMIN', 'SUPERVISOR'), validate(updateUserSchema), userController.update);
+router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), userController.remove);
 
 export default router;

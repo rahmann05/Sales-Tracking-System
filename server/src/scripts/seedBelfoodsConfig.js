@@ -22,10 +22,6 @@ async function seedBelfoodsConfig() {
     where: { role: 'SUPERVISOR', deletedAt: null },
   });
 
-  const opsUser = await prisma.user.findFirst({
-    where: { role: 'MANAJER_OPERASIONAL', deletedAt: null },
-  });
-
   const adminUser = await prisma.user.findFirst({
     where: { role: 'ADMIN', deletedAt: null },
   });
@@ -138,8 +134,6 @@ async function seedBelfoodsConfig() {
       },
       spvName: spvUser?.name || 'Ahmad Subagja',
       spvApprovedAt: new Date(Date.now() - 172800000),
-      opsManagerName: opsUser?.name || 'Bambang Suroso',
-      opsApprovedAt: new Date(Date.now() - 86400000),
       adminName: adminUser?.name || 'Maria Ulfah',
       adminRegisteredAt: new Date(),
     },

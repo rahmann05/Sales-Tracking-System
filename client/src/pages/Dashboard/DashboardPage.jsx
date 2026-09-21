@@ -1,49 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ActiveRoutesList } from './components/ActiveRoutesList';
 import { useRouteFilter } from '../../hooks/useRouteFilter';
 import { filterStopsForToday } from '../../utils/dateUtils';
 import { useMap } from '../../context/MapContext';
 import { useMapData } from '../../context/MapDataContext';
+import { computeClusterPolygons } from '../../utils/clusterBoundaryHelper';
 import '../../styles/pages/Dashboard.css';
 
 export const DashboardPage = ({ searchQuery = '' }) => {
   const { user, activeRoutes = [], salesStops = [] } = useApp();
-  const { setMapMode, setMarkers, clearMarkers, setPolylines, clearPolylines, panTo } = useMap();
-  const { outlets } = useMapData();
+  const {
+    setMapMode,
+    setMarkers,
+    clearMarkers,
+    setPolylines,
+    clearPolylines,
+    setPolygons,
+    clearPolygons,
+    panTo,
+    fitBounds,
+    isMapReady,
+  } = useMap();
+  const { outlets = [], clusters: mapClusters = [] } = useMapData();
 
   const isSalesRole = user?.role === 'SALES';
 
-  // Stops & rute SELALU difilter ke jadwal HARI INI saja (untuk semua role)
-  const todayStops = React.useMemo(() => filterStopsForToday(salesStops), [salesStops]);
+  // Stops & rute difilter ke jadwal HARI INI
+  const todayStops = useMemo(() => filterStopsForToday(salesStops), [salesStops]);
 
-  const todayRoutes = React.useMemo(
-    () =>
-      activeRoutes
-        .map((route) => ({ ...route, stops: filterStopsForToday(route.stops || []) }))
-        .filter((route) => route.stops.length > 0),
-    [activeRoutes]
-  );
+  const todayRoutes = useMemo(() => {
+    return (activeRoutes || [])
+      .map((route) => ({ ...route, stops: filterStopsForToday(route.stops || []) }))
+      .filter((route) => route.stops.length > 0);
+  }, [activeRoutes]);
 
-  const {
-    routes,
-    setQuery,
-    filterStatus,
-    filterByStatus,
-  } = useRouteFilter(todayRoutes);
+  // ─── Sales name filter ──────────────────────────────────────────────────────
+  const [selectedSalesName, setSelectedSalesName] = useState('ALL');
 
-  // Selected Sales route (for SPV/Manager view)
+  const salesOptions = useMemo(() => {
+    const names = new Set();
+    todayRoutes.forEach((r) => {
+      const n = r.repName || r.name;
+      if (n) names.add(n);
+    });
+    return Array.from(names).sort();
+  }, [todayRoutes]);
+
+  const filteredRoutes = useMemo(() => {
+    if (selectedSalesName === 'ALL') return todayRoutes;
+    return todayRoutes.filter((r) => (r.repName || r.name) === selectedSalesName);
+  }, [todayRoutes, selectedSalesName]);
+
+  const { routes, setQuery } = useRouteFilter(filteredRoutes);
+
+  // Selected Sales route (for SPV/Manager view or drilldown)
   const [selectedRoute, setSelectedRoute] = useState(null);
 
   // Selected Outlet (for auto-focusing map panTo)
   const [selectedOutlet, setSelectedOutlet] = useState(null);
 
   // For Sales role, restrict strictly to their own assigned stops
-  const displayStops = React.useMemo(() => {
+  const displayStops = useMemo(() => {
     if (isSalesRole) {
-      return todayStops.filter(
-        (stop) => !stop.assignedSalesName || stop.assignedSalesName === user?.name || stop.assignedSalesName === 'Budi Santoso'
+      const myStops = todayStops.filter(
+        (stop) => !stop.assignedSalesName || stop.assignedSalesName === user?.name
       );
+      return myStops.length > 0 ? myStops : todayStops;
     }
     return todayStops;
   }, [todayStops, isSalesRole, user]);
@@ -52,93 +75,176 @@ export const DashboardPage = ({ searchQuery = '' }) => {
     setQuery(searchQuery);
   }, [searchQuery, setQuery]);
 
-  // Hubungkan DashboardPage ke Persistent Map
+  // ─── Map Mode Setup & Teardown ──────────────────────────────────────────────
   useEffect(() => {
     setMapMode('dashboard');
 
-    // Setup Persistent Map Markers (Role-Based Visibility)
-    if (outlets && outlets.length > 0) {
-      // Filter visible outlets based on role
-      let visibleOutlets = [];
-      
-      if (user?.role === 'SALES') {
-        const assignedCodes = displayStops.map(s => s.outletCode).filter(Boolean);
-        visibleOutlets = outlets.filter(o => assignedCodes.includes(o.outletCode));
-      } else if (user?.role === 'SUPERVISOR') {
-        const teamCodes = [];
-        todayRoutes.forEach(r => {
-          r.stops.forEach(s => teamCodes.push(s.outletCode));
-        });
-        const uniqueCodes = [...new Set(teamCodes)].filter(Boolean);
-        visibleOutlets = outlets.filter(o => uniqueCodes.includes(o.outletCode));
-      } else {
-        // ADMIN or MANAJER_OPERASIONAL sees all
-        visibleOutlets = outlets;
-      }
-
-      const getSvgMarker = (color) => {
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path fill="${color}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
-        return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-      };
-
-      const markersData = visibleOutlets.map(o => {
-        let markerColor = '#6b7280'; // default gray
-        if (o.type === 'GENERAL_TRADE') {
-            markerColor = o.clusterId ? '#1e3a8a' : '#3b82f6';
-        } else {
-            markerColor = o.clusterId ? '#581c87' : '#a855f7';
-        }
-
-        return {
-          id: o.id,
-          lat: o.latitude,
-          lng: o.longitude,
-          title: o.name,
-          icon: {
-            url: getSvgMarker(markerColor),
-            anchor: window.google ? new window.google.maps.Point(16, 32) : { x: 16, y: 32 }
-          },
-        };
-      });
-      setMarkers(markersData);
-    }
-
     return () => {
-      // Bersihkan jika pergi ke tab lain (tapi jangan unmount map fisiknya)
       setMapMode('hidden');
       clearMarkers();
       clearPolylines();
+      clearPolygons();
     };
-  }, [outlets, setMapMode, setMarkers, clearMarkers, clearPolylines]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Fokus ke outlet yang dipilih di peta secara imperatif
+  // ─── 1. Cluster Polygons (Wilayah Klaster Hari Ini) ─────────────────────────
+  const clusterPolygons = useMemo(() => {
+    return computeClusterPolygons(mapClusters, outlets);
+  }, [mapClusters, outlets]);
+
   useEffect(() => {
-    if (selectedOutlet && selectedOutlet.lat && selectedOutlet.lng) {
-      panTo(selectedOutlet.lat, selectedOutlet.lng, 15);
+    if (!isMapReady || clusterPolygons.length === 0) return;
+
+    // Highlight cluster if selected route or filtered sales belongs to it
+    const activeClusterName = selectedRoute?.clusterName;
+
+    const styledPolygons = clusterPolygons.map((poly) => {
+      const isHighlighted = activeClusterName && poly.name.toLowerCase() === activeClusterName.toLowerCase();
+      return {
+        ...poly,
+        strokeOpacity: isHighlighted ? 1.0 : 0.7,
+        strokeWeight: isHighlighted ? 3 : 2,
+        fillOpacity: isHighlighted ? 0.28 : 0.12,
+      };
+    });
+
+    setPolygons(styledPolygons);
+  }, [isMapReady, clusterPolygons, selectedRoute, setPolygons]);
+
+  // ─── 2. Outlet Markers ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isMapReady || outlets.length === 0) return;
+
+    let visibleOutlets = outlets;
+
+    if (selectedRoute && Array.isArray(selectedRoute.stops) && selectedRoute.stops.length > 0) {
+      const routeOutletCodes = new Set(
+        selectedRoute.stops.map((s) => s.outletCode || s.customerId).filter(Boolean)
+      );
+      const routeOutletIds = new Set(selectedRoute.stops.map((s) => s.id).filter(Boolean));
+
+      visibleOutlets = outlets.map((o) => ({
+        ...o,
+        _highlighted: routeOutletCodes.has(o.outletCode) || routeOutletIds.has(o.id),
+      }));
+    } else if (selectedSalesName !== 'ALL') {
+      const currentSalesRoutes = todayRoutes.filter(
+        (r) => (r.repName || r.name) === selectedSalesName
+      );
+      const allowedCodes = new Set();
+      currentSalesRoutes.forEach((r) =>
+        r.stops.forEach((s) => {
+          if (s.outletCode) allowedCodes.add(s.outletCode);
+        })
+      );
+      visibleOutlets = outlets.map((o) => ({
+        ...o,
+        _highlighted: allowedCodes.has(o.outletCode),
+      }));
+    }
+
+    const getSvgMarker = (color, scale = 1, label = '') => {
+      const size = Math.round(30 * scale);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}"><path fill="${color}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    };
+
+    // Find cluster color for an outlet
+    const getOutletColor = (outlet) => {
+      const cluster = mapClusters.find((c) => c.id === outlet.clusterId);
+      if (cluster?.colorHex) return cluster.colorHex;
+      return outlet.type === 'GENERAL_TRADE' ? '#3b82f6' : '#8b5cf6';
+    };
+
+    const markersData = visibleOutlets
+      .filter((o) => o.latitude && o.longitude)
+      .map((o) => {
+        const highlighted = o._highlighted;
+        const baseColor = getOutletColor(o);
+
+        return {
+          id: o.id,
+          lat: Number(o.latitude),
+          lng: Number(o.longitude),
+          title: o.name,
+          icon: {
+            url: getSvgMarker(highlighted ? '#ea580c' : baseColor, highlighted ? 1.35 : 0.95),
+            anchor: window.google ? new window.google.maps.Point(15, 30) : { x: 15, y: 30 },
+          },
+          zIndex: highlighted ? 50 : 1,
+        };
+      });
+
+    setMarkers(markersData);
+  }, [isMapReady, outlets, selectedRoute, selectedSalesName, todayRoutes, mapClusters, setMarkers]);
+
+  // ─── 3. Selected Route Polyline (Jalur Rute) ────────────────────────────────
+  useEffect(() => {
+    if (!isMapReady) return;
+
+    if (selectedRoute && Array.isArray(selectedRoute.stops) && selectedRoute.stops.length > 0) {
+      const pathPoints = selectedRoute.stops
+        .filter((s) => s.latitude && s.longitude)
+        .map((s) => ({ lat: Number(s.latitude), lng: Number(s.longitude) }));
+
+      if (pathPoints.length > 0) {
+        setPolylines([
+          {
+            id: `route-polyline-${selectedRoute.id}`,
+            path: pathPoints,
+            color: '#2563eb',
+            strokeWeight: 4,
+            strokeOpacity: 0.95,
+            isActive: true,
+          },
+        ]);
+
+        if (pathPoints.length > 1) {
+          fitBounds(pathPoints);
+        } else {
+          panTo(pathPoints[0].lat, pathPoints[0].lng, 15);
+        }
+      }
+    } else {
+      clearPolylines();
+    }
+  }, [isMapReady, selectedRoute, setPolylines, clearPolylines, fitBounds, panTo]);
+
+  // ─── 4. Auto-Focus ke Outlet yang dipilih ───────────────────────────────────
+  useEffect(() => {
+    if (selectedOutlet) {
+      const lat = Number(selectedOutlet.latitude || selectedOutlet.lat);
+      const lng = Number(selectedOutlet.longitude || selectedOutlet.lng);
+      if (lat && lng) {
+        panTo(lat, lng, 16);
+      }
     }
   }, [selectedOutlet, panTo]);
 
   return (
     <div className="dashboard-wrapper">
-      {/* PersistentMapShell sudah merender peta di background. Kita hanya butuh overlay konten. */}
-
-      {/* Floating Dashboard Overlay */}
+      {/* Floating Dashboard Left Overlay Panel */}
       <div className="dashboard-overlay">
-        {/* Left Column: Active Routes List */}
         <div className="dashboard-left-col">
           <ActiveRoutesList
             routes={routes}
-            salesStops={todayStops}
+            salesStops={displayStops}
             selectedRoute={selectedRoute}
             onSelectRoute={(route) => {
-              setSelectedRoute(route);
+              setSelectedRoute((prev) => (prev?.id === route.id ? null : route));
               setSelectedOutlet(null);
             }}
             selectedOutlet={selectedOutlet}
             onSelectOutlet={setSelectedOutlet}
-            filterStatus={filterStatus}
-            onFilterStatusChange={filterByStatus}
             userRole={user?.role || 'SALES'}
+            selectedSalesName={selectedSalesName}
+            onSelectSalesName={(name) => {
+              setSelectedSalesName(name);
+              setSelectedRoute(null);
+              setSelectedOutlet(null);
+            }}
+            salesOptions={salesOptions}
           />
         </div>
       </div>

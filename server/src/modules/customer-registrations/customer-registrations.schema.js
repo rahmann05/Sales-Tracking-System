@@ -20,8 +20,9 @@ export const createRegistrationSchema = z.object({
     taxAddress: z.string().optional().nullable(),
     taxDocumentUrl: z.string().optional().nullable(),
 
-    // Wilayah & Geografis
-    area: z.enum(['CIMAHI', 'KAB_BANDUNG_BARAT', 'KAB_BANDUNG', 'KOTA_BANDUNG']).default('CIMAHI'),
+    // Wilayah, Klaster & Geografis (dinamis sesuai definisi klaster supervisor)
+    clusterId: z.string().optional().nullable(),
+    area: z.string().optional().default('CIMAHI'),
     subAreaKecamatan: z.string().optional().nullable(),
     kelurahan: z.string().optional().nullable(),
     city: z.string().default('CIMAHI'),
@@ -90,8 +91,9 @@ export const filterRegistrationSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().positive().optional().default(1),
     limit: z.coerce.number().int().positive().optional().default(20),
-    status: z.enum(['ALL', 'DRAFT', 'SUBMITTED', 'SPV_APPROVED', 'OPS_APPROVED', 'REGISTERED_ACTIVE', 'REJECTED']).optional().default('ALL'),
-    area: z.enum(['ALL', 'CIMAHI', 'KAB_BANDUNG_BARAT', 'KAB_BANDUNG', 'KOTA_BANDUNG']).optional().default('ALL'),
+    status: z.enum(['ALL', 'DRAFT', 'SUBMITTED', 'SPV_APPROVED', 'REGISTERED_ACTIVE', 'REJECTED']).optional().default('ALL'),
+    clusterId: z.string().optional(),
+    area: z.string().optional().default('ALL'),
     channel: z.enum(['ALL', 'MODERN_TRADE', 'GENERAL_TRADE']).optional().default('ALL'),
     division: z.enum(['ALL', 'UNICHARM', 'BELFOODS', 'GENERAL']).optional().default('ALL'),
     search: z.string().optional().default(''),

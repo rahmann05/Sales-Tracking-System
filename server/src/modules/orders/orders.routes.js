@@ -9,7 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 router.post('/', authorize('SALES'), validate(createOrderSchema), orderController.create);
-router.get('/', authorize('ADMIN', 'SUPERVISOR', 'MANAJER_OPERASIONAL', 'SALES'), orderController.getAll);
+router.get('/', authorize('ADMIN', 'SUPERVISOR', 'SALES'), orderController.getAll);
 router.get('/:id', orderController.getById);
 router.patch('/:id/approve', authorize('ADMIN'), orderController.approve);
 router.patch('/:id/reject', authorize('ADMIN'), orderController.reject);

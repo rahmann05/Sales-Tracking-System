@@ -10,7 +10,7 @@ import { notifySuccess } from '../../../services/notificationService';
  * 1 File per Component
  */
 export const SupervisorShiftHeader = () => {
-  const { user, shiftAttendance, handleShiftClockIn, handleShiftClockOut } = useApp();
+  const { user, shiftAttendance, handleShiftClockIn, handleShiftClockOut, clusters = [] } = useApp();
 
   const onClockIn = () => {
     handleShiftClockIn('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
@@ -46,7 +46,7 @@ export const SupervisorShiftHeader = () => {
           </div>
           <p className="text-xs text-on-surface-variant flex items-center gap-1.5 mt-1">
             <LuMapPin className="text-xs text-primary shrink-0" />
-            <span>Wilayah Tugas: <strong className="text-on-surface font-semibold">Klaster Cimahi, Padalarang & Lembang</strong></span>
+            <span>Wilayah Tugas: <strong className="text-on-surface font-semibold">{clusters.length > 0 ? clusters.map((c) => c.name).join(', ') : (user?.region || 'Klaster Terdaftar')}</strong></span>
           </p>
         </div>
       </div>

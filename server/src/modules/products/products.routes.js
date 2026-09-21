@@ -10,8 +10,8 @@ router.use(authenticate);
 
 router.get('/', productController.getAll);
 router.get('/:id', productController.getById);
-router.post('/', authorize('ADMIN', 'MANAJER_OPERASIONAL'), validate(createProductSchema), productController.create);
-router.patch('/:id', authorize('ADMIN', 'MANAJER_OPERASIONAL'), validate(updateProductSchema), productController.update);
-router.delete('/:id', authorize('ADMIN', 'MANAJER_OPERASIONAL'), productController.remove);
+router.post('/', authorize('ADMIN', 'SUPERVISOR'), validate(createProductSchema), productController.create);
+router.patch('/:id', authorize('ADMIN', 'SUPERVISOR'), validate(updateProductSchema), productController.update);
+router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), productController.remove);
 
 export default router;

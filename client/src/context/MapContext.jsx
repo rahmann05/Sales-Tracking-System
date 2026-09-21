@@ -28,6 +28,7 @@ export const MapProvider = ({ children }) => {
     const mapInstanceRef = useRef(null);
     const markersRef = useRef(new Map());   // Map<string|number, google.maps.Marker>
     const polylinesRef = useRef(new Map()); // Map<string|number, google.maps.Polyline>
+    const polygonsRef = useRef(new Map());  // Map<string|number, google.maps.Polygon>
     const clickListenerRef = useRef(null);
     const gpsMarkerRef = useRef(null);
 
@@ -227,6 +228,46 @@ export const MapProvider = ({ children }) => {
         polylinesRef.current.clear();
     }, []);
 
+    /** Render cluster territory polygons. polygonsData: [{id, path:[{lat,lng}], color, fillOpacity}] */
+    const setPolygons = useCallback((polygonsData = []) => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.google) return;
+
+        const nextIds = new Set(polygonsData.map((p) => String(p.id)));
+        for (const [id, poly] of polygonsRef.current.entries()) {
+            if (!nextIds.has(String(id))) {
+                poly.setMap(null);
+                polygonsRef.current.delete(id);
+            }
+        }
+        polygonsData.forEach((p) => {
+            const key = String(p.id);
+            const path = (p.path || []).map((pt) => ({ lat: Number(pt.lat), lng: Number(pt.lng) }));
+            const opts = {
+                paths: path,
+                map,
+                strokeColor: p.color || '#3b82f6',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: p.color || '#3b82f6',
+                fillOpacity: p.fillOpacity ?? 0.12,
+                zIndex: 1,
+            };
+            const existing = polygonsRef.current.get(key);
+            if (existing) {
+                existing.setOptions(opts);
+                existing.setPaths(path);
+            } else {
+                polygonsRef.current.set(key, new window.google.maps.Polygon(opts));
+            }
+        });
+    }, []);
+
+    const clearPolygons = useCallback(() => {
+        for (const poly of polygonsRef.current.values()) poly.setMap(null);
+        polygonsRef.current.clear();
+    }, []);
+
     // When Google Map instance becomes ready, sync any pending markers/routes stored in mapState
     useEffect(() => {
         if (!isMapReady || !mapInstanceRef.current || !window.google) return;
@@ -287,6 +328,8 @@ export const MapProvider = ({ children }) => {
         clearMarkers,
         setPolylines,
         clearPolylines,
+        setPolygons,
+        clearPolygons,
         panTo,
         fitBounds,
         addClickListener,

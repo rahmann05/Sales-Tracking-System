@@ -8,6 +8,7 @@ import {
   LuRefreshCw,
   LuClock,
 } from 'react-icons/lu';
+import { useApp } from '../../../context/AppContext';
 
 const LOCATION_TYPES = [
   { id: 'DALAM_PASAR', label: 'Dalam Pasar' },
@@ -38,6 +39,7 @@ export const OutletIdentitySection = ({
   onUnlockGooglePlace,
   onChange,
 }) => {
+  const { clusters } = useApp();
   const debounceTimerRef = useRef(null);
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -236,16 +238,24 @@ export const OutletIdentitySection = ({
         {/* Area Wilayah, Kecamatan, Kelurahan (Auto-filled by GPS & Google Places) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-surface-container-low rounded-xl border border-border-glass">
           <div>
-            <label className="outlet-reg-label text-[11px]">AREA WILAYAH</label>
+            <label className="outlet-reg-label text-[11px]">KLASTER WILAYAH (DEFINISI SUPERVISOR)</label>
             <select
-              value={area || 'CIMAHI'}
-              onChange={(e) => onChange('area', e.target.value)}
+              value={area || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                const chosen = clusters?.find(c => c.id === val || c.name === val);
+                onChange('area', chosen?.name || val);
+                if (chosen?.id) onChange('clusterId', chosen.id);
+              }}
               className="outlet-reg-input font-bold text-xs"
             >
-              <option value="CIMAHI">Cimahi</option>
-              <option value="KAB_BANDUNG_BARAT">Kab. Bandung Barat</option>
-              <option value="KAB_BANDUNG">Kab. Bandung</option>
-              <option value="KOTA_BANDUNG">Kota Bandung</option>
+              {clusters && clusters.length > 0 ? (
+                clusters.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name} ({c.region})</option>
+                ))
+              ) : (
+                <option value="Klaster Cimahi Tengah">Klaster Cimahi Tengah</option>
+              )}
             </select>
           </div>
           <div>

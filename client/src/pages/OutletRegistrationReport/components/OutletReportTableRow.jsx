@@ -12,7 +12,6 @@ export const OutletReportTableRow = ({
 }) => {
   const isApprovedAndReady =
     item.registrationStatus === 'SPV_APPROVED' ||
-    item.registrationStatus === 'OPS_APPROVED' ||
     item.registrationStatus === 'SUBMITTED';
 
   const isAlreadyActive = item.registrationStatus === 'REGISTERED_ACTIVE';
@@ -66,8 +65,6 @@ export const OutletReportTableRow = ({
               ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
               : item.registrationStatus === 'SPV_APPROVED'
               ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
-              : item.registrationStatus === 'OPS_APPROVED'
-              ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
               : item.registrationStatus === 'REJECTED'
               ? 'bg-red-500/10 text-red-600 border-red-500/20'
               : 'bg-amber-500/10 text-amber-600 border-amber-500/20'

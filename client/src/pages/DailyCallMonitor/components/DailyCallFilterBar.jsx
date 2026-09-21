@@ -18,6 +18,9 @@ export const DailyCallFilterBar = ({
   onExport,
   onOpenPdf,
   isLoading = false,
+  embedded = false,
+  hideActions = false,
+  showStatusPills = true,
 }) => {
   const filterOptions = [
     { key: 'ALL', label: 'Semua Kunjungan', icon: null },
@@ -31,9 +34,15 @@ export const DailyCallFilterBar = ({
   ];
 
   return (
-    <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3">
+    <div
+      className={
+        embedded
+          ? 'p-4 sm:p-5 border-b border-border-glass bg-surface space-y-3'
+          : 'bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3'
+      }
+    >
       {/* Top Filter Controls: Date, Salesman, Search, Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${hideActions ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-3`}>
         {/* 1. Date Picker */}
         <div className="relative">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
@@ -89,59 +98,63 @@ export const DailyCallFilterBar = ({
           </div>
         </div>
 
-        {/* 4. Action Buttons */}
-        <div className="flex items-end gap-2">
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="p-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
-            title="Refresh Data"
-          >
-            <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
-          </button>
-
-          <button
-            type="button"
-            onClick={onExport}
-            className="flex-1 py-2 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
-            title="Ekspor Laporan Format Excel ND6"
-          >
-            <LuDownload /> Excel
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenPdf}
-            className="flex-1 py-2 px-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
-            title="Buka Dokumen Cetak / PDF Resmi"
-          >
-            <LuPrinter /> Cetak PDF
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar">
-        {filterOptions.map((opt) => {
-          const Icon = opt.icon;
-          return (
+        {/* 4. Action Buttons (Optional) */}
+        {!hideActions && (
+          <div className="flex items-end gap-2">
             <button
-              key={opt.key}
               type="button"
-              onClick={() => onSelectFilter(opt.key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterType === opt.key
-                  ? 'bg-primary text-on-primary shadow-sm'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant border border-border-glass'
-              }`}
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="p-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
+              title="Refresh Data"
             >
-              {Icon && <Icon className="text-xs" />}
-              <span>{opt.label}</span>
+              <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
             </button>
-          );
-        })}
+
+            <button
+              type="button"
+              onClick={onExport}
+              className="flex-1 py-2 px-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              title="Ekspor Laporan Format Excel ND6"
+            >
+              <LuDownload /> Excel
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenPdf}
+              className="flex-1 py-2 px-2.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              title="Buka Dokumen Cetak / PDF Resmi"
+            >
+              <LuPrinter /> Cetak PDF
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Bottom Filter Pills (Optional) */}
+      {showStatusPills && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar">
+          {filterOptions.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => onSelectFilter(opt.key)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterType === opt.key
+                    ? 'bg-primary text-on-primary shadow-sm'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant border border-border-glass'
+                }`}
+              >
+                {Icon && <Icon className="text-xs" />}
+                <span>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

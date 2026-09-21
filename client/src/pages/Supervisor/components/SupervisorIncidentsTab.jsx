@@ -12,7 +12,7 @@ export const SupervisorIncidentsTab = ({ closedShopIncidents = [], onHandleIncid
     <div className="space-y-4">
         <SectionHeader
             title="Laporan Toko Tutup / Kendala Kunjungan"
-            subtitle="Tindakan cepat SPV: Lewati Toko (Skip), Reroute Langsung ke toko pengganti, atau Eskalasi ke Manajer Operasional."
+            subtitle="Tindakan cepat SPV: Lewati Toko (Skip) atau Reroute Langsung ke toko pengganti."
         />
 
         {closedShopIncidents.length === 0 ? (

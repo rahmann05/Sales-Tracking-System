@@ -1,17 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { OPS_MANAGER_ROLES, ROLES } from '../../constants/roles';
+import { ROLES } from '../../constants/roles';
 import { RJP_ROLE_TAB_MAP } from '../../constants/routePlanning';
 import { TAB_IDS } from '../../constants/navigation';
 
 // Tab content components (child components per SRP)
 import { RjpRoleTabBar } from './components/RjpRoleTabBar';
 import { SalesViewTab } from './components/SalesViewTab';
-import { RjpOpsHeader } from './components/ops/RjpOpsHeader';
-import { RjpAllocationStats } from './components/ops/RjpAllocationStats';
-import { MasterClusterTable } from './components/ops/MasterClusterTable';
-import { SpreadsheetImportModal } from './components/ops/SpreadsheetImportModal';
-import { EditClusterModal } from './components/ops/EditClusterModal';
+import { RjpMasterHeader } from './components/master/RjpMasterHeader';
+import { RjpAllocationStats } from './components/master/RjpAllocationStats';
+import { MasterClusterTable } from './components/master/MasterClusterTable';
+import { SpreadsheetImportModal } from './components/master/SpreadsheetImportModal';
+import { EditClusterModal } from './components/master/EditClusterModal';
 
 import { RjpSpvHeader } from './components/spv/RjpSpvHeader';
 import { WeeklyRollingMatrixTable } from './components/spv/WeeklyRollingMatrixTable';
@@ -29,19 +29,17 @@ import '../../styles/pages/RoutePlanning.css';
 /**
  * RoutePlanningPage Component (Master RJP Orchestrator)
  * Single Responsibility: Compose tab bar + tab contents + modals untuk
- * role Ops Manager / Supervisor / Sales. Logika seleksi didelegasikan ke hooks.
+ * role Supervisor / Admin / Sales.
  */
 export const RoutePlanningPage = () => {
   const { user, salesStops = [], rjpTeams = [], setActiveTab: setGlobalActiveTab } = useApp();
 
-  const isOpsOrAdmin = OPS_MANAGER_ROLES.includes(user?.role);
-  const isSupervisor = user?.role === ROLES.SUPERVISOR;
+  const isSupervisorOrAdmin = [ROLES.SUPERVISOR, ROLES.ADMIN].includes(user?.role);
 
   const allowedTabs = useMemo(() => {
-    if (isOpsOrAdmin) return RJP_ROLE_TAB_MAP.OPS;
-    if (isSupervisor) return RJP_ROLE_TAB_MAP.SPV;
+    if (isSupervisorOrAdmin) return RJP_ROLE_TAB_MAP.SPV;
     return RJP_ROLE_TAB_MAP.SALES;
-  }, [isOpsOrAdmin, isSupervisor]);
+  }, [isSupervisorOrAdmin]);
 
   const [activeTab, setActiveTab] = useState(allowedTabs[0]?.id || 'SALES_VIEW');
 
@@ -64,8 +62,6 @@ export const RoutePlanningPage = () => {
     handleDeleteCluster,
     handleImportSpreadsheet,
   } = useRjpManagement();
-
-
 
   const {
     matrixRows,
@@ -95,9 +91,9 @@ export const RoutePlanningPage = () => {
     <div className="page-container">
       <RjpRoleTabBar tabs={allowedTabs} activeTab={activeTab} onSelectTab={setActiveTab} />
 
-      {activeTab === 'OPS_MANAGER' && isOpsOrAdmin && (
+      {activeTab === 'MASTER_CLUSTER' && isSupervisorOrAdmin && (
         <div className="space-y-6">
-          <RjpOpsHeader
+          <RjpMasterHeader
             onNavigateCreateCluster={navigateToCreateCluster}
             onOpenImportModal={() => setIsImportModalOpen(true)}
           />
@@ -110,7 +106,7 @@ export const RoutePlanningPage = () => {
         </div>
       )}
 
-      {activeTab === 'SPV_ROLLING' && (isSupervisor || isOpsOrAdmin) && (
+      {activeTab === 'SPV_ROLLING' && isSupervisorOrAdmin && (
         <div className="space-y-6">
           <RjpSpvHeader onOpenAutoRollingModal={() => setIsAutoRollingModalOpen(true)} />
           <WeeklyRollingMatrixTable
@@ -129,11 +125,11 @@ export const RoutePlanningPage = () => {
           filteredDailyStops={selection.filteredDailyStops}
           matrixRows={matrixRows}
           onSelectSales={selection.setSelectedSalesPerson}
-          canSwitchSales={isSupervisor || isOpsOrAdmin}
+          canSwitchSales={isSupervisorOrAdmin}
         />
       )}
 
-      {isOpsOrAdmin && (
+      {isSupervisorOrAdmin && (
         <>
           <SpreadsheetImportModal
             isOpen={isImportModalOpen}
@@ -149,11 +145,6 @@ export const RoutePlanningPage = () => {
             }}
             onSave={handleUpdateCluster}
           />
-        </>
-      )}
-
-      {(isSupervisor || isOpsOrAdmin) && (
-        <>
           <ReassignDayRouteModal
             isOpen={isReassignModalOpen}
             onClose={() => setIsReassignModalOpen(false)}

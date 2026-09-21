@@ -9,14 +9,14 @@ import { outletsApi } from '../../../services/api';
  * 1 File per Component
  */
 export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute, onRequestReroute }) => {
-  const [actionType, setActionType] = useState('SKIP'); // 'SKIP', 'DIRECT_REROUTE', or 'REROUTE'
+  const [actionType, setActionType] = useState('SKIP'); // 'SKIP' or 'DIRECT_REROUTE'
   const [replacementOutletId, setReplacementOutletId] = useState('');
   const [rerouteReason, setRerouteReason] = useState('Penggantian toko rute langsung oleh Supervisor');
   const [outlets, setOutlets] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (actionType === 'DIRECT_REROUTE' || actionType === 'REROUTE') {
+    if (actionType === 'DIRECT_REROUTE') {
       setIsLoading(true);
       outletsApi.getAll()
         .then((res) => {
@@ -33,16 +33,10 @@ export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute
   const handleSubmit = () => {
     if (actionType === 'SKIP') {
       onSkip(incident.id);
-    } else if (actionType === 'DIRECT_REROUTE') {
-      if (!replacementOutletId) return alert('Silakan pilih outlet pengganti.');
-      onDirectReroute({
-        incidentId: incident.id,
-        replacementOutletId,
-        reason: rerouteReason,
-      });
     } else {
       if (!replacementOutletId) return alert('Silakan pilih outlet pengganti.');
-      onRequestReroute({
+      const rerouteFn = onDirectReroute || onRequestReroute;
+      rerouteFn({
         incidentId: incident.id,
         replacementOutletId,
         reason: rerouteReason,
@@ -66,8 +60,8 @@ export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute
         {/* Action Type Selection Cards */}
         <DecisionOptionCards actionType={actionType} onSelectAction={setActionType} />
 
-        {/* Reroute Options if DIRECT_REROUTE or REROUTE selected */}
-        {(actionType === 'DIRECT_REROUTE' || actionType === 'REROUTE') && (
+        {/* Reroute Options if DIRECT_REROUTE selected */}
+        {actionType === 'DIRECT_REROUTE' && (
           <div className="space-y-3 p-3 bg-tertiary/5 border border-tertiary/20 rounded-2xl">
             <div className="space-y-1">
               <label className="form-label">Toko Pengganti:</label>
@@ -106,17 +100,13 @@ export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute
           className={`w-full py-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 ${
             actionType === 'SKIP'
               ? 'bg-amber-600 hover:bg-amber-700'
-              : actionType === 'DIRECT_REROUTE'
-              ? 'bg-primary hover:bg-primary/90'
-              : 'bg-tertiary hover:bg-tertiary/90'
+              : 'bg-primary hover:bg-primary/90'
           }`}
         >
           <span>
             {actionType === 'SKIP'
               ? 'Konfirmasi Skip Toko'
-              : actionType === 'DIRECT_REROUTE'
-              ? 'Terapkan Reroute Langsung Ke Sales'
-              : 'Kirim Permohonan Reroute ke Manajer'}
+              : 'Terapkan Reroute Langsung Ke Sales'}
           </span>
           <LuArrowRight className="text-base" />
         </button>

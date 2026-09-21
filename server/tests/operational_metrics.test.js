@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-describe('Supervisor & Operational Manager Business Logic Unit Tests', () => {
+describe('Supervisor Operational Business Logic Unit Tests', () => {
   describe('Daily Summary Metrics Calculation', () => {
     it('should calculate accurate compliance and adherence rate', () => {
       const totalTarget = 20;
@@ -53,34 +53,30 @@ describe('Supervisor & Operational Manager Business Logic Unit Tests', () => {
     });
   });
 
-  describe('Off-PJP Override Hierarchy Logic', () => {
-    it('should allow Operational Manager override to supersede SPV validation', () => {
+  describe('Off-PJP Validation Logic', () => {
+    it('should validate off-PJP visit attendance by Supervisor', () => {
       const initialRecord = {
         id: 'off-pjp-01',
         salesName: 'Budi Santoso',
-        spvValidationStatus: 'REJECTED',
-        spvValidationNote: 'Di luar rute master',
-        opsOverrideStatus: null,
-        opsOverrideNote: null,
+        validationStatus: 'PENDING',
       };
 
-      // Ops manager reviews and applies managerial override
-      const overrideAction = {
-        status: 'APPROVED',
-        note: 'Disahkan oleh Manajer Ops setelah konfirmasi pemilik toko',
-        by: 'Manajer Operasional',
+      // Supervisor validates off-pjp visit
+      const validationAction = {
+        status: 'TERVALIDASI',
+        note: 'Disahkan oleh Supervisor',
+        by: 'Supervisor Lapangan',
       };
 
       const finalRecord = {
         ...initialRecord,
-        effectiveStatus: overrideAction.status,
-        opsOverrideStatus: overrideAction.status,
-        opsOverrideNote: overrideAction.note,
-        opsOverrideBy: overrideAction.by,
+        validationStatus: validationAction.status,
+        validationNote: validationAction.note,
+        validatedBy: validationAction.by,
       };
 
-      assert.equal(finalRecord.effectiveStatus, 'APPROVED');
-      assert.ok(finalRecord.opsOverrideNote.includes('Manajer Ops'));
+      assert.equal(finalRecord.validationStatus, 'TERVALIDASI');
+      assert.equal(finalRecord.validatedBy, 'Supervisor Lapangan');
     });
   });
 });

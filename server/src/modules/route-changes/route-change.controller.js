@@ -16,7 +16,7 @@ export const reroute = async (req, res, next) => {
     const { id } = req.params;
     const { replacementOutletId } = req.body;
     const data = await routeChangeService.submitReroute(req.user.id, id, replacementOutletId);
-    return successResponse(res, 200, data, 'Pengajuan reroute dikirim ke Manajer Operasional');
+    return successResponse(res, 200, data, 'Reroute berhasil diproses dan jadwal sales diperbarui');
   } catch (error) {
     next(error);
   }

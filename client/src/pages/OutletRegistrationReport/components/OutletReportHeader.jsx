@@ -89,7 +89,7 @@ export const OutletReportHeader = ({
             <button
               type="button"
               onClick={onOpenNikModal}
-              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
               title="Kelola dan Input NIK 16-Digit Pemilik Toko"
             >
               <LuIdCard className="text-sm" /> Kelola / Input NIK
@@ -99,7 +99,7 @@ export const OutletReportHeader = ({
             <button
               type="button"
               onClick={onExportNikExcel}
-              className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
               title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom: Code, Name, NIK, Owner, Alamat, PKP, NPWP)"
             >
               <LuFileSpreadsheet /> Ekspor IMPORT NIK
@@ -108,7 +108,7 @@ export const OutletReportHeader = ({
           <button
             type="button"
             onClick={onExportCSV}
-            className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
             title="Ekspor Laporan Master Tabel ke Excel (.xls)"
           >
             <LuFileSpreadsheet /> Ekspor Excel
@@ -116,7 +116,7 @@ export const OutletReportHeader = ({
           <button
             type="button"
             onClick={onExportNd6TXT}
-            className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
             title="Ekspor Format Data Stream (TXT/Pipe)"
           >
             <LuFileText /> Ekspor TXT
@@ -124,7 +124,7 @@ export const OutletReportHeader = ({
           <button
             type="button"
             onClick={onExportTXT}
-            className="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass transition-all cursor-pointer"
+            className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
             title="Ekspor Ringkasan Teks Terbaca"
           >
             <LuFileText /> Ringkasan TXT

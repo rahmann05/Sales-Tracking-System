@@ -16,50 +16,52 @@ const router = Router();
 
 router.use(authenticate);
 
-// ─── Validation ──────────────────────────────────────────────────────────────
+// ─── 1. Static Sub-Resources (Must precede /:id) ─────────────────────────────
 router.get(
   '/validation-summary',
-  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  authorize('ADMIN', 'SUPERVISOR'),
   validationController.getValidationSummary
 );
 router.post(
   '/batch-validate',
-  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  authorize('ADMIN', 'SUPERVISOR'),
   validationController.batchValidate
 );
+router.get(
+  '/unlock-requests',
+  authorize('SUPERVISOR', 'ADMIN'),
+  handleGetUnlockRequests
+);
+router.patch(
+  '/unlock-requests/:requestId',
+  authorize('SUPERVISOR', 'ADMIN'),
+  handleApproveOrRejectUnlock
+);
+
+// ─── 2. Root Collection CRUD ─────────────────────────────────────────────────
+router.get('/', outletController.getAll);
+router.post('/', authorize('ADMIN', 'SUPERVISOR'), validate(createOutletSchema), outletController.create);
+
+// ─── 3. Member Sub-Actions (/:id/...) ────────────────────────────────────────
 router.post(
   '/:id/validate',
-  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  authorize('ADMIN', 'SUPERVISOR'),
   validationController.validateSingle
 );
 router.post(
   '/:id/validate-nearby',
-  authorize('ADMIN', 'MANAJER_OPERASIONAL'),
+  authorize('ADMIN', 'SUPERVISOR'),
   validationController.validateNearby
-);
-
-// ─── CRUD ─────────────────────────────────────────────────────────────────────
-router.get('/', outletController.getAll);
-router.get('/:id', outletController.getById);
-router.post('/', authorize('ADMIN', 'MANAJER_OPERASIONAL'), validate(createOutletSchema), outletController.create);
-router.patch('/:id', authorize('ADMIN', 'MANAJER_OPERASIONAL'), validate(updateOutletSchema), outletController.update);
-router.delete('/:id', authorize('ADMIN', 'MANAJER_OPERASIONAL'), outletController.remove);
-
-// ─── Lock / Unlock Management ──────────────────────────────────────────────────
-router.get(
-  '/unlock-requests',
-  authorize('SUPERVISOR', 'ADMIN', 'MANAJER_OPERASIONAL'),
-  handleGetUnlockRequests
 );
 router.post(
   '/:id/lock',
-  authorize('ADMIN', 'SUPERVISOR', 'MANAJER_OPERASIONAL'),
+  authorize('ADMIN', 'SUPERVISOR'),
   validate(lockOutletSchema),
   handleLockOutlet
 );
 router.post(
   '/:id/unlock',
-  authorize('ADMIN', 'SUPERVISOR', 'MANAJER_OPERASIONAL'),
+  authorize('ADMIN', 'SUPERVISOR'),
   validate(lockOutletSchema),
   handleUnlockOutletDirect
 );
@@ -69,11 +71,10 @@ router.post(
   validate(unlockRequestSchema),
   handleRequestUnlock
 );
-router.patch(
-  '/unlock-requests/:requestId',
-  authorize('SUPERVISOR', 'ADMIN'),
-  handleApproveOrRejectUnlock
-);
+
+// ─── 4. Member CRUD (/:id) ───────────────────────────────────────────────────
+router.get('/:id', outletController.getById);
+router.patch('/:id', authorize('ADMIN', 'SUPERVISOR'), validate(updateOutletSchema), outletController.update);
+router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), outletController.remove);
 
 export default router;
-

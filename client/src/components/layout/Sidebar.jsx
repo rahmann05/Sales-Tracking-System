@@ -24,7 +24,7 @@ const SidebarBrand = () => (
 
 /**
  * SidebarNavItem Component
- * Single Responsibility: Render a single navigation button.
+ * Single Responsibility: Render a single navigation button with symmetric icon alignment.
  */
 const SidebarNavItem = ({ item, isActive, onClick }) => {
   const Icon = item.icon;
@@ -33,27 +33,29 @@ const SidebarNavItem = ({ item, isActive, onClick }) => {
       onClick={() => onClick(item.id)}
       className={`sidebar-nav-btn ${isActive ? 'sidebar-nav-btn-active' : 'sidebar-nav-btn-inactive'}`}
     >
-      <Icon className="text-xl" />
-      <span>{item.label}</span>
+      <div className="w-5 h-5 flex items-center justify-center shrink-0">
+        <Icon className="text-lg" />
+      </div>
+      <span className="truncate">{item.label}</span>
     </button>
   );
 };
 
 /**
  * SidebarRoleBadge Component
- * Single Responsibility: Display the current active role badge.
+ * Single Responsibility: Display the current active role badge with cohesive styling.
  */
 const SidebarRoleBadge = ({ roleLabel }) => (
   <div className="sidebar-footer-card">
     <div className="flex items-center justify-between">
-      <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-        Role Aktif
+      <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+        Peran Aktif
       </span>
-      <span className="pulse-dot"></span>
+      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
     </div>
-    <p className="text-xs font-semibold text-on-surface">{roleLabel}</p>
-    <span className="text-xs text-on-surface-variant">
-      Express REST API Connected
+    <p className="text-xs font-bold text-on-surface m-0">{roleLabel}</p>
+    <span className="text-[11px] text-on-surface-variant m-0">
+      Sistem Distribusi Terhubung
     </span>
   </div>
 );

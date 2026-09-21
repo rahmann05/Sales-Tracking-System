@@ -29,23 +29,33 @@ export const SPV_AUDIT_CHECKLIST_ITEMS = [
     { key: 'salesGreeting', label: 'Pelayanan & Hubungan Sales dengan Pemilik Toko Baik' },
 ];
 
-// Main workspace tabs for SupervisorPage
+// Main workspace tabs for SupervisorPage (Action Center & Daily Recap)
 export const SUPERVISOR_TABS = [
-    { id: 'field_visit', label: 'Kunjungan & Absensi Lapangan (Utama)', icon: LuCompass },
-    { id: 'daily_call_monitor', label: 'Daily Call Monitor', icon: LuTrendingUp },
-    { id: 'performance', label: 'Monitoring Tim Sales', icon: LuTrendingUp },
-    { id: 'daily_summary', label: 'Rekap Harian', icon: LuFileText },
-    { id: 'approvals', label: 'Antrean Approval', icon: LuCircleCheck },
-    { id: 'incidents', label: 'Laporan Toko Tutup', icon: FiAlertCircle },
+    { 
+        id: 'action_center', 
+        label: 'Pusat Approval & Kendala', 
+        shortLabel: 'Pusat Approval',
+        icon: LuCircleCheck,
+        description: 'Antrean persetujuan toko tutup (reroute), buka kunci presensi, dan luar RJP'
+    },
+    { 
+        id: 'daily_recap', 
+        label: 'Rekap Harian & Kinerja Tim', 
+        shortLabel: 'Rekap & Kinerja',
+        icon: LuFileText,
+        description: 'Ringkasan pencapaian omzet, target order harian, dan kepatuhan tim sales'
+    },
 ];
 
-// Sub-filter chips untuk tab Antrean Approval
-export const APPROVAL_SUB_FILTERS = [
+// Filter chips untuk tab Pusat Approval & Kendala
+export const ACTION_CENTER_FILTERS = [
     { id: 'ALL', label: 'Semua Antrean', icon: null },
-    { id: 'UNLOCK', label: 'Buka Kunci Presensi', icon: LuKey },
-    { id: 'OFF_PJP_ATTENDANCE', label: 'Absen Luar RJP', icon: LuClock },
-    { id: 'OFF_PJP_REQUEST', label: 'Pengajuan Toko Baru', icon: LuFileText },
+    { id: 'CLOSED_SHOP', label: 'Kendala Toko Tutup', icon: FiAlertCircle, badgeColor: 'rose' },
+    { id: 'UNLOCK', label: 'Buka Kunci Presensi', icon: LuKey, badgeColor: 'amber' },
+    { id: 'OFF_PJP', label: 'Absen Luar RJP', icon: LuClock, badgeColor: 'blue' },
 ];
+
+export const APPROVAL_SUB_FILTERS = ACTION_CENTER_FILTERS;
 
 export const DEFAULT_SPV_CHECKLIST = {
     stockAvailability: true,

@@ -27,15 +27,15 @@ export const SpvModeSelector = ({ spvMode, onSelectMode, selectedSales, onSelect
             <button
                 type="button"
                 onClick={onOpenOffPjp}
-                className="px-4 py-2.5 bg-surface-variant hover:bg-surface-variant/80 text-on-surface border border-border-glass rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 self-start md:self-auto"
+                className="px-4 py-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 self-start md:self-auto shadow-xs"
             >
                 <LuPlus className="text-primary text-sm" />
                 <span>+ Kunjungan Luar RJP (Dadakan)</span>
             </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
                 {SPV_MODE_OPTIONS.map((option) => {
                     const Icon = option.icon;
                     const isActive = spvMode === option.id;
@@ -44,21 +44,21 @@ export const SpvModeSelector = ({ spvMode, onSelectMode, selectedSales, onSelect
                             key={option.id}
                             type="button"
                             onClick={() => onSelectMode(option.id)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${isActive
-                                    ? 'bg-primary text-on-primary shadow-sm'
-                                    : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50'
+                            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 border ${isActive
+                                    ? 'bg-primary text-on-primary border-primary shadow-xs'
+                                    : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container'
                                 }`}
                         >
-                            <Icon className="text-xs" />
-                            <span>{option.label}</span>
+                            <Icon className="text-sm shrink-0" />
+                            <span className="truncate">{option.label}</span>
                         </button>
                     );
                 })}
             </div>
 
             {spvMode === SPV_MODES.JOINT_VISIT && (
-                <div className="flex items-center gap-2 bg-surface-variant/30 px-3 py-1.5 rounded-xl border border-border-glass">
-                    <span className="text-xs font-medium text-on-surface-variant">Dampingi Sales:</span>
+                <div className="flex items-center gap-2 bg-surface px-3.5 py-2 rounded-xl border border-border-glass shadow-xs shrink-0">
+                    <span className="text-xs font-medium text-on-surface-variant whitespace-nowrap">Dampingi:</span>
                     <select
                         value={selectedSales}
                         onChange={(e) => onSelectSales(e.target.value)}

@@ -29,7 +29,7 @@ export const getDashboardSummary = async (query = {}) => {
     prisma.pjpStop.count({ where: { pjp: pjpWhere, status: VISIT_STATUS.SKIPPED } }),
     prisma.customerRegistration.count({ where: { deletedAt: null } }),
     prisma.customerRegistration.count({ where: { registrationStatus: 'REGISTERED_ACTIVE', deletedAt: null } }),
-    prisma.customerRegistration.count({ where: { registrationStatus: { in: ['SUBMITTED', 'SPV_APPROVED', 'OPS_APPROVED'] }, deletedAt: null } }),
+    prisma.customerRegistration.count({ where: { registrationStatus: { in: ['SUBMITTED', 'SPV_APPROVED'] }, deletedAt: null } }),
     prisma.routeChangeRequest.count(),
   ]);
 

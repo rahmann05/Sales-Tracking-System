@@ -12,10 +12,6 @@ async function seedCustomerRegistrations() {
     where: { role: 'SUPERVISOR', deletedAt: null },
   });
 
-  const opsUser = await prisma.user.findFirst({
-    where: { role: 'MANAJER_OPERASIONAL', deletedAt: null },
-  });
-
   const adminUser = await prisma.user.findFirst({
     where: { role: 'ADMIN', deletedAt: null },
   });
@@ -121,14 +117,12 @@ async function seedCustomerRegistrations() {
       termOfPaymentDays: 30,
       visitWeekSchedule: 'ALL_WEEK',
       visitDays: 'RABU',
-      registrationStatus: 'OPS_APPROVED',
+      registrationStatus: 'SPV_APPROVED',
       outletKnownBy: 'Dra. Nurhayati',
       salesmanId: sales3.id,
       salesmanName: sales3.name,
       spvName: spvUser?.name || 'Ahmad Subagja',
       spvApprovedAt: new Date(Date.now() - 86400000),
-      opsManagerName: opsUser?.name || 'Bambang Suroso',
-      opsApprovedAt: new Date(),
     },
     {
       customerCode: 'PVC0014',
@@ -164,8 +158,6 @@ async function seedCustomerRegistrations() {
       salesmanName: sales1.name,
       spvName: spvUser?.name || 'Ahmad Subagja',
       spvApprovedAt: new Date(Date.now() - 172800000),
-      opsManagerName: opsUser?.name || 'Bambang Suroso',
-      opsApprovedAt: new Date(Date.now() - 86400000),
       adminName: adminUser?.name || 'Maria Ulfah',
       adminRegisteredAt: new Date(),
     },

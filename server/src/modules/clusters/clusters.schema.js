@@ -5,6 +5,8 @@ export const createClusterSchema = z.object({
     name: z.string().min(2, 'Nama cluster minimal 2 karakter'),
     region: z.string().min(2, 'Region minimal 2 karakter'),
     colorHex: z.string().optional(),
+    assignedSalesId: z.string().nullable().optional(),
+    supervisorId: z.string().nullable().optional(),
   }),
 });
 
@@ -13,10 +15,14 @@ export const updateClusterSchema = z.object({
     name: z.string().min(2, 'Nama cluster minimal 2 karakter').optional(),
     region: z.string().min(2, 'Region minimal 2 karakter').optional(),
     colorHex: z.string().optional(),
-    assignedSalesId: z.string().uuid('ID sales tidak valid').nullable().optional(),
+    assignedSalesId: z.string().nullable().optional(),
+    assignedSalesName: z.string().nullable().optional(),
+    supervisorId: z.string().nullable().optional(),
+    assignedSpvId: z.string().nullable().optional(),
+    assignedSpvName: z.string().nullable().optional(),
   }),
   params: z.object({
-    id: z.string().uuid('ID tidak valid'),
+    id: z.string().min(1, 'ID tidak valid'),
   }),
 });
 
@@ -45,6 +51,8 @@ export const createFullClusterSchema = z.object({
     centerLng: z.number().nullable().optional(),
     outletCount: z.number().int().optional(),
     assignedSalesId: z.string().nullable().optional(),
+    supervisorId: z.string().nullable().optional(),
+    assignedSpvId: z.string().nullable().optional(),
     outletIds: z.array(z.string()),
     routes: z.array(z.object({
       routeIndex: z.number().int().optional(),

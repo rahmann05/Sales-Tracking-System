@@ -10,7 +10,7 @@ import '../../styles/pages/OutletRegistration.css';
 
 /**
  * OutletApprovalPage Orchestrator Component
- * Single Responsibility: Compose header, queue table, and review/reject modals for Supervisor & Ops Manager.
+ * Single Responsibility: Compose header, queue table, and review/reject modals for Supervisor & Admin.
  */
 export const OutletApprovalPage = () => {
   const { user } = useApp();

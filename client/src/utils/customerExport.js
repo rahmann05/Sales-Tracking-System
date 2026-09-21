@@ -597,7 +597,7 @@ export const exportCustomerSummaryTxt = (data = [], filename = 'RINGKASAN_REGIST
     txt += `  Pajak (Tax)  : ${d.taxType} (No: ${d.taxNumber || '-'})\n`;
     txt += `  Pembayaran   : ${d.paymentType} ${d.termOfPaymentDays ? `(${d.termOfPaymentDays} Hari)` : ''}\n`;
     txt += `  Jadwal RJP   : ${d.visitWeekSchedule} (Hari: ${d.visitDays || '-'})\n`;
-    txt += `  Salesman     : ${d.salesmanName || '-'} | SPV: ${d.spvName || '-'} | Ops: ${d.opsManagerName || '-'}\n`;
+    txt += `  Salesman     : ${d.salesmanName || '-'} | SPV: ${d.spvName || '-'}\n`;
     txt += `  Koordinat    : Lat ${d.latitude}, Lng ${d.longitude}\n`;
     txt += `----------------------------------------------------------------------------------------\n`;
   });

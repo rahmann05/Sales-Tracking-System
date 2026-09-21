@@ -29,22 +29,22 @@ export const TeamTrackingPage = () => {
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
-  const isOpsOrAdmin = ['OPERATIONAL_MANAGER', 'ADMIN'].includes(user?.role);
+  const isAdmin = user?.role === 'ADMIN';
   const isSupervisor = user?.role === 'SUPERVISOR';
   const isSales = user?.role === 'SALES';
 
   // Filter Data according to Role Scope
-  const filteredSupervisorTeams = isOpsOrAdmin
+  const filteredSupervisorTeams = isAdmin
     ? supervisorTeams
-    : supervisorTeams.filter((t) => t.spvName === user.name || t.spvName === 'Ahmad Subagja');
+    : supervisorTeams.filter((t) => t.spvName === user?.name || t.spvName === 'Ahmad Subagja');
 
-  const filteredSalesList = isOpsOrAdmin
+  const filteredSalesList = isAdmin
     ? salesList
-    : salesList.filter((s) => s.spvName === user.name || s.spvName === 'Ahmad Subagja' || isSales);
+    : salesList.filter((s) => s.spvName === user?.name || s.spvName === 'Ahmad Subagja' || isSales);
 
-  const filteredRjpTeams = isOpsOrAdmin
+  const filteredRjpTeams = isAdmin
     ? rjpTeams
-    : rjpTeams.filter((r) => r.spvName === user.name || r.spvName === 'Ahmad Subagja' || isSales);
+    : rjpTeams.filter((r) => r.spvName === user?.name || r.spvName === 'Ahmad Subagja' || isSales);
 
   const handleOpenCreateRjpModal = () => {
     setIsRjpModalOpen(true);
@@ -73,7 +73,7 @@ export const TeamTrackingPage = () => {
     addNotification({
       title: 'Personel Baru Ditambahkan',
       message: `${newUserData.name} (${newUserData.role}) telah ditambahkan ke sistem oleh ${user.name}.`,
-      roleTarget: ['OPERATIONAL_MANAGER', 'SUPERVISOR'],
+      roleTarget: ['SUPERVISOR', 'ADMIN'],
     });
 
     // Call API in background
@@ -101,7 +101,7 @@ export const TeamTrackingPage = () => {
     addNotification({
       title: 'Data Personel Diperbarui',
       message: `Data ${updatedData.name} telah diperbarui.`,
-      roleTarget: ['OPERATIONAL_MANAGER', 'SUPERVISOR'],
+      roleTarget: ['SUPERVISOR', 'ADMIN'],
     });
 
     usersApi.update(updatedData.id, updatedData).catch((err) => {
@@ -115,7 +115,7 @@ export const TeamTrackingPage = () => {
     addNotification({
       title: 'Personel Dinonaktifkan',
       message: `Akun personel telah dinonaktifkan dari sistem.`,
-      roleTarget: ['OPERATIONAL_MANAGER', 'SUPERVISOR'],
+      roleTarget: ['SUPERVISOR', 'ADMIN'],
     });
 
     usersApi.remove(userId).catch((err) => {
@@ -126,61 +126,53 @@ export const TeamTrackingPage = () => {
   return (
     <div className="page-container space-y-6 pb-24">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <TeamTrackingHeader user={user} onCreateRjpTeam={handleOpenCreateRjpModal} />
-        {isOpsOrAdmin && (
-          <button
-            type="button"
-            onClick={() => setIsCreateUserModalOpen(true)}
-            className="px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm hover:opacity-90 transition-all cursor-pointer w-fit shrink-0"
-          >
-            <LuUserPlus className="text-sm" />
-            <span>+ Tambah Personel</span>
-          </button>
-        )}
-      </div>
+      <TeamTrackingHeader 
+        user={user} 
+        onCreateRjpTeam={handleOpenCreateRjpModal}
+        onCreateUser={isAdmin ? () => setIsCreateUserModalOpen(true) : null}
+      />
 
       {/* Tabs Navigation (Not shown for Sales, only for SPV & Ops) */}
       {!isSales && (
-        <div className="flex items-center gap-2 border-b border-border-glass pb-2 overflow-x-auto no-scrollbar">
+        <div className="bg-surface-container-low p-1.5 rounded-2xl border border-border-glass grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
           <button
             type="button"
             onClick={() => setActiveTab('spv-teams')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+            className={`py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
               activeTab === 'spv-teams'
-                ? 'bg-primary text-on-primary shadow-sm'
-                : 'bg-surface border border-border-glass text-on-surface-variant hover:bg-surface-variant/40'
+                ? 'bg-primary text-on-primary border-primary shadow-xs'
+                : 'bg-surface border-border-glass text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
             }`}
           >
-            <LuShieldCheck className="text-sm" />
-            <span>{isSupervisor ? 'Tim Supervisor Saya' : `Daftar Tim Supervisor (${filteredSupervisorTeams.length})`}</span>
+            <LuShieldCheck className="text-base shrink-0" />
+            <span className="truncate">{isSupervisor ? 'Tim Supervisor Saya' : `Daftar Tim Supervisor (${filteredSupervisorTeams.length})`}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('sales-list')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+            className={`py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
               activeTab === 'sales-list'
-                ? 'bg-primary text-on-primary shadow-sm'
-                : 'bg-surface border border-border-glass text-on-surface-variant hover:bg-surface-variant/40'
+                ? 'bg-primary text-on-primary border-primary shadow-xs'
+                : 'bg-surface border-border-glass text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
             }`}
           >
-            <LuUserCheck className="text-sm" />
-            <span>{isSupervisor ? `Sales Bawahan Saya (${filteredSalesList.length})` : `Daftar Sales (${filteredSalesList.length})`}</span>
+            <LuUserCheck className="text-base shrink-0" />
+            <span className="truncate">{isSupervisor ? `Sales Bawahan (${filteredSalesList.length})` : `Daftar Sales (${filteredSalesList.length})`}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('live-gps')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+            className={`py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
               activeTab === 'live-gps'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-surface border border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10'
+                ? 'bg-primary text-on-primary border-primary shadow-xs'
+                : 'bg-surface border-border-glass text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-            <LuNavigation className="text-xs" />
-            <span>Live GPS Tracking Sales</span>
+            <span className={`w-2 h-2 rounded-full ${activeTab === 'live-gps' ? 'bg-white' : 'bg-emerald-500'} animate-ping`}></span>
+            <LuNavigation className="text-base shrink-0" />
+            <span className="truncate">Live GPS Tracking</span>
           </button>
         </div>
       )}
@@ -196,7 +188,7 @@ export const TeamTrackingPage = () => {
         <SalesListTab 
           filteredSalesList={filteredSalesList} 
           isSales={isSales} 
-          canManage={isOpsOrAdmin}
+          canManage={isAdmin || isSupervisor}
           onEditUser={(u) => setEditingUser(u)}
         />
       )}

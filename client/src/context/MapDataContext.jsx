@@ -31,6 +31,10 @@ export const MapDataProvider = ({ children }) => {
 
   const fetchSalesUsers = async () => {
     try {
+      const userStr = localStorage.getItem('authUser');
+      const user = userStr ? JSON.parse(userStr) : null;
+      if (!user || (user.role !== 'SUPERVISOR' && user.role !== 'ADMIN')) return;
+
       const res = await usersApi.getAll({ role: 'SALES' });
       setSalesUsers(res.data || []);
     } catch (err) {

@@ -38,10 +38,9 @@ export const useDailyCallMonitor = () => {
   useEffect(() => {
     const fetchSalesTeam = async () => {
       try {
-        const res = await usersApi.getUsers();
+        const res = await usersApi.getAll({ role: 'SALES' });
         if (res?.data) {
-          const salesOnly = res.data.filter((u) => u.role === 'SALES');
-          setSalesTeam(salesOnly);
+          setSalesTeam(res.data);
         }
       } catch (err) {
         console.warn('[useDailyCallMonitor] Failed to fetch sales team:', err.message);

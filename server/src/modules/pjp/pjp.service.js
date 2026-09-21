@@ -50,7 +50,40 @@ const ensureTodayPjpForSales = async (userId) => {
     }
   });
 
-  if (!template || template.stops.length === 0) return null;
+  let stopsToCreate = [];
+  if (template && template.stops.length > 0) {
+    stopsToCreate = template.stops.map((ts, idx) => ({
+      outletId: ts.outletId,
+      sequence: ts.sequence || idx + 1,
+      status: 'PENDING',
+    }));
+  } else {
+    // Fallback ke cluster outlets jika belum ada template manual
+    const activeRoute = await prisma.clusterRoute.findFirst({
+      where: { clusterId: sales.clusterId, isActive: true },
+    });
+    let clusterOutlets = [];
+    if (activeRoute && Array.isArray(activeRoute.outletOrder) && activeRoute.outletOrder.length > 0) {
+      const orderedIds = activeRoute.outletOrder.map(item => item.id).filter(Boolean);
+      const fetched = await prisma.outlet.findMany({
+        where: { id: { in: orderedIds }, deletedAt: null },
+      });
+      const outletMap = new Map(fetched.map(o => [o.id, o]));
+      clusterOutlets = orderedIds.map(id => outletMap.get(id)).filter(Boolean);
+    }
+    if (clusterOutlets.length === 0) {
+      clusterOutlets = await prisma.outlet.findMany({
+        where: { clusterId: sales.clusterId, deletedAt: null },
+        orderBy: { name: 'asc' },
+      });
+    }
+    if (clusterOutlets.length === 0) return null;
+    stopsToCreate = clusterOutlets.map((o, idx) => ({
+      outletId: o.id,
+      sequence: idx + 1,
+      status: 'PENDING',
+    }));
+  }
 
   return await prisma.pjp.create({
     data: {
@@ -59,11 +92,7 @@ const ensureTodayPjpForSales = async (userId) => {
       type: PJP_TYPE.SALES,
       status: PJP_STATUS.SCHEDULED,
       stops: {
-        create: template.stops.map((ts, idx) => ({
-          outletId: ts.outletId,
-          sequence: ts.sequence || idx + 1,
-          status: 'PENDING',
-        })),
+        create: stopsToCreate,
       },
     },
     include: {
@@ -77,6 +106,7 @@ const ensureTodayPjpForSales = async (userId) => {
               id: true,
               name: true,
               region: true,
+              supervisor: { select: { id: true, name: true } },
               users: { select: { id: true, name: true, role: true } }
             }
           }
@@ -95,7 +125,8 @@ const PJP_STOP_INCLUDE = {
           id: true,
           name: true,
           region: true,
-          users: { select: { id: true, name: true, role: true } }
+          users: { select: { id: true, name: true, role: true } },
+          supervisor: { select: { id: true, name: true } },
         }
       }
     }
@@ -121,6 +152,7 @@ export const getTodayPjp = async (userId) => {
               id: true,
               name: true,
               region: true,
+              supervisor: { select: { id: true, name: true } },
               users: { select: { id: true, name: true, role: true } }
             }
           }
@@ -162,7 +194,7 @@ export const getAllPjps = async (query = {}) => {
     prisma.pjp.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true, role: true, cluster: { select: { id: true, name: true, region: true } } } },
+        user: { select: { id: true, name: true, role: true, cluster: { select: { id: true, name: true, region: true, supervisor: { select: { id: true, name: true } } } } } },
         stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } },
         _count: { select: { stops: true } },
       },
@@ -188,7 +220,7 @@ export const getPjpById = async (id, currentUser) => {
   if (!pjp) throw new AppError('PJP tidak ditemukan', 404);
 
   const isOwner = pjp.userId === currentUser.id;
-  const isPrivileged = [ROLES.SUPERVISOR, ROLES.ADMIN, ROLES.MANAJER_OPERASIONAL].includes(currentUser.role);
+  const isPrivileged = [ROLES.SUPERVISOR, ROLES.ADMIN].includes(currentUser.role);
   if (!isOwner && !isPrivileged) {
     throw new AppError('Anda tidak memiliki akses ke PJP ini', 403);
   }
