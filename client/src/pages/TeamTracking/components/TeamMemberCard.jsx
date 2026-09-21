@@ -1,8 +1,8 @@
 import React from 'react';
 import { LuMapPin, LuClock } from 'react-icons/lu';
-import { Card } from '../../../components/common/Card';
-import { Avatar } from '../../../components/common/Avatar';
-import { Badge } from '../../../components/common/Badge';
+import { Card } from '../../../shared/components/common/Card';
+import { Avatar } from '../../../shared/components/common/Avatar';
+import { Badge } from '../../../shared/components/common/Badge';
 
 /**
  * TeamMemberCard Component (Single Responsibility: Individual Team Member Card)

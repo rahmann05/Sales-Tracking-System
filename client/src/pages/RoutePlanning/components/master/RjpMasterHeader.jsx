@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuFileSpreadsheet, LuPlus, LuShieldCheck } from 'react-icons/lu';
-import { PageHeader } from '../../../../components/common/PageHeader';
+import { PageHeader } from '../../../../shared/components/common/PageHeader';
 
 /**
  * RjpMasterHeader Component

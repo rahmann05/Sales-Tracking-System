@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageHeader } from '../../components/common/PageHeader';
+import { PageHeader } from '../../shared/components/common/PageHeader';
 import { OutletValidationPanel } from './components/OutletValidationPanel';
 import { LuMapPin, LuCompass } from 'react-icons/lu';
 

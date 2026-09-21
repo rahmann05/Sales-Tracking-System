@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuShieldCheck } from 'react-icons/lu';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 import { useApp } from '../../../context/AppContext';
 
 export const SpvTeamListTab = ({ filteredSupervisorTeams }) => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { FiXCircle, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
-import { DeviceCameraCapture } from '../../../components/common/DeviceCameraCapture';
+import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { AbsenNotesInput } from './AbsenNotesInput';
 import { OffPjpIdentityForm } from './OffPjpIdentityForm';
 import { useOffPjpCheckIn } from '../hooks/useOffPjpCheckIn';

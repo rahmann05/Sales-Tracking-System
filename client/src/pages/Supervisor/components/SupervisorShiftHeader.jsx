@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { LuCamera, LuClock, LuShieldCheck, LuMapPin } from 'react-icons/lu';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 import { notifySuccess } from '../../../services/notificationService';
 
 /**

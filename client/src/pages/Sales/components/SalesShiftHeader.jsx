@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { LuCamera, LuClock } from 'react-icons/lu';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 
 /**
  * SalesShiftHeader Component (Single Responsibility: Display Sales Profile & Shift Attendance Widget)

@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuFileCheck, LuSearch, LuFileSpreadsheet, LuFileText, LuRotateCw } from 'react-icons/lu';
-import { PageHeader } from '../../../components/common/PageHeader';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import {
   exportCustomerExcel,
   exportCustomerNd6Txt,

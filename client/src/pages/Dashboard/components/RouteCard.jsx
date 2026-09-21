@@ -1,7 +1,7 @@
 import React from 'react';
 import { FiAlertTriangle } from 'react-icons/fi';
-import { Badge } from '../../../components/common/Badge';
-import { Avatar } from '../../../components/common/Avatar';
+import { Badge } from '../../../shared/components/common/Badge';
+import { Avatar } from '../../../shared/components/common/Avatar';
 
 /**
  * RouteCard Component (Single Responsibility: Display Single Sales Route Item)

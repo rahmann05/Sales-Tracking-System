@@ -1,18 +1,18 @@
 import React, { useEffect } from 'react';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ErrorBoundary } from './shared/components/common/ErrorBoundary';
 import { AppProvider, useApp } from './context/AppContext';
 import { MapProvider } from './context/MapContext';
 import { MapDataProvider } from './context/MapDataContext';
-import { Sidebar } from './components/layout/Sidebar';
-import { Header } from './components/layout/Header';
-import { MobileHeader } from './components/layout/MobileHeader';
-import { BottomNav } from './components/layout/BottomNav';
+import { Sidebar } from './shared/components/layout/Sidebar';
+import { Header } from './shared/components/layout/Header';
+import { MobileHeader } from './shared/components/layout/MobileHeader';
+import { BottomNav } from './shared/components/layout/BottomNav';
 import { LoginPage } from './pages/Login/LoginPage';
-import { AppRouter } from './components/AppRouter';
-import { useAuth } from './hooks/useAuth';
-import { useSearch } from './hooks/useSearch';
+import { AppRouter } from './app/AppRouter';
+import { useAuth } from './shared/hooks/useAuth';
+import { useSearch } from './shared/hooks/useSearch';
 import { usersApi } from './services/api';
-import { PersistentMapShell } from './components/map/PersistentMapShell';
+import { PersistentMapShell } from './shared/components/map/PersistentMapShell';
 
 /**
  * AppContent Component

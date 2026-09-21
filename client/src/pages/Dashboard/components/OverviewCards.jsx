@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuTrendingUp } from 'react-icons/lu';
-import { Card } from '../../../components/common/Card';
+import { Card } from '../../../shared/components/common/Card';
 
 /**
  * OverviewCards Component (Single Responsibility: Displaying KPI Stats)

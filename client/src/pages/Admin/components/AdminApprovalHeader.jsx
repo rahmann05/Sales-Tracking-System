@@ -2,7 +2,7 @@ import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { LuFileCheck, LuClock } from 'react-icons/lu';
 import { FiCheckCircle } from 'react-icons/fi';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 
 /**
  * AdminApprovalHeader Component (Single Responsibility: Header Overview for Admin Sales Approval)

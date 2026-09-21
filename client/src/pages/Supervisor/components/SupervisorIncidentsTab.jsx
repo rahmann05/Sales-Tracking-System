@@ -1,6 +1,6 @@
 import React from 'react';
-import { SectionHeader } from '../../../components/common/SectionHeader';
-import { EmptyState } from '../../../components/common/EmptyState';
+import { SectionHeader } from '../../../shared/components/common/SectionHeader';
+import { EmptyState } from '../../../shared/components/common/EmptyState';
 import { IncidentCard } from './IncidentCard';
 import { LuCircleCheck } from 'react-icons/lu';
 

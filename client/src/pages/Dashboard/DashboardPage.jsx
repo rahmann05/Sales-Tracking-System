@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ActiveRoutesList } from './components/ActiveRoutesList';
-import { useRouteFilter } from '../../hooks/useRouteFilter';
+import { useRouteFilter } from '../../shared/hooks/useRouteFilter';
 import { filterStopsForToday } from '../../utils/dateUtils';
 import { useMap } from '../../context/MapContext';
 import { useMapData } from '../../context/MapDataContext';

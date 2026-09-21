@@ -1,7 +1,7 @@
 import React from 'react';
 import { FiCalendar } from 'react-icons/fi';
 import { LuStore, LuUserCheck, LuShield } from 'react-icons/lu';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 
 /**
  * RjpTeamCard Component

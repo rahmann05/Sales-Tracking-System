@@ -9,7 +9,7 @@ import {
   LuTrendingUp
 } from 'react-icons/lu';
 import { FiCheckCircle, FiXCircle } from 'react-icons/fi';
-import { Card } from '../../../components/common/Card';
+import { Card } from '../../../shared/components/common/Card';
 
 export const SpvDailySummaryTab = ({
   salesStops = [],

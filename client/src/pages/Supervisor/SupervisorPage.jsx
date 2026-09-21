@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { useModal } from '../../hooks/useModal';
+import { useModal } from '../../shared/hooks/useModal';
 import { notifySuccess } from '../../services/notificationService';
-import { PageHeader } from '../../components/common/PageHeader';
+import { PageHeader } from '../../shared/components/common/PageHeader';
 import { SupervisorTabBar } from './components/SupervisorTabBar';
 import { SupervisorActionCenterTab } from './components/SupervisorActionCenterTab';
 import { SupervisorDailyRecapTab } from './components/SupervisorDailyRecapTab';

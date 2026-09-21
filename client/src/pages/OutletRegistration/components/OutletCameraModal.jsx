@@ -7,7 +7,7 @@ import {
   LuMapPin,
   LuClock,
 } from 'react-icons/lu';
-import { useDeviceCamera } from '../../../hooks/useDeviceCamera';
+import { useDeviceCamera } from '../../../shared/hooks/useDeviceCamera';
 
 /**
  * OutletCameraModal Component

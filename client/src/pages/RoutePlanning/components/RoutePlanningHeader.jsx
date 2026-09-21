@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuMapPin, LuPlus } from 'react-icons/lu';
-import { Button } from '../../../components/common/Button';
+import { Button } from '../../../shared/components/common/Button';
 
 export const RoutePlanningHeader = ({ user, onCreateRoute }) => {
   const isSales = user?.role === 'SALES';

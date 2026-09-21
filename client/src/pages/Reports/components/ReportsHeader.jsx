@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuRefreshCw, LuActivity } from 'react-icons/lu';
-import { Button } from '../../../components/common/Button';
+import { Button } from '../../../shared/components/common/Button';
 
 /**
  * ReportsHeader Component (Single Responsibility: Page Header & API Actions)

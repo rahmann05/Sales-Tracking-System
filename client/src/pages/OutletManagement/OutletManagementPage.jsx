@@ -14,12 +14,12 @@ import {
   LuFileSpreadsheet
 } from 'react-icons/lu';
 import { FiEdit, FiCheckCircle } from 'react-icons/fi';
-import { Card } from '../../components/common/Card';
+import { Card } from '../../shared/components/common/Card';
 import { outletsApi, clustersApi } from '../../services/api';
 import { notifySuccess } from '../../services/notificationService';
 import { exportImportNikExcel } from '../../utils/customerExport';
 import { NikManagementModal } from '../OutletRegistrationReport/components/NikManagementModal';
-import { PageHeader } from '../../components/common/PageHeader';
+import { PageHeader } from '../../shared/components/common/PageHeader';
 
 export const OutletManagementPage = () => {
   const { user, addNotification, clusters: appClusters, fetchClusters } = useApp();

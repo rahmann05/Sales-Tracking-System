@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { getTodayNameId } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
-import { useModal } from '../../hooks/useModal';
+import { useModal } from '../../shared/hooks/useModal';
 import { notifySuccess } from '../../services/notificationService';
 import { SalesShiftHeader } from './components/SalesShiftHeader';
 import { SalesDailyPerformanceTracker } from './components/SalesDailyPerformanceTracker';

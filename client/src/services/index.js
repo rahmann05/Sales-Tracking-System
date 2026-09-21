@@ -1,6 +1,6 @@
 /**
  * Barrel export for services.
- * Single import point: `import { apiService, notifySuccess } from '../services'`
+ * Single import point: `import { apiService, notifySuccess } from './'`
  */
 
 export { apiService } from './api';

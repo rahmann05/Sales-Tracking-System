@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge } from '../../../components/common/Badge';
+import { Badge } from '../../../shared/components/common/Badge';
 
 /**
  * UsersTable Component (Single Responsibility: Rendering Backend User Data Table)

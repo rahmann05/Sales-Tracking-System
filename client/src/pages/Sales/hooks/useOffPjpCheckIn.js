@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useGeofence } from '../../../hooks/useGeofence';
+import { useGeofence } from '../../../shared/hooks/useGeofence';
 import { getDetailedAddressFromGps } from '../../../services/reverseGeocodeService';
 
 const FALLBACK_GPS = {

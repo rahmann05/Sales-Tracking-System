@@ -2,7 +2,7 @@ import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { LuUsers, LuCircleCheck, LuClock, LuShieldCheck, LuStore, LuCompass } from 'react-icons/lu';
 import { FiAlertCircle } from 'react-icons/fi';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 
 /**
  * SupervisorHeader Component

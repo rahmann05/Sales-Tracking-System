@@ -1,6 +1,6 @@
 import React from 'react';
 import { LuMapPin } from 'react-icons/lu';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 
 /**
  * SalesRepProgressCard Component

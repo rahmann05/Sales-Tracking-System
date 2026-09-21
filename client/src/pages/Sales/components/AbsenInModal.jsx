@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FiXCircle, FiCheckCircle } from 'react-icons/fi';
-import { DeviceCameraCapture } from '../../../components/common/DeviceCameraCapture';
+import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { AbsenNotesInput } from './AbsenNotesInput';
 
 /**

@@ -1,7 +1,7 @@
 import React from 'react';
 import { RouteCard } from './RouteCard';
 import { SalesOutletItemCard } from './SalesOutletItemCard';
-import { Card } from '../../../components/common/Card';
+import { Card } from '../../../shared/components/common/Card';
 import { LuUser, LuChevronDown } from 'react-icons/lu';
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LuMapPin, LuPlus, LuMinus, LuLayers } from 'react-icons/lu';
-import { Button } from '../../../components/common/Button';
+import { Button } from '../../../shared/components/common/Button';
 import '../../../styles/pages/Dashboard.css';
 
 /**

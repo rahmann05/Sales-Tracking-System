@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PageHeader } from '../../components/common/PageHeader';
+import { PageHeader } from '../../shared/components/common/PageHeader';
 import { ReportTabBar } from './components/ReportTabBar';
 import { DailyCallMonitorPage } from '../DailyCallMonitor/DailyCallMonitorPage';
 import { WeeklyReportView } from './components/WeeklyReportView';

@@ -19,9 +19,9 @@ import { ReassignDayRouteModal } from './components/spv/ReassignDayRouteModal';
 import { AutoRollingConfirmModal } from './components/spv/AutoRollingConfirmModal';
 
 // Hooks
-import { useRjpManagement } from '../../hooks/useRjpManagement';
+import { useRjpManagement } from './hooks/useRjpManagement';
 
-import { useSupervisorRollingMatrix } from '../../hooks/useSupervisorRollingMatrix';
+import { useSupervisorRollingMatrix } from './hooks/useSupervisorRollingMatrix';
 import { useSalesRouteSelection } from './hooks/useSalesRouteSelection';
 
 import '../../styles/pages/RoutePlanning.css';

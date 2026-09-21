@@ -4,7 +4,7 @@ import { OutletPhoto } from './OutletPhoto';
 import { OutletExcelMetadata } from './OutletExcelMetadata';
 import { OutletGooglePlaceInfo } from './OutletGooglePlaceInfo';
 import { SalesStopActions } from './SalesStopActions';
-import { useOutletLockStatus } from '../../../hooks/useOutletLockStatus';
+import { useOutletLockStatus } from '../hooks/useOutletLockStatus';
 
 /**
  * SalesStopCard Component

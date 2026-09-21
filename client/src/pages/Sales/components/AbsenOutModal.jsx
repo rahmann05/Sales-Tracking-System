@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiXCircle, FiCheckCircle, FiAlertTriangle, FiClock } from 'react-icons/fi';
-import { DeviceCameraCapture } from '../../../components/common/DeviceCameraCapture';
+import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { AbsenNotesInput } from './AbsenNotesInput';
 
 const EARLY_REASON_OPTIONS = [

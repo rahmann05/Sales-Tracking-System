@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar } from '../../../components/common/Avatar';
+import { Avatar } from '../../../shared/components/common/Avatar';
 import { FiEdit } from 'react-icons/fi';
 
 /**
