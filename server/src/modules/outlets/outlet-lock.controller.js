@@ -46,7 +46,7 @@ export const handleApproveOrRejectUnlock = async (req, res, next) => {
 
 export const handleGetUnlockRequests = async (req, res, next) => {
   try {
-    const requests = await getUnlockRequests(req.query);
+    const requests = await getUnlockRequests(req.query, req.user);
     return successResponse(res, 200, requests, 'Daftar permintaan unlock berhasil diambil');
   } catch (err) {
     next(err);

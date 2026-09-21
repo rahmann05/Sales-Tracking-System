@@ -234,12 +234,12 @@ export const routeChangesApi = {
   },
   skip: async (id) => {
     return await request(`/route-changes/${id}/skip`, {
-      method: 'PATCH',
+      method: 'POST',
     });
   },
   reroute: async (id, replacementOutletId, reason) => {
     return await request(`/route-changes/${id}/reroute`, {
-      method: 'PATCH',
+      method: 'POST',
       body: JSON.stringify({ replacementOutletId, reason }),
     });
   },

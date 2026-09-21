@@ -76,9 +76,29 @@ export const useSupervisorActions = ({
       if (!incident) return;
 
       const res = await routeChangesApi.reroute(incidentId, replacementOutletId, reason);
-      const newStop = res.data;
+      // Server returns { routeChangeRequest, createdPjpStop } (Prisma shapes)
+      const createdStop = res?.data?.createdPjpStop || null;
+      const replacementOutlet = createdStop?.outlet || res?.data?.routeChangeRequest?.replacementOutlet || null;
 
-      if (newStop && setSalesStops) {
+      if (createdStop && setSalesStops) {
+        const maxSeq = Math.max(...salesStops.map((s) => s.sequence || 0), 0);
+        const newStop = {
+          id: createdStop.id,
+          outletId: createdStop.outletId || replacementOutlet?.id || null,
+          pjpId: createdStop.pjpId,
+          sequence: createdStop.sequence || maxSeq + 1,
+          outletName: replacementOutlet?.name || 'Toko Pengganti',
+          customerName: replacementOutlet?.name || 'Toko Pengganti',
+          owner: replacementOutlet?.ownerName || '',
+          phone: replacementOutlet?.phone || '',
+          address: replacementOutlet?.address || '',
+          type: replacementOutlet?.type || 'MODERN_TRADE',
+          latitude: Number(replacementOutlet?.latitude) || null,
+          longitude: Number(replacementOutlet?.longitude) || null,
+          radiusMeters: replacementOutlet?.radiusMeters || 50,
+          status: 'PENDING',
+          isReroute: true,
+        };
         setSalesStops((prev) => [
           ...prev.map((s) => (s.id === incident.stopId ? { ...s, status: 'SKIPPED' } : s)),
           newStop,
@@ -92,6 +112,7 @@ export const useSupervisorActions = ({
                 ...i,
                 status: 'RESOLVED_DIRECT_REROUTE',
                 rerouteReason: reason,
+                newOutletName: replacementOutlet?.name || null,
                 spvName: user.name,
               }
             : i

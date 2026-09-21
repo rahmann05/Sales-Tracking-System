@@ -1,4 +1,6 @@
 import { absensiApi, ordersApi, outletsApi, routeChangesApi } from '../services/api';
+import { mapServerOrder } from '../utils/orderMapper';
+import { mapServerRouteChange, mapServerUnlockRequest } from '../utils/incidentMapper';
 
 /**
  * Custom hook containing all business logic for Sales actions.
@@ -110,8 +112,8 @@ export const useSalesActions = ({
         paymentType: paymentType || 'CASH',
       });
 
-      const newOrder = res.data; // Server returns real Order object with ID
-      setOrders((prev) => [newOrder, ...prev]);
+      const newOrder = res.data; // Server returns real Order object (Prisma shape)
+      setOrders((prev) => [mapServerOrder(newOrder), ...prev]);
 
       addNotification({
         title: 'Order Baru Masuk (Menunggu Persetujuan)',
@@ -141,7 +143,7 @@ export const useSalesActions = ({
         photoUrl,
       });
 
-      const newIncident = res.data;
+      const newIncident = mapServerRouteChange(res.data);
       setIncidents((prev) => [newIncident, ...prev]);
       setSalesStops((prev) =>
         prev.map((s) => (s.id === stopId ? { ...s, status: 'CLOSED_REPORTED' } : s))
@@ -165,8 +167,11 @@ export const useSalesActions = ({
   // Sales Action: Request Unlock Outlet
   const handleRequestUnlockOutlet = async ({ stopId, reason }) => {
     try {
-      const res = await outletsApi.requestUnlock(stopId, reason);
-      const newRequest = res.data;
+      // Backend endpoint expects the OUTLET id (not the PJP stop id)
+      const stop = salesStops.find((s) => s.id === stopId);
+      const outletId = stop?.outletId || stopId;
+      const res = await outletsApi.requestUnlock(outletId, reason);
+      const newRequest = mapServerUnlockRequest(res.data);
 
       setIncidents((prev) => [newRequest, ...prev]);
       addNotification({

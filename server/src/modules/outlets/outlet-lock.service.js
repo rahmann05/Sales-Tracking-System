@@ -109,10 +109,12 @@ export const handleUnlockRequest = async (requestId, handlerId, approved) => {
   return { message: notifMsg, approved };
 };
 
-export const getUnlockRequests = async (query = {}) => {
+export const getUnlockRequests = async (query = {}, user = null) => {
   const { status } = query;
   const where = {};
   if (status) where.status = status;
+  // Sales users may only see their own unlock requests
+  if (user?.role === 'SALES') where.requestedBy = user.id;
 
   return await prisma.outletUnlockRequest.findMany({
     where,

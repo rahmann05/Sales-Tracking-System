@@ -13,6 +13,6 @@ router.post('/:id/reroute', authorize('SUPERVISOR'), validate(rerouteSchema), ro
 router.post('/:id/skip', authorize('SUPERVISOR'), validate(skipSchema), routeChangeController.skip);
 router.patch('/:id/approve', authorize('SUPERVISOR', 'ADMIN'), routeChangeController.approve);
 router.patch('/:id/reject', authorize('SUPERVISOR', 'ADMIN'), routeChangeController.reject);
-router.get('/', authorize('SUPERVISOR', 'ADMIN'), routeChangeController.getAll);
+router.get('/', authorize('SUPERVISOR', 'ADMIN', 'SALES'), routeChangeController.getAll);
 
 export default router;

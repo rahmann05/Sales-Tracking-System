@@ -66,7 +66,10 @@ export const reportClosedOutlet = async (salesId, pjpStopId, reason = null, phot
 export const submitReroute = async (supervisorId, requestId, replacementOutletId) => {
   const request = await prisma.routeChangeRequest.findUnique({
     where: { id: requestId },
-    include: { pjpStop: { include: { outlet: true } } },
+    include: {
+      pjpStop: { include: { outlet: true } },
+      pjp: { include: { stops: true } },
+    },
   });
 
   if (!request) throw new AppError('Request perubahan rute tidak ditemukan', 404);
@@ -111,7 +114,7 @@ export const submitReroute = async (supervisorId, requestId, replacementOutletId
     { pjpId: request.pjpId }
   );
 
-  return updatedRequest;
+  return { routeChangeRequest: updatedRequest, createdPjpStop: newPjpStop };
 };
 
 /**
@@ -229,11 +232,13 @@ export const rejectReroute = async (managerId, requestId) => {
   return updatedRequest;
 };
 
-export const getRouteChanges = async (query = {}) => {
+export const getRouteChanges = async (query = {}, user = null) => {
   const { status, type, page = 1, limit = 20 } = query;
   const where = {};
   if (status) where.status = status;
   if (type) where.type = type;
+  // Sales users may only see the incidents they reported themselves
+  if (user?.role === 'SALES') where.reportedBy = user.id;
 
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const take = parseInt(limit);

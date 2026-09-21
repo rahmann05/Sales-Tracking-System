@@ -4,7 +4,7 @@ import { createNotification, createBulkNotificationByRoles } from '../notificati
 import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../utils/pagination.js';
 import { ORDER_STATUS, ROLES, NOTIFICATION_TYPES } from '../../utils/constants.js';
 
-export const createOrder = async (salesId, pjpStopId, items) => {
+export const createOrder = async (salesId, pjpStopId, items, paymentType) => {
   const stop = await prisma.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: { pjp: true, attendances: true, outlet: true },
@@ -43,6 +43,7 @@ export const createOrder = async (salesId, pjpStopId, items) => {
       pjpStopId,
       createdBy: salesId,
       totalValue,
+      ...(paymentType ? { paymentType } : {}),
       status: ORDER_STATUS.PENDING_APPROVAL,
       items: { create: orderItemsData },
     },
@@ -150,7 +151,7 @@ export const approveOrder = async (orderId, adminId) => {
   return updatedOrder;
 };
 
-export const rejectOrder = async (orderId, adminId) => {
+export const rejectOrder = async (orderId, adminId, reason = null) => {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { pjpStop: { include: { outlet: true } } },
@@ -176,9 +177,10 @@ export const rejectOrder = async (orderId, adminId) => {
     order.createdBy,
     NOTIFICATION_TYPES.ORDER_REJECTED,
     'Order Ditolak',
-    `Order Anda di outlet "${order.pjpStop.outlet.name}" ditolak`,
+    `Order Anda di outlet "${order.pjpStop.outlet.name}" ditolak${reason ? `. Alasan: ${reason}` : ''}`,
     { orderId: order.id }
   );
 
-  return updatedOrder;
+  // rejectionReason is transient (not persisted in schema) but returned for immediate UI display
+  return { ...updatedOrder, rejectionReason: reason };
 };

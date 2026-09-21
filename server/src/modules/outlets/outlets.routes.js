@@ -29,7 +29,7 @@ router.post(
 );
 router.get(
   '/unlock-requests',
-  authorize('SUPERVISOR', 'ADMIN'),
+  authorize('SUPERVISOR', 'ADMIN', 'SALES'),
   handleGetUnlockRequests
 );
 router.patch(

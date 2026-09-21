@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getAuthToken } from '../services/api';
 
-import { authApi, pjpApi, ordersApi, productsApi, absensiApi, outletsApi, clustersApi, usersApi, divisionsApi } from '../services/api';
+import { authApi, pjpApi, ordersApi, productsApi, absensiApi, outletsApi, clustersApi, usersApi, divisionsApi, routeChangesApi } from '../services/api';
+import { mapServerOrder } from '../utils/orderMapper';
+import { mapServerRouteChange, mapServerUnlockRequest } from '../utils/incidentMapper';
 import { useSalesActions } from '../hooks/useSalesActions';
 import { useSupervisorActions } from '../hooks/useSupervisorActions';
 import { useAdminActions } from '../hooks/useAdminActions';
@@ -251,6 +253,8 @@ export const AppProvider = ({ children }) => {
 
               return {
                 id: s.id,
+                outletId: s.outletId || s.outlet?.id || null,
+                pjpId: pjpData.id,
                 sequence: s.sequence || idx + 1,
                 customerName: s.outlet?.name || '',
                 outletName: s.outlet?.name || '',
@@ -410,18 +414,32 @@ export const AppProvider = ({ children }) => {
           if (ordersRes?.data && isMounted) {
             const rawOrders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.items || [];
             if (rawOrders.length > 0) {
-              const mappedOrders = rawOrders.map((o) => ({
-                id: o.id,
-                dailyStopId: o.pjpStopId,
-                outletName: o.pjpStop?.outlet?.name || '',
-                salesName: o.createdByUser?.name || '',
-                createdAt: new Date(o.createdAt).toISOString().replace('T', ' ').substring(0, 16),
-                items: o.items || [],
-                totalAmount: o.totalValue,
-                paymentType: o.paymentType || 'CASH',
-                status: o.status,
-              }));
-              setOrders(mappedOrders);
+              setOrders(rawOrders.map(mapServerOrder));
+            }
+          }
+        }
+
+        // 4b. Load live incidents (closed-shop reports & unlock requests) from DB
+        if (user?.role === 'SUPERVISOR' || user?.role === 'ADMIN' || user?.role === 'SALES') {
+          const [routeChangesRes, unlockRes] = await Promise.all([
+            routeChangesApi.getAll().catch(() => null),
+            outletsApi.getUnlockRequests().catch(() => null),
+          ]);
+
+          if (isMounted) {
+            const rawRouteChanges = Array.isArray(routeChangesRes?.data)
+              ? routeChangesRes.data
+              : routeChangesRes?.data?.data || [];
+            const rawUnlocks = Array.isArray(unlockRes?.data)
+              ? unlockRes.data
+              : unlockRes?.data?.data || [];
+
+            const mappedIncidents = [
+              ...rawRouteChanges.map(mapServerRouteChange),
+              ...rawUnlocks.map(mapServerUnlockRequest),
+            ];
+            if (mappedIncidents.length > 0) {
+              setIncidents(mappedIncidents);
             }
           }
         }

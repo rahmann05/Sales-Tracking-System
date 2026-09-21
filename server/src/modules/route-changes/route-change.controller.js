@@ -54,7 +54,7 @@ export const reject = async (req, res, next) => {
 
 export const getAll = async (req, res, next) => {
   try {
-    const data = await routeChangeService.getRouteChanges(req.query);
+    const data = await routeChangeService.getRouteChanges(req.query, req.user);
     return successResponse(res, 200, data);
   } catch (error) {
     next(error);

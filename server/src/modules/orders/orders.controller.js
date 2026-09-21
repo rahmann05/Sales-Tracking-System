@@ -3,8 +3,8 @@ import { successResponse } from '../../utils/response.js';
 
 export const create = async (req, res, next) => {
   try {
-    const { pjpStopId, items } = req.body;
-    const data = await orderService.createOrder(req.user.id, pjpStopId, items);
+    const { pjpStopId, items, paymentType } = req.body;
+    const data = await orderService.createOrder(req.user.id, pjpStopId, items, paymentType);
     return successResponse(res, 201, data, 'Order berhasil dibuat');
   } catch (error) {
     next(error);
@@ -40,7 +40,7 @@ export const approve = async (req, res, next) => {
 
 export const reject = async (req, res, next) => {
   try {
-    const data = await orderService.rejectOrder(req.params.id, req.user.id);
+    const data = await orderService.rejectOrder(req.params.id, req.user.id, req.body?.reason);
     return successResponse(res, 200, data, 'Order berhasil ditolak');
   } catch (error) {
     next(error);
