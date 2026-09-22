@@ -68,8 +68,8 @@ export const Home = () => {
           )}
 
           {users && (
-            <div className="api-demo-table-wrapper">
-              <table className="api-demo-table">
+            <div className="api-demo-table-wrapper mobile-card-table-wrapper">
+              <table className="api-demo-table mobile-card-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -81,10 +81,10 @@ export const Home = () => {
                 <tbody>
                   {users.map((user) => (
                     <tr key={user.id}>
-                      <td>#{user.id}</td>
-                      <td className="name">{user.name}</td>
-                      <td className="email">{user.email}</td>
-                      <td>
+                      <td data-label="ID">#{user.id}</td>
+                      <td data-label="Nama" className="name">{user.name}</td>
+                      <td data-label="Email" className="email">{user.email}</td>
+                      <td data-label="Role">
                         <span className={`role-badge ${user.role === 'Admin' ? 'admin' : 'default'}`}>
                           {user.role}
                         </span>

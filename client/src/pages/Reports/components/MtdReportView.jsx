@@ -406,8 +406,8 @@ export const MtdReportView = () => {
         </div>
 
         {/* Workspace Body: Salesman MTD Breakdown Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto mobile-card-table-wrapper">
+          <table className="w-full text-left border-collapse text-xs mobile-card-table">
             <thead>
               <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
                 <th className="py-3 px-3">Salesman</th>
@@ -429,41 +429,41 @@ export const MtdReportView = () => {
                   key={s.salesmanId}
                   className="hover:bg-surface-variant/20 transition-colors border-b border-border-glass/60"
                 >
-                  <td className="py-3 px-3 font-bold text-on-surface whitespace-nowrap">
+                  <td data-label="Salesman" className="py-3 px-3 font-bold text-on-surface whitespace-nowrap">
                     {s.salesmanName}
                   </td>
-                  <td className="py-3 px-3 text-on-surface-variant text-[11px] whitespace-nowrap">
+                  <td data-label="Klaster" className="py-3 px-3 text-on-surface-variant text-[11px] whitespace-nowrap">
                     {s.clusterName}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono text-on-surface-variant whitespace-nowrap">
+                  <td data-label="Target" className="py-3 px-3 text-right font-mono text-on-surface-variant whitespace-nowrap">
                     Rp {(s.monthlyTarget || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td data-label="MTD Actual" className="py-3 px-3 text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.mtdActualAmount || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono font-bold text-purple-600">
+                  <td data-label="% Achv" className="py-3 px-3 text-center font-mono font-bold text-purple-600">
                     <span className="px-2 py-0.5 rounded-md bg-purple-500/10">
                       {s.achievementRate}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-right font-mono text-on-surface-variant whitespace-nowrap">
+                  <td data-label="LMA" className="py-3 px-3 text-right font-mono text-on-surface-variant whitespace-nowrap">
                     Rp {(s.lastMonthActual || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono font-bold text-emerald-600">
+                  <td data-label="% MTD/LMA" className="py-3 px-3 text-center font-mono font-bold text-emerald-600">
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/10">
                       {s.mtdToLmaRate}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-center font-mono whitespace-nowrap">
+                  <td data-label="MTD Call" className="py-3 px-3 text-center font-mono whitespace-nowrap">
                     {s.mtdActualCalls} / {s.mtdPlanCalls}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-blue-600 font-bold">
+                  <td data-label="Call %" className="py-3 px-3 text-center font-mono text-blue-600 font-bold">
                     {s.callComplianceRate}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-emerald-600 font-bold">
+                  <td data-label="EC %" className="py-3 px-3 text-center font-mono text-emerald-600 font-bold">
                     {s.effectiveCallRate}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono">
+                  <td data-label="SKU Sold" className="py-3 px-3 text-center font-mono">
                     {s.totalSkuSold} SKU
                   </td>
                 </tr>

@@ -7,7 +7,7 @@
 }
 
 .reports-table {
-  @apply w-full border-collapse text-left min-w-[600px];
+  @apply w-full border-collapse text-left md:min-w-[600px];
 }
 
 .reports-th {

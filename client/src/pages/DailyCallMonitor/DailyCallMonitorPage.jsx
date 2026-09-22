@@ -86,21 +86,23 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
         {/* Workspace Card Header: View Switcher (Left) & Actions (Right) */}
         <div className="p-4 sm:p-5 border-b border-border-glass flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface-container-low/40">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
             {/* Tab 1: Master Table */}
             <button
               type="button"
               onClick={() => setActiveTableView('ALL_VISITS')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap border ${
+              className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 w-full border ${
                 activeTableView === 'ALL_VISITS'
                   ? 'bg-primary text-on-primary border-primary shadow-xs'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <LuListOrdered className="text-sm shrink-0" />
-              <span>Tabel Master Daily Call</span>
+              <div className="flex items-center gap-2 truncate">
+                <LuListOrdered className="text-sm shrink-0" />
+                <span className="truncate">Tabel Master Call</span>
+              </div>
               <span
-                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
                   activeTableView === 'ALL_VISITS' ? 'bg-white/20 text-white' : 'bg-surface-container'
                 }`}
               >
@@ -112,16 +114,18 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setActiveTableView('SALESMAN_TIMELINE')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap border ${
+              className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 w-full border ${
                 activeTableView === 'SALESMAN_TIMELINE'
                   ? 'bg-primary text-on-primary border-primary shadow-xs'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <LuUserCheck className="text-sm shrink-0" />
-              <span>Timeline & Rute Per Sales</span>
+              <div className="flex items-center gap-2 truncate">
+                <LuUserCheck className="text-sm shrink-0" />
+                <span className="truncate">Timeline & Rute</span>
+              </div>
               <span
-                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
                   activeTableView === 'SALESMAN_TIMELINE' ? 'bg-white/20 text-white' : 'bg-surface-container'
                 }`}
               >
@@ -133,17 +137,19 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setActiveTableView('ANOMALIES_ONLY')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap border ${
+              className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 w-full border ${
                 activeTableView === 'ANOMALIES_ONLY'
                   ? 'bg-primary text-on-primary border-primary shadow-xs'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <LuShieldAlert className="text-sm shrink-0" />
-              <span>Tabel Khusus Absensi Janggal</span>
+              <div className="flex items-center gap-2 truncate">
+                <LuShieldAlert className="text-sm shrink-0" />
+                <span className="truncate">Absensi Janggal</span>
+              </div>
               {totalAnomalies > 0 ? (
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                     activeTableView === 'ANOMALIES_ONLY'
                       ? 'bg-white/20 text-white'
                       : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -153,7 +159,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                 </span>
               ) : (
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
                     activeTableView === 'ANOMALIES_ONLY' ? 'bg-white/20 text-white' : 'bg-surface-container'
                   }`}
                 >

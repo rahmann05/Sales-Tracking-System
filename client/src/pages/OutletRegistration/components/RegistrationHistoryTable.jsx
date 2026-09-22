@@ -84,8 +84,8 @@ export const RegistrationHistoryTable = ({
           Belum ada riwayat pengajuan registrasi outlet.
         </div>
       ) : (
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left text-xs border-collapse min-w-[750px]">
+        <div className="overflow-x-auto w-full mobile-card-table-wrapper">
+          <table className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead className="bg-surface-variant/30">
               <tr>
                 <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
@@ -114,30 +114,30 @@ export const RegistrationHistoryTable = ({
 
                 return (
                   <tr key={item.id} className="hover:bg-surface-variant/20 transition-colors">
-                    <td className="py-3 px-4 whitespace-nowrap text-on-surface-variant font-mono">
+                    <td data-label="Tanggal" className="py-3 px-4 whitespace-nowrap text-on-surface-variant font-mono">
                       {new Date(item.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
                       })}
                     </td>
-                    <td className="py-3 px-4">
+                    <td data-label="Nama Toko" className="py-3 px-4">
                       <div className="font-bold text-on-surface">{item.name}</div>
                       <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
                         <LuMapPin className="text-primary text-xs shrink-0" />
                         <span>{item.address}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td data-label="Area" className="py-3 px-4">
                       <div className="font-semibold text-on-surface">{item.area}</div>
                       <div className="text-[10px] text-on-surface-variant">{item.division}</div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td data-label="Channel" className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container border border-border-glass">
                         {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td data-label="Status" className="py-3 px-4">
                       <span
                         className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${badge.cls}`}
                       >
@@ -154,11 +154,11 @@ export const RegistrationHistoryTable = ({
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-center">
+                    <td className="py-3 px-4 text-center mobile-full-width">
                       <button
                         type="button"
                         onClick={() => onSelectDetail(item)}
-                        className="px-2.5 py-1 bg-surface-container hover:bg-surface-container-high rounded-lg text-xs font-bold text-primary transition-all border border-border-glass"
+                        className="w-full md:w-auto px-3 py-2 md:py-1 bg-surface-container hover:bg-surface-container-high rounded-lg text-xs font-bold text-primary transition-all border border-border-glass cursor-pointer"
                       >
                         Detail
                       </button>

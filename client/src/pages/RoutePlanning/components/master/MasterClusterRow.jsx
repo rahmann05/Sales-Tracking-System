@@ -11,12 +11,12 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
   return (
     <tr className="master-cluster-row">
       {/* Code */}
-      <td className="master-cluster-td">
+      <td data-label="Kode" className="master-cluster-td">
         <span className="master-cluster-code">{cluster.code}</span>
       </td>
 
       {/* Cluster Name & Sub-Districts */}
-      <td className="master-cluster-td">
+      <td data-label="Cluster" className="master-cluster-td">
         <div className="master-cluster-name">{cluster.name}</div>
         <div className="master-cluster-subdistricts">
           {Array.isArray(cluster.subDistricts) ? cluster.subDistricts.join(', ') : 'Area Bandung Barat'}
@@ -24,7 +24,7 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
       </td>
 
       {/* Region */}
-      <td className="master-cluster-td">
+      <td data-label="Region" className="master-cluster-td">
         <span className="master-cluster-region-badge">
           <LuMapPin className="text-xs text-primary" />
           {cluster.region}
@@ -32,7 +32,7 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
       </td>
 
       {/* Quota / Allocated Outlets */}
-      <td className="master-cluster-td">
+      <td data-label="Kuota" className="master-cluster-td">
         <span className="master-cluster-quota-badge">
           <LuStore className="text-sm" />
           {cluster.allocatedOutletsCount} Toko
@@ -40,7 +40,7 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
       </td>
 
       {/* Sales Bertugas */}
-      <td className="master-cluster-td">
+      <td data-label="Sales" className="master-cluster-td">
         <div className="flex items-center gap-1.5 font-bold text-on-surface">
           <LuUserCheck className="text-primary text-sm shrink-0" />
           <span>{cluster.assignedSalesName || 'Belum Ditugaskan'}</span>
@@ -48,7 +48,7 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
       </td>
 
       {/* Supervisor Wilayah */}
-      <td className="master-cluster-td">
+      <td data-label="Supervisor" className="master-cluster-td">
         <div className="flex items-center gap-1.5 text-xs text-on-surface-variant font-medium">
           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
           <span>{cluster.assignedSpvName || '-'}</span>
@@ -56,18 +56,18 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
       </td>
 
       {/* Status */}
-      <td className="master-cluster-td">
+      <td data-label="Status" className="master-cluster-td">
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600">
           ● {cluster.status || 'Active'}
         </span>
       </td>
 
       {/* Aksi */}
-      <td className="master-cluster-td text-center">
-        <div className="flex items-center justify-center gap-2">
+      <td className="master-cluster-td text-center mobile-full-width">
+        <div className="flex items-center justify-center gap-2 w-full">
           <button 
             onClick={() => onEdit && onEdit(cluster)}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+            className="flex-1 md:flex-initial py-2 md:py-1.5 px-3 text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 font-bold rounded-lg text-xs transition-colors cursor-pointer"
             title="Edit Klaster"
           >
             Edit
@@ -78,7 +78,7 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
                 onDelete && onDelete(cluster.id);
               }
             }}
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+            className="flex-1 md:flex-initial py-2 md:py-1.5 px-3 text-red-600 bg-red-500/10 hover:bg-red-500/20 font-bold rounded-lg text-xs transition-colors cursor-pointer"
             title="Hapus Klaster"
           >
             Hapus

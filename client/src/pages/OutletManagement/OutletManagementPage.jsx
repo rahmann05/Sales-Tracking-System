@@ -197,11 +197,11 @@ export const OutletManagementPage = () => {
           { label: 'Filter Kluster', value: selectedCluster === 'ALL' ? 'Semua Kluster' : selectedCluster, color: 'blue' },
         ]}
         actions={
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
             <button
               type="button"
               onClick={() => setIsNikModalOpen(true)}
-              className="px-3.5 py-2.5 bg-surface border border-border-glass hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer w-fit shrink-0"
+              className="flex-1 sm:flex-initial px-3.5 py-2.5 bg-surface border border-border-glass hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
               title="Kelola dan Input NIK 16-Digit Pemilik Toko"
             >
               <LuIdCard className="text-sm" />
@@ -210,7 +210,7 @@ export const OutletManagementPage = () => {
             <button
               type="button"
               onClick={() => exportImportNikExcel(outlets, `IMPORT_NIK_${new Date().toISOString().split('T')[0]}.xls`)}
-              className="px-3.5 py-2.5 bg-surface border border-border-glass hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer w-fit shrink-0"
+              className="flex-1 sm:flex-initial px-3.5 py-2.5 bg-surface border border-border-glass hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
               title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom)"
             >
               <LuFileSpreadsheet className="text-sm" />
@@ -231,7 +231,7 @@ export const OutletManagementPage = () => {
                 });
                 setIsAddModalOpen(true);
               }}
-              className="px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs hover:bg-primary/90 transition-all cursor-pointer w-fit shrink-0"
+              className="w-full sm:w-auto px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-primary/90 transition-all cursor-pointer shrink-0"
             >
               <LuPlus className="text-sm" />
               <span>+ Tambah Outlet Baru</span>
@@ -243,7 +243,7 @@ export const OutletManagementPage = () => {
       {/* Unified Master Outlet Workspace Card */}
       <Card className="!p-0 rounded-3xl border border-border-glass overflow-hidden shadow-sm">
         {/* Workspace Toolbar: Search & Filter */}
-        <div className="p-4 border-b border-border-glass bg-surface-container/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 border-b border-border-glass bg-surface-container/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 workspace-toolbar-mobile">
           <div className="relative flex-1">
             <LuSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" />
             <input
@@ -260,7 +260,7 @@ export const OutletManagementPage = () => {
             <select
               value={selectedCluster}
               onChange={(e) => setSelectedCluster(e.target.value)}
-              className="py-2.5 px-3 rounded-xl bg-surface border border-border-glass text-xs text-on-surface font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-xs"
+              className="w-full sm:w-auto py-2.5 px-3 rounded-xl bg-surface border border-border-glass text-xs text-on-surface font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-xs"
             >
               <option value="ALL">Semua Klaster ({outlets.length})</option>
               {clusters.map((c) => (
@@ -281,8 +281,8 @@ export const OutletManagementPage = () => {
         ) : filteredOutlets.length === 0 ? (
           <div className="p-12 text-center text-xs text-on-surface-variant">Tidak ada outlet yang sesuai dengan pencarian.</div>
         ) : (
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto md:max-h-[600px] md:overflow-y-auto mobile-card-table-wrapper">
+            <table className="w-full text-left text-xs border-collapse mobile-card-table">
               <thead className="bg-surface-variant/30 text-on-surface-variant font-bold border-b border-border-glass sticky top-0 backdrop-blur-md">
                 <tr>
                   <th className="py-3 px-4">Kode & Nama Toko</th>
@@ -295,38 +295,38 @@ export const OutletManagementPage = () => {
               <tbody className="divide-y divide-border-glass">
                 {filteredOutlets.slice(0, 50).map((outlet) => (
                   <tr key={outlet.id} className="hover:bg-surface-variant/10 transition-colors">
-                    <td className="py-3 px-4">
+                    <td data-label="Nama Toko" className="py-3 px-4">
                       <div className="font-bold text-on-surface">{outlet.name}</div>
                       <div className="text-[10px] text-on-surface-variant font-mono">{outlet.outletCode || outlet.id?.substring(0, 8)}</div>
                     </td>
-                    <td className="py-3 px-4 text-on-surface-variant max-w-[220px] truncate" title={outlet.address}>
+                    <td data-label="Alamat" className="py-3 px-4 text-on-surface-variant md:max-w-[220px] md:truncate" title={outlet.address}>
                       {outlet.address || '-'}
                     </td>
-                    <td className="py-3 px-4">
+                    <td data-label="Klaster" className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                         {outlet.cluster?.name || 'Klaster Belfoods'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-on-surface-variant">
+                    <td data-label="GPS" className="py-3 px-4 font-mono text-[11px] text-on-surface-variant">
                       {outlet.latitude?.toFixed(4)}, {outlet.longitude?.toFixed(4)}
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <td className="py-3 px-4 text-center mobile-full-width">
+                      <div className="flex items-center justify-center gap-2 w-full">
                         <button
                           type="button"
                           onClick={() => openEditModal(outlet)}
-                          className="p-1.5 rounded-lg bg-surface-variant/40 hover:bg-surface-variant text-on-surface-variant hover:text-on-surface transition-all cursor-pointer"
+                          className="flex-1 md:flex-initial py-2 md:py-1.5 px-3 rounded-lg bg-surface-variant/40 hover:bg-surface-variant text-on-surface-variant hover:text-on-surface transition-all cursor-pointer flex items-center justify-center gap-1 font-bold text-xs"
                           title="Edit Outlet"
                         >
-                          <FiEdit className="text-sm" />
+                          <FiEdit className="text-sm" /> Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(outlet)}
-                          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all cursor-pointer"
+                          className="flex-1 md:flex-initial py-2 md:py-1.5 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all cursor-pointer flex items-center justify-center gap-1 font-bold text-xs"
                           title="Hapus Outlet"
                         >
-                          <LuTrash2 className="text-sm" />
+                          <LuTrash2 className="text-sm" /> Hapus
                         </button>
                       </div>
                     </td>

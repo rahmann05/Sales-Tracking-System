@@ -5,7 +5,7 @@ const FilterPill = ({ isActive, activeClass, onClick, children }) => (
     <button
         type="button"
         onClick={onClick}
-        className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all ${isActive ? activeClass : 'bg-surface-container-high text-on-surface-variant'
+        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center w-full truncate ${isActive ? activeClass : 'bg-surface-container-high text-on-surface-variant'
             }`}
     >
         {children}
@@ -24,18 +24,18 @@ export const MobileMatrixFilters = ({
     selectedDay,
     onSelectDay,
 }) => (
-    <div className="space-y-2 mb-4 bg-surface-container-low p-3 rounded-2xl border border-border-glass">
+    <div className="space-y-3 mb-4 bg-surface-container-low p-3 rounded-2xl border border-border-glass">
         <div>
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                 <LuUser className="text-xs text-primary" /> Filter Salesman:
             </span>
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 w-full">
                 <FilterPill
                     isActive={selectedSales === 'ALL'}
                     activeClass="bg-primary text-on-primary shadow-sm"
                     onClick={() => onSelectSales('ALL')}
                 >
-                    Semua Sales ({matrixRows.length})
+                    Semua ({matrixRows.length})
                 </FilterPill>
                 {matrixRows.map((row) => (
                     <FilterPill
@@ -54,7 +54,7 @@ export const MobileMatrixFilters = ({
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                 <LuCalendar className="text-xs text-emerald-600" /> Filter Hari:
             </span>
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 w-full">
                 <FilterPill
                     isActive={selectedDay === 'ALL'}
                     activeClass="bg-emerald-600 text-white shadow-sm"

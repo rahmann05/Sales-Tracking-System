@@ -23,8 +23,8 @@ export const OutletReportTable = ({
           Tidak ada data pendaftaran outlet yang cocok dengan filter.
         </div>
       ) : (
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left text-xs border-collapse min-w-[900px]">
+        <div className="overflow-x-auto w-full mobile-card-table-wrapper">
+          <table className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead className="bg-surface-variant/30">
               <tr>
                 <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">

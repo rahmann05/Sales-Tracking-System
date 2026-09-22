@@ -194,8 +194,8 @@ export const SpvDailySummaryTab = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto mobile-card-table-wrapper">
+          <table className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead className="bg-surface-variant/30 text-on-surface-variant font-bold border-b border-border-glass">
               <tr>
                 <th className="py-3 px-4">Nama Sales</th>
@@ -210,13 +210,13 @@ export const SpvDailySummaryTab = ({
             <tbody className="divide-y divide-border-glass">
               {salesSummary.map((rep) => (
                 <tr key={rep.name} className="hover:bg-surface-variant/10 transition-colors">
-                  <td className="py-3 px-4 font-bold text-on-surface">{rep.name}</td>
-                  <td className="py-3 px-4 text-on-surface-variant">{rep.cluster}</td>
-                  <td className="py-3 px-4 text-center font-semibold">{rep.actualTarget}</td>
-                  <td className="py-3 px-4 text-center font-bold text-emerald-600">{rep.completed}</td>
-                  <td className="py-3 px-4 text-center font-bold text-rose-600">{rep.skipped}</td>
-                  <td className="py-3 px-4">
-                    <div className="w-28 mx-auto space-y-1">
+                  <td data-label="Sales" className="py-3 px-4 font-bold text-on-surface">{rep.name}</td>
+                  <td data-label="Wilayah" className="py-3 px-4 text-on-surface-variant">{rep.cluster}</td>
+                  <td data-label="Target" className="py-3 px-4 md:text-center text-left font-semibold">{rep.actualTarget}</td>
+                  <td data-label="Selesai" className="py-3 px-4 md:text-center text-left font-bold text-emerald-600">{rep.completed}</td>
+                  <td data-label="Skip" className="py-3 px-4 md:text-center text-left font-bold text-rose-600">{rep.skipped}</td>
+                  <td data-label="Progres" className="py-3 px-4">
+                    <div className="w-full md:w-28 md:mx-auto space-y-1">
                       <div className="flex justify-between text-[10px] font-bold">
                         <span>{rep.progress}%</span>
                       </div>
@@ -230,7 +230,7 @@ export const SpvDailySummaryTab = ({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td data-label="Status" className="py-3 px-4 md:text-center text-left">
                     <span
                       className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                         rep.completed >= rep.actualTarget

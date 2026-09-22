@@ -17,12 +17,12 @@ export const DayFilterTabs = ({ selectedDay, onSelectDay }) => {
         </span>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 w-full">
         {DAYS.map((day) => (
           <button
             key={day}
             onClick={() => onSelectDay(day)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1 w-full ${
               selectedDay === day
                 ? 'bg-tertiary text-on-tertiary shadow-sm'
                 : 'bg-surface border border-border-glass text-on-surface-variant hover:bg-surface-variant/40'

@@ -27,8 +27,8 @@ export const MapDirectoryTab = ({ rjpTeams = [] }) => {
             {/* Tabel Monitoring Kunjungan & Absensi */}
             <div className="bg-surface border border-border-glass rounded-2xl p-5 shadow-sm space-y-4">
                 <h3 className="text-base font-extrabold text-on-surface">Monitoring Kunjungan & Absensi Hari Ini</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm border-collapse">
+                <div className="overflow-x-auto mobile-card-table-wrapper">
+                    <table className="w-full text-left text-sm border-collapse mobile-card-table">
                         <thead>
                             <tr className="border-b border-border-glass">
                                 <th className="py-3 px-4 font-semibold text-on-surface">Sales</th>
@@ -45,14 +45,14 @@ export const MapDirectoryTab = ({ rjpTeams = [] }) => {
                                 
                                 return (
                                     <tr key={sales.id} className="border-b border-border-glass last:border-0 hover:bg-surface-variant/30 transition-colors">
-                                        <td className="py-3 px-4 font-medium text-on-surface">{sales.name}</td>
-                                        <td className="py-3 px-4 text-on-surface-variant">{myStops.length} Toko</td>
-                                        <td className="py-3 px-4">
+                                        <td data-label="Sales" className="py-3 px-4 font-medium text-on-surface">{sales.name}</td>
+                                        <td data-label="Target" className="py-3 px-4 text-on-surface-variant">{myStops.length} Toko</td>
+                                        <td data-label="Progres" className="py-3 px-4">
                                             <span className="px-2 py-1 rounded bg-primary/10 text-primary text-xs font-bold">
                                                 {completed} / {myStops.length}
                                             </span>
                                         </td>
-                                        <td className="py-3 px-4 text-on-surface-variant text-xs truncate max-w-[200px]">
+                                        <td data-label="Posisi" className="py-3 px-4 text-on-surface-variant text-xs md:truncate md:max-w-[200px]">
                                             {lastStop ? lastStop.outletName : 'Belum Mulai / Belum Ada Posisi'}
                                         </td>
                                     </tr>

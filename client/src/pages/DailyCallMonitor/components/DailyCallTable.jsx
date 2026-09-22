@@ -32,8 +32,8 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
 
   return (
     <div className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto mobile-card-table-wrapper">
+        <table className="w-full text-left border-collapse mobile-card-table">
           <thead>
             <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
               <th className="py-3 px-3 text-center">No</th>

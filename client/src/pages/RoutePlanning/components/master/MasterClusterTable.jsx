@@ -20,8 +20,8 @@ export const MasterClusterTable = ({ clusters = [], onEdit, onDelete }) => {
         </span>
       </div>
 
-      <div className="overflow-x-auto w-full">
-        <table className="w-full text-left text-sm border-collapse min-w-[800px]">
+      <div className="overflow-x-auto w-full mobile-card-table-wrapper">
+        <table className="w-full text-left text-sm border-collapse mobile-card-table">
           <thead className="bg-surface-variant/30">
             <tr>
               <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Kode</th>

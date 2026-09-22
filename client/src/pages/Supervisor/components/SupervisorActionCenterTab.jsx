@@ -83,7 +83,7 @@ export const SupervisorActionCenterTab = ({
       </div>
 
       {/* 2. Symmetrical Segmented Sub-filter Chips */}
-      <div className="bg-surface-container/60 p-1.5 rounded-2xl border border-border-glass inline-flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
+      <div className="bg-surface-container/60 p-1.5 rounded-2xl border border-border-glass grid grid-cols-2 lg:grid-cols-4 gap-1.5 w-full">
         {ACTION_CENTER_FILTERS.map((filter) => {
           const Icon = filter.icon;
           const isActive = activeFilter === filter.id;
@@ -94,16 +94,18 @@ export const SupervisorActionCenterTab = ({
               key={filter.id}
               type="button"
               onClick={() => setActiveFilter(filter.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 border ${
+              className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-1.5 w-full border ${
                 isActive
                   ? 'bg-surface text-on-surface border-border-glass shadow-xs'
                   : 'bg-transparent border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface/40'
               }`}
             >
-              {Icon && <Icon className="text-sm shrink-0" />}
-              <span>{filter.label}</span>
+              <div className="flex items-center gap-1.5 truncate">
+                {Icon && <Icon className="text-sm shrink-0" />}
+                <span className="truncate">{filter.label}</span>
+              </div>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                   isActive
                     ? 'bg-surface-container text-on-surface'
                     : count > 0

@@ -36,5 +36,5 @@
 }
 
 .bottom-nav-label {
-  @apply text-[9.5px] font-semibold leading-tight tracking-tight block text-center truncate max-w-[60px];
+  @apply text-[9px] font-semibold leading-tight tracking-tight block text-center;
 }

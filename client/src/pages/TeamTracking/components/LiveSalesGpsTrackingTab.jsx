@@ -155,11 +155,11 @@ export const LiveSalesGpsTrackingTab = () => {
         {/* Left Side: Sales List & Filter Panel */}
         <div className="lg:col-span-4 space-y-3 bg-surface border border-border-glass rounded-2xl p-3.5 shadow-sm">
           {/* Quick Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+          <div className="grid grid-cols-3 gap-1.5 w-full">
             <button
               type="button"
               onClick={() => setFilterStatus('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full truncate ${
                 filterStatus === 'ALL'
                   ? 'bg-primary text-on-primary shadow-xs'
                   : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant'
@@ -170,7 +170,7 @@ export const LiveSalesGpsTrackingTab = () => {
             <button
               type="button"
               onClick={() => setFilterStatus('IN_VISIT')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full truncate ${
                 filterStatus === 'IN_VISIT'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-surface-container text-emerald-700 hover:bg-emerald-500/10'
@@ -181,7 +181,7 @@ export const LiveSalesGpsTrackingTab = () => {
             <button
               type="button"
               onClick={() => setFilterStatus('ONLINE')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full truncate ${
                 filterStatus === 'ONLINE'
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-surface-container text-blue-700 hover:bg-blue-500/10'

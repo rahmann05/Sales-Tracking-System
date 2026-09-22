@@ -167,11 +167,11 @@ export const SupervisorDailyRecapTab = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             <button
               type="button"
               onClick={handlePrint}
-              className="px-3.5 py-2 bg-surface border border-border-glass hover:bg-surface-container rounded-xl text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+              className="flex-1 sm:flex-initial px-3.5 py-2 bg-surface border border-border-glass hover:bg-surface-container rounded-xl text-xs font-bold text-on-surface flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
             >
               <LuPrinter className="text-sm" />
               <span>Cetak Rekap</span>
@@ -179,7 +179,7 @@ export const SupervisorDailyRecapTab = ({
             <button
               type="button"
               onClick={() => setActiveTab(TAB_IDS.REPORTS)}
-              className="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
+              className="flex-1 sm:flex-initial px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
             >
               <LuExternalLink className="text-sm" />
               <span>Laporan ND6 Lengkap</span>
@@ -187,8 +187,8 @@ export const SupervisorDailyRecapTab = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto mobile-card-table-wrapper">
+          <table className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead>
               <tr className="border-b border-border-glass text-on-surface-variant font-bold">
                 <th className="pb-3 px-3">Nama Salesman</th>
@@ -204,7 +204,7 @@ export const SupervisorDailyRecapTab = ({
             <tbody className="divide-y divide-border-glass">
               {salesSummary.map((s) => (
                 <tr key={s.id} className="hover:bg-surface-variant/20 transition-colors">
-                  <td className="py-3 px-3 font-bold text-on-surface">
+                  <td data-label="Salesman" className="py-3 px-3 font-bold text-on-surface">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">
                         {s.name.charAt(0)}
@@ -215,19 +215,19 @@ export const SupervisorDailyRecapTab = ({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-3 text-on-surface-variant">
+                  <td data-label="Klaster" className="py-3 px-3 text-on-surface-variant">
                     {s.cluster?.name || 'Klaster Bandung'}
                   </td>
-                  <td className="py-3 px-3 text-center font-bold">{s.target}</td>
-                  <td className="py-3 px-3 text-center font-extrabold text-emerald-600">{s.done}</td>
-                  <td className="py-3 px-3 text-center text-amber-600 font-semibold">
+                  <td data-label="Target RJP" className="py-3 px-3 md:text-center text-left font-bold">{s.target}</td>
+                  <td data-label="Selesai" className="py-3 px-3 md:text-center text-left font-extrabold text-emerald-600">{s.done}</td>
+                  <td data-label="Toko Tutup" className="py-3 px-3 md:text-center text-left text-amber-600 font-semibold">
                     {s.skips + s.reroutes > 0 ? `${s.skips + s.reroutes} toko` : '-'}
                   </td>
-                  <td className="py-3 px-3 text-center text-blue-600 font-semibold">
+                  <td data-label="Luar RJP" className="py-3 px-3 md:text-center text-left text-blue-600 font-semibold">
                     {s.offPjp > 0 ? `${s.offPjp} toko` : '-'}
                   </td>
-                  <td className="py-3 px-3 min-w-[120px]">
-                    <div className="flex items-center gap-2">
+                  <td data-label="Kepatuhan" className="py-3 px-3 md:min-w-[120px]">
+                    <div className="flex items-center gap-2 w-full">
                       <div className="flex-1 bg-surface-container rounded-full h-1.5 overflow-hidden">
                         <div 
                           className={`h-1.5 rounded-full ${
@@ -239,7 +239,7 @@ export const SupervisorDailyRecapTab = ({
                       <span className="font-extrabold text-[11px] w-8 text-right">{s.complianceRate}%</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 text-center">
+                  <td data-label="Status" className="py-3 px-3 md:text-center text-left">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                       s.status === 'Selesai'
                         ? 'bg-emerald-500/10 text-emerald-700'

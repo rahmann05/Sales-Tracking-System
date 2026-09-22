@@ -17,8 +17,8 @@ export const OutletApprovalTable = ({ items = [], isLoading = false, onReview })
           Tidak ada data pengajuan outlet dengan filter saat ini.
         </div>
       ) : (
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+        <div className="overflow-x-auto w-full mobile-card-table-wrapper">
+          <table className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead className="bg-surface-variant/30">
               <tr>
                 <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass">

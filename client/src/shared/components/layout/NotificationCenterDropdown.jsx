@@ -113,11 +113,11 @@ export const NotificationCenterDropdown = () => {
             </div>
 
             {/* Quick Filter Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[11px] shrink-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full text-[11px] shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveFilter('ALL')}
-                className={`px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'ALL'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'
@@ -128,7 +128,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setActiveFilter('UNREAD')}
-                className={`px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'UNREAD'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'
@@ -139,7 +139,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setActiveFilter('CLOSED')}
-                className={`px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'CLOSED'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'
@@ -150,7 +150,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setActiveFilter('UNLOCK')}
-                className={`px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'UNLOCK'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'

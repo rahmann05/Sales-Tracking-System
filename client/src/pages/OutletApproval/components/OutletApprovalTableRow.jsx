@@ -9,7 +9,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
   return (
     <tr className="hover:bg-surface-variant/20 transition-colors">
       {/* Tanggal */}
-      <td className="py-3.5 px-4 whitespace-nowrap font-mono text-on-surface-variant">
+      <td data-label="Tanggal" className="py-3.5 px-4 whitespace-nowrap font-mono text-on-surface-variant">
         {new Date(item.createdAt).toLocaleDateString('id-ID', {
           day: 'numeric',
           month: 'short',
@@ -18,7 +18,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Nama & Alamat */}
-      <td className="py-3.5 px-4">
+      <td data-label="Nama Toko" className="py-3.5 px-4">
         <div className="font-bold text-on-surface text-sm">{item.name}</div>
         <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
           <LuMapPin className="text-primary text-xs shrink-0" />
@@ -27,7 +27,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Salesman */}
-      <td className="py-3.5 px-4">
+      <td data-label="Salesman" className="py-3.5 px-4">
         <div className="font-bold text-on-surface flex items-center gap-1">
           <LuUser className="text-primary text-xs" />
           <span>{item.salesmanName || '-'}</span>
@@ -38,7 +38,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Area & Divisi */}
-      <td className="py-3.5 px-4">
+      <td data-label="Wilayah" className="py-3.5 px-4">
         <span className="font-bold text-on-surface">{item.area}</span>
         <div className="text-[10px] text-on-surface-variant font-semibold mt-0.5">
           Divisi: {item.division}
@@ -46,7 +46,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Channel & Payment */}
-      <td className="py-3.5 px-4">
+      <td data-label="Channel" className="py-3.5 px-4">
         <span className="px-2 py-0.5 rounded-md bg-surface-container text-[10px] font-bold border border-border-glass">
           {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
         </span>
@@ -56,7 +56,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Status */}
-      <td className="py-3.5 px-4">
+      <td data-label="Status" className="py-3.5 px-4">
         <span
           className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
             item.registrationStatus === 'REGISTERED_ACTIVE'
@@ -78,11 +78,11 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Aksi */}
-      <td className="py-3.5 px-4 text-center">
+      <td className="py-3.5 px-4 text-center mobile-full-width">
         <button
           type="button"
           onClick={() => onReview(item)}
-          className={`px-3 py-1 rounded-lg text-xs font-bold shadow-xs hover:opacity-90 transition-all cursor-pointer ${
+          className={`w-full md:w-auto px-3 py-2 md:py-1 rounded-lg text-xs font-bold shadow-xs hover:opacity-90 transition-all cursor-pointer ${
             item.registrationStatus === 'SUBMITTED'
               ? 'bg-primary text-white'
               : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass'

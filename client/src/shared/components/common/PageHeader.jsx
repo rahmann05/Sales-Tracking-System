@@ -23,7 +23,7 @@ export const PageHeader = ({
 }) => {
   return (
     <div
-      className={`bg-surface border border-border-glass rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all ${className}`}
+      className={`bg-surface border border-border-glass rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all page-header-mobile ${className}`}
     >
       <div className="space-y-1.5 min-w-0">
         {badge && (
@@ -38,7 +38,7 @@ export const PageHeader = ({
           </div>
         )}
 
-        <h1 className="text-lg sm:text-xl md:text-2xl font-black text-on-surface tracking-tight m-0 truncate">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-black text-on-surface tracking-tight m-0">
           {title}
         </h1>
 
@@ -49,7 +49,7 @@ export const PageHeader = ({
         )}
 
         {stats && stats.length > 0 && (
-          <div className="flex items-center gap-2 pt-2 flex-wrap">
+          <div className="flex items-center gap-2 pt-2 flex-wrap page-header-stats-mobile">
             {stats.map((st, idx) => (
               <div
                 key={idx}
@@ -72,7 +72,7 @@ export const PageHeader = ({
       </div>
 
       {actions && (
-        <div className="flex items-center gap-2 flex-wrap self-start lg:self-center shrink-0">
+        <div className="flex items-center gap-2 flex-wrap self-start lg:self-center shrink-0 w-full lg:w-auto page-header-actions-mobile">
           {actions}
         </div>
       )}

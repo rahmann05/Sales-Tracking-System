@@ -27,8 +27,8 @@ export const UsersTable = ({ users, loading, error }) => {
       )}
 
       {users && (
-        <div className="overflow-x-auto">
-          <table className="reports-table">
+        <div className="overflow-x-auto mobile-card-table-wrapper">
+          <table className="reports-table mobile-card-table">
             <thead>
               <tr>
                 <th className="reports-th">ID</th>
@@ -41,15 +41,15 @@ export const UsersTable = ({ users, loading, error }) => {
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td className="reports-td font-bold">#{user.id}</td>
-                  <td className="reports-td font-bold text-on-surface">{user.name}</td>
-                  <td className="reports-td text-on-surface-variant">{user.email}</td>
-                  <td className="reports-td">
+                  <td data-label="ID" className="reports-td font-bold">#{user.id}</td>
+                  <td data-label="Nama" className="reports-td font-bold text-on-surface">{user.name}</td>
+                  <td data-label="Email" className="reports-td text-on-surface-variant">{user.email}</td>
+                  <td data-label="Role" className="reports-td">
                     <Badge variant={user.role === 'Admin' ? 'lime' : 'completed'}>
                       {user.role}
                     </Badge>
                   </td>
-                  <td className="reports-td">
+                  <td data-label="Status" className="reports-td">
                     <span className="text-xs font-semibold text-secondary">Active</span>
                   </td>
                 </tr>

@@ -156,8 +156,8 @@ export const SalesDailyRouteSummaryCard = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left text-sm border-collapse min-w-[750px]">
+        <div className="overflow-x-auto w-full mobile-card-table-wrapper">
+          <table className="w-full text-left text-sm border-collapse mobile-card-table">
             <thead className="bg-surface-variant/30">
               <tr>
                 <th className="py-3 px-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass text-center w-16">
@@ -194,7 +194,7 @@ export const SalesDailyRouteSummaryCard = ({
                   return (
                     <tr key={stop.id || idx} className="hover:bg-surface-variant/20 transition-colors">
                       {/* Urutan TSP */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td data-label="Urutan" className="py-3.5 px-4 text-center">
                         <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-extrabold shadow-xs ${
                           isGT 
                             ? 'bg-blue-100 text-blue-700 border border-blue-200' 
@@ -205,7 +205,7 @@ export const SalesDailyRouteSummaryCard = ({
                       </td>
 
                       {/* Nama & Alamat */}
-                      <td className="py-3.5 px-4">
+                      <td data-label="Nama Outlet" className="py-3.5 px-4">
                         <div className="font-bold text-on-surface text-sm">
                           {stop.customerName || stop.outletName || stop.name}
                         </div>
@@ -216,7 +216,7 @@ export const SalesDailyRouteSummaryCard = ({
                       </td>
 
                       {/* Tipe Outlet (Column GT vs MT) */}
-                      <td className="py-3.5 px-4">
+                      <td data-label="Tipe Outlet" className="py-3.5 px-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                           isGT
                             ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
@@ -228,8 +228,8 @@ export const SalesDailyRouteSummaryCard = ({
                       </td>
 
                       {/* Frekuensi Kunjungan (F1, F2, F4, F8) */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex flex-col items-center">
+                      <td data-label="Frekuensi" className="py-3.5 px-4 md:text-center text-left">
+                        <div className="inline-flex flex-col md:items-center items-start">
                           <span 
                             className="px-2.5 py-1 rounded-lg bg-surface-container font-mono text-xs font-bold text-on-surface border border-border-glass shadow-xs"
                             title={freqLegend?.description || `${freqCode}: Kunjungan terjadwal`}
@@ -243,7 +243,7 @@ export const SalesDailyRouteSummaryCard = ({
                       </td>
 
                       {/* Wilayah / Area */}
-                      <td className="py-3.5 px-4">
+                      <td data-label="Wilayah" className="py-3.5 px-4">
                         <span className="text-xs font-bold text-on-surface bg-surface-container/60 px-2.5 py-1 rounded-lg border border-border-glass inline-flex items-center gap-1.5">
                           <LuMapPin className="text-primary text-xs" />
                           <span>{areaText}</span>

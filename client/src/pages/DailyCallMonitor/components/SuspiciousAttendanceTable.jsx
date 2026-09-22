@@ -127,13 +127,13 @@ export const SuspiciousAttendanceTable = ({
   return (
     <div className="space-y-4">
       {/* 1. Header Banner & Audit Warning */}
-      <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 suspicious-header-mobile">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
             <LuShieldAlert className="text-xl" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-black text-rose-700 m-0 uppercase tracking-tight">
                 Tabel Khusus Audit Absensi Janggal & Anomali Lapangan
               </h3>
@@ -148,7 +148,7 @@ export const SuspiciousAttendanceTable = ({
         </div>
 
         {/* Filter Pills & Export */}
-        <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+        <div className="flex items-center gap-2 flex-wrap self-start md:self-auto suspicious-filter-pills-mobile w-full md:w-auto">
           <button
             type="button"
             onClick={() => setFilterAnomalyType('ALL')}
@@ -208,7 +208,7 @@ export const SuspiciousAttendanceTable = ({
           <button
             type="button"
             onClick={exportSuspiciousCsv}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer ml-auto"
+            className="w-full md:w-auto px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-xs transition-all cursor-pointer md:ml-auto"
             title="Ekspor Daftar Anomali ke Excel/CSV"
           >
             <LuFileSpreadsheet /> Ekspor Audit
@@ -217,8 +217,8 @@ export const SuspiciousAttendanceTable = ({
       </div>
 
       {/* 2. Search Bar */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="relative w-full max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative w-full sm:max-w-sm">
           <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs" />
           <input
             type="text"
@@ -235,8 +235,8 @@ export const SuspiciousAttendanceTable = ({
 
       {/* 3. Dedicated Anomaly Table */}
       <div className="bg-surface border border-rose-500/20 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto mobile-card-table-wrapper">
+          <table className="w-full text-left border-collapse text-xs mobile-card-table">
             <thead>
               <tr className="bg-rose-500/10 border-b border-rose-500/20 text-[11px] font-black text-rose-800 uppercase tracking-wider">
                 <th className="py-3 px-3 text-center">No</th>
@@ -264,34 +264,34 @@ export const SuspiciousAttendanceTable = ({
                     className="hover:bg-rose-500/5 transition-colors border-b border-border-glass/60 cursor-pointer"
                     onClick={() => onSelectRow && onSelectRow(r)}
                   >
-                    <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-on-surface-variant">
+                    <td data-label="No" className="py-3 px-3 text-center font-mono text-[11px] font-bold text-on-surface-variant">
                       {idx + 1}
                     </td>
 
                     {/* Salesman */}
-                    <td className="py-3 px-3 font-semibold text-on-surface">
+                    <td data-label="Salesman" className="py-3 px-3 font-semibold text-on-surface">
                       <div className="font-bold">{r.salesmanName}</div>
                       <div className="text-[10px] text-on-surface-variant">{r.clusterName}</div>
                     </td>
 
                     {/* Outlet */}
-                    <td className="py-3 px-3 text-on-surface max-w-[200px]">
-                      <div className="font-bold truncate" title={r.customerName}>
+                    <td data-label="Outlet" className="py-3 px-3 text-on-surface md:max-w-[200px]">
+                      <div className="font-bold md:truncate" title={r.customerName}>
                         {r.customerName}
                       </div>
-                      <div className="text-[10px] text-on-surface-variant truncate font-mono" title={r.customerAddress}>
+                      <div className="text-[10px] text-on-surface-variant md:truncate font-mono" title={r.customerAddress}>
                         {r.customerId} • {r.customerAddress}
                       </div>
                     </td>
 
                     {/* Time In / Out */}
-                    <td className="py-3 px-2 text-center font-mono text-[11px]">
+                    <td data-label="Jam In/Out" className="py-3 px-2 md:text-center text-left font-mono text-[11px]">
                       <div className="text-emerald-600 font-semibold">{r.timeIn || '-'}</div>
                       <div className="text-on-surface-variant">{r.timeOut || '-'}</div>
                     </td>
 
                     {/* Travel Time & Distance */}
-                    <td className="py-3 px-3 text-center font-mono">
+                    <td data-label="Jarak & Jeda" className="py-3 px-3 md:text-center text-left font-mono">
                       {r.prevStopName ? (
                         <div
                           className={`inline-block p-1.5 rounded-lg text-[11px] ${
@@ -309,7 +309,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Duration Flag */}
-                    <td className="py-3 px-3 text-center">
+                    <td data-label="Durasi" className="py-3 px-3 md:text-center text-left">
                       <div
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black font-mono ${
                           isShort
@@ -328,7 +328,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* GPS Deviation Flag */}
-                    <td className="py-3 px-3 text-center">
+                    <td data-label="Deviasi GPS" className="py-3 px-3 md:text-center text-left">
                       <div
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold ${
                           isFar
@@ -347,7 +347,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Anomaly Badge & Notes */}
-                    <td className="py-3 px-3 max-w-[240px]">
+                    <td data-label="Anomali" className="py-3 px-3 md:max-w-[240px]">
                       <div className="space-y-1">
                         {isTravel && (
                           <div className="p-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-[10.5px] text-rose-900 font-bold flex items-center gap-1">
@@ -375,8 +375,8 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Photo Evidence */}
-                    <td className="py-3 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                    <td data-label="Bukti Foto" className="py-3 px-3 md:text-center text-left">
+                      <div className="flex items-center justify-start md:justify-center gap-1">
                         {r.photoIn ? (
                           <span className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center text-xs font-bold" title="Foto Check-In Tersedia">
                             <LuImage />
@@ -394,17 +394,17 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Action Button */}
-                    <td className="py-3 px-3 text-center">
+                    <td className="py-3 px-3 text-center mobile-full-width">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           onSelectRow && onSelectRow(r);
                         }}
-                        className="p-1.5 rounded-xl bg-surface-container hover:bg-rose-500/15 text-on-surface hover:text-rose-700 transition-all border border-border-glass text-xs cursor-pointer"
+                        className="w-full md:w-auto p-2 md:p-1.5 rounded-xl bg-surface-container hover:bg-rose-500/15 text-on-surface hover:text-rose-700 transition-all border border-border-glass text-xs cursor-pointer flex items-center justify-center gap-1.5"
                         title="Lihat Rincian Lengkap & Foto"
                       >
-                        <LuExternalLink />
+                        <LuExternalLink /> Lihat Rincian Lengkap
                       </button>
                     </td>
                   </tr>

@@ -7,6 +7,7 @@
 @import "./common/Button.css";
 @import "./common/Input.css";
 @import "./animations.css";
+@import "./common/MobileResponsive.css";
 
 @theme {
   /* ── Apple Editorial Monochrome ── */

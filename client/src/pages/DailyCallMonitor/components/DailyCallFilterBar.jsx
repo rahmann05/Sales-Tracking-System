@@ -134,7 +134,7 @@ export const DailyCallFilterBar = ({
 
       {/* Bottom Filter Pills (Optional) */}
       {showStatusPills && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 pt-1 w-full">
           {filterOptions.map((opt) => {
             const Icon = opt.icon;
             return (
@@ -142,14 +142,14 @@ export const DailyCallFilterBar = ({
                 key={opt.key}
                 type="button"
                 onClick={() => onSelectFilter(opt.key)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-2 sm:py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 w-full sm:w-auto text-center ${
                   filterType === opt.key
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant border border-border-glass'
                 }`}
               >
-                {Icon && <Icon className="text-xs" />}
-                <span>{opt.label}</span>
+                {Icon && <Icon className="text-xs shrink-0" />}
+                <span className="truncate">{opt.label}</span>
               </button>
             );
           })}

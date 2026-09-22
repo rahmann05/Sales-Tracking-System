@@ -106,7 +106,7 @@ export const DriverFieldView = () => {
 
       {/* Progress Summary */}
       {activeRoute && (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <MetricCard label="Total Toko" value={totalStops} icon={LuMapPin} color="#2563eb" />
           <MetricCard label="Terkirim" value={deliveredCount} icon={LuCircleCheck} color="#16a34a" />
           <MetricCard label="Menunggu" value={pendingCount} icon={LuTruck} color="#d97706" />

@@ -28,8 +28,8 @@ export const SpvTeamListTab = ({ filteredSupervisorTeams }) => {
 
             <div className="space-y-2">
               <h5 className="text-xs font-bold text-on-surface mb-2">Anggota Sales Terdaftar ({teamSales.length || team.memberSalesNames?.length || 0}):</h5>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="overflow-x-auto mobile-card-table-wrapper">
+                <table className="w-full text-left text-xs border-collapse mobile-card-table">
                   <thead>
                     <tr className="bg-surface-variant/30 text-on-surface-variant font-semibold">
                       <th className="p-2 border-b border-border-glass rounded-tl-lg whitespace-nowrap">Nama Sales</th>
@@ -42,16 +42,16 @@ export const SpvTeamListTab = ({ filteredSupervisorTeams }) => {
                     {teamSales.length > 0 ? (
                       teamSales.map((sales, idx) => (
                         <tr key={idx} className="hover:bg-surface-variant/10 transition-colors border-b border-border-glass/50 last:border-0">
-                          <td className="p-2">
+                          <td data-label="Nama Sales" className="p-2">
                             <div className="flex items-center gap-2">
                               <Avatar name={sales.name} size="sm" />
-                              <span className="font-bold text-on-surface whitespace-nowrap">{sales.name}</span>
+                              <span className="font-bold text-on-surface">{sales.name}</span>
                             </div>
                           </td>
-                          <td className="p-2 text-on-surface-variant">{sales.phone}</td>
-                          <td className="p-2 text-on-surface-variant">{sales.rjpTeamName || '-'}</td>
-                          <td className="p-2">
-                            <span className={`px-2 py-1 rounded-md font-bold text-[10px] whitespace-nowrap ${
+                          <td data-label="Telepon" className="p-2 text-on-surface-variant">{sales.phone}</td>
+                          <td data-label="Tim RJP" className="p-2 text-on-surface-variant">{sales.rjpTeamName || '-'}</td>
+                          <td data-label="Status" className="p-2">
+                            <span className={`px-2 py-1 rounded-md font-bold text-[10px] ${
                               sales.status === 'Checked In' ? 'bg-emerald-500/10 text-emerald-600' :
                               sales.status === 'In Transit' ? 'bg-amber-500/10 text-amber-600' :
                               'bg-primary/10 text-primary'

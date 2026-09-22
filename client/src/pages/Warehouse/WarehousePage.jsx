@@ -13,12 +13,12 @@ export const WarehousePage = () => {
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Tabs Header */}
-      <div className="flex items-center gap-4 px-4 pt-4 border-b border-border-glass overflow-x-auto hide-scrollbar">
+      <div className="grid grid-cols-2 gap-2 px-4 pt-4 border-b border-border-glass w-full">
         <button
           onClick={() => setActiveTab('pengiriman')}
-          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 border-b-2 font-medium text-sm transition-colors text-center w-full ${
             activeTab === 'pengiriman'
-              ? 'border-primary text-primary'
+              ? 'border-primary text-primary font-bold'
               : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -26,9 +26,9 @@ export const WarehousePage = () => {
         </button>
         <button
           onClick={() => setActiveTab('kendaraan')}
-          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 border-b-2 font-medium text-sm transition-colors text-center w-full ${
             activeTab === 'kendaraan'
-              ? 'border-primary text-primary'
+              ? 'border-primary text-primary font-bold'
               : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >

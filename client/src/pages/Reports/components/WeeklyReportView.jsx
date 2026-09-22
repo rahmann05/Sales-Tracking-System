@@ -368,8 +368,8 @@ export const WeeklyReportView = () => {
         </div>
 
         {/* Workspace Body: Day-by-Day Performance Matrix Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto mobile-card-table-wrapper">
+          <table className="w-full text-left border-collapse text-xs mobile-card-table">
             <thead>
               <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
                 <th className="py-3 px-3">Salesman</th>
@@ -392,18 +392,19 @@ export const WeeklyReportView = () => {
                   key={s.salesmanId}
                   className="hover:bg-surface-variant/20 transition-colors border-b border-border-glass/60"
                 >
-                  <td className="py-3 px-3 font-bold text-on-surface whitespace-nowrap">
+                  <td data-label="Salesman" className="py-3 px-3 font-bold text-on-surface whitespace-nowrap">
                     {s.salesmanName}
                   </td>
-                  <td className="py-3 px-3 text-on-surface-variant text-[11px] whitespace-nowrap">
+                  <td data-label="Klaster" className="py-3 px-3 text-on-surface-variant text-[11px] whitespace-nowrap">
                     {s.clusterName}
                   </td>
 
                   {/* 6 Day Breakdown */}
                   {['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'].map((dayKey) => {
                     const d = s.days?.[dayKey] || { plan: 0, actual: 0, ec: 0 };
+                    const dayCapitalized = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
                     return (
-                      <td key={dayKey} className="py-3 px-2 text-center font-mono text-[11px]">
+                      <td key={dayKey} data-label={dayCapitalized} className="py-3 px-2 text-center font-mono text-[11px]">
                         {d.plan > 0 ? (
                           <div className="space-y-0.5">
                             <span className="font-bold text-on-surface">
@@ -421,16 +422,16 @@ export const WeeklyReportView = () => {
                   })}
 
                   {/* Weekly Totals */}
-                  <td className="py-3 px-3 text-center font-mono font-bold text-on-surface whitespace-nowrap">
+                  <td data-label="Total Act/Plan" className="py-3 px-3 text-center font-mono font-bold text-on-surface whitespace-nowrap">
                     {s.weeklyTotal?.actual} / {s.weeklyTotal?.plan}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono font-bold text-blue-600">
+                  <td data-label="Call %" className="py-3 px-3 text-center font-mono font-bold text-blue-600">
                     {s.weeklyTotal?.callRate}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono font-bold text-emerald-600">
+                  <td data-label="EC %" className="py-3 px-3 text-center font-mono font-bold text-emerald-600">
                     {s.weeklyTotal?.ecRate}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td data-label="Omzet" className="py-3 px-3 text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.weeklyTotal?.omzet || 0).toLocaleString('id-ID')}
                   </td>
                 </tr>

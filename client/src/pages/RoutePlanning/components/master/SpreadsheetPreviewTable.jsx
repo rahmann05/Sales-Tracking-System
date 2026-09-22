@@ -10,8 +10,8 @@ export const SpreadsheetPreviewTable = ({ previewRows = [] }) => {
   if (previewRows.length === 0) return null;
 
   return (
-    <div className="spreadsheet-preview-container">
-      <table className="spreadsheet-preview-table">
+    <div className="spreadsheet-preview-container mobile-card-table-wrapper">
+      <table className="spreadsheet-preview-table mobile-card-table">
         <thead>
           <tr>
             <th className="spreadsheet-preview-th">Klaster</th>
@@ -24,11 +24,11 @@ export const SpreadsheetPreviewTable = ({ previewRows = [] }) => {
         <tbody>
           {previewRows.slice(0, 5).map((row, idx) => (
             <tr key={idx}>
-              <td className="spreadsheet-preview-td font-semibold">{row.clusterName}</td>
-              <td className="spreadsheet-preview-td font-mono">{row.outletCode}</td>
-              <td className="spreadsheet-preview-td">{row.customerName}</td>
-              <td className="spreadsheet-preview-td text-xs text-on-surface-variant">{row.address}</td>
-              <td className="spreadsheet-preview-td font-bold text-primary">{row.callFrequency}</td>
+              <td data-label="Klaster" className="spreadsheet-preview-td font-semibold">{row.clusterName}</td>
+              <td data-label="Kode" className="spreadsheet-preview-td font-mono">{row.outletCode}</td>
+              <td data-label="Nama Outlet" className="spreadsheet-preview-td">{row.customerName}</td>
+              <td data-label="Alamat" className="spreadsheet-preview-td text-xs text-on-surface-variant">{row.address}</td>
+              <td data-label="Frekuensi" className="spreadsheet-preview-td font-bold text-primary">{row.callFrequency}</td>
             </tr>
           ))}
         </tbody>

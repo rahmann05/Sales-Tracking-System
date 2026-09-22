@@ -19,7 +19,7 @@ export const OutletReportTableRow = ({
   return (
     <tr className="hover:bg-surface-variant/20 transition-colors">
       {/* Kode Outlet */}
-      <td className="py-3 px-4 font-mono font-bold text-xs">
+      <td data-label="Kode Outlet" className="py-3 px-4 font-mono font-bold text-xs">
         {item.customerCode ? (
           <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
             {item.customerCode}
@@ -30,7 +30,7 @@ export const OutletReportTableRow = ({
       </td>
 
       {/* Nama & Alamat */}
-      <td className="py-3 px-4">
+      <td data-label="Nama Toko" className="py-3 px-4">
         <div className="font-bold text-on-surface text-xs">{item.name}</div>
         <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
           <LuMapPin className="text-primary text-xs shrink-0" />
@@ -39,26 +39,26 @@ export const OutletReportTableRow = ({
       </td>
 
       {/* Area & Divisi */}
-      <td className="py-3 px-4">
+      <td data-label="Area" className="py-3 px-4">
         <div className="font-bold text-on-surface text-xs">{item.area}</div>
         <div className="text-[10px] text-on-surface-variant">{item.division}</div>
       </td>
 
       {/* Channel */}
-      <td className="py-3 px-4">
+      <td data-label="Channel" className="py-3 px-4">
         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container border border-border-glass">
           {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
         </span>
       </td>
 
       {/* Sales & SPV */}
-      <td className="py-3 px-4 text-[11px]">
+      <td data-label="Sales & SPV" className="py-3 px-4 text-[11px]">
         <div className="font-bold text-on-surface">{item.salesmanName || '-'}</div>
         <div className="text-[10px] text-on-surface-variant">SPV: {item.spvName || '-'}</div>
       </td>
 
       {/* Status */}
-      <td className="py-3 px-4">
+      <td data-label="Status" className="py-3 px-4">
         <span
           className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
             isAlreadyActive
@@ -75,13 +75,13 @@ export const OutletReportTableRow = ({
       </td>
 
       {/* Aksi */}
-      <td className="py-3 px-4 text-center">
-        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+      <td className="py-3 px-4 text-center mobile-full-width">
+        <div className="flex items-center justify-center gap-1.5 flex-wrap w-full">
           {/* Print PDF Button */}
           <button
             type="button"
             onClick={() => onOpenPdf(item)}
-            className="px-2.5 py-1 bg-surface-container hover:bg-surface-container-high rounded-lg text-xs font-bold text-on-surface transition-all border border-border-glass flex items-center gap-1"
+            className="flex-1 md:flex-initial px-2.5 py-2 md:py-1 bg-surface-container hover:bg-surface-container-high rounded-lg text-xs font-bold text-on-surface transition-all border border-border-glass flex items-center justify-center gap-1"
             title="Cetak Formulir Resmi"
           >
             <LuPrinter /> Cetak PDF
@@ -92,7 +92,7 @@ export const OutletReportTableRow = ({
             <button
               type="button"
               onClick={() => onOpenFinalize(item)}
-              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1"
+              className="flex-1 md:flex-initial px-2.5 py-2 md:py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1"
             >
               <LuCheckCheck /> Input ke Sistem
             </button>
