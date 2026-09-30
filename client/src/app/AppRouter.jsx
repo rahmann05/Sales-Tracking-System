@@ -24,6 +24,7 @@ import { ReportsPage } from '../pages/Reports/ReportsPage';
 import { SalesPage } from '../pages/Sales/SalesPage';
 import { SupervisorPage } from '../pages/Supervisor/SupervisorPage';
 import { AdminApprovalPage } from '../pages/Admin/AdminApprovalPage';
+import { AdminLandingPage } from '../pages/Admin/AdminLandingPage';
 import { OutletValidationPage } from '../pages/OutletValidation/OutletValidationPage';
 import { OutletManagementPage } from '../pages/OutletManagement/OutletManagementPage';
 import { OutletRegistrationPage } from '../pages/OutletRegistration/OutletRegistrationPage';
@@ -50,7 +51,7 @@ const RoleWorkspace = ({ role }) => {
         case ROLES.SUPERVISOR:
             return <SupervisorPage />;
         case ROLES.ADMIN:
-            return <AdminApprovalPage />;
+            return <AdminLandingPage />;
         case ROLES.KEPALA_GUDANG:
             return <WarehousePage />;
         case ROLES.SUPIR:
@@ -139,6 +140,11 @@ const ACCESS_CONTROL = {
         title: 'Akses Dibatasi',
         description: 'Halaman Peta Pengiriman hanya dapat diakses oleh Supir.',
     },
+    [TAB_IDS.ADMIN_APPROVAL]: {
+        roles: [ROLES.ADMIN],
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Halaman Persetujuan Order dan Buka Kunci hanya dapat diakses oleh Admin Penjualan.',
+    },
 };
 
 /** Wrapper: full interactive layer (blocks map clicks) */
@@ -158,7 +164,7 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
 
     // Role workspace (home)
     if (activeTab === TAB_IDS.ROLE_WORKSPACE) {
-        return <Interactive><RoleWorkspace role={role} /></Interactive>;
+        return <Interactive><RoleWorkspace role={role} onGoBack={onGoBack} /></Interactive>;
     }
 
     // Check RBAC for restricted tabs
@@ -175,6 +181,8 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
 
     // Public tab routing
     switch (activeTab) {
+        case TAB_IDS.ADMIN_APPROVAL:
+            return <Interactive><AdminApprovalPage onGoBack={onGoBack} /></Interactive>;
         case TAB_IDS.DASHBOARD:
             return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
         case TAB_IDS.DAILY_CALL_MONITOR:

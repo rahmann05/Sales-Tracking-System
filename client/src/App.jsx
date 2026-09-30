@@ -88,10 +88,12 @@ const AppContent = () => {
     );
   }
 
+  const isAdmin = user?.role === 'ADMIN';
+
   return (
     <ErrorBoundary>
       <div className="flex w-screen h-screen overflow-hidden bg-background">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        {!isAdmin && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
 
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           <Header
@@ -101,7 +103,7 @@ const AppContent = () => {
           />
           <MobileHeader onLogout={handleLogout} />
 
-          <main className="flex-1 relative overflow-y-auto bg-background pb-16 md:pb-8 min-h-0 pointer-events-none">
+          <main className={`flex-1 relative overflow-y-auto bg-background ${isAdmin ? 'pb-8' : 'pb-16 md:pb-8'} min-h-0 pointer-events-none`}>
             <ErrorBoundary>
               <PersistentMapShell />
               <AppRouter
@@ -112,7 +114,7 @@ const AppContent = () => {
             </ErrorBoundary>
           </main>
 
-          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+          {!isAdmin && <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />}
         </div>
       </div>
     </ErrorBoundary>

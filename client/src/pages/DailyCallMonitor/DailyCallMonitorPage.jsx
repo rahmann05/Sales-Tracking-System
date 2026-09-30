@@ -57,7 +57,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
   });
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto">
+    <div className={`space-y-5 max-w-7xl mx-auto ${showHeader ? 'p-4 md:p-6 pb-24' : ''}`}>
       {/* 1. Page Header Title Banner (Only rendered when standalone) */}
       {showHeader && (
         <PageHeader

@@ -18,6 +18,7 @@ import {
     LuTruck,
     LuPackage,
     LuMap,
+    LuLayoutGrid,
 } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 import { LuMapPin } from 'react-icons/lu';
@@ -38,6 +39,7 @@ import {
 /** Tab IDs used across the app */
 export const TAB_IDS = Object.freeze({
     ROLE_WORKSPACE: 'role-workspace',
+    ADMIN_APPROVAL: 'admin-approval',
     DASHBOARD: 'dashboard',
     DAILY_CALL_MONITOR: 'daily-call-monitor',
     ROUTE_PLANNING: 'route-planning',
@@ -60,7 +62,7 @@ export const TAB_IDS = Object.freeze({
 const ROLE_WORKSPACE_MAP = Object.freeze({
     [ROLES.SALES]: { label: 'PJP Sales Field', icon: LuNavigation },
     [ROLES.SUPERVISOR]: { label: 'Supervisi Lapangan', icon: LuShieldCheck },
-    [ROLES.ADMIN]: { label: 'Approval Order Admin', icon: LuFileCheck },
+    [ROLES.ADMIN]: { label: 'Menu Utama Admin', icon: LuLayoutGrid },
     [ROLES.KEPALA_GUDANG]: { label: 'Dashboard Pengiriman', icon: LuTruck },
     [ROLES.SUPIR]: { label: 'Rute Pengiriman Hari Ini', icon: LuTruck },
 });
@@ -82,6 +84,24 @@ export const getRoleWorkspaceTab = (role) => {
  */
 export const getNavigationTabs = (role) => {
     const tabs = [getRoleWorkspaceTab(role)];
+
+    // 0. Persetujuan Order & Unlock khusus Admin
+    if (role === ROLES.ADMIN) {
+        tabs.push({
+            id: TAB_IDS.ADMIN_APPROVAL,
+            label: 'Persetujuan Order & Unlock',
+            icon: LuFileCheck,
+        });
+    }
+
+    // 0.1 Daily Call Monitor untuk Admin & Supervisor
+    if (DAILY_CALL_ROLES.includes(role)) {
+        tabs.push({
+            id: TAB_IDS.DAILY_CALL_MONITOR,
+            label: 'Daily Call Monitor',
+            icon: LuPhoneCall,
+        });
+    }
 
     // 1. Rute & RJP Lapangan
     if (ROUTE_PLANNING_ROLES.includes(role)) {
@@ -147,6 +167,15 @@ export const getNavigationTabs = (role) => {
         });
     }
 
+    // 8b. Kelola Master Kluster — Admin & Supervisor
+    if ([ROLES.ADMIN, ROLES.SUPERVISOR].includes(role)) {
+        tabs.push({
+            id: TAB_IDS.CREATE_CLUSTER,
+            label: 'Kelola Master Kluster',
+            icon: LuMap,
+        });
+    }
+
     // ═══════════════════════════════════════════════════
     // 9. Kepala Gudang — Delivery Management Tabs
     // ═══════════════════════════════════════════════════
@@ -164,6 +193,15 @@ export const getNavigationTabs = (role) => {
         tabs.push({
             id: TAB_IDS.DELIVERY_MONITOR,
             label: 'Monitor Pengiriman',
+            icon: LuTruck,
+        });
+    }
+
+    // 9b. Admin — Monitor Logistik (view-only, tanpa Packing List & Rute operasional)
+    if (role === ROLES.ADMIN) {
+        tabs.push({
+            id: TAB_IDS.DELIVERY_MONITOR,
+            label: 'Monitor Logistik & Gudang',
             icon: LuTruck,
         });
     }
