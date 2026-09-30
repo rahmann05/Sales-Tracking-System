@@ -1,0 +1,23 @@
+/** bulkUpsertConfigs - service to upsert multiple config keys at once. */
+import { prisma } from '../../../config/prisma.js';
+
+export const bulkUpsertConfigs = async (configMap) => {
+  const results = {};
+  // Use a transaction for atomic bulk update
+  await prisma.$transaction(
+    Object.entries(configMap).map(([key, value]) =>
+      prisma.systemConfig.upsert({
+        where: { key },
+        update: { value },
+        create: { key, value },
+      })
+    )
+  );
+
+  // Re-fetch all to return updated state
+  const allConfigs = await prisma.systemConfig.findMany({ orderBy: { key: 'asc' } });
+  for (const cfg of allConfigs) {
+    results[cfg.key] = cfg.value;
+  }
+  return results;
+};

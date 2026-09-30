@@ -27,7 +27,17 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
   // Geolocation calculation & validation
   const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
   const deviationMeters = Math.round(distance);
-  const maxRadius = stop.outlet.radiusMeters || config.attendanceRadiusMeters || 50;
+
+  // Read dynamic radius from SystemConfig, then env config, then hardcoded fallback
+  let globalRadius = config.attendanceRadiusMeters || 50;
+  try {
+    const radiusConfig = await prisma.systemConfig.findUnique({ where: { key: 'ATTENDANCE_RADIUS_METERS' } });
+    if (radiusConfig?.value !== undefined && radiusConfig?.value !== null) {
+      globalRadius = Number(radiusConfig.value) || globalRadius;
+    }
+  } catch { /* use default */ }
+
+  const maxRadius = stop.outlet.radiusMeters || globalRadius;
   const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
 
   // Enforce Geofence: Block attendance if outside radius, except for testing account sales@sinaranugrah.com

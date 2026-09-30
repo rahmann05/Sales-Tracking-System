@@ -20,6 +20,7 @@ import {
   LuArrowRight,
   LuLayoutGrid,
   LuMap,
+  LuSettings,
 } from 'react-icons/lu';
 import { FiBarChart2, FiCheckCircle } from 'react-icons/fi';
 
@@ -215,6 +216,19 @@ export const AdminLandingPage = () => {
         badge: 'Peta Geospasial',
         badgeVariant: 'neutral',
       },
+
+      // 5. Pengaturan Sistem
+      {
+        id: TAB_IDS.SYSTEM_CONFIG,
+        title: 'Pengaturan Parameter Sistem',
+        description:
+          'Kelola radius geofence presensi, durasi kunjungan, validasi GPS, divisi cabang, logistik, dan token sesi.',
+        category: 'SISTEM',
+        categoryLabel: 'Sistem',
+        icon: LuSettings,
+        badge: 'Konfigurasi',
+        badgeVariant: 'info',
+      },
     ];
   }, [pendingOrders.length, pendingUnlocks.length, totalOutlets, totalSales]);
 
@@ -240,6 +254,11 @@ export const AdminLandingPage = () => {
       key: 'LAPORAN',
       label: 'Laporan & Peta',
       count: featureList.filter((f) => f.category === 'LAPORAN').length,
+    },
+    {
+      key: 'SISTEM',
+      label: 'Sistem',
+      count: featureList.filter((f) => f.category === 'SISTEM').length,
     },
   ];
 

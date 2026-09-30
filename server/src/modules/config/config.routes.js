@@ -8,8 +8,18 @@ const router = express.Router();
 
 router.use(authenticate);
 
+// Get ALL configs (Admin only)
+router.get('/', authorize('ADMIN'), configController.getAllConfigs);
+
 // Get config by key
 router.get('/:key', configController.getConfig);
+
+// Bulk update configs (Admin only)
+router.put(
+  '/',
+  authorize('ADMIN'),
+  configController.bulkUpdateConfigs
+);
 
 // Upsert config by key (only ADMIN or SUPERVISOR)
 router.put(

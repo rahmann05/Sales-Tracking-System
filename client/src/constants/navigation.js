@@ -19,6 +19,7 @@ import {
     LuPackage,
     LuMap,
     LuLayoutGrid,
+    LuSettings,
 } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 import { LuMapPin } from 'react-icons/lu';
@@ -56,6 +57,8 @@ export const TAB_IDS = Object.freeze({
     DELIVERY_ROUTES: 'delivery-routes',
     DELIVERY_MONITOR: 'delivery-monitor',
     DELIVERY_DRIVER_MAP: 'delivery-driver-map',
+    // Admin System Configuration
+    SYSTEM_CONFIG: 'system-config',
 });
 
 /** Role-specific "home workspace" tab metadata */
@@ -197,7 +200,16 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 9b. Admin — Monitor Logistik (view-only, tanpa Packing List & Rute operasional)
+    // 9b. Admin — Pengaturan Sistem (Config Management)
+    if (role === ROLES.ADMIN) {
+        tabs.push({
+            id: TAB_IDS.SYSTEM_CONFIG,
+            label: 'Pengaturan Sistem',
+            icon: LuSettings,
+        });
+    }
+
+    // 9c. Admin — Monitor Logistik (view-only, tanpa Packing List & Rute operasional)
     if (role === ROLES.ADMIN) {
         tabs.push({
             id: TAB_IDS.DELIVERY_MONITOR,

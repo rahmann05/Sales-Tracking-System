@@ -378,8 +378,10 @@ export const vehiclesApi = {
 
 // ─── 11. Config API ───────────────────────────────────────────────────────────
 export const configApi = {
+  getAll: async () => request('/config'),
   getByKey: async (key) => request(`/config/${key}`),
   updateByKey: async (key, value) => request(`/config/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
+  bulkUpdate: async (configs) => request('/config', { method: 'PUT', body: JSON.stringify({ configs }) }),
 };
 
 // ─── 12. Customer Registrations API ───────────────────────────────────────────

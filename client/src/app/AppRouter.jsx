@@ -25,6 +25,7 @@ import { SalesPage } from '../pages/Sales/SalesPage';
 import { SupervisorPage } from '../pages/Supervisor/SupervisorPage';
 import { AdminApprovalPage } from '../pages/Admin/AdminApprovalPage';
 import { AdminLandingPage } from '../pages/Admin/AdminLandingPage';
+import { AdminConfigPage } from '../pages/Admin/AdminConfigPage';
 import { OutletValidationPage } from '../pages/OutletValidation/OutletValidationPage';
 import { OutletManagementPage } from '../pages/OutletManagement/OutletManagementPage';
 import { OutletRegistrationPage } from '../pages/OutletRegistration/OutletRegistrationPage';
@@ -145,6 +146,11 @@ const ACCESS_CONTROL = {
         title: 'Akses Dibatasi (Access Denied)',
         description: 'Halaman Persetujuan Order dan Buka Kunci hanya dapat diakses oleh Admin Penjualan.',
     },
+    [TAB_IDS.SYSTEM_CONFIG]: {
+        roles: [ROLES.ADMIN],
+        title: 'Akses Dibatasi (Access Denied)',
+        description: 'Halaman Pengaturan Sistem hanya dapat diakses oleh Admin.',
+    },
 };
 
 /** Wrapper: full interactive layer (blocks map clicks) */
@@ -216,6 +222,10 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             return <Interactive><DeliveryMonitor /></Interactive>;
         case TAB_IDS.DELIVERY_DRIVER_MAP:
             return <Interactive><DriverRouteMap /></Interactive>;
+
+        // Admin System Configuration
+        case TAB_IDS.SYSTEM_CONFIG:
+            return <Interactive><AdminConfigPage onGoBack={onGoBack} /></Interactive>;
 
         default:
             return <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;

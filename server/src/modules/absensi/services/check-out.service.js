@@ -38,7 +38,17 @@ export const checkOut = async (pjpStopId, userId, latitude, longitude, photoUrl 
   // Geolocation validation
   const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
   const deviationMeters = Math.round(distance);
-  const maxRadius = stop.outlet.radiusMeters || config.attendanceRadiusMeters || 50;
+
+  // Read dynamic radius from SystemConfig, then env config, then hardcoded fallback
+  let globalRadius = config.attendanceRadiusMeters || 50;
+  try {
+    const radiusConfig = await prisma.systemConfig.findUnique({ where: { key: 'ATTENDANCE_RADIUS_METERS' } });
+    if (radiusConfig?.value !== undefined && radiusConfig?.value !== null) {
+      globalRadius = Number(radiusConfig.value) || globalRadius;
+    }
+  } catch { /* use default */ }
+
+  const maxRadius = stop.outlet.radiusMeters || globalRadius;
   const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
 
   // Enforce Geofence: Block checkout if outside radius, except for testing account sales@sinaranugrah.com
@@ -55,8 +65,15 @@ export const checkOut = async (pjpStopId, userId, latitude, longitude, photoUrl 
   const durationMs = Math.max(0, outTimestamp - inTimestamp);
   const durationMinutes = Math.round((durationMs / 60000) * 10) / 10;
 
-  // Minimum duration check (e.g. 5 minutes)
-  const MINIMUM_DURATION_MINS = 5;
+  // Minimum duration check — read from SystemConfig, fallback to 5 minutes
+  let MINIMUM_DURATION_MINS = 5;
+  try {
+    const minDurConfig = await prisma.systemConfig.findUnique({ where: { key: 'MINIMUM_VISIT_DURATION_MINUTES' } });
+    if (minDurConfig?.value !== undefined && minDurConfig?.value !== null) {
+      MINIMUM_DURATION_MINS = Number(minDurConfig.value) || 5;
+    }
+  } catch { /* use default */ }
+
   if (durationMinutes < MINIMUM_DURATION_MINS && !earlyReason) {
     throw new AppError(
       `Durasi kunjungan baru ${Math.floor(durationMinutes)} menit. Waktu minimal kunjungan toko adalah ${MINIMUM_DURATION_MINS} menit. Harap sertakan alasan jika checkout lebih awal.`,

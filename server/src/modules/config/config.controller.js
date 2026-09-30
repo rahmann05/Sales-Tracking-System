@@ -20,3 +20,22 @@ export const updateConfig = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getAllConfigs = async (req, res, next) => {
+  try {
+    const configs = await configService.getAllConfigs();
+    res.json({ data: configs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const bulkUpdateConfigs = async (req, res, next) => {
+  try {
+    const { configs } = req.body;
+    const updated = await configService.bulkUpsertConfigs(configs);
+    res.json({ message: 'Configs updated successfully', data: updated });
+  } catch (error) {
+    next(error);
+  }
+};

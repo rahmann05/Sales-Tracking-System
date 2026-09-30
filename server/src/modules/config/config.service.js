@@ -5,3 +5,5 @@
  */
 export { getConfigByKey } from './services/get-config-by-key.service.js';
 export { upsertConfig } from './services/upsert-config.service.js';
+export { getAllConfigs } from './services/get-all-configs.service.js';
+export { bulkUpsertConfigs } from './services/bulk-upsert-configs.service.js';
