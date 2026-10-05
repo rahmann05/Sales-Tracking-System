@@ -14,7 +14,7 @@ export const ROLES = Object.freeze({
 export const ROLE_LABELS = Object.freeze({
     [ROLES.SALES]: 'Sales Field',
     [ROLES.SUPERVISOR]: 'Supervisor',
-    [ROLES.ADMIN]: 'Admin Penjualan',
+    [ROLES.ADMIN]: 'Admin',
     [ROLES.KEPALA_GUDANG]: 'Kepala Gudang',
     [ROLES.SUPIR]: 'Supir',
 });

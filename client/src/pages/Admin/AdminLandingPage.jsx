@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TAB_IDS } from '../../constants/navigation';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import { AdminFeatureCard } from './components/AdminFeatureCard';
+import { SectionSlider } from './components/SectionSlider';
 import { AdminStatCard } from './components/AdminStatCard';
 import {
   LuFileCheck,
@@ -21,13 +22,49 @@ import {
   LuLayoutGrid,
   LuMap,
   LuSettings,
+  LuSearch,
+  LuX,
+  LuLock,
+  LuUserCheck,
 } from 'react-icons/lu';
 import { FiBarChart2, FiCheckCircle } from 'react-icons/fi';
 
 /**
+ * Route prefetch map for instant transitions (Zero-delay navigation).
+ */
+const PREFETCH_MAP = {
+  [TAB_IDS.ADMIN_APPROVAL]: () => import('./AdminApprovalPage'),
+  [TAB_IDS.OUTLET_APPROVAL]: () => import('../OutletApproval/OutletApprovalPage'),
+  [TAB_IDS.OUTLET_REGISTRATION]: () => import('../OutletRegistration/OutletRegistrationPage'),
+  [TAB_IDS.DAILY_CALL_MONITOR]: () => import('../DailyCallMonitor/DailyCallMonitorPage'),
+  [TAB_IDS.ROUTE_PLANNING]: () => import('../RoutePlanning/RoutePlanningPage'),
+  [TAB_IDS.DASHBOARD]: () => import('../Dashboard/DashboardPage'),
+  [TAB_IDS.TEAM_TRACKING]: () => import('../TeamTracking/TeamTrackingPage'),
+  [TAB_IDS.OUTLET_MANAGEMENT]: () => import('../OutletManagement/OutletManagementPage'),
+  [TAB_IDS.OUTLET_VALIDATION]: () => import('../OutletValidation/OutletValidationPage'),
+  [TAB_IDS.CREATE_CLUSTER]: () => import('../RoutePlanning/CreateClusterPage'),
+  [TAB_IDS.DELIVERY_MONITOR]: () => import('../Warehouse/components/DeliveryMonitor'),
+  [TAB_IDS.REPORTS]: () => import('../Reports/ReportsPage'),
+  [TAB_IDS.OUTLET_REGISTRATION_REPORT]: () => import('../OutletRegistrationReport/OutletRegistrationReportPage'),
+  [TAB_IDS.USER_MANAGEMENT]: () => import('./AdminUserListPage'),
+  [TAB_IDS.SYSTEM_CONFIG]: () => import('./AdminConfigPage'),
+};
+
+const preloadedRoutes = new Set();
+const preloadRoute = (id) => {
+  if (preloadedRoutes.has(id)) return;
+  const loader = PREFETCH_MAP[id];
+  if (loader) {
+    preloadedRoutes.add(id);
+    loader().catch(() => {});
+  }
+};
+
+/**
  * AdminLandingPage Component
- * Material Design 3 / Apple Editorial Symmetrical Grid Hub.
- * Symmetrical 12-Card Menu Grid with uniform dimensions and balanced responsiveness.
+ * Apple Editorial Enterprise Monochrome Design System.
+ * Mathematically symmetrical 16-card matrix (4 rows × 4 columns, 4 cards per category),
+ * cohesive monochrome aesthetics, unclipped typography, and zero-delay navigation.
  */
 export const AdminLandingPage = () => {
   const {
@@ -41,6 +78,26 @@ export const AdminLandingPage = () => {
   } = useApp();
 
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Preload priority modules on idle to eliminate transition delay
+  useEffect(() => {
+    const idlePreload = () => {
+      preloadRoute(TAB_IDS.ADMIN_APPROVAL);
+      preloadRoute(TAB_IDS.OUTLET_MANAGEMENT);
+      preloadRoute(TAB_IDS.DAILY_CALL_MONITOR);
+      preloadRoute(TAB_IDS.USER_MANAGEMENT);
+      preloadRoute(TAB_IDS.SYSTEM_CONFIG);
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const handle = window.requestIdleCallback(idlePreload, { timeout: 1200 });
+      return () => window.cancelIdleCallback(handle);
+    } else {
+      const timer = setTimeout(idlePreload, 350);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Compute live metrics
   const pendingOrders = useMemo(() => {
@@ -70,54 +127,78 @@ export const AdminLandingPage = () => {
     return salesList.length || teamMembers.length || 0;
   }, [salesList, teamMembers]);
 
-  // Perfectly Balanced 12 Feature Modules (Divisible by 2, 3, and 4)
+  // Perfectly balanced 16 Feature Modules: Exactly 4 categories with 4 cards each (4x4 matrix)
   const featureList = useMemo(() => {
     return [
-      // 1. Persetujuan & Transaksi
+      // ── Kategori 1: Persetujuan & Otorisasi Transaksi (4 Modul) ──
       {
         id: TAB_IDS.ADMIN_APPROVAL,
-        title: 'Persetujuan Order & Unlock',
+        title: 'Persetujuan Order Penjualan (PO)',
         description:
-          'Otorisasi PO penjualan sales, pengecekan limit kredit piutang, dan buka kunci absen toko.',
+          'Otorisasi PO penjualan sales, verifikasi plafon kredit piutang, dan persetujuan alokasi stok gudang.',
         category: 'APPROVAL',
         categoryLabel: 'Persetujuan',
         icon: LuFileCheck,
         badge:
-          pendingOrders.length + pendingUnlocks.length > 0
-            ? `${pendingOrders.length + pendingUnlocks.length} Menunggu`
-            : 'Selesai',
-        badgeVariant:
-          pendingOrders.length + pendingUnlocks.length > 0 ? 'alert' : 'success',
+          pendingOrders.length > 0
+            ? `${pendingOrders.length} Menunggu`
+            : 'Siap Diproses',
+        badgeVariant: pendingOrders.length > 0 ? 'alert' : 'neutral',
       },
       {
         id: TAB_IDS.OUTLET_APPROVAL,
-        title: 'Persetujuan Outlet (NOO)',
+        title: 'Persetujuan Outlet Baru (NOO)',
         description:
-          'Verifikasi pendaftaran toko baru dari sales, validasi kelengkapan berkas KTP/NPWP & geotag.',
+          'Verifikasi pendaftaran toko baru dari sales, validasi kelengkapan berkas KTP/NPWP dan verifikasi geotag.',
+        category: 'APPROVAL',
+        categoryLabel: 'Persetujuan',
+        icon: LuUserCheck,
+        badge: 'Approval NOO',
+        badgeVariant: 'neutral',
+      },
+      {
+        id: TAB_IDS.ADMIN_APPROVAL,
+        title: 'Otorisasi Buka Kunci Presensi',
+        description:
+          'Persetujuan izin dispensasi check-in sales di luar radius geofence toko karena kendala sinyal atau lokasi.',
+        category: 'APPROVAL',
+        categoryLabel: 'Persetujuan',
+        icon: LuLock,
+        badge:
+          pendingUnlocks.length > 0
+            ? `${pendingUnlocks.length} Pengajuan`
+            : 'Normal',
+        badgeVariant: pendingUnlocks.length > 0 ? 'alert' : 'neutral',
+      },
+      {
+        id: TAB_IDS.OUTLET_REGISTRATION,
+        title: 'Registrasi Outlet Baru (NOO)',
+        description:
+          'Input pendaftaran gerai baru secara langsung, penentuan batas plafon kredit, dan pemetaan koordinat toko.',
         category: 'APPROVAL',
         categoryLabel: 'Persetujuan',
         icon: LuUserPlus,
-        badge: 'Approval NOO',
-        badgeVariant: 'warning',
+        badge: 'Buka Toko',
+        badgeVariant: 'neutral',
       },
 
-      // 2. Operasional Lapangan & Rute
+      // ── Kategori 2: Operasional Lapangan & Rute PJP (4 Modul) ──
       {
         id: TAB_IDS.DAILY_CALL_MONITOR,
-        title: 'Daily Call Monitor',
+        title: 'Daily Call Monitor & Presensi',
         description:
-          'Monitoring presensi GPS live, durasi kunjungan toko, dan efektivitas call harian sales.',
+          'Monitoring presensi GPS real-time, durasi kunjungan toko, kepatuhan rute, dan status call harian sales.',
         category: 'OPERASIONAL',
         categoryLabel: 'Operasional',
         icon: LuPhoneCall,
-        badge: 'Live Tracking',
-        badgeVariant: 'info',
+        badge: 'Live GPS',
+        badgeVariant: 'neutral',
       },
       {
         id: TAB_IDS.ROUTE_PLANNING,
-        title: 'Kelola Master RJP & Rute',
+        title: 'Kelola Master RJP & Rute Sales',
         description:
-          'Penjadwalan rencana rute perjalanan (PJP/RJP), matriks mingguan, dan alokasi kunjungan toko.',
+          'Penjadwalan rencana rute perjalanan (PJP/RJP), matriks kunjungan mingguan, dan alokasi rayon toko.',
         category: 'OPERASIONAL',
         categoryLabel: 'Operasional',
         icon: LuNavigation,
@@ -125,175 +206,243 @@ export const AdminLandingPage = () => {
         badgeVariant: 'neutral',
       },
       {
-        id: TAB_IDS.TEAM_TRACKING,
-        title: 'Manajemen Tim & Personel',
+        id: TAB_IDS.DASHBOARD,
+        title: 'Peta Monitoring Distribusi',
         description:
-          'Struktur tim sales force, supervisor regional, penugasan rayon, dan status kehadiran.',
+          'Visualisasi geospasial sebaran seluruh toko di peta interaktif dan pelacakan lintasan rute sales.',
+        category: 'OPERASIONAL',
+        categoryLabel: 'Operasional',
+        icon: LuLayoutDashboard,
+        badge: 'Peta Interaktif',
+        badgeVariant: 'neutral',
+      },
+      {
+        id: TAB_IDS.TEAM_TRACKING,
+        title: 'Manajemen Tim & Personel Sales',
+        description:
+          'Struktur tim sales force lapangan, pembagian rayon supervisor, penugasan wilayah, dan status kehadiran.',
         category: 'OPERASIONAL',
         categoryLabel: 'Operasional',
         icon: LuUsers,
-        badge: `${totalSales > 0 ? totalSales : 'Sales'} Personel`,
-        badgeVariant: 'neutral',
-      },
-      {
-        id: TAB_IDS.DELIVERY_MONITOR,
-        title: 'Monitor Logistik & Gudang',
-        description:
-          'Pantauan status pengiriman barang supir, surat jalan armada, dan muat packing list gudang.',
-        category: 'OPERASIONAL',
-        categoryLabel: 'Operasional',
-        icon: LuTruck,
-        badge: 'Armada & Gudang',
+        badge: `${totalSales > 0 ? totalSales : '16'} Personel`,
         badgeVariant: 'neutral',
       },
 
-      // 3. Master Data & Geotagging
+      // ── Kategori 3: Master Data Toko & Logistik (4 Modul) ──
       {
         id: TAB_IDS.OUTLET_MANAGEMENT,
-        title: 'Kelola Master Outlet',
+        title: 'Database Master Outlet Toko',
         description:
-          'Database lengkap seluruh toko terdaftar, informasi pemilik, plafon piutang, dan riwayat.',
+          'Database terpadu seluruh outlet terdaftar, identitas pemilik, riwayat transaksi, dan batas kredit piutang.',
         category: 'MASTER',
         categoryLabel: 'Master Data',
         icon: LuStore,
-        badge: `${totalOutlets > 0 ? totalOutlets : 'Database'} Outlet`,
+        badge: `${totalOutlets > 0 ? totalOutlets : '1.240+'} Outlet`,
         badgeVariant: 'neutral',
       },
       {
         id: TAB_IDS.OUTLET_VALIDATION,
-        title: 'Validasi Titik GPS Outlet',
+        title: 'Audit & Validasi Titik Geotag',
         description:
-          'Audit dan koreksi titik koordinat GPS toko untuk menjamin presisi radius absen sales.',
+          'Verifikasi dan koreksi koordinat latitude/longitude toko untuk menjamin presisi radius presensi sales.',
         category: 'MASTER',
         categoryLabel: 'Master Data',
         icon: LuMapPin,
-        badge: 'Koreksi Geotag',
+        badge: 'Geotag Audit',
         badgeVariant: 'neutral',
       },
       {
         id: TAB_IDS.CREATE_CLUSTER,
-        title: 'Kelola Master Kluster',
+        title: 'Kelola Master Kluster Distribusi',
         description:
-          'Pengaturan zonasi kluster distribusi, alokasi rayon penjualan, dan pemetaan area outlet.',
+          'Pengaturan zonasi wilayah distribusi, pemetaan rayon penjualan, dan pembagian area kerja supervisor.',
         category: 'MASTER',
         categoryLabel: 'Master Data',
         icon: LuMap,
         badge: 'Zonasi Wilayah',
         badgeVariant: 'neutral',
       },
+      {
+        id: TAB_IDS.DELIVERY_MONITOR,
+        title: 'Monitor Logistik & Armada Gudang',
+        description:
+          'Pantauan status pengiriman armada supir, surat jalan distribusi, dan status muat barang packing list.',
+        category: 'MASTER',
+        categoryLabel: 'Master Data',
+        icon: LuTruck,
+        badge: 'Armada & Driver',
+        badgeVariant: 'neutral',
+      },
 
-      // 4. Laporan & Peta Geospasial
+      // ── Kategori 4: Laporan, Analitik & Tata Kelola (4 Modul) ──
       {
         id: TAB_IDS.REPORTS,
-        title: 'Laporan & Analitik ND6',
+        title: 'Laporan Analitik Penjualan ND6',
         description:
-          'Analitik omset penjualan standar ND6, evaluasi target sales, dan audit anomali absensi.',
-        category: 'LAPORAN',
-        categoryLabel: 'Laporan',
+          'Analitik omset distribusi standar ND6, evaluasi pencapaian target sales, dan rekapitulasi audit transaksi.',
+        category: 'TATA_KELOLA',
+        categoryLabel: 'Laporan & Sistem',
         icon: FiBarChart2,
         badge: 'Standar ND6',
-        badgeVariant: 'info',
+        badgeVariant: 'neutral',
       },
       {
         id: TAB_IDS.OUTLET_REGISTRATION_REPORT,
-        title: 'Laporan Registrasi Outlet',
+        title: 'Laporan Pertumbuhan Outlet NOO',
         description:
-          'Rekapitulasi pertumbuhan pembukaan toko baru per sales dan riwayat penerbitan kode customer.',
-        category: 'LAPORAN',
-        categoryLabel: 'Laporan',
+          'Rekapitulasi pembukaan toko baru per wilayah kerja sales dan riwayat penerbitan kode customer toko.',
+        category: 'TATA_KELOLA',
+        categoryLabel: 'Laporan & Sistem',
         icon: LuClipboardList,
         badge: 'Rekap NOO',
         badgeVariant: 'neutral',
       },
       {
-        id: TAB_IDS.DASHBOARD,
-        title: 'Peta Monitoring Interaktif',
+        id: TAB_IDS.USER_MANAGEMENT,
+        title: 'Manajemen Pengguna & Izin RBAC',
         description:
-          'Visualisasi geospasial sebaran seluruh toko di peta dan pelacakan rute sales secara live.',
-        category: 'LAPORAN',
-        categoryLabel: 'Laporan',
-        icon: LuLayoutDashboard,
-        badge: 'Peta Geospasial',
+          'Kelola akun pengguna, reset kata sandi, pengaturan role hierarki, dan konfigurasi hak akses granular.',
+        category: 'TATA_KELOLA',
+        categoryLabel: 'Laporan & Sistem',
+        icon: LuUsers,
+        badge: 'Akun & Akses',
         badgeVariant: 'neutral',
       },
-
-      // 5. Pengaturan Sistem
       {
         id: TAB_IDS.SYSTEM_CONFIG,
-        title: 'Pengaturan Parameter Sistem',
+        title: 'Pengaturan Parameter & Geofence',
         description:
-          'Kelola radius geofence presensi, durasi kunjungan, validasi GPS, divisi cabang, logistik, dan token sesi.',
-        category: 'SISTEM',
-        categoryLabel: 'Sistem',
+          'Konfigurasi radius geofence presensi, batas durasi kunjungan, timeout GPS, dan parameter sesi sistem.',
+        category: 'TATA_KELOLA',
+        categoryLabel: 'Laporan & Sistem',
         icon: LuSettings,
-        badge: 'Konfigurasi',
-        badgeVariant: 'info',
+        badge: 'Parameter Inti',
+        badgeVariant: 'neutral',
       },
     ];
   }, [pendingOrders.length, pendingUnlocks.length, totalOutlets, totalSales]);
 
-  // Categories metadata for filter pills
-  const categories = [
-    { key: 'ALL', label: 'Semua Menu', count: featureList.length },
+  // Categories metadata for section headers and filter pills
+  const CATEGORIES = useMemo(() => [
+    {
+      key: 'ALL',
+      label: 'Semua Menu',
+      shortLabel: 'Semua',
+      description: 'Seluruh 16 modul operasional, transaksi, master data, dan tata kelola distribusi.',
+      count: featureList.length,
+    },
     {
       key: 'APPROVAL',
-      label: 'Persetujuan',
-      count: featureList.filter((f) => f.category === 'APPROVAL').length,
+      label: 'Persetujuan & Otorisasi Transaksi',
+      shortLabel: 'Persetujuan',
+      description: 'Otorisasi PO penjualan sales, batas plafon kredit piutang, dan verifikasi outlet baru NOO.',
+      count: 4,
     },
     {
       key: 'OPERASIONAL',
-      label: 'Operasional & Rute',
-      count: featureList.filter((f) => f.category === 'OPERASIONAL').length,
+      label: 'Operasional Lapangan & Rute PJP',
+      shortLabel: 'Operasional',
+      description: 'Monitoring presensi GPS live, jadwal rencana perjalanan (PJP), tim sales, dan peta sebaran.',
+      count: 4,
     },
     {
       key: 'MASTER',
-      label: 'Master Data',
-      count: featureList.filter((f) => f.category === 'MASTER').length,
+      label: 'Master Data Toko & Logistik',
+      shortLabel: 'Master Data',
+      description: 'Database toko aktif, audit koordinat GPS, kluster distribusi, dan armada logistik.',
+      count: 4,
     },
     {
-      key: 'LAPORAN',
-      label: 'Laporan & Peta',
-      count: featureList.filter((f) => f.category === 'LAPORAN').length,
+      key: 'TATA_KELOLA',
+      label: 'Laporan, Analitik & Tata Kelola',
+      shortLabel: 'Laporan & Sistem',
+      description: 'Laporan omset penjualan standar ND6, rekapitulasi NOO, akun pengguna, dan konfigurasi sistem.',
+      count: 4,
     },
-    {
-      key: 'SISTEM',
-      label: 'Sistem',
-      count: featureList.filter((f) => f.category === 'SISTEM').length,
-    },
-  ];
+  ], [featureList.length]);
 
-  // Filter features based on category
+  // Filter features based on search query and category
   const filteredFeatures = useMemo(() => {
     return featureList.filter((feature) => {
-      return selectedCategory === 'ALL' || feature.category === selectedCategory;
-    });
-  }, [featureList, selectedCategory]);
+      const matchCategory =
+        selectedCategory === 'ALL' || feature.category === selectedCategory;
+      if (!matchCategory) return false;
 
-  const handleCardClick = (id) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        feature.title.toLowerCase().includes(q) ||
+        feature.description.toLowerCase().includes(q) ||
+        feature.categoryLabel.toLowerCase().includes(q) ||
+        (feature.badge && feature.badge.toLowerCase().includes(q))
+      );
+    });
+  }, [featureList, selectedCategory, searchQuery]);
+
+  const handleCardClick = useCallback((id) => {
     setActiveTab(id);
-  };
+  }, [setActiveTab]);
+
+  const handleCardHover = useCallback((id) => {
+    preloadRoute(id);
+  }, []);
+
+  // Symmetrical 4 sections with exactly 4 cards each
+  const categorizedSections = useMemo(() => {
+    const sections = [
+      {
+        key: 'APPROVAL',
+        label: '1. Persetujuan & Otorisasi Transaksi',
+        description: 'Otorisasi PO penjualan, limit piutang, pembukaan kunci presensi, dan NOO toko.',
+      },
+      {
+        key: 'OPERASIONAL',
+        label: '2. Operasional Lapangan & Rute PJP',
+        description: 'Pantauan presensi GPS, jadwal rute mingguan, peta interaktif, dan tim sales force.',
+      },
+      {
+        key: 'MASTER',
+        label: '3. Master Data Toko & Logistik',
+        description: 'Database master toko, audit titik geotag, zonasi kluster, dan logistik gudang.',
+      },
+      {
+        key: 'TATA_KELOLA',
+        label: '4. Laporan, Analitik & Tata Kelola Sistem',
+        description: 'Laporan analitik ND6, rekap NOO, manajemen pengguna, dan parameter geofence.',
+      },
+    ];
+
+    return sections
+      .map((sec) => ({
+        ...sec,
+        items: featureList.filter((f) => f.category === sec.key),
+      }))
+      .filter((sec) => sec.items.length > 0);
+  }, [featureList]);
+
+  const isGroupedView = selectedCategory === 'ALL' && !searchQuery.trim();
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-24">
-      {/* ── 1. Unified Suite Header Banner ── */}
+    <div className="p-4 sm:p-6 lg:p-8 space-y-7 max-w-7xl mx-auto pb-24">
+      {/* ── 1. Page Header Banner (Monochrome & Executive) ── */}
       <PageHeader
         badge={
-          <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuLayoutGrid className="text-sm" /> PORTAL MENU UTAMA ADMIN
+          <span className="px-3 py-1 bg-neutral-100 text-neutral-800 border border-neutral-200 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1.5">
+            <LuLayoutGrid className="text-sm text-neutral-900" /> PORTAL UTAMA ADMINISTRATOR
           </span>
         }
-        title={`Pusat Kendali Admin • ${user?.name || 'Administrator'}`}
-        subtitle="Akses seluruh modul operasional distribusi, persetujuan order, pemantauan rute PJP, dan laporan analitik dalam susunan menu yang simetris dan rapi."
+        title={`Pusat Kendali Admin • ${user?.name || 'Administrator Sistem'}`}
+        subtitle="Akses terpadu seluruh modul operasional distribusi, otorisasi transaksi, audit geolokasi, dan konfigurasi sistem."
         stats={[
           {
             label: 'Order Pending',
             value: `${pendingOrders.length} Order`,
-            color: pendingOrders.length > 0 ? 'rose' : 'emerald',
+            color: pendingOrders.length > 0 ? 'rose' : 'neutral',
           },
           {
             label: 'Buka Kunci',
-            value: `${pendingUnlocks.length} Menunggu`,
-            color: pendingUnlocks.length > 0 ? 'amber' : 'emerald',
+            value: `${pendingUnlocks.length} Izin`,
+            color: pendingUnlocks.length > 0 ? 'rose' : 'neutral',
           },
           {
             label: 'Total Outlet',
@@ -302,26 +451,26 @@ export const AdminLandingPage = () => {
           },
           {
             label: 'Sales Force',
-            value: `${totalSales > 0 ? totalSales : '16'} Personel`,
+            value: `${totalSales > 0 ? totalSales : '16'} Tim`,
             color: 'neutral',
           },
         ]}
       />
 
-      {/* ── 2. Urgent Attention Alert Banner (Conditional) ── */}
+      {/* ── 2. Urgent Attention Alert Banner (Refined Monochrome with Soft Rose Accent) ── */}
       {(pendingOrders.length > 0 || pendingUnlocks.length > 0) && (
-        <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0 border border-amber-300">
+        <div className="bg-white border border-rose-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_2px_10px_rgba(244,63,94,0.06)]">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 border border-rose-200/90">
               <LuShieldAlert className="text-xl" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-amber-900 m-0">
-                Pemberitahuan Tindakan Segera
+              <h4 className="text-sm font-bold text-neutral-900 m-0">
+                Pemberitahuan Tindakan Prioritas Admin
               </h4>
-              <p className="text-xs text-amber-800 m-0 mt-0.5">
+              <p className="text-xs text-neutral-600 m-0 mt-0.5 leading-relaxed">
                 Terdapat <strong>{pendingOrders.length} order penjualan</strong> dan{' '}
-                <strong>{pendingUnlocks.length} permohonan buka kunci</strong> yang menunggu keputusan Admin.
+                <strong>{pendingUnlocks.length} permohonan buka kunci</strong> yang menunggu keputusan otorisasi Admin.
               </p>
             </div>
           </div>
@@ -329,23 +478,23 @@ export const AdminLandingPage = () => {
           <button
             type="button"
             onClick={() => setActiveTab(TAB_IDS.ADMIN_APPROVAL)}
-            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+            className="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
           >
-            <span>Tinjau Sekarang</span>
+            <span>Buka Otorisasi</span>
             <LuArrowRight className="text-sm" />
           </button>
         </div>
       )}
 
       {/* ── 3. Executive KPI Stat Cards (Symmetric 4-Column Grid) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <AdminStatCard
           title="Antrean Order Sales"
           value={pendingOrders.length}
-          subtext="Pesanan penjualan perlu persetujuan"
+          subtext="Pesanan penjualan menunggu persetujuan"
           icon={LuFileCheck}
-          badgeText={pendingOrders.length > 0 ? 'Perlu Review' : 'Selesai'}
-          badgeColor={pendingOrders.length > 0 ? 'rose' : 'emerald'}
+          badgeText={pendingOrders.length > 0 ? 'Perlu Review' : 'Tuntas'}
+          badgeColor={pendingOrders.length > 0 ? 'rose' : 'neutral'}
           onClick={() => setActiveTab(TAB_IDS.ADMIN_APPROVAL)}
         />
 
@@ -354,103 +503,202 @@ export const AdminLandingPage = () => {
           value={pendingUnlocks.length}
           subtext="Permohonan buka kunci outlet sales"
           icon={LuClock}
-          badgeText={pendingUnlocks.length > 0 ? 'Menunggu' : 'Aman'}
-          badgeColor={pendingUnlocks.length > 0 ? 'amber' : 'emerald'}
+          badgeText={pendingUnlocks.length > 0 ? 'Menunggu' : 'Terkendali'}
+          badgeColor={pendingUnlocks.length > 0 ? 'rose' : 'neutral'}
           onClick={() => setActiveTab(TAB_IDS.ADMIN_APPROVAL)}
         />
 
         <AdminStatCard
           title="Master Database Toko"
           value={totalOutlets > 0 ? totalOutlets : '1.240+'}
-          subtext="Total outlet terdata dalam sistem"
+          subtext="Total outlet terdaftar dalam sistem"
           icon={LuStore}
           badgeText="Terdata"
-          badgeColor="blue"
+          badgeColor="neutral"
           onClick={() => setActiveTab(TAB_IDS.OUTLET_MANAGEMENT)}
         />
 
         <AdminStatCard
           title="Sales Force Lapangan"
           value={totalSales > 0 ? totalSales : '16 Tim'}
-          subtext="Personel lapangan aktif bertugas"
+          subtext="Personel sales aktif bertugas"
           icon={LuUsers}
-          badgeText="Distribusi"
+          badgeText="Personel"
           badgeColor="neutral"
           onClick={() => setActiveTab(TAB_IDS.TEAM_TRACKING)}
         />
       </div>
 
-      {/* ── 4. Category Filter Tabs ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3 pb-1 border-b border-border-glass">
-        <div className="flex items-center gap-2 overflow-x-auto py-1 no-scrollbar">
-          {categories.map((cat) => {
-            const isActive = selectedCategory === cat.key;
-            return (
-              <button
-                key={cat.key}
-                type="button"
-                onClick={() => setSelectedCategory(cat.key)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 border ${
-                  isActive
-                    ? 'bg-primary text-on-primary border-primary shadow-xs'
-                    : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-variant hover:text-on-surface'
-                }`}
-              >
-                <span>{cat.label}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+      {/* ── 4. Filter Toolbar & Search Bar (Sleek Apple Editorial Tone) ── */}
+      <div className="space-y-3 pt-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto py-1 no-scrollbar">
+            {CATEGORIES.map((cat) => {
+              const isActive = selectedCategory === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.key)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 border ${
                     isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-surface-container text-on-surface-variant'
+                      ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
+                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300 hover:text-neutral-900'
                   }`}
                 >
-                  {cat.count}
-                </span>
+                  <span>{cat.shortLabel || cat.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                      isActive
+                        ? 'bg-white/20 text-white font-extrabold'
+                        : 'bg-neutral-100 text-neutral-600 font-bold'
+                    }`}
+                  >
+                    {cat.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Search Input */}
+          <div className="relative w-full md:w-72 shrink-0">
+            <LuSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-sm pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari menu modul..."
+              className="w-full pl-9 pr-8 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900/10 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-neutral-400 hover:text-neutral-700 rounded-md cursor-pointer"
+                title="Hapus pencarian"
+              >
+                <LuX className="text-xs" />
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
 
-        <span className="text-xs text-on-surface-variant font-medium">
-          Menampilkan <strong>{filteredFeatures.length}</strong> menu modul
-        </span>
+        {/* Status Text Bar */}
+        <div className="flex items-center justify-between text-xs text-neutral-500 px-0.5">
+          <span>
+            {searchQuery ? (
+              <>
+                Hasil pencarian untuk "<strong>{searchQuery}</strong>": Ditemukan{' '}
+                <strong>{filteredFeatures.length}</strong> modul
+              </>
+            ) : (
+              <>
+                Menampilkan <strong>{filteredFeatures.length}</strong> menu modul
+                {selectedCategory !== 'ALL' && (
+                  <> pada kategori <strong>{CATEGORIES.find((c) => c.key === selectedCategory)?.label}</strong></>
+                )}
+              </>
+            )}
+          </span>
+
+          {(selectedCategory !== 'ALL' || searchQuery) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategory('ALL');
+                setSearchQuery('');
+              }}
+              className="text-neutral-900 font-bold hover:underline cursor-pointer text-xs"
+            >
+              Reset Tampilan Semua
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ── 5. Symmetric 12-Card Feature Grid (4-cols on XL, 3-cols on LG, 2-cols on SM) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-        {filteredFeatures.map((feature) => (
-          <AdminFeatureCard
-            key={feature.id}
-            id={feature.id}
-            title={feature.title}
-            description={feature.description}
-            categoryLabel={feature.categoryLabel}
-            icon={feature.icon}
-            badge={feature.badge}
-            badgeVariant={feature.badgeVariant}
-            onClick={handleCardClick}
-          />
-        ))}
-      </div>
+      {/* ── 5. Modular Content Presentation (100% Symmetrical 4-Column Grids) ── */}
+      {isGroupedView ? (
+        /* STRUCTURED VIEW: Section Sliders with 3D Snap Cards */
+        <div className="space-y-8">
+          {categorizedSections.map((section) => (
+            <SectionSlider
+              key={section.key}
+              title={section.label}
+              count={`${section.items.length} Modul`}
+              description={section.description}
+              items={section.items}
+              onCardClick={handleCardClick}
+              onCardHover={handleCardHover}
+            />
+          ))}
+        </div>
+      ) : (
+        /* FILTERED OR SEARCH VIEW (Flush 4-column grid) */
+        <div>
+          {filteredFeatures.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              {filteredFeatures.map((feature) => (
+                <AdminFeatureCard
+                  key={feature.id + feature.title}
+                  id={feature.id}
+                  title={feature.title}
+                  description={feature.description}
+                  category={feature.category}
+                  categoryLabel={feature.categoryLabel}
+                  icon={feature.icon}
+                  badge={feature.badge}
+                  badgeVariant={feature.badgeVariant}
+                  onClick={handleCardClick}
+                  onMouseEnter={handleCardHover}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-12 text-center rounded-2xl bg-white border border-neutral-200 space-y-3 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-neutral-100 text-neutral-500 flex items-center justify-center text-xl mx-auto border border-neutral-200">
+                <LuSearch />
+              </div>
+              <h3 className="text-base font-bold text-neutral-900 m-0">
+                Menu Modul Tidak Ditemukan
+              </h3>
+              <p className="text-xs text-neutral-500 max-w-sm mx-auto m-0">
+                Tidak ada menu yang sesuai dengan kata kunci "<strong>{searchQuery}</strong>". Silakan periksa ejaan atau reset filter.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('ALL');
+                  setSearchQuery('');
+                }}
+                className="px-4 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition-all cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <span>Tampilkan Seluruh Menu</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* ── 6. System Status & Quick Summary Strip ── */}
-      <div className="rounded-2xl bg-surface border border-border-glass p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-on-surface-variant shadow-2xs">
+      {/* ── 6. System Status & Enterprise Summary Strip ── */}
+      <div className="rounded-2xl bg-white border border-neutral-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-neutral-500 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/90">
             <FiCheckCircle className="text-base" />
           </div>
           <div>
-            <span className="font-bold text-on-surface block">
+            <span className="font-bold text-neutral-900 block">
               Sistem Distribusi Sinar Anugrah Terhubung
             </span>
-            <span className="text-[11px]">
+            <span className="text-[11px] text-neutral-500">
               Koneksi REST API & Real-time Geolocation aktif • Standar ND6 & PJP
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] font-semibold text-on-surface-variant">
-          <span>Hak Akses: Administrator Penjualan</span>
+        <div className="flex items-center gap-3 text-[11px] font-semibold text-neutral-500">
+          <span>Hak Akses: Administrator Sistem (Penuh)</span>
           <span>•</span>
           <span>Versi Enterprise 2.4</span>
         </div>

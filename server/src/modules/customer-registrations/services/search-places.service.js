@@ -1,23 +1,28 @@
 /** searchPlaces - single-responsibility service (extracted from customer-registrations.service.js). */
 import { GOOGLE_API_KEY, getDistanceInMeters } from './customer-registrations.helpers.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 /**
- * Search places by query keyword strictly within 100 meters of current coordinates via Google Places API
+ * Search places by query keyword strictly within configurable radius of current coordinates via Google Places API
  */
-export const searchPlaces = async (keyword, lat = -6.8722, lng = 107.5422) => {
+export const searchPlaces = async (keyword, lat = null, lng = null) => {
   if (!keyword || keyword.trim().length < 2) return [];
+
+  const defaultLat = await getDynamicConfig('DEFAULT_OFFICE_LATITUDE', -6.8722);
+  const defaultLng = await getDynamicConfig('DEFAULT_OFFICE_LONGITUDE', 107.5422);
+  const searchRadius = await getDynamicConfig('CUSTOMER_REG_PLACES_RADIUS_METERS', 100);
 
   const results = [];
   const cleanKeyword = keyword.trim();
-  const userLat = Number(lat) || -6.8722;
-  const userLng = Number(lng) || 107.5422;
+  const userLat = Number(lat) || defaultLat;
+  const userLng = Number(lng) || defaultLng;
 
-  // 1. Google Places Text Search within strictly 100 meters
+  // 1. Google Places Text Search within strictly searchRadius meters
   if (GOOGLE_API_KEY) {
     try {
       const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
         cleanKeyword
-      )}&location=${userLat},${userLng}&radius=100&key=${GOOGLE_API_KEY}`;
+      )}&location=${userLat},${userLng}&radius=${searchRadius}&key=${GOOGLE_API_KEY}`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -27,13 +32,13 @@ export const searchPlaces = async (keyword, lat = -6.8722, lng = 107.5422) => {
           const itemLat = item.geometry?.location?.lat;
           const itemLng = item.geometry?.location?.lng;
 
-          // Strictly enforce 100-meter radius check
+          // Strictly enforce radius check
           const dist = (itemLat && itemLng)
             ? getDistanceInMeters(userLat, userLng, itemLat, itemLng)
             : 0;
 
-          if (dist > 100) {
-            continue; // Outside 100m radius, skip
+          if (dist > searchRadius) {
+            continue; // Outside radius, skip
           }
 
           // Determine Area based on address text

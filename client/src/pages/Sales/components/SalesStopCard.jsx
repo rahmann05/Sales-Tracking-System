@@ -12,7 +12,7 @@ import { useOutletLockStatus } from '../hooks/useOutletLockStatus';
  * photo, Excel metadata, Google API information, Geofence status, lock state, and actions.
  * Equal height standard: h-full flex flex-col justify-between
  */
-export const SalesStopCard = ({
+export const SalesStopCard = React.memo(({
   stop,
   allStops = [],
   onAbsenIn,
@@ -127,4 +127,6 @@ export const SalesStopCard = ({
       </div>
     </div>
   );
-};
+});
+
+SalesStopCard.displayName = 'SalesStopCard';

@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
+import { authenticate, authorize, authorizeWithPermission } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import * as controller from './customer-registrations.controller.js';
 import * as schema from './customer-registrations.schema.js';
@@ -12,7 +12,7 @@ router.use(authenticate);
 // 1. Submit new registration (Sales, SPV, Admin)
 router.post(
   '/',
-  authorize(ROLES.SALES, ROLES.SUPERVISOR, ROLES.ADMIN),
+  authorizeWithPermission([ROLES.SALES, ROLES.SUPERVISOR, ROLES.ADMIN], 'can_register_outlet'),
   validate(schema.createRegistrationSchema),
   controller.createRegistration
 );
@@ -36,7 +36,7 @@ router.get('/:id', controller.getRegistrationById);
 // 4. Approve (Supervisor, Admin)
 router.patch(
   '/:id/approve',
-  authorize(ROLES.SUPERVISOR, ROLES.ADMIN),
+  authorizeWithPermission([ROLES.SUPERVISOR, ROLES.ADMIN], 'can_register_outlet'),
   validate(schema.approveRegistrationSchema),
   controller.approveRegistration
 );
@@ -44,7 +44,7 @@ router.patch(
 // 5. Reject (Supervisor, Admin)
 router.patch(
   '/:id/reject',
-  authorize(ROLES.SUPERVISOR, ROLES.ADMIN),
+  authorizeWithPermission([ROLES.SUPERVISOR, ROLES.ADMIN], 'can_register_outlet'),
   validate(schema.rejectRegistrationSchema),
   controller.rejectRegistration
 );
@@ -52,7 +52,7 @@ router.patch(
 // 6. Finalize & register active outlet (Supervisor, Admin)
 router.post(
   '/:id/finalize',
-  authorize(ROLES.ADMIN, ROLES.SUPERVISOR),
+  authorizeWithPermission([ROLES.ADMIN, ROLES.SUPERVISOR], 'can_register_outlet'),
   validate(schema.finalizeRegistrationSchema),
   controller.finalizeAndRegister
 );

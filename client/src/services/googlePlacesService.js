@@ -37,36 +37,48 @@ export const googlePlacesService = {
       return outlet.googlePlaceDetails;
     }
 
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-    if (apiKey) {
+    // Strategy 1: Google Maps JS SDK PlacesService (client-side in-browser, zero CORS)
+    if (typeof window !== 'undefined' && window.google?.maps?.places?.PlacesService) {
       try {
-        const locationQuery = `${outlet.latitude},${outlet.longitude}`;
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${locationQuery}&radius=100&key=${apiKey}`
-        );
-        const data = await response.json();
+        const dummyNode = document.createElement('div');
+        const service = new window.google.maps.places.PlacesService(dummyNode);
+        const result = await new Promise((resolve) => {
+          service.nearbySearch(
+            {
+              location: { lat: Number(outlet.latitude), lng: Number(outlet.longitude) },
+              radius: 150,
+            },
+            (results, status) => {
+              if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.[0]) {
+                resolve(results[0]);
+              } else {
+                resolve(null);
+              }
+            }
+          );
+        });
 
-        if (data.results && data.results.length > 0) {
-          const place = data.results[0];
+        if (result) {
           let photoUrl = null;
-          if (place.photos && place.photos.length > 0) {
-            photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${apiKey}`;
+          if (result.photos && result.photos.length > 0) {
+            try {
+              photoUrl = result.photos[0].getUrl({ maxWidth: 800 });
+            } catch {}
           }
 
           return {
-            placeName: place.name || outlet.outletName,
-            rating: place.rating || 4.7,
-            userRatingsTotal: place.user_ratings_total || 42,
-            category: place.types ? place.types[0].replace('_', ' ') : 'Toko Terverifikasi Google',
-            businessStatus: place.opening_hours?.open_now ? 'Buka Sekarang' : 'Operasional',
-            openHours: place.opening_hours?.open_now ? 'Buka 07:00 - 21:00 WIB' : '07:00 - 21:00 WIB',
+            placeName: result.name || outlet.outletName,
+            rating: result.rating || 4.7,
+            userRatingsTotal: result.user_ratings_total || 42,
+            category: result.types ? result.types[0].replace(/_/g, ' ') : 'Toko Terverifikasi Google',
+            businessStatus: result.opening_hours?.open_now ? 'Buka Sekarang' : 'Operasional',
+            openHours: result.opening_hours?.open_now ? 'Buka 07:00 - 21:00 WIB' : '07:00 - 21:00 WIB',
             googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${outlet.latitude},${outlet.longitude}`,
             photoUrl,
           };
         }
       } catch (err) {
-        console.warn('[Google Places API] Nearby search fetch error, using system metadata:', err);
+        console.warn('[googlePlacesService] SDK nearbySearch fallback:', err.message);
       }
     }
 

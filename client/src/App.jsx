@@ -30,7 +30,8 @@ const AppContent = () => {
   const goToWorkspace = () => setActiveTab('role-workspace');
 
   useEffect(() => {
-    if (isAuthenticated && navigator.geolocation) {
+    // Only track and broadcast device GPS location for field sales reps on mobile
+    if (isAuthenticated && user?.role === 'SALES' && navigator.geolocation) {
       const reportLocation = (position) => {
         const coords = {
           latitude: position.coords.latitude,
@@ -43,18 +44,16 @@ const AppContent = () => {
         localStorage.setItem('user_gps_location', JSON.stringify(loc));
         window.dispatchEvent(new CustomEvent('gps_location_updated', { detail: loc }));
 
-        if (user?.role === 'SALES') {
-          usersApi.updateLocation(coords).catch(() => {});
-        }
+        usersApi.updateLocation(coords).catch(() => {});
       };
 
-      navigator.geolocation.getCurrentPosition(reportLocation, console.error, {
+      navigator.geolocation.getCurrentPosition(reportLocation, () => {}, {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0,
+        maximumAge: 10000,
       });
 
-      const watchId = navigator.geolocation.watchPosition(reportLocation, console.error, {
+      const watchId = navigator.geolocation.watchPosition(reportLocation, () => {}, {
         enableHighAccuracy: true,
         maximumAge: 30000,
         timeout: 27000,

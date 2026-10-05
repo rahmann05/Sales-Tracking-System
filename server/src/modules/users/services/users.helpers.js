@@ -5,6 +5,7 @@ export const USER_SELECT = {
   name: true,
   email: true,
   role: true,
+  permissions: true,
   clusterId: true,
   cluster: {
     select: {
@@ -27,6 +28,8 @@ export const ROLE_LABELS = {
   SALES: 'Sales Field Rep',
   SUPERVISOR: 'Supervisor Operasional',
   ADMIN: 'Admin',
+  KEPALA_GUDANG: 'Kepala Gudang',
+  SUPIR: 'Supir / Driver',
 };
 
 
@@ -37,4 +40,5 @@ export const enrichUserResponse = (user) => ({
   spvName: user.cluster?.supervisor?.name ?? (user.role === 'SALES' ? 'Ahmad Subagja' : null),
   supervisorName: user.cluster?.supervisor?.name ?? (user.role === 'SALES' ? 'Ahmad Subagja' : null),
   roleLabel: ROLE_LABELS[user.role] ?? user.role,
+  permissions: user.permissions || {},
 });

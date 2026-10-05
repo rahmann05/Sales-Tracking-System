@@ -1,5 +1,6 @@
 /** getMtdReport - single-responsibility service (extracted from reports.service.js). */
 import { prisma } from '../../../config/prisma.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -8,6 +9,8 @@ import { prisma } from '../../../config/prisma.js';
  */
 export const getMtdReport = async (query = {}) => {
   const { month, year, userId, clusterId } = query;
+  const defaultLma = await getDynamicConfig('SALES_BASELINE_LMA_AMOUNT', 85000000);
+  const defaultTarget = await getDynamicConfig('SALES_MONTHLY_TARGET_AMOUNT', 100000000);
 
   const now = new Date();
   const targetYear = year ? parseInt(year, 10) : now.getFullYear();
@@ -147,10 +150,10 @@ export const getMtdReport = async (query = {}) => {
 
       // Default baseline LMA if system is fresh
       if (sLmaOmzet === 0) {
-        sLmaOmzet = 85000000; // Rp 85 Juta standard LMA
+        sLmaOmzet = defaultLma;
       }
 
-      const sMonthlyTarget = 100000000; // Rp 100 Juta standard monthly target
+      const sMonthlyTarget = defaultTarget;
       const achievementRate = sMonthlyTarget > 0 ? Math.round((sMtdOmzet / sMonthlyTarget) * 100) : 0;
       const mtdToLmaRate = sLmaOmzet > 0 ? Math.round((sMtdOmzet / sLmaOmzet) * 100) : 0;
 

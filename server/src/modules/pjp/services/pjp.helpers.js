@@ -139,9 +139,16 @@ export const PJP_STOP_INCLUDE = {
  * Generate PJP hari ini untuk SEMUA sales (idempotent), masing-masing memakai
  * logika clustering per-hari (bukan semua outlet). Dipakai getAllPjps.
  */
+let lastGeneratedDateStr = null;
+
 export const generateTodayPjpsAllSales = async () => {
   const now = new Date();
   if (now.getDay() === 0) return 0; // Minggu libur (0 = Sunday)
+
+  const todayStr = now.toISOString().slice(0, 10);
+  if (lastGeneratedDateStr === todayStr) {
+    return 0; // Sudah di-generate untuk hari ini, skip redundant DB loop
+  }
 
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -157,5 +164,6 @@ export const generateTodayPjpsAllSales = async () => {
     const created = await ensureTodayPjpForSales(sales.id);
     if (created) count++;
   }
+  lastGeneratedDateStr = todayStr;
   return count;
 };

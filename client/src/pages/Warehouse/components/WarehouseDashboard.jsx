@@ -138,14 +138,14 @@ export const WarehouseDashboard = () => {
 };
 
 const SummaryCard = ({ icon: Icon, label, value, color }) => (
-  <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm">
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-1.5 rounded-lg" style={{ backgroundColor: color + '15' }}>
-        <Icon className="text-sm" style={{ color }} />
+  <div className="bg-surface border border-border-glass border-b-[3.5px] border-b-neutral-300 dark:border-b-neutral-700 rounded-2xl p-4 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all flex flex-col justify-between">
+    <div className="flex items-center gap-2.5 mb-2">
+      <div className="p-2 rounded-xl border border-border-glass shadow-xs" style={{ backgroundColor: color + '15' }}>
+        <Icon className="text-base" style={{ color }} />
       </div>
-      <span className="text-xs text-on-surface-variant font-medium">{label}</span>
+      <span className="text-xs text-on-surface-variant font-bold">{label}</span>
     </div>
-    <div className="text-2xl font-bold text-on-surface">{value}</div>
+    <div className="text-2xl font-black text-on-surface tracking-tight">{value}</div>
   </div>
 );
 
@@ -156,10 +156,10 @@ const RouteCard = ({ route }) => {
   const progress = totalStops > 0 ? Math.round((deliveredCount / totalStops) * 100) : 0;
 
   return (
-    <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3">
+    <div className="bg-surface border border-border-glass border-b-[3.5px] border-b-neutral-300 dark:border-b-neutral-700 rounded-2xl p-4 shadow-xs hover:-translate-y-0.5 hover:shadow-sm transition-all space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10">
+          <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 shadow-xs">
             <LuTruck className="text-lg text-primary" />
           </div>
           <div>

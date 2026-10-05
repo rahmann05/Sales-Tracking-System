@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
+import { useDebounce } from '../../../shared/hooks/useDebounce';
 
 /**
  * useOutletApproval Hook
@@ -11,6 +12,7 @@ export const useOutletApproval = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('SUBMITTED');
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -23,7 +25,7 @@ export const useOutletApproval = () => {
     try {
       const res = await customerRegistrationsApi.getAll({
         status: filterStatus === 'ALL' ? undefined : filterStatus,
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         limit: 50,
       });
       if (res?.data) {
@@ -35,7 +37,7 @@ export const useOutletApproval = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [filterStatus, searchQuery]);
+  }, [filterStatus, debouncedSearch]);
 
   useEffect(() => {
     loadData();

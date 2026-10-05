@@ -1,27 +1,22 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { LuArrowUpRight } from 'react-icons/lu';
 
 /**
  * AdminStatCard Component
- * Apple Editorial Monochrome executive KPI statistic card.
- * Single Responsibility: Present a single executive KPI statistic with icon, value, and interactive link.
+ * Apple Editorial Enterprise Monochrome KPI Card.
+ * Clean white surface, graphite icon containers, obsidian metric values,
+ * and semantic badges.
  */
-export const AdminStatCard = ({
+export const AdminStatCard = memo(({
   title,
   value,
   subtext,
   icon: Icon,
   badgeText,
-  badgeColor = 'emerald',
+  badgeColor = 'neutral',
   onClick,
 }) => {
-  const badgeStyles = {
-    emerald: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
-    amber: 'bg-amber-50 text-amber-800 border-amber-200/80',
-    rose: 'bg-rose-50 text-rose-800 border-rose-200/80',
-    blue: 'bg-blue-50 text-blue-800 border-blue-200/80',
-    neutral: 'bg-surface-container text-on-surface-variant border-border-glass',
-  };
+  const isAlert = badgeColor === 'rose';
 
   return (
     <div
@@ -34,29 +29,29 @@ export const AdminStatCard = ({
           onClick();
         }
       }}
-      className={`group p-4 sm:p-5 rounded-2xl bg-surface border border-border-glass shadow-xs transition-all duration-150 flex flex-col justify-between h-[120px] select-none ${
-        onClick
-          ? 'cursor-pointer hover:border-primary/40 hover:shadow-sm'
-          : ''
+      className={`group p-4 sm:p-5 rounded-2xl bg-white border border-neutral-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-neutral-400 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all duration-200 flex flex-col justify-between min-h-[125px] select-none ${
+        onClick ? 'cursor-pointer' : ''
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-surface-container border border-border-glass flex items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-colors duration-150">
-            <Icon className="text-lg" />
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-neutral-100 text-neutral-700 border border-neutral-200 flex items-center justify-center text-lg shrink-0 group-hover:bg-neutral-900 group-hover:text-white group-hover:border-neutral-900 transition-all duration-200">
+            <Icon />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block leading-none">
+            <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block leading-none">
               {title}
             </span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-on-surface tracking-tight leading-none">
+            <div className="flex items-baseline gap-2 mt-1.5">
+              <span className="text-2xl font-black text-neutral-900 tracking-tight leading-none">
                 {value}
               </span>
               {badgeText && (
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border leading-tight ${
-                    badgeStyles[badgeColor] || badgeStyles.neutral
+                  className={`text-[10px] px-2 py-0.5 rounded-full border leading-tight ${
+                    isAlert
+                      ? 'bg-rose-50 text-rose-700 border-rose-200 font-bold'
+                      : 'bg-neutral-100 text-neutral-600 border-neutral-200 font-semibold'
                   }`}
                 >
                   {badgeText}
@@ -67,17 +62,17 @@ export const AdminStatCard = ({
         </div>
 
         {onClick && (
-          <div className="w-6 h-6 rounded-lg bg-surface-container border border-border-glass flex items-center justify-center text-on-surface-variant opacity-60 group-hover:opacity-100 group-hover:bg-primary group-hover:text-white transition-all">
+          <div className="w-6 h-6 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-500 opacity-60 group-hover:opacity-100 group-hover:bg-neutral-900 group-hover:text-white transition-all">
             <LuArrowUpRight className="text-xs" />
           </div>
         )}
       </div>
 
       {subtext && (
-        <p className="text-[11px] text-on-surface-variant font-medium border-t border-border-glass pt-2 m-0 line-clamp-1 truncate">
+        <p className="text-[11px] text-neutral-500 font-medium border-t border-neutral-100 pt-2.5 m-0 mt-2 line-clamp-1 truncate">
           {subtext}
         </p>
       )}
     </div>
   );
-};
+});

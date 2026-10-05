@@ -38,6 +38,16 @@ export const approve = async (req, res, next) => {
   }
 };
 
+export const batchApprove = async (req, res, next) => {
+  try {
+    const { orderIds } = req.body;
+    const data = await orderService.batchApproveOrders(orderIds, req.user.id);
+    return successResponse(res, 200, data, 'Batch approval order selesai diproses');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const reject = async (req, res, next) => {
   try {
     const data = await orderService.rejectOrder(req.params.id, req.user.id, req.body?.reason);

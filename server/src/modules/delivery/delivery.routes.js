@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
+import { authenticate, authorize, authorizeWithPermission } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import * as ctrl from './delivery.controller.js';
 import {
@@ -21,26 +21,26 @@ router.use(authenticate);
 
 router.get(
   '/packing-lists',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   ctrl.getPackingLists
 );
 
 router.get(
   '/packing-lists/:id',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   ctrl.getPackingListById
 );
 
 router.post(
   '/packing-lists',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   validate(createPackingListSchema),
   ctrl.createPackingList
 );
 
 router.delete(
   '/packing-lists/:id',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   ctrl.deletePackingList
 );
 
@@ -50,33 +50,33 @@ router.delete(
 
 router.get(
   '/routes',
-  authorize('KEPALA_GUDANG', 'SUPIR', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'SUPIR', 'ADMIN'], 'can_manage_delivery'),
   ctrl.getDeliveryRoutes
 );
 
 router.get(
   '/routes/:id',
-  authorize('KEPALA_GUDANG', 'SUPIR', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'SUPIR', 'ADMIN'], 'can_manage_delivery'),
   ctrl.getDeliveryRouteById
 );
 
 router.post(
   '/routes',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   validate(createDeliveryRouteSchema),
   ctrl.createDeliveryRoute
 );
 
 router.patch(
   '/routes/:id/status',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   validate(updateRouteStatusSchema),
   ctrl.updateRouteStatus
 );
 
 router.delete(
   '/routes/:id',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   ctrl.deleteDeliveryRoute
 );
 
@@ -104,13 +104,13 @@ router.patch(
 
 router.get(
   '/dashboard',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   ctrl.getDashboard
 );
 
 router.get(
   '/drivers',
-  authorize('KEPALA_GUDANG', 'ADMIN'),
+  authorizeWithPermission(['KEPALA_GUDANG', 'ADMIN'], 'can_manage_delivery'),
   ctrl.getDrivers
 );
 

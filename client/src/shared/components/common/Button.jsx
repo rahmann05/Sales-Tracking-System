@@ -1,5 +1,4 @@
 import React from 'react';
-import '../../../styles/common/Button.css';
 
 /**
  * Modular Button Component (1 Component per File)

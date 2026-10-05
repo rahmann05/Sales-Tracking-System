@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import {
   LuSearch,
   LuLogOut,
@@ -20,7 +20,7 @@ import '../../../styles/layout/Header.css';
  * Single Responsibility: Desktop top navigation bar with user info, notifications,
  * and seamless Admin hub navigation (no-sidebar mode).
  */
-export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
+export const Header = memo(({ searchQuery, setSearchQuery, onLogout }) => {
   const { user, activeTab, setActiveTab } = useApp();
   const isAdmin = user?.role === 'ADMIN';
   const isLanding = activeTab === TAB_IDS.ROLE_WORKSPACE;
@@ -28,7 +28,7 @@ export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const navTabs = getNavigationTabs(user?.role);
+  const navTabs = getNavigationTabs(user);
   const activeTabMeta = navTabs.find((t) => t.id === activeTab);
   const ActiveIcon = activeTabMeta?.icon;
 
@@ -220,4 +220,4 @@ export const Header = ({ searchQuery, setSearchQuery, onLogout }) => {
       </div>
     </header>
   );
-};
+});

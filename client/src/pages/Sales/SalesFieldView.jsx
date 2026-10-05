@@ -31,9 +31,22 @@ export const SalesFieldView = () => {
 
   const { modalType, payload: selectedStop, openModal, closeModal, isOpen } = useModal();
 
-  // Active Selected Day Filter for PJP Plan
+  // Active Selected Day Filter for PJP Plan with localStorage offline persistence
   const todayDayName = getTodayNameId();
-  const [selectedDay, setSelectedDay] = useState(todayDayName);
+  const [selectedDay, setSelectedDay] = useState(() => {
+    try {
+      return localStorage.getItem('sales_pjp_active_day') || todayDayName;
+    } catch (e) {
+      return todayDayName;
+    }
+  });
+
+  const handleSelectDay = (day) => {
+    setSelectedDay(day);
+    try {
+      localStorage.setItem('sales_pjp_active_day', day);
+    } catch (e) {}
+  };
 
   // Extract unique days dynamically from the stops assigned to the sales rep
   const dynamicDaysList = useMemo(() => {
@@ -62,13 +75,11 @@ export const SalesFieldView = () => {
     return salesStops.filter((stop) => (stop.dayOfWeek || todayDayName) === selectedDay);
   }, [salesStops, selectedDay, todayDayName]);
 
-  const stopActions = {
-    onAbsenIn: (s) => openModal('ABSEN_IN', s),
-    onAbsenOut: (s) => openModal('ABSEN_OUT', s),
-    onRequestUnlock: (s) => openModal('UNLOCK_REQUEST', s),
-    onInputOrder: (s) => openModal('ORDER', s),
-    onClosedReport: (s) => openModal('CLOSED_REPORT', s),
-  };
+  const onAbsenIn = (s) => openModal('ABSEN_IN', s);
+  const onAbsenOut = (s) => openModal('ABSEN_OUT', s);
+  const onRequestUnlock = (s) => openModal('UNLOCK_REQUEST', s);
+  const onInputOrder = (s) => openModal('ORDER', s);
+  const onClosedReport = (s) => openModal('CLOSED_REPORT', s);
 
   const activeVisitingStop = activeDayStops.find(
     (s) => s.status === 'ARRIVED' || s.status === 'IN_VISIT'
@@ -141,7 +152,7 @@ export const SalesFieldView = () => {
               <button
                 key={item.day}
                 type="button"
-                onClick={() => setSelectedDay(item.day)}
+                onClick={() => handleSelectDay(item.day)}
                 className={`px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-between gap-1.5 w-full ${
                   isActive
                     ? 'bg-primary text-on-primary shadow-sm font-bold'
@@ -186,7 +197,11 @@ export const SalesFieldView = () => {
               key={stop.id}
               stop={stop}
               allStops={activeDayStops}
-              {...stopActions}
+              onAbsenIn={onAbsenIn}
+              onAbsenOut={onAbsenOut}
+              onRequestUnlock={onRequestUnlock}
+              onInputOrder={onInputOrder}
+              onClosedReport={onClosedReport}
             />
           ))}
         </div>

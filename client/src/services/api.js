@@ -128,6 +128,12 @@ export const ordersApi = {
       method: 'PATCH',
     });
   },
+  batchApproveOrders: async (orderIds) => {
+    return await request('/orders/batch-approve', {
+      method: 'PATCH',
+      body: JSON.stringify({ orderIds }),
+    });
+  },
   rejectOrder: async (id, reason) => {
     return await request(`/orders/${id}/reject`, {
       method: 'PATCH',
@@ -350,6 +356,18 @@ export const usersApi = {
       method: 'DELETE',
     });
   },
+  updatePassword: async (id, password) => {
+    return await request(`/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
+    });
+  },
+  updatePermissions: async (id, permissions) => {
+    return await request(`/users/${id}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions }),
+    });
+  },
   updateLocation: async (coords) => {
     return await request('/users/location', {
       method: 'POST',
@@ -565,3 +583,34 @@ export const deliveryApi = {
     return await request('/delivery/drivers');
   },
 };
+
+// ─── 17. Roles & Permissions API ───────────────────────────────────────────
+export const rolesApi = {
+  getAll: async () => {
+    return await request('/roles');
+  },
+  getByCode: async (code) => {
+    return await request(`/roles/${code}`);
+  },
+  create: async (data) => {
+    return await request('/roles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (code, data) => {
+    return await request(`/roles/${code}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (code) => {
+    return await request(`/roles/${code}`, {
+      method: 'DELETE',
+    });
+  },
+  getPermissions: async () => {
+    return await request('/roles/permissions');
+  },
+};
+

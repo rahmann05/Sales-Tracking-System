@@ -17,7 +17,14 @@ const EARLY_REASON_OPTIONS = [
  * Duration Anti-Fraud Check, and Result Notes.
  */
 export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const cacheKey = stop?.id ? `sales_cached_photo_out_${stop.id}` : null;
+  const [capturedPhoto, setCapturedPhoto] = useState(() => {
+    try {
+      return (cacheKey && sessionStorage.getItem(cacheKey)) || null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [gpsData, setGpsData] = useState(null);
   const [notes, setNotes] = useState('Kunjungan Selesai & Transaksi Berhasil');
   const [earlyReason, setEarlyReason] = useState('');
@@ -53,10 +60,20 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   const handleCapture = (photoUrl, location) => {
     setCapturedPhoto(photoUrl);
     setGpsData(location);
+    if (cacheKey && photoUrl) {
+      try {
+        sessionStorage.setItem(cacheKey, photoUrl);
+      } catch (e) {}
+    }
   };
 
   const handleRetake = () => {
     setCapturedPhoto(null);
+    if (cacheKey) {
+      try {
+        sessionStorage.removeItem(cacheKey);
+      } catch (e) {}
+    }
   };
 
   const handleConfirm = () => {
@@ -68,6 +85,12 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     if (isEarlyCheckout && !earlyReason) {
       alert('Durasi kunjungan belum mencapai 5 menit. Harap pilih alasan checkout lebih awal.');
       return;
+    }
+
+    if (cacheKey) {
+      try {
+        sessionStorage.removeItem(cacheKey);
+      } catch (e) {}
     }
 
     onConfirm(stop.id, {

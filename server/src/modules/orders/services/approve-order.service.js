@@ -37,3 +37,26 @@ export const approveOrder = async (orderId, adminId) => {
 
   return updatedOrder;
 };
+
+export const batchApproveOrders = async (orderIds = [], adminId) => {
+  if (!Array.isArray(orderIds) || orderIds.length === 0) {
+    throw new AppError('Daftar ID order wajib diisi', 400);
+  }
+
+  const results = [];
+  for (const id of orderIds) {
+    try {
+      const res = await approveOrder(id, adminId);
+      results.push({ id, success: true, order: res });
+    } catch (err) {
+      results.push({ id, success: false, error: err.message });
+    }
+  }
+
+  return {
+    total: orderIds.length,
+    approvedCount: results.filter((r) => r.success).length,
+    failedCount: results.filter((r) => !r.success).length,
+    results,
+  };
+};

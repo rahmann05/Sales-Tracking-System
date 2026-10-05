@@ -8,7 +8,7 @@ import {
   handleGetUnlockRequests,
 } from './outlet-lock.controller.js';
 import * as validationController from './outlet-validation.controller.js';
-import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
+import { authenticate, authorize, authorizeWithPermission } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { createOutletSchema, updateOutletSchema, lockOutletSchema, unlockRequestSchema } from './outlets.schema.js';
 
@@ -19,12 +19,12 @@ router.use(authenticate);
 // ─── 1. Static Sub-Resources (Must precede /:id) ─────────────────────────────
 router.get(
   '/validation-summary',
-  authorize('ADMIN', 'SUPERVISOR'),
+  authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_validate_outlet'),
   validationController.getValidationSummary
 );
 router.post(
   '/batch-validate',
-  authorize('ADMIN', 'SUPERVISOR'),
+  authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_validate_outlet'),
   validationController.batchValidate
 );
 router.get(
@@ -34,7 +34,7 @@ router.get(
 );
 router.patch(
   '/unlock-requests/:requestId',
-  authorize('SUPERVISOR', 'ADMIN'),
+  authorizeWithPermission(['SUPERVISOR', 'ADMIN'], 'can_unlock_absensi'),
   handleApproveOrRejectUnlock
 );
 
@@ -45,12 +45,12 @@ router.post('/', authorize('ADMIN', 'SUPERVISOR'), validate(createOutletSchema),
 // ─── 3. Member Sub-Actions (/:id/...) ────────────────────────────────────────
 router.post(
   '/:id/validate',
-  authorize('ADMIN', 'SUPERVISOR'),
+  authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_validate_outlet'),
   validationController.validateSingle
 );
 router.post(
   '/:id/validate-nearby',
-  authorize('ADMIN', 'SUPERVISOR'),
+  authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_validate_outlet'),
   validationController.validateNearby
 );
 router.post(
@@ -61,7 +61,7 @@ router.post(
 );
 router.post(
   '/:id/unlock',
-  authorize('ADMIN', 'SUPERVISOR'),
+  authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_unlock_absensi'),
   validate(lockOutletSchema),
   handleUnlockOutletDirect
 );

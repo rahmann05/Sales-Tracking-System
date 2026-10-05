@@ -1,5 +1,4 @@
 import React from 'react';
-import '../../../styles/common/Card.css';
 
 /**
  * Modular Glassmorphism Card Component

@@ -1,6 +1,7 @@
 /** validateOutlet - single-responsibility service (extracted from outlet-validation.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 import { AppError } from '../../../utils/errors.js';
 import { DEFAULT_WEIGHTS, runReverseGeocode, runForwardGeocode, runFindPlace, runNearbySearch } from './outlet-validation.helpers.js';
 import { normalizeIndonesianStoreName } from './normalize-indonesian-store-name.service.js';
@@ -18,9 +19,14 @@ import { scoreNearbySearch } from './score-nearby-search.service.js';
  * @returns {Object} Validation result with status, confidence, and details
  */
 export const validateOutlet = async (outletId) => {
-  const apiKey = config.googleMapsApiKey;
+  let apiKey = config.googleMapsApiKey;
   if (!apiKey) {
-    throw new AppError('Google Maps API Key belum dikonfigurasi. Set GOOGLE_MAPS_API_KEY di .env', 400);
+    try {
+      apiKey = await getDynamicConfig('MAPS_API_KEY', '');
+    } catch {}
+  }
+  if (!apiKey) {
+    throw new AppError('Google Maps API Key belum dikonfigurasi. Set GOOGLE_MAPS_API_KEY di .env atau Pengaturan Sistem', 400);
   }
 
   const outlet = await prisma.outlet.findUnique({
@@ -105,7 +111,8 @@ export const validateOutlet = async (outletId) => {
   }
 
   if (hasLatLng) {
-    parallelCalls.nearbySearch = runNearbySearch(outlet.latitude, outlet.longitude, apiKey, 200);
+    const nearbyRadius = await getDynamicConfig('VALIDATION_NEARBY_RADIUS_METERS', 200);
+    parallelCalls.nearbySearch = runNearbySearch(outlet.latitude, outlet.longitude, apiKey, nearbyRadius);
   } else {
     delete activeWeights.nearbySearch;
   }
@@ -178,21 +185,29 @@ export const validateOutlet = async (outletId) => {
   }
 
   if (validDistanceMeters != null) {
-    if (validDistanceMeters > config.validationDistanceSuspect) {
-      warnings.push(`Jarak antara koordinat outlet dan titik Google: ${validDistanceMeters}m (> ${config.validationDistanceSuspect}m)`);
-    } else if (validDistanceMeters > config.validationDistanceWarning) {
-      warnings.push(`Jarak antara koordinat outlet dan titik Google: ${validDistanceMeters}m (> ${config.validationDistanceWarning}m)`);
+    const suspectThreshold = await getDynamicConfig('VALIDATION_DISTANCE_SUSPECT', 500);
+    const warningThreshold = await getDynamicConfig('VALIDATION_DISTANCE_WARNING', 200);
+
+    if (validDistanceMeters > suspectThreshold) {
+      warnings.push(`Jarak antara koordinat outlet dan titik Google: ${validDistanceMeters}m (> ${suspectThreshold}m)`);
+    } else if (validDistanceMeters > warningThreshold) {
+      warnings.push(`Jarak antara koordinat outlet dan titik Google: ${validDistanceMeters}m (> ${warningThreshold}m)`);
     }
   }
 
-  // Step 8: Determine validation status
+  // Step 8: Determine validation status using dynamic confidence thresholds
+  const CONF_VALID = await getDynamicConfig('VALIDATION_CONFIDENCE_THRESHOLD_VALID', 75);
+  const CONF_LIKELY = await getDynamicConfig('VALIDATION_CONFIDENCE_THRESHOLD_LIKELY', 50);
+  const CONF_WARNING = await getDynamicConfig('VALIDATION_CONFIDENCE_THRESHOLD_WARNING', 30);
+
   let validationStatus;
-  if (overallConfidence >= 75) validationStatus = 'VALID';
-  else if (overallConfidence >= 50) validationStatus = 'LIKELY_VALID';
-  else if (overallConfidence >= 30) validationStatus = 'WARNING';
+  if (overallConfidence >= CONF_VALID) validationStatus = 'VALID';
+  else if (overallConfidence >= CONF_LIKELY) validationStatus = 'LIKELY_VALID';
+  else if (overallConfidence >= CONF_WARNING) validationStatus = 'WARNING';
   else validationStatus = 'SUSPECT';
 
-  if (validDistanceMeters != null && validDistanceMeters > config.validationDistanceSuspect && validationStatus === 'VALID') {
+  const suspectThresholdForDowngrade = await getDynamicConfig('VALIDATION_DISTANCE_SUSPECT', 500);
+  if (validDistanceMeters != null && validDistanceMeters > suspectThresholdForDowngrade && validationStatus === 'VALID') {
     validationStatus = 'WARNING';
     warnings.push('Status disesuaikan dari VALID ke WARNING karena jarak koordinat cukup jauh');
   }

@@ -4,6 +4,7 @@ import { config } from '../../../config/index.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
 import { AppError } from '../../../utils/errors.js';
 import { ATTENDANCE_TYPE, VISIT_STATUS, PJP_STATUS } from '../../../utils/constants.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 
 export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null) => {
@@ -22,20 +23,16 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-  const isBypassUser = user?.email === 'sales@sinaranugrah.com';
+  const bypassEmailsRaw = await getDynamicConfig('BYPASS_GEOFENCE_EMAILS', 'sales@sinaranugrah.com');
+  const bypassEmails = String(bypassEmailsRaw).split(',').map((e) => e.trim().toLowerCase());
+  const isBypassUser = Boolean(user?.email && bypassEmails.includes(user.email.toLowerCase()));
 
   // Geolocation calculation & validation
   const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
   const deviationMeters = Math.round(distance);
 
-  // Read dynamic radius from SystemConfig, then env config, then hardcoded fallback
-  let globalRadius = config.attendanceRadiusMeters || 50;
-  try {
-    const radiusConfig = await prisma.systemConfig.findUnique({ where: { key: 'ATTENDANCE_RADIUS_METERS' } });
-    if (radiusConfig?.value !== undefined && radiusConfig?.value !== null) {
-      globalRadius = Number(radiusConfig.value) || globalRadius;
-    }
-  } catch { /* use default */ }
+  // Read dynamic radius from SystemConfig cache
+  const globalRadius = await getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50);
 
   const maxRadius = stop.outlet.radiusMeters || globalRadius;
   const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';

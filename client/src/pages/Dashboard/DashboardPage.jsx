@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ActiveRoutesList } from './components/ActiveRoutesList';
 import { useRouteFilter } from '../../shared/hooks/useRouteFilter';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import { filterStopsForToday } from '../../utils/dateUtils';
 import { useMap } from '../../context/MapContext';
 import { useMapData } from '../../context/MapDataContext';
@@ -71,9 +72,11 @@ export const DashboardPage = ({ searchQuery = '' }) => {
     return todayStops;
   }, [todayStops, isSalesRole, user]);
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   useEffect(() => {
-    setQuery(searchQuery);
-  }, [searchQuery, setQuery]);
+    setQuery(debouncedSearchQuery);
+  }, [debouncedSearchQuery, setQuery]);
 
   // ─── Map Mode Setup & Teardown ──────────────────────────────────────────────
   useEffect(() => {

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
 import { AppError } from '../../../utils/errors.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 
 export const loginUser = async (rawEmail, password) => {
@@ -29,14 +30,18 @@ export const loginUser = async (rawEmail, password) => {
     email: user.email,
     role: user.role,
     clusterId: user.clusterId,
+    permissions: user.permissions || {},
   };
 
+  const jwtExpiresIn = await getDynamicConfig('JWT_EXPIRES_IN', config.jwtExpiresIn);
+  const jwtRefreshExpiresIn = await getDynamicConfig('JWT_REFRESH_EXPIRES_IN', config.jwtRefreshExpiresIn);
+
   const accessToken = jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
+    expiresIn: jwtExpiresIn,
   });
 
   const refreshToken = jwt.sign({ id: user.id }, config.jwtRefreshSecret, {
-    expiresIn: config.jwtRefreshExpiresIn,
+    expiresIn: jwtRefreshExpiresIn,
   });
 
   return {

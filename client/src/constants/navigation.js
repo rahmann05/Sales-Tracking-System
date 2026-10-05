@@ -57,8 +57,8 @@ export const TAB_IDS = Object.freeze({
     DELIVERY_ROUTES: 'delivery-routes',
     DELIVERY_MONITOR: 'delivery-monitor',
     DELIVERY_DRIVER_MAP: 'delivery-driver-map',
-    // Admin System Configuration
     SYSTEM_CONFIG: 'system-config',
+    USER_MANAGEMENT: 'user-management',
 });
 
 /** Role-specific "home workspace" tab metadata */
@@ -85,11 +85,16 @@ export const getRoleWorkspaceTab = (role) => {
  * @param {string} role - User role
  * @returns {Array<{ id: string, label: string, icon: any }>}
  */
-export const getNavigationTabs = (role) => {
+export const getNavigationTabs = (userOrRole) => {
+    if (!userOrRole) return [];
+    const user = typeof userOrRole === 'object' ? userOrRole : { role: userOrRole, permissions: {} };
+    const role = user.role;
+    const permissions = user.permissions || {};
+    
     const tabs = [getRoleWorkspaceTab(role)];
 
-    // 0. Persetujuan Order & Unlock khusus Admin
-    if (role === ROLES.ADMIN) {
+    // 0. Persetujuan Order & Unlock (Admin atau yang punya izin)
+    if (role === ROLES.ADMIN || permissions.can_approve_order || permissions.can_unlock_absensi) {
         tabs.push({
             id: TAB_IDS.ADMIN_APPROVAL,
             label: 'Persetujuan Order & Unlock',
@@ -97,8 +102,8 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 0.1 Daily Call Monitor untuk Admin & Supervisor
-    if (DAILY_CALL_ROLES.includes(role)) {
+    // 0.1 Daily Call Monitor (Admin, Supervisor, atau yang punya izin)
+    if (role === ROLES.ADMIN || DAILY_CALL_ROLES.includes(role) || permissions.can_view_daily_call) {
         tabs.push({
             id: TAB_IDS.DAILY_CALL_MONITOR,
             label: 'Daily Call Monitor',
@@ -107,7 +112,7 @@ export const getNavigationTabs = (role) => {
     }
 
     // 1. Rute & RJP Lapangan
-    if (ROUTE_PLANNING_ROLES.includes(role)) {
+    if (role === ROLES.ADMIN || ROUTE_PLANNING_ROLES.includes(role) || permissions.can_access_rjp || permissions.can_manage_rjp) {
         tabs.push({
             id: TAB_IDS.ROUTE_PLANNING,
             label: role === ROLES.SALES ? 'Jadwal Master RJP' : 'Kelola Master RJP',
@@ -115,8 +120,8 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 2. Registrasi Outlet khusus Sales di Lapangan
-    if (role === ROLES.SALES) {
+    // 2. Registrasi Outlet (Sales di Lapangan atau yang punya izin)
+    if (role === ROLES.ADMIN || role === ROLES.SALES || permissions.can_register_outlet) {
         tabs.push({
             id: TAB_IDS.OUTLET_REGISTRATION,
             label: 'Registrasi Outlet',
@@ -124,8 +129,8 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 3. Master Outlet untuk Admin & Supervisor
-    if ([ROLES.ADMIN, ROLES.SUPERVISOR].includes(role)) {
+    // 3. Master Outlet (Admin, Supervisor, atau yang punya izin)
+    if (role === ROLES.ADMIN || [ROLES.ADMIN, ROLES.SUPERVISOR].includes(role) || permissions.can_manage_outlets) {
         tabs.push({
             id: TAB_IDS.OUTLET_MANAGEMENT,
             label: 'Master Outlet',
@@ -133,8 +138,8 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 4. Persetujuan Outlet NOO untuk Supervisor & Admin
-    if (OUTLET_APPROVAL_ROLES.includes(role) && role !== ROLES.SALES) {
+    // 4. Persetujuan Outlet NOO (Supervisor, Admin, atau yang punya izin)
+    if (role === ROLES.ADMIN || (OUTLET_APPROVAL_ROLES.includes(role) && role !== ROLES.SALES) || permissions.can_approve_outlet) {
         tabs.push({
             id: TAB_IDS.OUTLET_APPROVAL,
             label: 'Persetujuan Outlet',
@@ -143,7 +148,7 @@ export const getNavigationTabs = (role) => {
     }
 
     // 5. Tim & Personel
-    if (TEAM_TRACKING_ROLES.includes(role)) {
+    if (role === ROLES.ADMIN || TEAM_TRACKING_ROLES.includes(role) || permissions.can_view_team || permissions.can_view_live_tracking) {
         tabs.push({
             id: TAB_IDS.TEAM_TRACKING,
             label: role === ROLES.SUPERVISOR ? 'Tim & Sales Bawahan' : 'Manajemen Tim & Personel',
@@ -152,17 +157,17 @@ export const getNavigationTabs = (role) => {
     }
 
     // 6. Laporan & Analitik Distribusi ND6
-    if (REPORTS_ROLES.includes(role)) {
+    if (role === ROLES.ADMIN || REPORTS_ROLES.includes(role) || permissions.can_view_reports) {
         tabs.push({ id: TAB_IDS.REPORTS, label: 'Laporan & Analitik', icon: FiBarChart2 });
     }
 
     // 7. Validasi Titik Koordinat GPS
-    if (OUTLET_VALIDATION_ROLES.includes(role)) {
+    if (role === ROLES.ADMIN || OUTLET_VALIDATION_ROLES.includes(role) || permissions.can_validate_outlet) {
         tabs.push({ id: TAB_IDS.OUTLET_VALIDATION, label: 'Validasi Outlet', icon: LuMapPin });
     }
 
     // 8. Laporan Registrasi Outlet
-    if (OUTLET_REGISTRATION_REPORT_ROLES.includes(role)) {
+    if (role === ROLES.ADMIN || OUTLET_REGISTRATION_REPORT_ROLES.includes(role) || permissions.can_view_outlet_report) {
         tabs.push({
             id: TAB_IDS.OUTLET_REGISTRATION_REPORT,
             label: 'Laporan Registrasi Outlet',
@@ -170,8 +175,8 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 8b. Kelola Master Kluster — Admin & Supervisor
-    if ([ROLES.ADMIN, ROLES.SUPERVISOR].includes(role)) {
+    // 8b. Kelola Master Kluster
+    if (role === ROLES.ADMIN || [ROLES.ADMIN, ROLES.SUPERVISOR].includes(role) || permissions.can_manage_clusters) {
         tabs.push({
             id: TAB_IDS.CREATE_CLUSTER,
             label: 'Kelola Master Kluster',
@@ -179,20 +184,26 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // ═══════════════════════════════════════════════════
-    // 9. Kepala Gudang — Delivery Management Tabs
-    // ═══════════════════════════════════════════════════
-    if (DELIVERY_MANAGEMENT_ROLES.includes(role) && role !== ROLES.ADMIN) {
+    // 9. Kelola Packing List Gudang (Admin, Kepala Gudang, atau yang punya izin)
+    if (role === ROLES.ADMIN || DELIVERY_MANAGEMENT_ROLES.includes(role) || permissions.can_manage_delivery || permissions.can_manage_packing_list) {
         tabs.push({
             id: TAB_IDS.DELIVERY_PACKING_LIST,
             label: 'Kelola Packing List',
             icon: LuPackage,
         });
+    }
+
+    // 9b. Kelola Rute Pengiriman (Admin, Kepala Gudang, atau yang punya izin)
+    if (role === ROLES.ADMIN || DELIVERY_MANAGEMENT_ROLES.includes(role) || permissions.can_manage_delivery || permissions.can_manage_delivery_routes) {
         tabs.push({
             id: TAB_IDS.DELIVERY_ROUTES,
             label: 'Kelola Rute Pengiriman',
             icon: LuNavigation,
         });
+    }
+
+    // 9c. Monitor Pengiriman & Logistik (Admin, Kepala Gudang, atau yang punya izin)
+    if (role === ROLES.ADMIN || DELIVERY_MANAGEMENT_ROLES.includes(role) || permissions.can_manage_delivery || permissions.can_monitor_delivery) {
         tabs.push({
             id: TAB_IDS.DELIVERY_MONITOR,
             label: 'Monitor Pengiriman',
@@ -200,28 +211,8 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 9b. Admin — Pengaturan Sistem (Config Management)
-    if (role === ROLES.ADMIN) {
-        tabs.push({
-            id: TAB_IDS.SYSTEM_CONFIG,
-            label: 'Pengaturan Sistem',
-            icon: LuSettings,
-        });
-    }
-
-    // 9c. Admin — Monitor Logistik (view-only, tanpa Packing List & Rute operasional)
-    if (role === ROLES.ADMIN) {
-        tabs.push({
-            id: TAB_IDS.DELIVERY_MONITOR,
-            label: 'Monitor Logistik & Gudang',
-            icon: LuTruck,
-        });
-    }
-
-    // ═══════════════════════════════════════════════════
     // 10. Supir — Driver Field Tab (Map)
-    // ═══════════════════════════════════════════════════
-    if (DELIVERY_FIELD_ROLES.includes(role)) {
+    if (DELIVERY_FIELD_ROLES.includes(role) || permissions.can_access_driver_map) {
         tabs.push({
             id: TAB_IDS.DELIVERY_DRIVER_MAP,
             label: 'Peta Pengiriman',
@@ -229,8 +220,24 @@ export const getNavigationTabs = (role) => {
         });
     }
 
-    // 11. Peta Monitoring Umum (semua role kecuali Supir)
-    if (role !== ROLES.SUPIR) {
+    // 11. Pengaturan Sistem & Manajemen User (Admin atau yang punya izin)
+    if (role === ROLES.ADMIN || permissions.can_manage_system_config) {
+        tabs.push({
+            id: TAB_IDS.SYSTEM_CONFIG,
+            label: 'Pengaturan Sistem',
+            icon: LuSettings,
+        });
+    }
+    if (role === ROLES.ADMIN || permissions.can_manage_users || permissions.can_manage_roles) {
+        tabs.push({
+            id: TAB_IDS.USER_MANAGEMENT,
+            label: 'Manajemen Pengguna',
+            icon: LuUsers,
+        });
+    }
+
+    // 12. Peta Monitoring Umum (Semua kecuali supir murni)
+    if (role === ROLES.ADMIN || role !== ROLES.SUPIR || permissions.can_view_dashboard) {
         tabs.push({ id: TAB_IDS.DASHBOARD, label: 'Peta', icon: LuLayoutDashboard });
     }
 

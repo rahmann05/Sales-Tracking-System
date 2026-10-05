@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { outletsApi, clustersApi, usersApi } from '../services/api';
 import { io } from 'socket.io-client';
 
@@ -42,23 +42,27 @@ export const MapDataProvider = ({ children }) => {
     }
   };
 
+  const hasFetchedRef = React.useRef(false);
+
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
+    hasFetchedRef.current = true;
     await Promise.all([fetchOutlets(), fetchClusters(), fetchSalesUsers()]);
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    // Initial fetch
-    if (localStorage.getItem('token')) {
-      fetchAllData();
-    }
+  const ensureDataLoaded = useCallback(() => {
+    if (hasFetchedRef.current || !localStorage.getItem('token')) return;
+    fetchAllData();
+  }, [fetchAllData]);
 
+  useEffect(() => {
     const handleAuthLogin = () => {
-      fetchAllData();
+      hasFetchedRef.current = false;
     };
 
     const handleAuthLogout = () => {
+      hasFetchedRef.current = false;
       setOutlets([]);
       setClusters([]);
       setSalesUsers([]);
@@ -73,40 +77,46 @@ export const MapDataProvider = ({ children }) => {
       window.removeEventListener('auth:expired', handleAuthLogout);
       window.removeEventListener('auth:logout', handleAuthLogout);
     };
-  }, [fetchAllData]);
+  }, []);
 
   useEffect(() => {
-    // Setup Socket.IO for cache invalidation
+    // Only establish Socket.IO for cache invalidation if authenticated
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const socket = io({
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
-      query: { userId: 'MAP_CLIENT' },
-    });
+    let socket = null;
+    try {
+      socket = io({
+        transports: ['polling', 'websocket'], // Polling first eliminates aborted WSS connection errors
+        autoConnect: true,
+        reconnection: true,
+        reconnectionAttempts: 2,
+        reconnectionDelay: 8000,
+        timeout: 10000,
+        query: { userId: 'MAP_CLIENT' },
+      });
 
-    socket.on('connect_error', (err) => {
-      // Suppress unhandled socket disconnect errors in dev
-      console.debug('[MapData Socket] Connection notice:', err.message);
-    });
+      socket.on('connect_error', (err) => {
+        // Suppress benign connection errors in dev
+        console.debug('[MapData Socket] Connection notice:', err.message);
+      });
 
-    socket.on('cache:invalidate', ({ dataType }) => {
-      console.log(`[MapData] Cache invalidated for: ${dataType}`);
-      if (dataType === 'outlets') fetchOutlets();
-      else if (dataType === 'clusters') fetchClusters();
-      else if (dataType === 'users') fetchSalesUsers();
-      
-      setDataVersion(v => v + 1);
-    });
+      socket.on('cache:invalidate', ({ dataType }) => {
+        if (!hasFetchedRef.current) return;
+        if (dataType === 'outlets') fetchOutlets();
+        else if (dataType === 'clusters') fetchClusters();
+        else if (dataType === 'users') fetchSalesUsers();
+
+        setDataVersion((v) => v + 1);
+      });
+    } catch (err) {
+      console.warn('[MapData Socket] Initialization notice:', err.message);
+    }
 
     return () => {
-      if (socket.connected) {
+      if (socket) {
+        socket.removeAllListeners();
         socket.disconnect();
-      } else {
-        socket.close();
       }
     };
   }, []);
@@ -119,16 +129,19 @@ export const MapDataProvider = ({ children }) => {
     setDataVersion(v => v + 1);
   };
 
+  const contextValue = useMemo(() => ({
+    outlets,
+    clusters,
+    salesUsers,
+    dataVersion,
+    isLoading,
+    invalidate,
+    ensureDataLoaded,
+    refetchAll: fetchAllData,
+  }), [outlets, clusters, salesUsers, dataVersion, isLoading, ensureDataLoaded, fetchAllData]);
+
   return (
-    <MapDataContext.Provider value={{
-      outlets,
-      clusters,
-      salesUsers,
-      dataVersion,
-      isLoading,
-      invalidate,
-      refetchAll: fetchAllData
-    }}>
+    <MapDataContext.Provider value={contextValue}>
       {children}
     </MapDataContext.Provider>
   );
@@ -139,5 +152,9 @@ export const useMapData = () => {
   if (!context) {
     throw new Error('useMapData must be used within MapDataProvider');
   }
+  const { ensureDataLoaded } = context;
+  useEffect(() => {
+    ensureDataLoaded();
+  }, [ensureDataLoaded]);
   return context;
 };

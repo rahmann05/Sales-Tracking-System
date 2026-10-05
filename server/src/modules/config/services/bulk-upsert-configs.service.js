@@ -1,5 +1,6 @@
 /** bulkUpsertConfigs - service to upsert multiple config keys at once. */
 import { prisma } from '../../../config/prisma.js';
+import { invalidateConfigCache } from './dynamic-config.service.js';
 
 export const bulkUpsertConfigs = async (configMap) => {
   const results = {};
@@ -19,5 +20,8 @@ export const bulkUpsertConfigs = async (configMap) => {
   for (const cfg of allConfigs) {
     results[cfg.key] = cfg.value;
   }
+
+  invalidateConfigCache();
+
   return results;
 };

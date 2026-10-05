@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { LuUser } from 'react-icons/lu';
-import '../../../styles/common/Avatar.css';
 
 /**
  * Modular Avatar Component
@@ -13,11 +12,11 @@ export const Avatar = ({ src, name = '', size = 'md', className = '' }) => {
   // Get initials from name
   const initials = name
     ? name
-        .split(' ')
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase()
     : '';
 
   if (src && !hasError) {

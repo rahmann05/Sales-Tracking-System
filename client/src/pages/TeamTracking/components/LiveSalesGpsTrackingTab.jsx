@@ -14,8 +14,16 @@ import {
   LuZap,
 } from 'react-icons/lu';
 
+// Icon cache to avoid DOM thrashing in Leaflet (Google Web Performance Best Practice)
+const iconCache = new Map();
+
 // Helper to create live pulsating sales avatar marker
 const makeSalesLiveIcon = (salesName, isOnline, activityStatus) => {
+  const cacheKey = `${salesName}_${isOnline}_${activityStatus}`;
+  if (iconCache.has(cacheKey)) {
+    return iconCache.get(cacheKey);
+  }
+
   const initials = (salesName || 'S')
     .split(' ')
     .map((n) => n[0])
@@ -33,7 +41,7 @@ const makeSalesLiveIcon = (salesName, isOnline, activityStatus) => {
       : '#6b7280'; // Gray (offline)
 
   const pulseHtml = isOnline
-    ? `<span style="position:absolute;top:-4px;left:-4px;width:44px;height:44px;border-radius:50%;background:${color};opacity:0.35;animation:livePulse 1.5s infinite;"></span>`
+    ? `<span style="position:absolute;top:-4px;left:-4px;width:44px;height:44px;border-radius:50%;background:${color};opacity:0.35;animation:livePulse 2s infinite ease-out;will-change:transform,opacity;transform:translateZ(0);"></span>`
     : '';
 
   const html = `
@@ -48,13 +56,16 @@ const makeSalesLiveIcon = (salesName, isOnline, activityStatus) => {
     </div>
   `;
 
-  return L.divIcon({
+  const icon = L.divIcon({
     className: 'live-sales-marker',
     html,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -20],
   });
+
+  iconCache.set(cacheKey, icon);
+  return icon;
 };
 
 const FlyToSalesLocation = ({ selectedSales }) => {
@@ -94,11 +105,25 @@ export const LiveSalesGpsTrackingTab = () => {
     }
   };
 
-  // Poll live GPS coordinates every 10 seconds
+  // Poll live GPS coordinates every 20 seconds, pausing when document is hidden (Google Web Vitals Best Practice)
   useEffect(() => {
     fetchLocations();
-    const interval = setInterval(fetchLocations, 10000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (document.hidden) return; // Pause polling when user is not viewing this tab/window
+      fetchLocations();
+    }, 20000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchLocations();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const filteredSales = salesLocations.filter((s) => {

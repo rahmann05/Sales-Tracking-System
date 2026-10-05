@@ -6,5 +6,5 @@
 export { createOrder } from './services/create-order.service.js';
 export { getOrders } from './services/get-orders.service.js';
 export { getOrderById } from './services/get-order-by-id.service.js';
-export { approveOrder } from './services/approve-order.service.js';
+export { approveOrder, batchApproveOrders } from './services/approve-order.service.js';
 export { rejectOrder } from './services/reject-order.service.js';

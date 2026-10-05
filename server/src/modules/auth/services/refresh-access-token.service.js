@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
 import { AppError } from '../../../utils/errors.js';
-
+import { getDynamicConfig } from '../../config/config.service.js';
 
 export const refreshAccessToken = async (refreshToken) => {
   try {
@@ -24,8 +24,10 @@ export const refreshAccessToken = async (refreshToken) => {
       clusterId: user.clusterId,
     };
 
+    const jwtExpiresIn = await getDynamicConfig('JWT_EXPIRES_IN', config.jwtExpiresIn);
+
     const newAccessToken = jwt.sign(payload, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
+      expiresIn: jwtExpiresIn,
     });
 
     return { accessToken: newAccessToken };

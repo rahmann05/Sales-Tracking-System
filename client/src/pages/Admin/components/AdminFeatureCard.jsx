@@ -1,53 +1,65 @@
-import React from 'react';
-import { LuArrowRight } from 'react-icons/lu';
+import React, { memo } from 'react';
+import { LuArrowRight, LuLayers } from 'react-icons/lu';
+
+const BADGE_STYLES = {
+  alert: 'bg-rose-50 text-rose-700 border-rose-200 font-bold shadow-[0_1px_2px_rgba(244,63,94,0.08)]',
+  warning: 'bg-amber-50 text-amber-800 border-amber-200 font-bold',
+  success: 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold',
+  info: 'bg-neutral-100 text-neutral-800 border-neutral-200 font-bold',
+  neutral: 'bg-neutral-100 text-neutral-600 border-neutral-200/90 font-semibold',
+};
 
 /**
  * AdminFeatureCard Component
- * Google Material 3 / Apple Editorial Monochrome Card
- * Symmetrical, uniform height, pixel-perfect alignment.
+ * Tactile 3D Card with Layered Depth, Sculptural Embossed Icon, and Unclipped Typography.
+ * Every card has the EXACT SAME uniform height (h-[265px]) across all sections.
  */
-export const AdminFeatureCard = ({
+export const AdminFeatureCard = memo(({
   id,
   title,
   description,
+  category,
   categoryLabel,
   icon: Icon,
   badge,
   badgeVariant = 'neutral',
   onClick,
+  onMouseEnter,
 }) => {
-  const badgeStyles = {
-    alert: 'bg-rose-50 text-rose-800 border-rose-200/80 font-bold',
-    warning: 'bg-amber-50 text-amber-800 border-amber-200/80 font-bold',
-    success: 'bg-emerald-50 text-emerald-800 border-emerald-200/80 font-bold',
-    info: 'bg-blue-50 text-blue-800 border-blue-200/80 font-bold',
-    neutral: 'bg-surface-container text-on-surface-variant border-border-glass font-medium',
-  };
+  // Defensive icon fallback: if icon prop is ever missing or undefined, never crash
+  const RenderIcon = typeof Icon === 'function' ? Icon : LuLayers;
 
   return (
     <div
-      onClick={() => onClick(id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick(id);
-        }
-      }}
-      className="group flex flex-col justify-between p-5 rounded-2xl bg-surface border border-border-glass shadow-xs hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer select-none text-left h-[180px]"
+      className="h-[265px] w-full select-none"
+      onMouseEnter={() => onMouseEnter && onMouseEnter(id)}
     >
-      {/* Top Section: Icon & Status Badge */}
-      <div>
-        <div className="flex items-center justify-between gap-3 h-11">
-          <div className="w-11 h-11 rounded-xl bg-surface-container border border-border-glass text-on-surface flex items-center justify-center text-lg shrink-0 group-hover:bg-primary group-hover:text-white transition-colors duration-150">
-            <Icon />
+      <div
+        onClick={() => onClick(id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(id);
+          }
+        }}
+        className="group relative h-full w-full flex flex-col justify-between p-5 rounded-2xl bg-gradient-to-b from-white via-[#FCFCFD] to-[#F8F8FA] border border-neutral-200/90 border-b-[3.5px] border-b-neutral-300 shadow-[0_2px_4px_rgba(0,0,0,0.02),0_8px_20px_-4px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.95)] hover:border-neutral-300 hover:border-b-neutral-400 hover:shadow-[0_18px_36px_-6px_rgba(0,0,0,0.09),0_8px_16px_-4px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,1)] hover:-translate-y-1.5 active:translate-y-0.5 active:border-b-2 active:shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-[transform,box-shadow,border-color] duration-200 ease-out cursor-pointer text-left"
+      >
+        {/* Specular Ambient Top Rim Light */}
+        <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white to-transparent rounded-t-2xl pointer-events-none" />
+
+        {/* ── Top Section: 3D Sculptural Icon Container & Status Badge ── */}
+        <div className="flex items-center justify-between gap-3 shrink-0">
+          {/* 3D Embossed Icon Medallion */}
+          <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-b from-neutral-700 via-neutral-850 to-neutral-950 text-white flex items-center justify-center text-lg shrink-0 border-t border-t-white/40 border-b-2 border-b-black border-x border-neutral-700/80 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.6),0_6px_14px_-2px_rgba(0,0,0,0.3)] group-hover:scale-105 group-hover:-translate-y-0.5 transition-[transform] duration-200">
+            <RenderIcon className="drop-shadow-[0_2px_3px_rgba(0,0,0,0.5)]" />
           </div>
 
           {badge && (
             <span
-              className={`text-[11px] px-2.5 py-0.5 rounded-full border tracking-tight shrink-0 truncate max-w-[140px] ${
-                badgeStyles[badgeVariant] || badgeStyles.neutral
+              className={`text-[11px] px-2.5 py-0.5 rounded-full border tracking-tight shrink-0 max-w-[140px] truncate ${
+                BADGE_STYLES[badgeVariant] || BADGE_STYLES.neutral
               }`}
             >
               {badge}
@@ -55,28 +67,30 @@ export const AdminFeatureCard = ({
           )}
         </div>
 
-        {/* Feature Title (Fixed 1-line height for perfect symmetry) */}
-        <h3 className="text-sm sm:text-[15px] font-bold text-on-surface group-hover:text-primary transition-colors leading-tight m-0 mt-3 truncate">
-          {title}
-        </h3>
+        {/* ── Middle Section: Title + Complete Unclipped Description ── */}
+        <div className="flex-1 flex flex-col justify-center my-2 min-h-0">
+          <h3 className="text-[14px] font-extrabold text-neutral-900 group-hover:text-black leading-snug tracking-tight m-0 transition-colors">
+            {title}
+          </h3>
 
-        {/* Description (Fixed 2-line height for perfect symmetry) */}
-        <p className="text-xs text-on-surface-variant font-normal leading-relaxed m-0 mt-1 line-clamp-2 h-8">
-          {description}
-        </p>
-      </div>
+          {/* Full description without clipping or ellipsis */}
+          <p className="text-[12px] text-neutral-500 font-normal leading-relaxed m-0 mt-1.5">
+            {description}
+          </p>
+        </div>
 
-      {/* Bottom Section: Category Tag & Action Affordance */}
-      <div className="pt-2.5 border-t border-border-glass flex items-center justify-between gap-2 mt-auto">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md border border-border-glass truncate">
-          {categoryLabel}
-        </span>
+        {/* ── Bottom Section: Category Tag & Action Affordance ── */}
+        <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2 shrink-0">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 border border-neutral-200/80 truncate">
+            {categoryLabel}
+          </span>
 
-        <div className="flex items-center gap-1 text-xs font-bold text-primary group-hover:translate-x-1 transition-transform shrink-0">
-          <span>Buka</span>
-          <LuArrowRight className="text-sm" />
+          <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-500 group-hover:text-neutral-900 group-hover:translate-x-1 transition-all duration-200 shrink-0">
+            <span>Buka Modul</span>
+            <LuArrowRight className="text-xs" />
+          </div>
         </div>
       </div>
     </div>
   );
-};
+});

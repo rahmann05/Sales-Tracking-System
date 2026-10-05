@@ -28,48 +28,77 @@ export const googleDirectionsService = {
   },
 
   /**
-   * Fetches official driving route polyline coordinates from Google Directions REST API
-   * using the stored latitude & longitude coordinates.
+   * Fetches official driving route polyline coordinates using client Google Maps SDK
+   * or backend routing API (/api/v1/routing/road-route) with graceful fallback.
    */
   fetchDirectionsRoute: async (origin, waypoints = []) => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const rawOrigin = { lat: Number(origin?.lat ?? origin?.latitude), lng: Number(origin?.lng ?? origin?.longitude) };
+    const directPath = [rawOrigin];
 
-    // Direct polyline path constructed from system coordinates
-    const directPath = [{ lat: origin.lat || origin.latitude, lng: origin.lng || origin.longitude }];
-
+    const validWaypoints = [];
     waypoints.forEach((wp) => {
-      if (wp.latitude != null && wp.longitude != null) {
-        directPath.push({ lat: wp.latitude, lng: wp.longitude });
+      const lat = Number(wp?.lat ?? wp?.latitude);
+      const lng = Number(wp?.lng ?? wp?.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        directPath.push({ lat, lng });
+        validWaypoints.push({ lat, lng });
       }
     });
 
-    if (!apiKey) {
-      return directPath;
+    if (directPath.length < 2) return directPath;
+
+    // Strategy 1: Google Maps JS SDK DirectionsService (client-side in-page)
+    if (typeof window !== 'undefined' && window.google?.maps?.DirectionsService) {
+      try {
+        const directionsService = new window.google.maps.DirectionsService();
+        const dest = directPath[directPath.length - 1];
+        const midPoints = directPath.slice(1, -1).slice(0, 23).map((pt) => ({
+          location: { lat: pt.lat, lng: pt.lng },
+          stopover: true,
+        }));
+
+        const result = await new Promise((resolve, reject) => {
+          directionsService.route(
+            {
+              origin: rawOrigin,
+              destination: dest,
+              waypoints: midPoints,
+              travelMode: window.google.maps.TravelMode.DRIVING,
+            },
+            (response, status) => {
+              if (status === window.google.maps.DirectionsStatus.OK && response?.routes?.[0]?.overview_path) {
+                const path = response.routes[0].overview_path.map((p) => ({
+                  lat: p.lat(),
+                  lng: p.lng(),
+                }));
+                resolve(path);
+              } else {
+                reject(new Error(`DirectionsService status: ${status}`));
+              }
+            }
+          );
+        });
+
+        if (result && result.length > 0) return result;
+      } catch (sdkErr) {
+        console.warn('[googleDirectionsService] SDK route failed, falling back to backend:', sdkErr.message);
+      }
     }
 
+    // Strategy 2: Backend routing service (/api/v1/routing/road-route)
     try {
-      const originStr = `${origin.lat || origin.latitude},${origin.lng || origin.longitude}`;
-      const dest = waypoints[waypoints.length - 1] || origin;
-      const destStr = `${dest.latitude || dest.lat},${dest.longitude || dest.lng}`;
-
-      const waypointsStr = waypoints
-        .slice(0, -1)
-        .map((w) => `${w.latitude || w.lat},${w.longitude || w.lng}`)
-        .join('|');
-
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${originStr}&destination=${destStr}&waypoints=${encodeURIComponent(
-          waypointsStr
-        )}&key=${apiKey}`
-      );
+      const response = await fetch('/api/v1/routing/road-route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ waypoints: directPath }),
+      });
       const data = await response.json();
-
-      if (data.routes && data.routes.length > 0) {
-        // Return Google Directions API overview path
-        return directPath;
+      if (data.success && data.data?.legs?.length > 0) {
+        const fullPath = data.data.legs.flatMap((l) => l.path || []);
+        if (fullPath.length > 0) return fullPath;
       }
-    } catch (err) {
-      console.warn('[Google Directions API] Rest fetch error, using system coordinates path:', err);
+    } catch (apiErr) {
+      console.warn('[googleDirectionsService] Backend routing fallback error:', apiErr.message);
     }
 
     return directPath;

@@ -46,6 +46,24 @@ export const remove = async (req, res, next) => {
   }
 };
 
+export const updatePassword = async (req, res, next) => {
+  try {
+    const user = await userService.updatePassword(req.params.id, req.body.password);
+    return successResponse(res, 200, user, 'Password berhasil diperbarui');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePermissions = async (req, res, next) => {
+  try {
+    const user = await userService.updatePermissions(req.params.id, req.body.permissions);
+    return successResponse(res, 200, user, 'Izin akses berhasil diperbarui');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateLocation = async (req, res, next) => {
   try {
     const result = await userService.updateSalesLocation(req.user.id, req.body);

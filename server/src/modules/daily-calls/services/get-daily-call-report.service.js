@@ -3,6 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
 import { ATTENDANCE_TYPE, VISIT_STATUS } from '../../../utils/constants.js';
 import { buildDayRange, formatTimeOnly, formatDurationHhMm } from './daily-calls.helpers.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 /**
  * Get Daily Call Report & Comprehensive Attendance Audit (ND6 Distribution Format)
@@ -13,6 +14,14 @@ export const getDailyCallReport = async (query = {}) => {
   const dayRange = buildDayRange(dateStr);
 
   const { userId, filterType, search } = query;
+
+  // Read dynamic configuration parameters
+  const GLOBAL_RADIUS = await getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50);
+  const MIN_VISIT_DURATION = await getDynamicConfig('MINIMUM_VISIT_DURATION_MINUTES', 5);
+  const GAP_SHORT_KM = await getDynamicConfig('TRAVEL_GAP_SHORT_KM', 3);
+  const GAP_SHORT_MINS = await getDynamicConfig('TRAVEL_GAP_SHORT_MINUTES', 45);
+  const GAP_MED_KM = await getDynamicConfig('TRAVEL_GAP_MED_KM', 8);
+  const GAP_MED_MINS = await getDynamicConfig('TRAVEL_GAP_MED_MINUTES', 90);
 
   const wherePjp = {
     date: dayRange,
@@ -91,7 +100,8 @@ export const getDailyCallReport = async (query = {}) => {
         devMeters = Math.round(checkIn.deviationMeters);
       }
 
-      const distWarning = devMeters > 50 ? 'WARNING' : 'OK';
+      const maxAllowedRadius = outlet.radiusMeters || GLOBAL_RADIUS;
+      const distWarning = devMeters > maxAllowedRadius ? 'WARNING' : 'OK';
 
       let durationMins = checkOut?.durationMinutes;
       if (durationMins === undefined || durationMins === null) {
@@ -112,7 +122,7 @@ export const getDailyCallReport = async (query = {}) => {
       const skuSold = Number(checkOut?.skuSold || 0);
       const isEc = isActual && (checkOut?.isEffectiveCall || orderAmount > 0 || skuSold > 0);
 
-      const isDurationAnomaly = isActual && checkOut && durationMins > 0 && durationMins < 5;
+      const isDurationAnomaly = isActual && checkOut && durationMins > 0 && durationMins < MIN_VISIT_DURATION;
       const isDistanceAnomaly = isActual && distWarning === 'WARNING';
       const isSkipped = !isActual;
 
@@ -150,7 +160,7 @@ export const getDailyCallReport = async (query = {}) => {
         photoOut: checkOut?.photoUrl || null,
         customerLat: outletLat,
         customerLng: outletLng,
-        radiusMeters: outlet.radiusMeters || 50,
+        radiusMeters: outlet.radiusMeters || GLOBAL_RADIUS,
         distanceWarning: distWarning,
         isDurationAnomaly,
         isDistanceAnomaly,
@@ -209,7 +219,7 @@ export const getDailyCallReport = async (query = {}) => {
       photoOut: null,
       customerLat: off.latitude || 0,
       customerLng: off.longitude || 0,
-      radiusMeters: 50,
+      radiusMeters: GLOBAL_RADIUS,
       distanceWarning: 'OK',
       isDurationAnomaly: false,
       isDistanceAnomaly: false,
@@ -284,14 +294,14 @@ export const getDailyCallReport = async (query = {}) => {
           travelDistKm = Math.round((meters / 1000) * 10) / 10;
         }
 
-        // TRAVEL GAP ANOMALY DETECTION:
-        // Case 1: Short distance (<= 3 km) but took >= 45 mins (e.g. 2 km took 2 hours)
-        // Case 2: Medium distance (<= 8 km) but took >= 90 mins (1.5 hours)
-        if (travelDistKm <= 3 && travelMins >= 45) {
+        // TRAVEL GAP ANOMALY DETECTION (Dynamic Configs):
+        // Case 1: Short distance (<= GAP_SHORT_KM) but took >= GAP_SHORT_MINS
+        // Case 2: Medium distance (<= GAP_MED_KM) but took >= GAP_MED_MINS
+        if (travelDistKm <= GAP_SHORT_KM && travelMins >= GAP_SHORT_MINS) {
           isTravelAnomaly = true;
           const hours = (travelMins / 60).toFixed(1);
           travelAnomalyReason = `Jarak tempuh hanya ${travelDistKm} km dari "${prevStopName}", namun waktu jeda perjalanan mencapai ${travelMins} menit (~${hours} jam).`;
-        } else if (travelDistKm <= 8 && travelMins >= 90) {
+        } else if (travelDistKm <= GAP_MED_KM && travelMins >= GAP_MED_MINS) {
           isTravelAnomaly = true;
           const hours = (travelMins / 60).toFixed(1);
           travelAnomalyReason = `Jarak ${travelDistKm} km memakan waktu ${travelMins} menit (~${hours} jam).`;

@@ -66,7 +66,7 @@ const SidebarRoleBadge = ({ roleLabel }) => (
  */
 export const Sidebar = ({ activeTab, setActiveTab }) => {
   const { user } = useApp();
-  const navItems = getNavigationTabs(user?.role);
+  const navItems = getNavigationTabs(user);
 
   return (
     <aside className="sidebar-container">

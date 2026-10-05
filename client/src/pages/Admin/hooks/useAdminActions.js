@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { ordersApi, outletsApi } from '../../../services/api';
 import { mapServerOrder } from '../../../utils/orderMapper';
 
@@ -16,9 +17,13 @@ export const useAdminActions = ({
   addNotification,
 }) => {
   // Admin Action: Approve / Reject Order
-  const handleAdminOrderDecision = async ({ orderId, approved, rejectionReason }) => {
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
+  const handleAdminOrderDecision = useCallback(async ({ orderId, approved, rejectionReason }) => {
+    let orderTarget = null;
+    setOrders((prev) => {
+      orderTarget = prev.find((o) => o.id === orderId);
+      return prev;
+    });
+    if (!orderTarget) return;
 
     try {
       if (approved) {
@@ -30,7 +35,7 @@ export const useAdminActions = ({
 
         addNotification({
           title: 'Order Disetujui Admin',
-          message: `Order #${order.id} (${order.outletName}) telah disetujui oleh Admin Penjualan.`,
+          message: `Order #${orderTarget.id} (${orderTarget.outletName}) telah disetujui oleh Admin.`,
           roleTarget: ['SALES', 'SUPERVISOR'],
         });
       } else {
@@ -46,7 +51,7 @@ export const useAdminActions = ({
 
         addNotification({
           title: 'Order Ditolak Admin',
-          message: `Order #${order.id} ditolak oleh Admin. Alasan: ${rejectionReason}`,
+          message: `Order #${orderTarget.id} ditolak oleh Admin. Alasan: ${rejectionReason}`,
           roleTarget: ['SALES', 'SUPERVISOR'],
         });
       }
@@ -58,10 +63,10 @@ export const useAdminActions = ({
         roleTarget: ['ADMIN'],
       });
     }
-  };
+  }, [setOrders, addNotification]);
 
   // Admin Action: Approve Unlock Request
-  const handleApproveUnlockRequest = async (requestId, stopId) => {
+  const handleApproveUnlockRequest = useCallback(async (requestId, stopId) => {
     try {
       await outletsApi.handleUnlockRequest(requestId, true);
 
@@ -88,10 +93,10 @@ export const useAdminActions = ({
         roleTarget: ['ADMIN'],
       });
     }
-  };
+  }, [setIncidents, setSalesStops, addNotification]);
 
   // Admin Action: Reject Unlock Request
-  const handleRejectUnlockRequest = async (requestId) => {
+  const handleRejectUnlockRequest = useCallback(async (requestId) => {
     try {
       await outletsApi.handleUnlockRequest(requestId, false);
 
@@ -112,11 +117,15 @@ export const useAdminActions = ({
         roleTarget: ['ADMIN'],
       });
     }
-  };
+  }, [setIncidents, addNotification]);
 
-  return {
+  return useMemo(() => ({
     handleAdminOrderDecision,
     handleApproveUnlockRequest,
     handleRejectUnlockRequest,
-  };
+  }), [
+    handleAdminOrderDecision,
+    handleApproveUnlockRequest,
+    handleRejectUnlockRequest,
+  ]);
 };

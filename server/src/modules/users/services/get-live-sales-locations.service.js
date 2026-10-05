@@ -2,6 +2,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
 import { liveLocationsCache } from './users.helpers.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 /**
  * Get Live Locations of all Sales Representatives (for Admin, Ops, Supervisor)
@@ -12,16 +13,46 @@ export const getLiveSalesLocations = async () => {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // 1. Get all Sales users
+  // 1. Get all Sales users with lean projection (Google Web Vitals DB Optimization)
   const salesUsers = await prisma.user.findMany({
     where: { role: 'SALES', deletedAt: null },
-    include: {
-      cluster: true,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      clusterId: true,
+      cluster: {
+        select: {
+          id: true,
+          name: true,
+          centerLat: true,
+          centerLng: true,
+        },
+      },
       pjps: {
         where: { date: { gte: today, lt: tomorrow } },
-        include: {
+        take: 1,
+        select: {
+          id: true,
           stops: {
-            include: { outlet: true, attendances: { orderBy: { timestamp: 'desc' } } },
+            select: {
+              id: true,
+              sequence: true,
+              status: true,
+              outlet: {
+                select: {
+                  id: true,
+                  name: true,
+                  address: true,
+                  latitude: true,
+                  longitude: true,
+                },
+              },
+              attendances: {
+                select: { type: true },
+                take: 2,
+              },
+            },
             orderBy: { sequence: 'asc' },
           },
         },
@@ -30,12 +61,28 @@ export const getLiveSalesLocations = async () => {
         where: { timestamp: { gte: today, lt: tomorrow } },
         orderBy: { timestamp: 'desc' },
         take: 1,
-        include: { pjpStop: { include: { outlet: true } } },
+        select: {
+          latitude: true,
+          longitude: true,
+          timestamp: true,
+          pjpStop: {
+            select: {
+              outlet: {
+                select: { name: true },
+              },
+            },
+          },
+        },
       },
     },
   });
 
   const nowMs = Date.now();
+  
+  const PING_TIMEOUT = await getDynamicConfig('LIVE_TRACKING_PING_TIMEOUT_MINUTES', 15);
+  const ATTENDANCE_TIMEOUT = await getDynamicConfig('LIVE_TRACKING_ATTENDANCE_TIMEOUT_MINUTES', 60);
+  const DEFAULT_LAT = await getDynamicConfig('DEFAULT_OFFICE_LATITUDE', -6.884984);
+  const DEFAULT_LNG = await getDynamicConfig('DEFAULT_OFFICE_LONGITUDE', 107.489953);
 
   return salesUsers.map((sales) => {
     const livePing = liveLocationsCache.get(sales.id);
@@ -47,8 +94,8 @@ export const getLiveSalesLocations = async () => {
     const currentStop = stops.find((s) => s.status === 'IN_VISIT' || s.status === 'ARRIVED') || null;
     const nextPendingStop = stops.find((s) => s.status === 'PENDING') || null;
 
-    let lat = -6.884984;
-    let lng = 107.489953;
+    let lat = DEFAULT_LAT;
+    let lng = DEFAULT_LNG;
     let locationSource = 'DEFAULT';
     let lastUpdated = null;
     let isOnline = false;
@@ -59,14 +106,14 @@ export const getLiveSalesLocations = async () => {
       locationSource = 'LIVE_GPS_PING';
       lastUpdated = livePing.updatedAt;
       const ageMinutes = (nowMs - new Date(livePing.updatedAt).getTime()) / 60000;
-      isOnline = ageMinutes <= 15; // Online if pinged within last 15 minutes
+      isOnline = ageMinutes <= PING_TIMEOUT;
     } else if (lastAttendance && lastAttendance.latitude) {
       lat = lastAttendance.latitude;
       lng = lastAttendance.longitude;
       locationSource = 'LAST_ATTENDANCE';
       lastUpdated = lastAttendance.timestamp.toISOString();
       const ageMinutes = (nowMs - new Date(lastAttendance.timestamp).getTime()) / 60000;
-      isOnline = ageMinutes <= 60;
+      isOnline = ageMinutes <= ATTENDANCE_TIMEOUT;
     } else if (sales.cluster?.centerLat && sales.cluster?.centerLng) {
       lat = sales.cluster.centerLat;
       lng = sales.cluster.centerLng;

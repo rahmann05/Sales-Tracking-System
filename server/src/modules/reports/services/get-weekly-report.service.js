@@ -1,5 +1,6 @@
 /** getWeeklyReport - single-responsibility service (extracted from reports.service.js). */
 import { prisma } from '../../../config/prisma.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -8,6 +9,7 @@ import { prisma } from '../../../config/prisma.js';
  */
 export const getWeeklyReport = async (query = {}) => {
   const { startDate, endDate, userId, clusterId } = query;
+  const minVisitDuration = await getDynamicConfig('MINIMUM_VISIT_DURATION_MINUTES', 5);
 
   // Default to current week's Monday to Saturday if not provided
   let start = startDate ? new Date(startDate) : new Date();
@@ -137,7 +139,7 @@ export const getWeeklyReport = async (query = {}) => {
             const dur = att?.durationMinutes || 0;
             dDuration += dur;
 
-            if (dur > 0 && dur < 5) dAnomalies += 1;
+            if (dur > 0 && dur < minVisitDuration) dAnomalies += 1;
             if (att?.distanceWarning === 'WARNING') dAnomalies += 1;
           });
         });

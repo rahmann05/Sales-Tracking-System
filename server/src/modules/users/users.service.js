@@ -10,3 +10,5 @@ export { updateUser } from './services/update-user.service.js';
 export { deleteUser } from './services/delete-user.service.js';
 export { updateSalesLocation } from './services/update-sales-location.service.js';
 export { getLiveSalesLocations } from './services/get-live-sales-locations.service.js';
+export { updatePassword } from './services/update-password.service.js';
+export { updatePermissions } from './services/update-permissions.service.js';

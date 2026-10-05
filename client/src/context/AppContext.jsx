@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 
 import { useSalesActions } from '../pages/Sales/hooks/useSalesActions';
 import { useSupervisorActions } from '../pages/Supervisor/hooks/useSupervisorActions';
@@ -88,7 +88,7 @@ export const AppProvider = ({ children }) => {
     addNotification,
   });
 
-  const value = {
+  const value = useMemo(() => ({
     // Current User Session
     user,
     setUser,
@@ -148,7 +148,51 @@ export const AppProvider = ({ children }) => {
     ...salesActions,
     ...supervisorActions,
     ...adminActions,
-  };
+  }), [
+    user,
+    setUser,
+    setUserFromAuth,
+    currentLocation,
+    activeTab,
+    shiftAttendance,
+    handleShiftClockIn,
+    handleShiftClockOut,
+    domain.salesStops,
+    domain.setSalesStops,
+    domain.supervisorTeams,
+    domain.setSupervisorTeams,
+    domain.teamMembers,
+    domain.setTeamMembers,
+    domain.activeRoutes,
+    domain.setActiveRoutes,
+    domain.masterRoutes,
+    domain.setMasterRoutes,
+    domain.salesList,
+    domain.setSalesList,
+    domain.rjpTeams,
+    domain.setRjpTeams,
+    domain.offPjpAttendances,
+    domain.setOffPjpAttendances,
+    domain.orders,
+    domain.setOrders,
+    domain.incidents,
+    domain.setIncidents,
+    domain.products,
+    domain.setProducts,
+    clusters,
+    setClusters,
+    fetchClusters,
+    divisions,
+    setDivisions,
+    fetchDivisions,
+    notifications,
+    addNotification,
+    markNotificationAsRead,
+    clearNotifications,
+    salesActions,
+    supervisorActions,
+    adminActions,
+  ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

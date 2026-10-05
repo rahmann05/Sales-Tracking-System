@@ -1,6 +1,7 @@
 /** updateSalesLocation - single-responsibility service (extracted from users.service.js). */
 import { AppError } from '../../../utils/errors.js';
 import { liveLocationsCache } from './users.helpers.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 /**
  * Update real-time GPS coordinates of a user (Sales device live ping)
@@ -15,7 +16,8 @@ export const updateSalesLocation = async (userId, locationData = {}) => {
   const existing = liveLocationsCache.get(userId) || { breadcrumbs: [] };
   const now = new Date();
 
-  // Keep last 20 breadcrumb locations for trail
+  // Dynamic breadcrumbs limit
+  const maxBreadcrumbs = await getDynamicConfig('LIVE_TRACKING_MAX_BREADCRUMBS', 20);
   const newBreadcrumb = {
     lat: latitude,
     lng: longitude,
@@ -24,7 +26,7 @@ export const updateSalesLocation = async (userId, locationData = {}) => {
 
   const updatedBreadcrumbs = [
     newBreadcrumb,
-    ...(existing.breadcrumbs || []).slice(0, 19),
+    ...(existing.breadcrumbs || []).slice(0, Math.max(0, maxBreadcrumbs - 1)),
   ];
 
   const record = {

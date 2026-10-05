@@ -151,10 +151,26 @@ export const SupervisorActionCenterTab = ({
       {/* 5. Unlock Requests Section */}
       {showUnlock && unlockRequests.length > 0 && (
         <div className="space-y-3">
-          <SectionHeader
-            title="Permintaan Buka Kunci (Unlock) Presensi"
-            subtitle="Permohonan pembukaan presensi dari sales yang terkunci karena toko sebelumnya belum selesai"
-          />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <SectionHeader
+              title="Permintaan Buka Kunci (Unlock) Presensi"
+              subtitle="Permohonan pembukaan presensi dari sales yang terkunci karena toko sebelumnya belum selesai"
+            />
+            {pendingUnlock.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Setujui seluruh ${pendingUnlock.length} permohonan buka kunci presensi sekaligus?`)) {
+                    pendingUnlock.forEach((req) => onApproveUnlock(req.id, req.stopId));
+                  }
+                }}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0"
+              >
+                <LuCircleCheck className="text-sm" />
+                <span>Setujui Semua Unlock ({pendingUnlock.length})</span>
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {unlockRequests.map((req) => (
               <UnlockRequestCard

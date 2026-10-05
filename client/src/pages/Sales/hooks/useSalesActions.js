@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { absensiApi, ordersApi, outletsApi, routeChangesApi } from '../../../services/api';
 import { mapServerOrder } from '../../../utils/orderMapper';
 import { mapServerRouteChange, mapServerUnlockRequest } from '../../../utils/incidentMapper';
@@ -17,7 +18,7 @@ export const useSalesActions = ({
   addNotification,
 }) => {
   // Absen In Outlet (Sales Check-In)
-  const handleSalesAbsenIn = async (stopId, payload = {}) => {
+  const handleSalesAbsenIn = useCallback(async (stopId, payload = {}) => {
     try {
       // Call Backend API first
       await absensiApi.checkIn(stopId, {
@@ -53,10 +54,10 @@ export const useSalesActions = ({
       });
       throw err;
     }
-  };
+  }, [setSalesStops, addNotification]);
 
   // Absen Out Outlet (Sales Check-Out)
-  const handleSalesAbsenOut = async (stopId, payload = {}) => {
+  const handleSalesAbsenOut = useCallback(async (stopId, payload = {}) => {
     try {
       // Call Backend API first
       await absensiApi.checkOut(stopId, {
@@ -96,10 +97,10 @@ export const useSalesActions = ({
       });
       throw err;
     }
-  };
+  }, [setSalesStops, addNotification]);
 
   // Submit Order (Sales)
-  const handleSubmitOrder = async ({ stopId, items, paymentType }) => {
+  const handleSubmitOrder = useCallback(async ({ stopId, items, paymentType }) => {
     try {
       // Call Backend API
       const res = await ordersApi.createOrder({
@@ -117,7 +118,7 @@ export const useSalesActions = ({
 
       addNotification({
         title: 'Order Baru Masuk (Menunggu Persetujuan)',
-        message: `Sales ${user.name} membuat pesanan baru untuk ${newOrder.pjpStop?.outlet?.name || 'Toko'} sebesar Rp ${(newOrder.totalValue || 0).toLocaleString('id-ID')}.`,
+        message: `Sales ${user?.name || 'Sales'} membuat pesanan baru untuk ${newOrder.pjpStop?.outlet?.name || 'Toko'} sebesar Rp ${(newOrder.totalValue || 0).toLocaleString('id-ID')}.`,
         roleTarget: ['SUPERVISOR', 'ADMIN'],
       });
     } catch (err) {
@@ -128,16 +129,20 @@ export const useSalesActions = ({
         roleTarget: ['SALES'],
       });
     }
-  };
+  }, [user?.name, setOrders, addNotification]);
 
   // Report Closed Outlet
-  const handleReportClosedOutlet = async ({ stopId, reason, photoUrl }) => {
+  const handleReportClosedOutlet = useCallback(async ({ stopId, reason, photoUrl }) => {
     try {
-      const stop = salesStops.find((s) => s.id === stopId);
-      if (!stop) return;
+      let stopTarget = null;
+      setSalesStops((prev) => {
+        stopTarget = prev.find((s) => s.id === stopId);
+        return prev;
+      });
+      if (!stopTarget) return;
 
       const res = await routeChangesApi.reportClosed({
-        pjpId: stop.pjpId,
+        pjpId: stopTarget.pjpId,
         pjpStopId: stopId,
         reason,
         photoUrl,
@@ -151,7 +156,7 @@ export const useSalesActions = ({
 
       addNotification({
         title: 'Laporan Toko Tutup Masuk',
-        message: `Sales ${user.name} melaporkan bahwa toko tutup. Alasan: ${reason}.`,
+        message: `Sales ${user?.name || 'Sales'} melaporkan bahwa toko tutup. Alasan: ${reason}.`,
         roleTarget: ['SUPERVISOR', 'ADMIN'],
       });
     } catch (err) {
@@ -162,21 +167,25 @@ export const useSalesActions = ({
         roleTarget: ['SALES'],
       });
     }
-  };
+  }, [user?.name, setSalesStops, setIncidents, addNotification]);
 
   // Sales Action: Request Unlock Outlet
-  const handleRequestUnlockOutlet = async ({ stopId, reason }) => {
+  const handleRequestUnlockOutlet = useCallback(async ({ stopId, reason }) => {
     try {
-      // Backend endpoint expects the OUTLET id (not the PJP stop id)
-      const stop = salesStops.find((s) => s.id === stopId);
-      const outletId = stop?.outletId || stopId;
+      let outletId = stopId;
+      setSalesStops((prev) => {
+        const stop = prev.find((s) => s.id === stopId);
+        if (stop?.outletId) outletId = stop.outletId;
+        return prev;
+      });
+
       const res = await outletsApi.requestUnlock(outletId, reason);
       const newRequest = mapServerUnlockRequest(res.data);
 
       setIncidents((prev) => [newRequest, ...prev]);
       addNotification({
         title: 'Permohonan Buka Kunci Outlet',
-        message: `Sales ${user.name} mengajukan permohonan buka kunci presensi. Alasan: ${reason}.`,
+        message: `Sales ${user?.name || 'Sales'} mengajukan permohonan buka kunci presensi. Alasan: ${reason}.`,
         roleTarget: ['SUPERVISOR', 'ADMIN'],
       });
     } catch (err) {
@@ -187,10 +196,10 @@ export const useSalesActions = ({
         roleTarget: ['SALES'],
       });
     }
-  };
+  }, [user?.name, setSalesStops, setIncidents, addNotification]);
 
   // Sales Action: Absen Toko Luar RJP (Off-PJP)
-  const handleSalesAbsenOffPJP = async ({
+  const handleSalesAbsenOffPJP = useCallback(async ({
     outletName,
     customerName,
     phone,
@@ -216,7 +225,7 @@ export const useSalesActions = ({
 
       addNotification({
         title: 'Presensi Toko Luar RJP Masuk',
-        message: `Sales ${user.name} melakukan presensi di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
+        message: `Sales ${user?.name || 'Sales'} melakukan presensi di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
         roleTarget: ['SUPERVISOR'],
       });
     } catch (err) {
@@ -227,14 +236,21 @@ export const useSalesActions = ({
         roleTarget: ['SALES'],
       });
     }
-  };
+  }, [user?.name, setOffPjpAttendances, addNotification]);
 
-  return {
+  return useMemo(() => ({
     handleSalesAbsenIn,
     handleSalesAbsenOut,
     handleSubmitOrder,
     handleReportClosedOutlet,
     handleRequestUnlockOutlet,
     handleSalesAbsenOffPJP,
-  };
+  }), [
+    handleSalesAbsenIn,
+    handleSalesAbsenOut,
+    handleSubmitOrder,
+    handleReportClosedOutlet,
+    handleRequestUnlockOutlet,
+    handleSalesAbsenOffPJP,
+  ]);
 };

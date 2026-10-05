@@ -288,7 +288,7 @@ const MapPreviewCard = ({ outlet, details }) => {
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAI-dw2SlLfX135yj4sNVNt9LIgORJB4dA',
   });
 
   const hasDbCoords = outlet.latitude != null && outlet.longitude != null;

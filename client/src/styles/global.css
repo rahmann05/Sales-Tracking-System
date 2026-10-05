@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./theme.css";
 @import "./common/Layout.css";
 @import "./common/Typography.css";
 @import "./common/Card.css";
@@ -8,69 +9,6 @@
 @import "./common/Input.css";
 @import "./animations.css";
 @import "./common/MobileResponsive.css";
-
-@theme {
-  /* ── Apple Editorial Monochrome ── */
-  --color-background: #F5F5F7;
-  --color-surface: #FFFFFF;
-  --color-surface-dim: #E8E8ED;
-  --color-surface-bright: #FFFFFF;
-  --color-surface-container-lowest: #FFFFFF;
-  --color-surface-container-low: #FBFBFD;
-  --color-surface-container: #F5F5F7;
-  --color-surface-container-high: #E8E8ED;
-  --color-surface-container-highest: #D2D2D7;
-
-  --color-on-surface: #1D1D1F;
-  --color-on-surface-variant: #86868B;
-
-  --color-inverse-surface: #1D1D1F;
-  --color-inverse-on-surface: #F5F5F7;
-
-  /* Primary — Near Black */
-  --color-primary: #1D1D1F;
-  --color-on-primary: #FFFFFF;
-  --color-primary-container: #333336;
-  --color-on-primary-container: #E8E8ED;
-
-  /* Secondary — Mid Gray */
-  --color-secondary: #86868B;
-  --color-on-secondary: #FFFFFF;
-  --color-secondary-container: #E8E8ED;
-  --color-on-secondary-container: #1D1D1F;
-
-  /* Semantic — Good */
-  --color-tertiary: #34C759;
-  --color-on-tertiary: #FFFFFF;
-  --color-tertiary-container: #E4F7EA;
-  --color-on-tertiary-container: #1E7E34;
-
-  /* Semantic — Warning */
-  --color-warning: #FF9500;
-  --color-on-warning: #FFFFFF;
-  --color-warning-container: #FFF0D9;
-  --color-on-warning-container: #B36A00;
-
-  /* Semantic — Alert */
-  --color-error: #FF3B30;
-  --color-on-error: #FFFFFF;
-  --color-error-container: #FFE5E3;
-  --color-on-error-container: #B3261E;
-
-  --color-outline: #D2D2D7;
-  --color-outline-variant: #E8E8ED;
-  --color-border-glass: rgba(0, 0, 0, 0.06);
-
-  /* Typography */
-  --font-headline: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-
-  /* Border radius */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
-}
 
 :root {
   --surface: #ffffff;

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as clusterController from './clusters.controller.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
+import { memoryCacheMiddleware, invalidateCache } from '../../middlewares/cache.middleware.js';
 import { 
   createClusterSchema, 
   updateClusterSchema,
@@ -17,9 +18,9 @@ const router = Router();
 
 router.use(authenticate);
 
-// Existing CRUD
-router.get('/', clusterController.getAll);
-router.get('/:id', clusterController.getById);
+// Existing CRUD with in-memory caching
+router.get('/', memoryCacheMiddleware(60), clusterController.getAll);
+router.get('/:id', memoryCacheMiddleware(60), clusterController.getById);
 router.post('/', authorize('ADMIN', 'SUPERVISOR'), validate(createClusterSchema), clusterController.create);
 router.patch('/:id', authorize('ADMIN', 'SUPERVISOR'), validate(updateClusterSchema), clusterController.update);
 router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), clusterController.remove);

@@ -102,9 +102,11 @@ export const EditUserModal = ({ isOpen, onClose, user, onUpdate, onDelete }) => 
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="w-full p-2.5 rounded-xl bg-surface-variant/20 border border-border-glass text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
-                <option value="SALES">Sales Field Rep</option>
-                <option value="SUPERVISOR">Supervisor Operasional</option>
-                <option value="ADMIN">Admin Penjualan</option>
+                <option value="SALES">Sales Field</option>
+                <option value="SUPERVISOR">Supervisor</option>
+                <option value="KEPALA_GUDANG">Kepala Gudang</option>
+                <option value="SUPIR">Supir</option>
+                <option value="ADMIN">Admin</option>
               </select>
             </div>
 

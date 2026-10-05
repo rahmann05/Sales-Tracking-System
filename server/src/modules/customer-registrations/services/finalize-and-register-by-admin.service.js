@@ -3,6 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { ROLES } from '../../../utils/constants.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
 /**
  * 6. Finalize and Register Active Outlet (Supervisor or Admin)
@@ -78,7 +79,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
       type: outletType,
       ownerName: registration.ownerName || registration.taxName,
       phone: registration.phone,
-      radiusMeters: 50,
+      radiusMeters: await getDynamicConfig('DEFAULT_OUTLET_RADIUS_METERS', 50),
       validationStatus: 'VALID',
       validationConfidence: 95,
       validatedAt: new Date(),

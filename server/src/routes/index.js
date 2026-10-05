@@ -18,6 +18,7 @@ import orderRoutes from '../modules/orders/orders.routes.js';
 import productRoutes from '../modules/products/products.routes.js';
 import divisionRoutes from '../modules/divisions/divisions.routes.js';
 import deliveryRoutes from '../modules/delivery/delivery.routes.js';
+import rolesRoutes from '../modules/roles/roles.routes.js';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ const v1Router = Router();
 v1Router.use('/health', healthRoutes);
 v1Router.use('/auth', authRoutes);
 v1Router.use('/users', userRoutes);
+v1Router.use('/roles', rolesRoutes);
 v1Router.use('/clusters', clusterRoutes);
 v1Router.use('/outlets', outletRoutes);
 v1Router.use('/pjp', pjpRoutes);

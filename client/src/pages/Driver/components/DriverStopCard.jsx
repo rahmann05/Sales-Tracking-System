@@ -23,14 +23,15 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
   const outletName = stop.outlet?.name || 'Toko';
 
   return (
-    <div className={`bg-surface border rounded-2xl shadow-sm overflow-hidden transition-all ${
-      isCompleted ? 'border-border-glass opacity-75' : 'border-primary/20'
-    }`}>
+    <div className={`bg-surface border border-b-[3.5px] rounded-2xl shadow-xs overflow-hidden transition-all ${isCompleted
+        ? 'border-border-glass border-b-neutral-300 dark:border-b-neutral-700 opacity-80'
+        : 'border-primary/30 border-b-primary/60 hover:shadow-sm'
+      }`}>
       {/* Header */}
       <div className="flex items-center gap-3 p-4">
         <div className="flex flex-col items-center gap-1">
           <span
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black shrink-0 border border-border-glass shadow-2xs"
             style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }}
           >
             {index + 1}
@@ -43,36 +44,36 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-on-surface truncate">{outletName}</span>
             <span
-              className="px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0"
+              className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 shadow-2xs"
               style={{ color: statusCfg.color, backgroundColor: statusCfg.bg }}
             >
-              <StatusIcon className="inline mr-0.5 text-xs" /> {statusCfg.label}
+              <StatusIcon className="inline mr-1 text-xs" /> {statusCfg.label}
             </span>
           </div>
-          <div className="text-xs text-on-surface-variant mt-0.5 truncate">
-            <LuMapPin className="inline mr-1" />
-            {stop.outlet?.address || '-'}
+          <div className="text-xs text-on-surface-variant mt-1 flex items-center gap-1 truncate">
+            <LuMapPin className="text-primary text-xs shrink-0" />
+            <span className="truncate">{stop.outlet?.address || '-'}</span>
           </div>
         </div>
       </div>
 
       {/* Packing List Info */}
       <div className="px-4 pb-3 space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-          <LuPackage className="text-primary shrink-0" />
-          <span className="font-semibold text-on-surface">{stop.packingList?.code}</span>
+        <div className="flex items-center gap-2 text-xs bg-surface-variant/20 p-2.5 rounded-xl border border-border-glass">
+          <LuPackage className="text-primary text-sm shrink-0" />
+          <span className="font-bold text-on-surface">{stop.packingList?.code}</span>
           <span className="text-on-surface-variant">— {stop.packingList?.totalCartons || 0} Karton</span>
         </div>
 
         {/* Invoice List */}
         {invoices.length > 0 && (
-          <div className="pl-6 space-y-1">
+          <div className="pl-4 space-y-1">
             {invoices.map((inv, idx) => (
               <div key={inv.id || idx} className="flex items-center gap-2 text-xs text-on-surface-variant">
                 <LuFileText className="shrink-0" />
-                <span className="font-medium text-on-surface">{inv.invoiceNumber}</span>
+                <span className="font-semibold text-on-surface">{inv.invoiceNumber}</span>
                 <span>{inv.totalCartons} krt</span>
-                {inv.isDelivered && <LuCircleCheck className="text-green-500 shrink-0" />}
+                {inv.isDelivered && <LuCircleCheck className="text-emerald-500 shrink-0" />}
               </div>
             ))}
           </div>
@@ -80,50 +81,50 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
 
         {/* Reject info */}
         {stop.rejectReason && (
-          <div className="text-xs bg-red-50 text-red-700 rounded-lg p-2 mt-1">
+          <div className="text-xs bg-rose-50 text-rose-800 rounded-xl p-3 mt-1 border border-rose-200/60 font-medium">
             Alasan: {stop.rejectReason}
             {stop.rejectedCartons > 0 && ` (${stop.rejectedCartons} karton ditolak)`}
           </div>
         )}
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons with Mobile-Friendly >= 48px Touch Targets */}
       {!isCompleted && (
-        <div className="px-4 pb-4 space-y-2">
-          {/* Navigation button */}
+        <div className="px-4 pb-4 space-y-2.5">
+          {/* Navigation button (min 48px) */}
           {stop.outlet?.latitude && stop.outlet?.longitude && (
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${stop.outlet.latitude},${stop.outlet.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 transition-colors"
+              className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 text-sm font-bold transition-all shadow-xs"
             >
-              <LuNavigation /> Navigasi ke Toko
+              <LuNavigation className="text-base" /> Navigasi ke Toko
             </a>
           )}
 
           {!hasArrived ? (
-            /* Absen In button */
+            /* Absen In button (min 48px) */
             <button
               onClick={onAbsenIn}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity"
+              className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-primary text-on-primary text-sm font-black shadow-md hover:bg-primary/90 transition-all cursor-pointer"
             >
-              <LuCamera /> Absen Sampai di Toko
+              <LuCamera className="text-base" /> Absen Sampai di Toko
             </button>
           ) : (
-            /* Mark Delivered / Rejected buttons */
-            <div className="grid grid-cols-2 gap-2">
+            /* Mark Delivered / Rejected buttons (min 48px each) */
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 onClick={onMarkDelivered}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-600 text-white text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity"
+                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-black shadow-md hover:bg-emerald-700 transition-all cursor-pointer"
               >
-                <LuCircleCheck /> Terkirim
+                <LuCircleCheck className="text-base" /> Terkirim
               </button>
               <button
                 onClick={onMarkRejected}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-600 text-white text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity"
+                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-600 text-white text-sm font-black shadow-md hover:bg-rose-700 transition-all cursor-pointer"
               >
-                <LuCircleX /> Ditolak
+                <LuCircleX className="text-base" /> Ditolak
               </button>
             </div>
           )}

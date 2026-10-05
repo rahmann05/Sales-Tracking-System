@@ -8,7 +8,14 @@ import { AbsenNotesInput } from './AbsenNotesInput';
  * Single Responsibility: Sales Rep Absen In with Live Camera, Real-Time GPS Tracking, and Keterangan Masuk.
  */
 export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const cacheKey = stop?.id ? `sales_cached_photo_in_${stop.id}` : null;
+  const [capturedPhoto, setCapturedPhoto] = useState(() => {
+    try {
+      return (cacheKey && sessionStorage.getItem(cacheKey)) || null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [gpsData, setGpsData] = useState(null);
   const [notes, setNotes] = useState('Kunjungan Rutin & Cek Stok');
 
@@ -17,16 +24,31 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
   const handleCapture = (photoUrl, location) => {
     setCapturedPhoto(photoUrl);
     setGpsData(location);
+    if (cacheKey && photoUrl) {
+      try {
+        sessionStorage.setItem(cacheKey, photoUrl);
+      } catch (e) {}
+    }
   };
 
   const handleRetake = () => {
     setCapturedPhoto(null);
+    if (cacheKey) {
+      try {
+        sessionStorage.removeItem(cacheKey);
+      } catch (e) {}
+    }
   };
 
   const handleConfirm = () => {
     if (!capturedPhoto) {
       alert('Harap ambil foto selfie presensi terlebih dahulu menggunakan kamera.');
       return;
+    }
+    if (cacheKey) {
+      try {
+        sessionStorage.removeItem(cacheKey);
+      } catch (e) {}
     }
     onConfirm(stop.id, {
       photoUrl: capturedPhoto,

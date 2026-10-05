@@ -16,7 +16,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
   const { user } = useApp();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
-  const navItems = getNavigationTabs(user?.role);
+  const navItems = getNavigationTabs(user);
 
   // If items are 5 or fewer, show directly without "Lainnya" drawer
   const hasMore = navItems.length > 5;

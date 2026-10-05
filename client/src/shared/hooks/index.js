@@ -7,6 +7,7 @@
 
 export { useApi } from './useApi';
 export { useAuth } from './useAuth';
+export { useDebounce, useDebouncedCallback } from './useDebounce';
 export { useDeviceCamera } from './useDeviceCamera';
 export { useGeofence } from './useGeofence';
 export { useLiveClock } from './useLiveClock';

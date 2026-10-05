@@ -57,17 +57,45 @@ export const useBackendSync = ({
         // Hanya sinkron jika ada sesi login valid (token dari auth backend)
         if (!getAuthToken() || !user?.email) return;
 
-        // 1. Load dynamic clusters defined by Supervisor (Single Source of Truth)
-        const dynamicClusters = await fetchClusters();
+        const isAdmin = user?.role === 'ADMIN';
+        const isSupervisor = user?.role === 'SUPERVISOR';
+        const isSales = user?.role === 'SALES';
+        const isManager = isSupervisor || isAdmin;
 
-        // 1c. Load dynamic divisions from DB (managed by Admin)
-        await fetchDivisions();
+        // Fetch domain slices in parallel, tailoring requests by role to eliminate startup delay:
+        // Admin does not need heavy all-PJP stops, off-PJP attendee lists, or full product catalogs on initial login.
+        const [
+          dynamicClusters,
+          ,
+          usersRes,
+          todayPjpRes,
+          pjpsRes,
+          offPjpRes,
+          ordersRes,
+          routeChangesRes,
+          unlockRes,
+          productsRes,
+        ] = await Promise.all([
+          fetchClusters(),
+          fetchDivisions(),
+          isManager ? usersApi.getAll().catch(() => null) : Promise.resolve(null),
+          isSales ? pjpApi.getTodayPjp().catch(() => null) : Promise.resolve(null),
+          (isSupervisor || isSales) ? pjpApi.getAllPjps().catch(() => null) : Promise.resolve(null),
+          isSupervisor ? absensiApi.getOffPjpList().catch(() => null) : Promise.resolve(null),
+          (isManager || isSales) ? ordersApi.getAllOrders().catch(() => null) : Promise.resolve(null),
+          (isManager || isSales) ? routeChangesApi.getAll().catch(() => null) : Promise.resolve(null),
+          (isManager || isSales) ? outletsApi.getUnlockRequests().catch(() => null) : Promise.resolve(null),
+          isSales ? productsApi.getAll().catch(() => null) : Promise.resolve(null),
+        ]);
 
-        // 1b. Load live users from PostgreSQL to populate salesList, supervisorTeams, and rjpTeams
-        if (user?.role === 'SUPERVISOR' || user?.role === 'ADMIN') {
-          const usersRes = await usersApi.getAll().catch(() => null);
+        if (!isMounted) return;
+
+        const clustersList = Array.isArray(dynamicClusters) ? dynamicClusters : [];
+
+        // 1. Process Live Users (Supervisor / Admin)
+        if (isManager && usersRes) {
           const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
-          if (userList.length > 0 && isMounted) {
+          if (userList.length > 0) {
             const salesUsers = userList.filter((u) => u.role === 'SALES');
             const spvUsers = userList.filter((u) => u.role === 'SUPERVISOR');
             const primarySpv = spvUsers[0]?.name || 'Ahmad Subagja';
@@ -92,12 +120,12 @@ export const useBackendSync = ({
               spvEmail: spv.email,
               teamName: `Tim SPV ${spv.name}`,
               teamCount: mappedSales.length,
-              clusters: dynamicClusters.map((c) => c.name),
+              clusters: clustersList.map((c) => c.name),
               members: mappedSales.map((s) => s.name),
             }));
             setSupervisorTeams(mappedSpvTeams);
 
-            const mappedRjpTeams = dynamicClusters.map((c) => ({
+            const mappedRjpTeams = clustersList.map((c) => ({
               id: c.id,
               name: `RJP ${c.name}`,
               cluster: c.name,
@@ -111,69 +139,65 @@ export const useBackendSync = ({
           }
         }
 
-        // 2. If user is Sales, load today's PJP directly from PostgreSQL
-        if (user?.role === 'SALES') {
-          const res = await pjpApi.getTodayPjp().catch(() => null);
-          if (res?.data?.stops && res.data.stops.length > 0 && isMounted) {
-            const pjpData = res.data;
-            const cluster = pjpData.user?.cluster;
+        // 2. Process Sales Today PJP
+        if (isSales && todayPjpRes?.data?.stops && todayPjpRes.data.stops.length > 0) {
+          const pjpData = todayPjpRes.data;
+          const cluster = pjpData.user?.cluster;
 
-            const mappedStops = pjpData.stops.map((s, idx) => {
-              const stopCluster = s.outlet?.cluster || cluster;
-              const spv = stopCluster?.users?.find(u => u.role === 'SUPERVISOR');
-              const area = stopCluster?.region || stopCluster?.name || (s.outlet?.address ? s.outlet.address.split(',').pop().trim() : '-');
+          const mappedStops = pjpData.stops.map((s, idx) => {
+            const stopCluster = s.outlet?.cluster || cluster;
+            const spv = stopCluster?.users?.find((u) => u.role === 'SUPERVISOR');
+            const area = stopCluster?.region || stopCluster?.name || (s.outlet?.address ? s.outlet.address.split(',').pop().trim() : '-');
 
-              const inAtt = s.attendances?.find((a) => a.type === 'IN');
-              const outAtt = s.attendances?.find((a) => a.type === 'OUT');
-              const stopStatus = resolveStopStatus(s, inAtt, outAtt);
+            const inAtt = s.attendances?.find((a) => a.type === 'IN');
+            const outAtt = s.attendances?.find((a) => a.type === 'OUT');
+            const stopStatus = resolveStopStatus(s, inAtt, outAtt);
 
-              return {
-                id: s.id,
-                outletId: s.outletId || s.outlet?.id || null,
-                pjpId: pjpData.id,
-                sequence: s.sequence || idx + 1,
-                customerName: s.outlet?.name || '',
-                outletName: s.outlet?.name || '',
-                owner: s.outlet?.ownerName || s.outlet?.owner || '',
-                phone: s.outlet?.phone || '',
-                address: s.outlet?.address || '',
-                type: s.outlet?.type || 'MODERN_TRADE',
-                latitude: Number(s.outlet?.latitude) || null,
-                longitude: Number(s.outlet?.longitude) || null,
-                radiusMeters: s.outlet?.radiusMeters || 50,
-                outstanding: s.outlet?.outstanding || 0,
-                callplanName: pjpData.name || '',
-                callFrequency: s.callFrequency || (pjpData.weekType === 'ALL' ? 'F4' : 'F2'),
-                clusterName: stopCluster?.name || pjpData.clusterName || '',
-                regionName: stopCluster?.region || pjpData.regionName || area,
-                subDistrict: area,
-                supervisorName: spv?.name || '',
-                dayOfWeek: pjpData.dayOfWeek || '',
-                assignedSalesName: user?.name || '',
-                customerId: s.outlet?.outletCode || '',
-                outletCode: s.outlet?.outletCode || '',
-                status: stopStatus,
-                inTimestamp: inAtt?.timestamp ? new Date(inAtt.timestamp).toISOString() : null,
-                outTimestamp: outAtt?.timestamp ? new Date(outAtt.timestamp).toISOString() : null,
-                checkInTime: formatTimeWib(inAtt?.timestamp),
-                checkOutTime: formatTimeWib(outAtt?.timestamp),
-                checkInPhoto: inAtt?.photoUrl || null,
-                checkOutPhoto: outAtt?.photoUrl || null,
-                checkInNotes: inAtt?.notes || null,
-                checkOutNotes: outAtt?.notes || null,
-                durationMinutes: outAtt?.durationMinutes || null,
-                deviationMeters: inAtt?.deviationMeters ?? null,
-              };
-            });
-            setSalesStops(mappedStops);
-          }
+            return {
+              id: s.id,
+              outletId: s.outletId || s.outlet?.id || null,
+              pjpId: pjpData.id,
+              sequence: s.sequence || idx + 1,
+              customerName: s.outlet?.name || '',
+              outletName: s.outlet?.name || '',
+              owner: s.outlet?.ownerName || s.outlet?.owner || '',
+              phone: s.outlet?.phone || '',
+              address: s.outlet?.address || '',
+              type: s.outlet?.type || 'MODERN_TRADE',
+              latitude: Number(s.outlet?.latitude) || null,
+              longitude: Number(s.outlet?.longitude) || null,
+              radiusMeters: s.outlet?.radiusMeters || 50,
+              outstanding: s.outlet?.outstanding || 0,
+              callplanName: pjpData.name || '',
+              callFrequency: s.callFrequency || (pjpData.weekType === 'ALL' ? 'F4' : 'F2'),
+              clusterName: stopCluster?.name || pjpData.clusterName || '',
+              regionName: stopCluster?.region || pjpData.regionName || area,
+              subDistrict: area,
+              supervisorName: spv?.name || '',
+              dayOfWeek: pjpData.dayOfWeek || '',
+              assignedSalesName: user?.name || '',
+              customerId: s.outlet?.outletCode || '',
+              outletCode: s.outlet?.outletCode || '',
+              status: stopStatus,
+              inTimestamp: inAtt?.timestamp ? new Date(inAtt.timestamp).toISOString() : null,
+              outTimestamp: outAtt?.timestamp ? new Date(outAtt.timestamp).toISOString() : null,
+              checkInTime: formatTimeWib(inAtt?.timestamp),
+              checkOutTime: formatTimeWib(outAtt?.timestamp),
+              checkInPhoto: inAtt?.photoUrl || null,
+              checkOutPhoto: outAtt?.photoUrl || null,
+              checkInNotes: inAtt?.notes || null,
+              checkOutNotes: outAtt?.notes || null,
+              durationMinutes: outAtt?.durationMinutes || null,
+              deviationMeters: inAtt?.deviationMeters ?? null,
+            };
+          });
+          setSalesStops(mappedStops);
         }
 
-        // 2b. Bangun activeRoutes dari PJP hari ini (PostgreSQL)
-        if (user && (user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'SALES')) {
-          const res = await pjpApi.getAllPjps().catch(() => null);
-          const pjps = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
-          if (pjps.length > 0 && isMounted) {
+        // 3. Process Active Routes (Supervisor / Admin / Sales)
+        if (pjpsRes) {
+          const pjps = Array.isArray(pjpsRes?.data) ? pjpsRes.data : (Array.isArray(pjpsRes?.data?.data) ? pjpsRes.data.data : (Array.isArray(pjpsRes) ? pjpsRes : []));
+          if (pjps.length > 0) {
             const todays = pjps.filter((p) => isDateToday(p.date));
             const listToUse = todays.length > 0 ? todays : pjps.slice(0, 20);
 
@@ -235,68 +259,52 @@ export const useBackendSync = ({
           }
         }
 
-        // 3. Load live Off-PJP attendances from DB
-        if (user?.role === 'SUPERVISOR' || user?.role === 'ADMIN' || user?.role === 'SALES') {
-          const offPjpRes = await absensiApi.getOffPjpList().catch(() => null);
-          if (offPjpRes?.data?.length > 0 && isMounted) {
-            const mappedOffPjp = offPjpRes.data.map((att) => ({
-              id: att.id,
-              salesId: att.userId,
-              salesName: att.user?.name || '',
-              outletName: att.outletName || '',
-              customerName: att.customerName || att.outletName || '',
-              phone: att.phone || '',
-              address: att.address,
-              reason: att.reason,
-              photoUrl: att.photoUrl,
-              gpsLocation: { lat: att.latitude, lng: att.longitude },
-              time: new Date(att.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-              date: new Date(att.createdAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }),
-              validationStatus: att.status === 'APPROVED' ? 'TERVALIDASI' : att.status === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU',
-            }));
-            setOffPjpAttendances(mappedOffPjp);
+        // 4. Process Off-PJP Attendances
+        if (offPjpRes?.data?.length > 0) {
+          const mappedOffPjp = offPjpRes.data.map((att) => ({
+            id: att.id,
+            salesId: att.userId,
+            salesName: att.user?.name || '',
+            outletName: att.outletName || '',
+            customerName: att.customerName || att.outletName || '',
+            phone: att.phone || '',
+            address: att.address,
+            reason: att.reason,
+            photoUrl: att.photoUrl,
+            gpsLocation: { lat: att.latitude, lng: att.longitude },
+            time: new Date(att.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+            date: new Date(att.createdAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }),
+            validationStatus: att.status === 'APPROVED' ? 'TERVALIDASI' : att.status === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU',
+          }));
+          setOffPjpAttendances(mappedOffPjp);
+        }
+
+        // 5. Process Orders
+        if (ordersRes?.data) {
+          const rawOrders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.items || [];
+          if (rawOrders.length > 0) {
+            setOrders(rawOrders.map(mapServerOrder));
           }
         }
 
-        // 4. Load live orders from DB
-        if (user?.role === 'SUPERVISOR' || user?.role === 'ADMIN' || user?.role === 'SALES') {
-          const ordersRes = await ordersApi.getAllOrders().catch(() => null);
-          if (ordersRes?.data && isMounted) {
-            const rawOrders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.items || [];
-            if (rawOrders.length > 0) {
-              setOrders(rawOrders.map(mapServerOrder));
-            }
-          }
+        // 6. Process Incidents
+        const rawRouteChanges = Array.isArray(routeChangesRes?.data)
+          ? routeChangesRes.data
+          : routeChangesRes?.data?.data || [];
+        const rawUnlocks = Array.isArray(unlockRes?.data)
+          ? unlockRes.data
+          : unlockRes?.data?.data || [];
+
+        const mappedIncidents = [
+          ...rawRouteChanges.map(mapServerRouteChange),
+          ...rawUnlocks.map(mapServerUnlockRequest),
+        ];
+        if (mappedIncidents.length > 0) {
+          setIncidents(mappedIncidents);
         }
 
-        // 4b. Load live incidents (closed-shop reports & unlock requests) from DB
-        if (user?.role === 'SUPERVISOR' || user?.role === 'ADMIN' || user?.role === 'SALES') {
-          const [routeChangesRes, unlockRes] = await Promise.all([
-            routeChangesApi.getAll().catch(() => null),
-            outletsApi.getUnlockRequests().catch(() => null),
-          ]);
-
-          if (isMounted) {
-            const rawRouteChanges = Array.isArray(routeChangesRes?.data)
-              ? routeChangesRes.data
-              : routeChangesRes?.data?.data || [];
-            const rawUnlocks = Array.isArray(unlockRes?.data)
-              ? unlockRes.data
-              : unlockRes?.data?.data || [];
-
-            const mappedIncidents = [
-              ...rawRouteChanges.map(mapServerRouteChange),
-              ...rawUnlocks.map(mapServerUnlockRequest),
-            ];
-            if (mappedIncidents.length > 0) {
-              setIncidents(mappedIncidents);
-            }
-          }
-        }
-
-        // 5. Load products from DB
-        const productsRes = await productsApi.getAll().catch(() => null);
-        if (productsRes?.data && isMounted) {
+        // 7. Process Products
+        if (productsRes?.data) {
           const rawProducts = Array.isArray(productsRes.data) ? productsRes.data : productsRes.data.items || [];
           if (rawProducts.length > 0) {
             setProducts(rawProducts);

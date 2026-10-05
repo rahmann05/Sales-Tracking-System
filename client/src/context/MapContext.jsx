@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 
 const DEFAULT_CENTER = { lat: -6.88498411526505, lng: 107.48995363176957 };
 
@@ -92,11 +92,56 @@ export const MapProvider = ({ children }) => {
         return () => window.removeEventListener('gps_location_updated', handleGpsUpdate);
     }, [isMapReady]);
 
+    // Viewport-based marker culling for zero-lag rendering when marker count is large
+    const cullMarkersToViewport = useCallback(() => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.google || markersRef.current.size <= 40) return;
+        const bounds = map.getBounds();
+        if (!bounds) return;
+
+        // Buffer bounds by ~15% for smooth panning without visual pop-in
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const latSpan = Math.abs(ne.lat() - sw.lat()) * 0.15;
+        const lngSpan = Math.abs(ne.lng() - sw.lng()) * 0.15;
+
+        const expandedBounds = new window.google.maps.LatLngBounds(
+            new window.google.maps.LatLng(sw.lat() - latSpan, sw.lng() - lngSpan),
+            new window.google.maps.LatLng(ne.lat() + latSpan, ne.lng() + lngSpan)
+        );
+
+        markersRef.current.forEach((marker) => {
+            const pos = marker.getPosition();
+            if (!pos) return;
+            // Always keep highlighted or active markers visible
+            if (marker._isHighlighted) {
+                if (marker.getMap() !== map) marker.setMap(map);
+                return;
+            }
+            const inView = expandedBounds.contains(pos);
+            if (inView && marker.getMap() !== map) {
+                marker.setMap(map);
+            } else if (!inView && marker.getMap() !== null) {
+                marker.setMap(null);
+            }
+        });
+    }, []);
+
     /** Called by PersistentMapShell when the underlying google map is created */
     const setMapInstance = useCallback((map) => {
         mapInstanceRef.current = map;
         setIsMapReady(!!map);
-    }, []);
+
+        if (map && window.google) {
+            let timeout = null;
+            map.addListener('idle', () => {
+                if (timeout) clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    cullMarkersToViewport();
+                }, 100);
+            });
+        }
+    }, [cullMarkersToViewport]);
 
     const setFallback = useCallback((val) => setUseFallback(!!val), []);
 
@@ -120,8 +165,10 @@ export const MapProvider = ({ children }) => {
         markersData.forEach((m) => {
             const key = String(m.id);
             const position = { lat: Number(m.lat), lng: Number(m.lng) };
+            const isHigh = Boolean(m._highlighted || m.highlighted || (m.zIndex && m.zIndex > 10));
             const existing = markersRef.current.get(key);
             if (existing) {
+                existing._isHighlighted = isHigh;
                 existing.setPosition(position);
                 if (m.icon !== undefined) existing.setIcon(m.icon);
                 if (m.title !== undefined) existing.setTitle(m.title);
@@ -141,13 +188,17 @@ export const MapProvider = ({ children }) => {
                     label: m.label,
                     zIndex: m.zIndex,
                 });
+                marker._isHighlighted = isHigh;
                 if (typeof m.onClick === 'function') {
                     marker.addListener('click', () => m.onClick(m));
                 }
                 markersRef.current.set(key, marker);
             }
         });
-    }, []);
+
+        // Cull markers outside viewport if count is large
+        cullMarkersToViewport();
+    }, [cullMarkersToViewport]);
 
     const addMarker = useCallback((markerData) => {
         if (!markerData) return;
@@ -312,29 +363,53 @@ export const MapProvider = ({ children }) => {
         }
     }, []);
 
-    const value = {
-        mapInstanceRef,
-        isMapReady,
-        useFallback,
-        setFallback,
-        setMapInstance,
-        mapState,
-        setMapState,
-        mapMode,
-        setMapMode,
-        setMarkers,
-        addMarker,
-        removeMarker,
-        clearMarkers,
-        setPolylines,
-        clearPolylines,
-        setPolygons,
-        clearPolygons,
-        panTo,
-        fitBounds,
-        addClickListener,
-        removeClickListener,
-    };
+    const value = useMemo(
+        () => ({
+            mapInstanceRef,
+            isMapReady,
+            useFallback,
+            setFallback,
+            setMapInstance,
+            mapState,
+            setMapState,
+            mapMode,
+            setMapMode,
+            setMarkers,
+            addMarker,
+            removeMarker,
+            clearMarkers,
+            setPolylines,
+            clearPolylines,
+            setPolygons,
+            clearPolygons,
+            panTo,
+            fitBounds,
+            addClickListener,
+            removeClickListener,
+        }),
+        [
+            isMapReady,
+            useFallback,
+            setFallback,
+            setMapInstance,
+            mapState,
+            setMapState,
+            mapMode,
+            setMapMode,
+            setMarkers,
+            addMarker,
+            removeMarker,
+            clearMarkers,
+            setPolylines,
+            clearPolylines,
+            setPolygons,
+            clearPolygons,
+            panTo,
+            fitBounds,
+            addClickListener,
+            removeClickListener,
+        ]
+    );
 
     return <MapContext.Provider value={value}>{children}</MapContext.Provider>;
 };
