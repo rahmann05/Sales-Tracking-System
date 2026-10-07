@@ -13,7 +13,24 @@ async function perform(db,user, data) {
   await requireActiveShift(user.id,db);
   if (data.action === 'OFF_PJP') {
     if (!data.outletName?.trim() || !data.notes?.trim()) throw new AppError('Nama toko dan alasan wajib diisi', 400);
-    return db.staffActivity.create({ data: { userId: user.id, dateKey, activityKey: `OFF:${randomUUID()}`, kind: 'OFF_PJP', outletName: data.outletName, notes: data.notes, checkOutAt: new Date() } });
+    if (!Number.isFinite(data.latitude) || !Number.isFinite(data.longitude) || !data.photoUrl) {
+      throw new AppError('Foto bukti kunjungan langsung dan koordinat GPS wajib disertakan', 400);
+    }
+    return db.staffActivity.create({
+      data: {
+        userId: user.id,
+        dateKey,
+        activityKey: `OFF:${randomUUID()}`,
+        kind: 'OFF_PJP',
+        visitMode: data.visitMode || 'PRIORITY_AUDIT',
+        outletName: data.outletName.trim(),
+        notes: data.notes.trim(),
+        latitude: data.latitude,
+        longitude: data.longitude,
+        photoUrl: data.photoUrl,
+        checkOutAt: new Date(),
+      },
+    });
   }
   if (!data.stopId) throw new AppError('Pilih toko PJP', 400);
   const stop = await db.pjpStop.findUnique({ where: { id: data.stopId }, include: { pjp: true, outlet: { include: { cluster: true } } } });

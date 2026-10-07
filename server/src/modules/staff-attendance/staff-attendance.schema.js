@@ -8,6 +8,6 @@ export const staffActionSchema = z.object({ body: z.object({
   outletName: z.string().min(1).max(250).optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
-  photoUrl: z.string().url().optional(),
+  photoUrl: z.string().optional(),
   checklist: z.record(z.boolean()).optional(),
 }).strict() });

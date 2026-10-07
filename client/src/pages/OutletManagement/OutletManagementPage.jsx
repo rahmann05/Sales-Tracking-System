@@ -1,12 +1,13 @@
 import { DataTable } from '../../shared/components/common/DataTable';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { LuStore, LuPlus, LuSearch, LuFilter, LuTrash2, LuX, LuIdCard, LuFileSpreadsheet } from "react-icons/lu";
+import { LuStore, LuPlus, LuSearch, LuFilter, LuTrash2, LuX, LuIdCard, LuFileSpreadsheet, LuMapPin, LuExternalLink } from "react-icons/lu";
 import { FiEdit } from "react-icons/fi";
 import { Card } from '../../shared/components/common/Card';
 import { outletsApi, clustersApi } from '../../services/api';
 import { notifySuccess } from '../../services/notificationService';
 import { exportImportNikExcel } from '../../utils/customerExport';
+import { googlePlacesService } from '../../services/googlePlacesService';
 import { NikManagementModal } from '../OutletRegistrationReport/components/NikManagementModal';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 
@@ -285,7 +286,15 @@ export const OutletManagementPage = () => {
                 {filteredOutlets.slice(0, 50).map((outlet) => (
                   <tr key={outlet.id} className="hover:bg-surface-variant/10 transition-colors">
                     <td data-label="Nama Toko" className="">
-                      <div className="font-bold text-on-surface">{outlet.name}</div>
+                      <button
+                        type="button"
+                        onClick={() => googlePlacesService.openInGoogleMaps(outlet, outlets)}
+                        className="font-bold text-on-surface hover:text-primary hover:underline flex items-center gap-1 cursor-pointer text-left bg-transparent border-none p-0"
+                        title="Buka titik koordinat di Google Maps"
+                      >
+                        <span>{outlet.name}</span>
+                        <LuExternalLink className="text-xs text-primary/70 shrink-0" />
+                      </button>
                       <div className="text-[10px] text-on-surface-variant font-mono">{outlet.outletCode || outlet.id?.substring(0, 8)}</div>
                     </td>
                     <td data-label="Alamat" className="text-on-surface-variant md:max-w-[220px] md:min-w-0 whitespace-normal break-words" title={outlet.address}>
@@ -297,7 +306,15 @@ export const OutletManagementPage = () => {
                       </span>
                     </td>
                     <td data-label="GPS" className="font-mono text-[11px] text-on-surface-variant">
-                      {outlet.latitude?.toFixed(4)}, {outlet.longitude?.toFixed(4)}
+                      <button
+                        type="button"
+                        onClick={() => googlePlacesService.openInGoogleMaps(outlet, outlets)}
+                        className="font-mono text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+                        title="Buka titik koordinat di Google Maps"
+                      >
+                        <LuMapPin className="text-xs shrink-0" />
+                        <span>{outlet.latitude != null ? Number(outlet.latitude).toFixed(4) : '-'}, {outlet.longitude != null ? Number(outlet.longitude).toFixed(4) : '-'}</span>
+                      </button>
                     </td>
                     <td className="text-center mobile-full-width">
                       <div className="flex items-center justify-center gap-2 w-full">

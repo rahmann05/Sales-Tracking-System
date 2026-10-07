@@ -2,7 +2,7 @@ import React from 'react';
 import { RouteCard } from './RouteCard';
 import { SalesOutletItemCard } from './SalesOutletItemCard';
 import { Card } from '../../../shared/components/common/Card';
-import { LuUser, LuChevronDown } from 'react-icons/lu';
+import { LuUser, LuChevronDown, LuExternalLink } from 'react-icons/lu';
 
 /**
  * ActiveRoutesList Component (Rute Hari Ini)
@@ -20,6 +20,7 @@ export const ActiveRoutesList = ({
   selectedSalesName = 'ALL',
   onSelectSalesName = () => {},
   salesOptions = [],
+  outlets = [],
 }) => {
   const isSalesRole = userRole === 'SALES';
 
@@ -126,27 +127,34 @@ export const ActiveRoutesList = ({
                               e.stopPropagation();
                               onSelectOutlet(stop);
                             }}
-                            className={`px-2 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                            title="Buka titik koordinat di Google Maps"
+                            className={`px-2 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors group ${
                               isStopSelected
                                 ? 'bg-primary/10 text-primary font-bold border border-primary/30'
                                 : 'hover:bg-surface-container text-on-surface'
                             }`}
                           >
-                            <div className="flex items-center gap-1.5 min-w-0 whitespace-normal break-words">
-                              <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1 whitespace-normal break-words">
+                              <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                                 {sIdx + 1}
                               </span>
-                              <span className="min-w-0 whitespace-normal break-words">{stop.outletName || stop.customerName || `Toko #${sIdx + 1}`}</span>
+                              <span className="min-w-0 whitespace-normal break-words leading-tight">{stop.outletName || stop.customerName || `Toko #${sIdx + 1}`}</span>
                             </div>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              stop.status === 'VISITED'
-                                ? 'bg-green-100 text-green-700'
-                                : stop.status === 'ARRIVED'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-surface-container text-on-surface-variant'
-                            }`}>
-                              {stop.status || 'PENDING'}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                stop.status === 'VISITED'
+                                  ? 'bg-green-100 text-green-700'
+                                  : stop.status === 'ARRIVED'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-surface-container text-on-surface-variant'
+                              }`}>
+                                {stop.status || 'PENDING'}
+                              </span>
+                              <LuExternalLink
+                                className="text-xs text-primary/60 group-hover:text-primary transition-colors shrink-0"
+                                title="Buka titik koordinat di Google Maps"
+                              />
+                            </div>
                           </div>
                         );
                       })}

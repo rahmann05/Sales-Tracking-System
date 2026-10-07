@@ -57,7 +57,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
   });
 
   return (
-    <div className={`space-y-5 max-w-7xl mx-auto ${showHeader ? 'p-4 md:p-6 pb-24' : ''}`}>
+    <div className={`space-y-5 w-full max-w-[1800px] mx-auto ${showHeader ? 'p-3 sm:p-4 md:p-6 pb-24' : ''}`}>
       {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={refreshData} disabled={isLoading}>Coba lagi</button></div>}
       {/* 1. Page Header Title Banner (Only rendered when standalone) */}
       {showHeader && (

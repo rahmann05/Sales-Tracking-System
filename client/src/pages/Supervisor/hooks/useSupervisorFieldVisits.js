@@ -90,7 +90,28 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
         setActiveModal('OFF_PJP');
     };
 
-    const confirmOffPjp = () => submit({ action: 'OFF_PJP', outletName: offPjpForm.outletName, notes: [offPjpForm.reason, offPjpForm.address, offPjpForm.owner].filter(Boolean).join(' · '), visitMode: spvMode, accompaniedSalesId: spvMode === 'JOINT_VISIT' ? selectedSales : undefined });
+    const confirmOffPjp = (payload) => {
+      const data = payload || offPjpForm;
+      const outlet = (data.outletName || offPjpForm.outletName || '').trim();
+      const notesParts = [
+        data.reason || offPjpForm.reason,
+        data.address || offPjpForm.address,
+        data.owner || offPjpForm.owner,
+        data.phone ? `Telp: ${data.phone}` : null
+      ].filter(Boolean);
+      const notes = notesParts.join(' · ') || 'Kunjungan Supervisi Luar RJP';
+
+      return submit({
+        action: 'OFF_PJP',
+        outletName: outlet,
+        notes,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        photoUrl: data.photoUrl,
+        visitMode: data.visitMode || spvMode,
+        accompaniedSalesId: (data.visitMode || spvMode) === 'JOINT_VISIT' ? selectedSales : undefined
+      });
+    };
 
     const closeModal = () => { if (!submitting.current) setActiveModal(null); };
 

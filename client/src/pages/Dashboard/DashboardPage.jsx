@@ -5,6 +5,7 @@ import { filterStopsForToday } from '../../utils/dateUtils';
 import { useMap } from '../../context/MapContext';
 import { useMapData } from '../../context/MapDataContext';
 import { computeClusterPolygons } from '../../utils/clusterBoundaryHelper';
+import { googlePlacesService } from '../../services/googlePlacesService';
 import '../../styles/pages/Dashboard.css';
 
 export const DashboardPage = () => {
@@ -152,6 +153,12 @@ export const DashboardPage = () => {
       return outlet.type === 'GENERAL_TRADE' ? '#3b82f6' : '#8b5cf6';
     };
 
+    const handleSelectOutlet = (stopOrOutlet) => {
+      if (!stopOrOutlet) return;
+      setSelectedOutlet(stopOrOutlet);
+      googlePlacesService.openInGoogleMaps(stopOrOutlet, outlets);
+    };
+
     const markersData = visibleOutlets
       .filter((o) => o.latitude && o.longitude)
       .map((o) => {
@@ -168,6 +175,9 @@ export const DashboardPage = () => {
             anchor: window.google ? new window.google.maps.Point(15, 30) : { x: 15, y: 30 },
           },
           zIndex: highlighted ? 50 : 1,
+          onClick: () => {
+            handleSelectOutlet(o);
+          },
         };
       });
 
@@ -217,6 +227,12 @@ export const DashboardPage = () => {
     }
   }, [selectedOutlet, panTo]);
 
+  const handleSelectOutlet = (stopOrOutlet) => {
+    if (!stopOrOutlet) return;
+    setSelectedOutlet(stopOrOutlet);
+    googlePlacesService.openInGoogleMaps(stopOrOutlet, outlets);
+  };
+
   return (
     <div className="dashboard-wrapper">
       {/* Floating Dashboard Left Overlay Panel */}
@@ -232,7 +248,8 @@ export const DashboardPage = () => {
               setSelectedOutlet(null);
             }}
             selectedOutlet={selectedOutlet}
-            onSelectOutlet={setSelectedOutlet}
+            onSelectOutlet={handleSelectOutlet}
+            outlets={outlets}
             userRole={user?.role || 'SALES'}
             selectedSalesName={selectedSalesName}
             onSelectSalesName={(name) => {

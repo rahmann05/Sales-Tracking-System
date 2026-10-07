@@ -1,10 +1,10 @@
 import React from 'react';
-import { LuMapPin, LuNavigation } from "react-icons/lu";
+import { LuMapPin, LuNavigation, LuExternalLink } from "react-icons/lu";
 
 /**
  * SalesOutletItemCard Component
  * Single Responsibility: Display a single assigned PJP outlet stop item in the Active Routes list for Sales.
- * Clicking this card triggers Google Maps panTo & focus on this outlet.
+ * Clicking this card triggers Google Maps search for exact outlet coordinates from DB.
  * 1 File = 1 Component
  */
 export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => {
@@ -13,7 +13,8 @@ export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => 
   return (
     <div
       onClick={onClick}
-      className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none space-y-2 ${
+      title="Buka titik koordinat di Google Maps"
+      className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none space-y-2 group ${
         isSelected
           ? 'bg-primary/10 border-primary shadow-md'
           : 'bg-surface-variant/20 border-border-glass hover:bg-surface-variant/40'
@@ -47,18 +48,22 @@ export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => 
         <span className="min-w-0 whitespace-normal break-words">{stop.address || 'Alamat outlet'}</span>
       </p>
 
-      {stop.legDistanceKm != null && (
-        <div className="flex items-center justify-between text-[11px] text-on-surface-variant pt-1 border-t border-border-glass/60">
+      <div className="flex items-center justify-between text-[11px] text-on-surface-variant pt-1 border-t border-border-glass/60">
+        {stop.legDistanceKm != null ? (
           <span className="flex items-center gap-1 font-mono text-tertiary">
             <LuNavigation className="text-xs" />
             Jarak: <strong>{stop.legDistanceKm} Km</strong>
           </span>
-          <span className="text-[10px] text-primary font-semibold flex items-center gap-1">
-            <span>Fokus Peta</span>
-            <LuMapPin className="text-xs" />
+        ) : (
+          <span className="text-[10px] text-on-surface-variant">
+            {stop.latitude && stop.longitude ? `${Number(stop.latitude).toFixed(4)}, ${Number(stop.longitude).toFixed(4)}` : 'Koordinat DB'}
           </span>
-        </div>
-      )}
+        )}
+        <span className="text-[10px] text-primary font-semibold flex items-center gap-1 group-hover:underline">
+          <span>Buka Google Maps</span>
+          <LuExternalLink className="text-xs" />
+        </span>
+      </div>
     </div>
   );
 };

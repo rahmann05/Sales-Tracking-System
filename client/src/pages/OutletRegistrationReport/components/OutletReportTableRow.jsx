@@ -74,13 +74,13 @@ export const OutletReportTableRow = ({
       </td>
 
       {/* Aksi */}
-      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-        <div className="flex items-center justify-center gap-1.5">
+      <td data-label="Aksi Admin" className="py-2.5 px-3 text-center whitespace-nowrap min-w-[130px]">
+        <div className="flex flex-col items-stretch justify-center gap-1.5 w-full max-w-[130px] mx-auto">
           {/* Print PDF Button */}
           <button
             type="button"
             onClick={() => onOpenPdf(item)}
-            className="px-2.5 py-1.5 bg-surface hover:bg-surface-container rounded-lg text-xs font-bold text-on-surface transition-all border border-border-glass flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            className="w-full px-2.5 py-1.5 bg-surface hover:bg-surface-container rounded-lg text-xs font-bold text-on-surface transition-all border border-border-glass flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
             title="Cetak Formulir Resmi"
           >
             <LuPrinter className="text-xs shrink-0" />
@@ -92,7 +92,7 @@ export const OutletReportTableRow = ({
             <button
               type="button"
               onClick={() => onOpenFinalize(item)}
-              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Input ke Sistem & Aktivasi"
             >
               <LuCheckCheck className="text-xs shrink-0" />

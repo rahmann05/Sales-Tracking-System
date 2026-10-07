@@ -155,16 +155,11 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
         <div className="p-3.5 rounded-2xl bg-surface-container/40 border border-border-glass space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-border-glass">
             <div className="flex items-center gap-2">
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider ${
-                  isGt
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                    : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                }`}
-              >
-                {isGt ? 'GT (General Trade)' : 'MT (Modern Trade)'}
+              <span className="px-2 py-0.5 rounded-md bg-surface text-[10px] font-bold border border-border-glass text-on-surface flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${isGt ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                <span>{isGt ? 'GT (General Trade)' : 'MT (Modern Trade)'}</span>
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface border border-border-glass">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface text-on-surface border border-border-glass">
                 {subChannelLabel}
               </span>
             </div>
@@ -237,9 +232,9 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
 
         {/* ── 3. Geocoding Validation Signals & Analysis ── */}
         {outlet.validationDetails?.note && (
-          <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-800/50 flex items-start gap-2.5">
-            <LuInfo className="text-blue-600 dark:text-blue-400 text-sm shrink-0 mt-0.5" />
-            <p className="text-blue-900 dark:text-blue-200 font-medium">
+          <div className="p-3 rounded-xl bg-surface-container/60 border border-border-glass flex items-start gap-2.5">
+            <LuInfo className="text-primary text-sm shrink-0 mt-0.5" />
+            <p className="text-on-surface font-medium">
               {outlet.validationDetails.note}
             </p>
           </div>
@@ -259,14 +254,14 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-on-surface">{SIGNALS[key] || key}</span>
                     <span
-                      className={`font-mono font-black text-[11px] px-1.5 py-0.5 rounded ${
+                      className={`font-mono font-bold text-[11px] px-2 py-0.5 rounded-md border ${
                         s.skipped
-                          ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                          ? 'bg-surface-container text-on-surface-variant border-border-glass'
                           : s.score >= 70
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : s.score >= 40
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                          : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                       }`}
                     >
                       {s.skipped ? 'Dilewati' : `Skor: ${s.score ?? 0}%`}
@@ -293,9 +288,9 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
             {warnings.map((w, idx) => (
               <div
                 key={idx}
-                className="p-2.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-start gap-2 text-[11px]"
+                className="p-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex items-start gap-2 text-[11px]"
               >
-                <LuTriangleAlert className="text-amber-600 shrink-0 text-sm mt-0.5" />
+                <LuTriangleAlert className="text-amber-500 shrink-0 text-sm mt-0.5" />
                 <span>{w}</span>
               </div>
             ))}

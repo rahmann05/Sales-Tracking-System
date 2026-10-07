@@ -15,7 +15,7 @@ export const ReportsPage = () => {
   const [activeTab, setActiveTab] = useState('DAILY');
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-24">
+    <div className="p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-[1800px] mx-auto pb-24">
       {/* 1. Suite Header Banner */}
       <PageHeader
         badge={

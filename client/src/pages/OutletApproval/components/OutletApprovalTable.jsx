@@ -40,7 +40,7 @@ export const OutletApprovalTable = ({ items = [], isLoading = false, onReview })
                 <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Status
                 </th>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass text-center">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass text-center whitespace-nowrap min-w-[110px]">
                   Aksi
                 </th>
               </tr>

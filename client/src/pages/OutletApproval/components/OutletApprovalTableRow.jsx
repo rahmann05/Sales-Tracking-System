@@ -78,11 +78,11 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Aksi */}
-      <td className="text-center mobile-full-width">
+      <td data-label="Aksi" className="text-center mobile-full-width whitespace-nowrap min-w-[110px]">
         <button
           type="button"
           onClick={() => onReview(item)}
-          className={`w-full md:w-auto px-3 py-2 md:py-1 rounded-lg text-xs font-bold shadow-xs hover:opacity-90 transition-all cursor-pointer ${
+          className={`inline-flex items-center justify-center whitespace-nowrap min-w-[80px] px-4 py-2 md:py-1.5 rounded-lg text-xs font-bold shadow-xs hover:opacity-90 transition-all cursor-pointer ${
             item.registrationStatus === 'SUBMITTED'
               ? 'bg-primary text-white'
               : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass'

@@ -27,32 +27,32 @@ import {
 const STATUS_META = {
   VALID: {
     label: 'Sesuai peta',
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+    badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
     icon: LuCircleCheck,
   },
   LIKELY_VALID: {
     label: 'Cenderung sesuai',
-    badgeClass: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800',
+    badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
     icon: LuCircleCheck,
   },
   WARNING: {
     label: 'Perlu tinjauan',
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+    badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
     icon: LuTriangleAlert,
   },
   SUSPECT: {
     label: 'Perlu koreksi',
-    badgeClass: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
+    badgeClass: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
     icon: LuCircleAlert,
   },
   INCOMPLETE: {
     label: 'Data belum lengkap',
-    badgeClass: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800',
+    badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
     icon: LuTriangleAlert,
   },
   UNVALIDATED: {
     label: 'Belum diperiksa',
-    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    badgeClass: 'bg-surface-container text-on-surface-variant border-border-glass',
     icon: LuCircleHelp,
   },
 };
@@ -200,22 +200,22 @@ export function OutletValidationPanel() {
   return (
     <div className="space-y-6">
       {/* ── Guidance Banner ── */}
-      <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 flex items-start gap-3">
-        <LuCompass className="text-blue-600 dark:text-blue-400 text-xl shrink-0 mt-0.5" />
-        <div className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
-          <p className="font-bold">Panduan Validasi & Geocoding Titik Toko:</p>
-          <p>
+      <div className="p-3.5 rounded-2xl bg-surface-container/60 border border-border-glass flex items-start gap-3">
+        <LuCompass className="text-primary text-base shrink-0 mt-0.5" />
+        <div className="text-xs space-y-0.5 text-on-surface-variant">
+          <span className="font-bold text-on-surface">Panduan Validasi & Geocoding Titik Toko: </span>
+          <span>
             Perbandingan peta membantu menemukan ketidaksesuaian nama toko, alamat tertulis, dan koordinat GPS.
             Gunakan filter <strong>GT</strong> dan <strong>MT</strong> untuk meninjau masing-masing jalur distribusi.
             Koreksi koordinat harus selalu didukung dengan pengecekan lokasi fisik di lapangan.
-          </p>
+          </span>
         </div>
       </div>
 
       {/* ── Key Metrics Cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-3.5 rounded-xl bg-surface border border-border-glass shadow-xs flex flex-col justify-between">
-          <span className="text-[11px] font-medium text-on-surface-variant flex items-center gap-1.5">
+        <div className="p-3.5 rounded-2xl bg-surface border border-border-glass shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1.5">
             <LuStore className="text-primary text-xs" /> Total Outlet
           </span>
           <span className="text-2xl font-black text-on-surface mt-1">{metrics.total}</span>
@@ -223,77 +223,77 @@ export function OutletValidationPanel() {
 
         <div
           onClick={() => { setChannelFilter(channelFilter === 'GENERAL_TRADE' ? 'ALL' : 'GENERAL_TRADE'); setPage(1); }}
-          className={`p-3.5 rounded-xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
             channelFilter === 'GENERAL_TRADE'
-              ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/20'
-              : 'bg-surface border-border-glass hover:border-emerald-500/50'
+              ? 'bg-surface border-primary shadow-xs ring-1 ring-primary/20'
+              : 'bg-surface border-border-glass hover:bg-surface-container/60 hover:border-primary/40'
           }`}
         >
-          <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center justify-between">
             <span>General Trade (GT)</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
           </span>
-          <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{metrics.gt}</span>
+          <span className="text-2xl font-black text-on-surface mt-1">{metrics.gt}</span>
         </div>
 
         <div
           onClick={() => { setChannelFilter(channelFilter === 'MODERN_TRADE' ? 'ALL' : 'MODERN_TRADE'); setPage(1); }}
-          className={`p-3.5 rounded-xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
             channelFilter === 'MODERN_TRADE'
-              ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/20'
-              : 'bg-surface border-border-glass hover:border-blue-500/50'
+              ? 'bg-surface border-primary shadow-xs ring-1 ring-primary/20'
+              : 'bg-surface border-border-glass hover:bg-surface-container/60 hover:border-primary/40'
           }`}
         >
-          <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-400 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center justify-between">
             <span>Modern Trade (MT)</span>
             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
           </span>
-          <span className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-1">{metrics.mt}</span>
+          <span className="text-2xl font-black text-on-surface mt-1">{metrics.mt}</span>
         </div>
 
         <div
           onClick={() => { setStatusFilter(statusFilter === 'VALID' ? 'ALL' : 'VALID'); setPage(1); }}
-          className={`p-3.5 rounded-xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
             statusFilter === 'VALID'
-              ? 'bg-teal-500/10 border-teal-500 ring-2 ring-teal-500/20'
-              : 'bg-surface border-border-glass hover:border-teal-500/50'
+              ? 'bg-surface border-primary shadow-xs ring-1 ring-primary/20'
+              : 'bg-surface border-border-glass hover:bg-surface-container/60 hover:border-primary/40'
           }`}
         >
-          <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-400 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center justify-between">
             <span>Sesuai Peta</span>
-            <LuCircleCheck className="text-teal-600 dark:text-teal-400 text-xs" />
+            <LuCircleCheck className="text-emerald-600 dark:text-emerald-400 text-xs" />
           </span>
-          <span className="text-2xl font-black text-teal-700 dark:text-teal-300 mt-1">{metrics.valid}</span>
+          <span className="text-2xl font-black text-on-surface mt-1">{metrics.valid}</span>
         </div>
 
         <div
           onClick={() => { setStatusFilter(statusFilter === 'WARNING' ? 'ALL' : 'WARNING'); setPage(1); }}
-          className={`p-3.5 rounded-xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
             statusFilter === 'WARNING'
-              ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/20'
-              : 'bg-surface border-border-glass hover:border-amber-500/50'
+              ? 'bg-surface border-primary shadow-xs ring-1 ring-primary/20'
+              : 'bg-surface border-border-glass hover:bg-surface-container/60 hover:border-primary/40'
           }`}
         >
-          <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center justify-between">
             <span>Perlu Tinjauan</span>
-            <LuTriangleAlert className="text-amber-600 dark:text-amber-400 text-xs" />
+            <LuTriangleAlert className="text-amber-500 text-xs" />
           </span>
-          <span className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">{metrics.warning}</span>
+          <span className="text-2xl font-black text-on-surface mt-1">{metrics.warning}</span>
         </div>
 
         <div
           onClick={() => { setStatusFilter(statusFilter === 'UNVALIDATED' ? 'ALL' : 'UNVALIDATED'); setPage(1); }}
-          className={`p-3.5 rounded-xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition-all flex flex-col justify-between ${
             statusFilter === 'UNVALIDATED'
-              ? 'bg-slate-500/10 border-slate-500 ring-2 ring-slate-500/20'
-              : 'bg-surface border-border-glass hover:border-slate-500/50'
+              ? 'bg-surface border-primary shadow-xs ring-1 ring-primary/20'
+              : 'bg-surface border-border-glass hover:bg-surface-container/60 hover:border-primary/40'
           }`}
         >
-          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-400 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center justify-between">
             <span>Belum Diperiksa</span>
-            <LuCircleHelp className="text-slate-600 dark:text-slate-400 text-xs" />
+            <LuCircleHelp className="text-on-surface-variant/60 text-xs" />
           </span>
-          <span className="text-2xl font-black text-slate-700 dark:text-slate-300 mt-1">{metrics.unvalidated}</span>
+          <span className="text-2xl font-black text-on-surface mt-1">{metrics.unvalidated}</span>
         </div>
       </div>
 
@@ -305,9 +305,9 @@ export function OutletValidationPanel() {
             <button
               type="button"
               onClick={() => { setChannelFilter('ALL'); setPage(1); }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 channelFilter === 'ALL'
-                  ? 'bg-surface text-on-surface shadow-xs'
+                  ? 'bg-primary text-on-primary shadow-xs'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
@@ -316,25 +316,25 @@ export function OutletValidationPanel() {
             <button
               type="button"
               onClick={() => { setChannelFilter('GENERAL_TRADE'); setPage(1); }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 channelFilter === 'GENERAL_TRADE'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-300"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span>General Trade (GT) ({metrics.gt})</span>
             </button>
             <button
               type="button"
               onClick={() => { setChannelFilter('MODERN_TRADE'); setPage(1); }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 channelFilter === 'MODERN_TRADE'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-blue-300"></span>
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
               <span>Modern Trade (MT) ({metrics.mt})</span>
             </button>
           </div>
@@ -343,7 +343,7 @@ export function OutletValidationPanel() {
             type="button"
             disabled={loading || Boolean(busy)}
             onClick={load}
-            className="px-3.5 py-1.5 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
+            className="px-3.5 py-1.5 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
           >
             <LuRefreshCw className={`text-xs ${loading ? 'animate-spin' : ''}`} />
             <span>Muat Ulang</span>
@@ -483,25 +483,19 @@ export function OutletValidationPanel() {
                     {/* Channel & Status Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border-glass">
                       {/* GT / MT Channel Badge */}
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider flex items-center gap-1 ${
-                          isGt
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                            : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                        }`}
-                      >
+                      <span className="px-2 py-0.5 rounded-md bg-surface-container text-[10px] font-bold border border-border-glass text-on-surface flex items-center gap-1">
                         <span className={`w-1.5 h-1.5 rounded-full ${isGt ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
                         <span>{isGt ? 'GT (General Trade)' : 'MT (Modern Trade)'}</span>
                       </span>
 
                       {/* Sub-channel badge */}
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container text-on-surface border border-border-glass">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface-container/60 text-on-surface border border-border-glass">
                         {subChannelLabel}
                       </span>
 
                       {/* Validation Status Badge */}
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${statusMeta.badgeClass}`}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${statusMeta.badgeClass}`}
                       >
                         <StatusIcon className="text-[10px]" />
                         <span>{statusMeta.label}</span>

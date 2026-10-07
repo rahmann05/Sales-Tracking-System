@@ -9,35 +9,83 @@ export const googlePlacesService = {
    * Generates a direct Google Maps search / navigation URL from system coordinates
    */
   getGoogleMapsUrl: (lat, lng, query = '') => {
-    if (lat != null && lng != null) {
-      return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    if (!isNaN(latNum) && !isNaN(lngNum) && latNum !== 0 && lngNum !== 0) {
+      return `https://www.google.com/maps/search/?api=1&query=${latNum},${lngNum}`;
     }
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    if (query && query.trim()) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query.trim())}`;
+    }
+    return 'https://www.google.com/maps';
   },
 
   /**
-   * Fetches or constructs Google Place details directly from system latitude & longitude
+   * Opens Google Maps in a new tab querying the exact real coordinates from the database.
+   * If coordinates are not directly present on the item (e.g. stop object), resolves from master outlets.
+   */
+  openInGoogleMaps: (outletOrStop, fallbackOutlets = []) => {
+    if (!outletOrStop) return;
+
+    // 1. Check coordinates directly on item or nested outlet relation
+    let lat = outletOrStop.latitude ?? outletOrStop.lat ?? outletOrStop.outlet?.latitude;
+    let lng = outletOrStop.longitude ?? outletOrStop.lng ?? outletOrStop.outlet?.longitude;
+
+    // 2. Cross-reference with database master outlets list if needed
+    if (
+      (lat == null || lng == null || isNaN(Number(lat)) || isNaN(Number(lng)) || Number(lat) === 0 || Number(lng) === 0) &&
+      Array.isArray(fallbackOutlets) &&
+      fallbackOutlets.length > 0
+    ) {
+      const code = outletOrStop.outletCode || outletOrStop.customerId;
+      const targetId = outletOrStop.outletId || outletOrStop.id;
+      const name = (outletOrStop.outletName || outletOrStop.customerName || outletOrStop.name || '').trim().toLowerCase();
+
+      const matched = fallbackOutlets.find((o) => {
+        if (targetId && (o.id === targetId || o.outletId === targetId)) return true;
+        if (code && (o.outletCode === code || o.customerId === code)) return true;
+        if (name && o.name && o.name.trim().toLowerCase() === name) return true;
+        return false;
+      });
+
+      if (matched && matched.latitude != null && matched.longitude != null) {
+        lat = matched.latitude;
+        lng = matched.longitude;
+      }
+    }
+
+    const searchQuery =
+      outletOrStop.outletName ||
+      outletOrStop.customerName ||
+      outletOrStop.name ||
+      outletOrStop.address ||
+      '';
+
+    const url = googlePlacesService.getGoogleMapsUrl(lat, lng, searchQuery);
+
+    if (url && typeof window !== 'undefined') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  },
+
+  /**
+   * Fetches Google Place details using official coordinates from database
    */
   getPlaceDetails: async (outlet) => {
     if (!outlet || outlet.latitude == null || outlet.longitude == null) {
       return {
-        placeName: outlet?.outletName || 'Toko Outlet',
-        rating: 4.5,
-        userRatingsTotal: 25,
-        category: 'Toko Kelontong & Sembako',
-        businessStatus: 'OPERASIONAL (Buka)',
-        openHours: '07:00 - 21:00 WIB',
-        googleMapsUrl: 'https://www.google.com/maps',
-        photoUrl: null,
+        placeName: outlet?.name || outlet?.outletName || 'Outlet',
+        category: outlet?.type === 'MODERN_TRADE' ? 'Modern Trade' : 'General Trade',
+        googleMapsUrl: googlePlacesService.getGoogleMapsUrl(null, null, outlet?.name || outlet?.outletName),
+        photoUrl: outlet?.photoUrl || null,
       };
     }
 
-    // Pre-cached details
     if (outlet.googlePlaceDetails) {
       return outlet.googlePlaceDetails;
     }
 
-    // Strategy 1: Google Maps JS SDK PlacesService (client-side in-browser, zero CORS)
+    // Google Maps JS SDK PlacesService if available
     if (typeof window !== 'undefined' && window.google?.maps?.places?.PlacesService) {
       try {
         const dummyNode = document.createElement('div');
@@ -67,13 +115,12 @@ export const googlePlacesService = {
           }
 
           return {
-            placeName: result.name || outlet.outletName,
-            rating: result.rating || 4.7,
-            userRatingsTotal: result.user_ratings_total || 42,
-            category: result.types ? result.types[0].replace(/_/g, ' ') : 'Toko Terverifikasi Google',
-            businessStatus: result.opening_hours?.open_now ? 'Buka Sekarang' : 'Operasional',
-            openHours: result.opening_hours?.open_now ? 'Buka 07:00 - 21:00 WIB' : '07:00 - 21:00 WIB',
-            googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${outlet.latitude},${outlet.longitude}`,
+            placeName: result.name || outlet.name || outlet.outletName,
+            rating: result.rating || null,
+            userRatingsTotal: result.user_ratings_total || null,
+            category: result.types ? result.types[0].replace(/_/g, ' ') : (outlet.type || 'Toko'),
+            businessStatus: result.opening_hours?.open_now ? 'Buka' : 'Tutup / Operasional',
+            googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${Number(outlet.latitude)},${Number(outlet.longitude)}`,
             photoUrl,
           };
         }
@@ -82,15 +129,12 @@ export const googlePlacesService = {
       }
     }
 
-    // Fallback using stored system info
     return {
-      placeName: outlet.outletName || outlet.customerName,
-      rating: 4.7,
-      userRatingsTotal: 58,
-      category: 'Toko Kelontong & Grosir Sembako',
-      businessStatus: 'OPERASIONAL (Buka)',
-      openHours: '07:00 - 21:00 WIB',
-      googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${outlet.latitude},${outlet.longitude}`,
+      placeName: outlet.name || outlet.outletName || outlet.customerName,
+      rating: null,
+      userRatingsTotal: null,
+      category: outlet.type || 'Toko',
+      googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${Number(outlet.latitude)},${Number(outlet.longitude)}`,
       photoUrl: outlet.photoUrl || null,
     };
   },

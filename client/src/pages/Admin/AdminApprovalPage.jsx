@@ -5,7 +5,7 @@ import { PendingOrderCard } from './components/PendingOrderCard';
 import { UnlockRequestCard } from './components/UnlockRequestCard';
 import { TAB_IDS } from '../../constants/navigation';
 import { PageHeader } from '../../shared/components/common/PageHeader';
-import { LuArrowLeft, LuFileCheck, LuClock, LuRotateCw } from "react-icons/lu";
+import { LuArrowLeft, LuFileCheck, LuClock, LuRotateCw, LuUser, LuChevronDown } from "react-icons/lu";
 import { ordersApi, outletsApi, absensiApi, collectPages } from '../../services/api';
 import { mapServerOrder } from '../../utils/orderMapper';
 import { mapServerUnlockRequest } from '../../utils/incidentMapper';
@@ -24,14 +24,36 @@ export const AdminApprovalPage = ({ onGoBack, embedded = false }) => {
     handleApproveUnlockRequest,
     handleRejectUnlockRequest,
     setActiveTab,
+    salesList = [],
   } = useApp();
 
   const [orderFilter, setOrderFilter] = useState('PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [selectedSales, setSelectedSales] = useState('ALL'); // 'ALL' | <salesName>
   const [loading, setLoading] = useState(false);
   const [manualPendingCount, setManualPendingCount] = useState(0);
 
   const unlockRequests = (incidents || []).filter((i) => i.type === 'UNLOCK_REQUEST');
   const pendingUnlockCount = unlockRequests.filter((r) => r.status === 'PENDING').length;
+
+  const salesOptions = useMemo(() => {
+    const names = new Set();
+    orders.forEach((o) => {
+      const n = o.salesName?.trim();
+      if (n) names.add(n);
+    });
+    salesList.forEach((s) => {
+      const n = s.name?.trim();
+      if (n) names.add(n);
+    });
+    return Array.from(names).sort();
+  }, [orders, salesList]);
+
+  const ordersBySales = useMemo(() => {
+    if (selectedSales === 'ALL') return orders;
+    return orders.filter(
+      (o) => (o.salesName || '').trim().toLowerCase() === selectedSales.trim().toLowerCase()
+    );
+  }, [orders, selectedSales]);
 
   const pendingOrders = useMemo(
     () => orders.filter((o) => o.status === 'PENDING_APPROVAL' || o.status === 'PENDING'),
@@ -40,6 +62,15 @@ export const AdminApprovalPage = ({ onGoBack, embedded = false }) => {
   const approvedOrders = useMemo(
     () => orders.filter((o) => o.status === 'APPROVED'),
     [orders]
+  );
+
+  const pendingOrdersBySales = useMemo(
+    () => ordersBySales.filter((o) => o.status === 'PENDING_APPROVAL' || o.status === 'PENDING'),
+    [ordersBySales]
+  );
+  const approvedOrdersBySales = useMemo(
+    () => ordersBySales.filter((o) => o.status === 'APPROVED'),
+    [ordersBySales]
   );
 
   const loadApprovalData = useCallback(async () => {
@@ -126,7 +157,7 @@ export const AdminApprovalPage = ({ onGoBack, embedded = false }) => {
   };
 
   // Filtered orders
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = ordersBySales.filter((o) => {
     if (orderFilter === 'PENDING') {
       return o.status === 'PENDING_APPROVAL' || o.status === 'PENDING';
     }
@@ -255,41 +286,66 @@ export const AdminApprovalPage = ({ onGoBack, embedded = false }) => {
             </div>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 bg-surface-container p-1 rounded-xl border border-border-glass self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setOrderFilter('ALL')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                orderFilter === 'ALL'
-                  ? 'bg-surface text-on-surface shadow-2xs'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Semua ({orders.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setOrderFilter('PENDING')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                orderFilter === 'PENDING'
-                  ? 'bg-primary text-white shadow-2xs'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Pending ({pendingOrders.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setOrderFilter('APPROVED')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                orderFilter === 'APPROVED'
-                  ? 'bg-emerald-600 text-white shadow-2xs'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Disetujui ({approvedOrders.length})
-            </button>
+          {/* Controls: Filter per Sales & Filter Status Pills */}
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {salesOptions.length > 0 && (
+              <div className="relative">
+                <div className="flex items-center gap-1.5 bg-surface-container px-3 py-1.5 rounded-xl border border-border-glass shadow-2xs hover:border-primary/40 transition-colors">
+                  <LuUser className="text-xs text-primary shrink-0" />
+                  <select
+                    value={selectedSales}
+                    onChange={(e) => setSelectedSales(e.target.value)}
+                    className="text-xs font-bold bg-transparent text-on-surface border-none focus:outline-none cursor-pointer pr-4 appearance-none max-w-[190px] truncate"
+                    title="Filter order per sales"
+                  >
+                    <option value="ALL">Semua Sales ({salesOptions.length})</option>
+                    {salesOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                  <LuChevronDown className="text-xs text-on-surface-variant pointer-events-none absolute right-2.5" />
+                </div>
+              </div>
+            )}
+
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 bg-surface-container p-1 rounded-xl border border-border-glass">
+              <button
+                type="button"
+                onClick={() => setOrderFilter('ALL')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  orderFilter === 'ALL'
+                    ? 'bg-surface text-on-surface shadow-2xs'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Semua ({ordersBySales.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderFilter('PENDING')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  orderFilter === 'PENDING'
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Pending ({pendingOrdersBySales.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderFilter('APPROVED')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  orderFilter === 'APPROVED'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Disetujui ({approvedOrdersBySales.length})
+              </button>
+            </div>
           </div>
         </div>
 
@@ -301,10 +357,21 @@ export const AdminApprovalPage = ({ onGoBack, embedded = false }) => {
         ) : filteredOrders.length === 0 ? (
           <div className="p-10 text-center bg-surface rounded-2xl border border-border-glass">
             <p className="text-xs text-on-surface-variant m-0">
-              {orderFilter === 'PENDING'
+              {selectedSales !== 'ALL'
+                ? `Tidak ada order ${orderFilter === 'PENDING' ? 'pending' : ''} untuk sales "${selectedSales}".`
+                : orderFilter === 'PENDING'
                 ? 'Tidak ada order pending saat ini. Semua pesanan telah diproses.'
                 : 'Belum ada data order penjualan.'}
             </p>
+            {selectedSales !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setSelectedSales('ALL')}
+                className="mt-2 text-xs text-primary font-bold hover:underline cursor-pointer bg-transparent border-none"
+              >
+                Reset filter sales
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
