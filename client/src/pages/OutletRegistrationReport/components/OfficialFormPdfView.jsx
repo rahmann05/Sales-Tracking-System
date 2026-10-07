@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuPrinter, LuX, LuDownload } from 'react-icons/lu';
+import { LuPrinter, LuX } from "react-icons/lu";
 
 /**
  * OfficialFormPdfView Component

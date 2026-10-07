@@ -1,9 +1,10 @@
+import {assertSalesAccess} from '../../utils/team-scope.js';
 import * as userService from './users.service.js';
 import { successResponse } from '../../utils/response.js';
 
 export const getAllUsers = async (req, res, next) => {
   try {
-    const users = await userService.getUsers(req.query);
+    const users = await userService.getUsers(req.query,req.user);
     return successResponse(res, 200, users);
   } catch (error) {
     next(error);
@@ -12,6 +13,7 @@ export const getAllUsers = async (req, res, next) => {
 
 export const getUser = async (req, res, next) => {
   try {
+    await assertSalesAccess(req.user,req.params.id);
     const user = await userService.getUserById(req.params.id);
     return successResponse(res, 200, user);
   } catch (error) {
@@ -75,7 +77,7 @@ export const updateLocation = async (req, res, next) => {
 
 export const getLiveLocations = async (req, res, next) => {
   try {
-    const locations = await userService.getLiveSalesLocations();
+    const locations = await userService.getLiveSalesLocations(req.user);
     return successResponse(res, 200, locations, 'Live lokasi sales berhasil diambil');
   } catch (error) {
     next(error);

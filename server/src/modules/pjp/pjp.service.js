@@ -6,5 +6,4 @@
 export { getTodayPjp } from './services/get-today-pjp.service.js';
 export { getAllPjps } from './services/get-all-pjps.service.js';
 export { getPjpById } from './services/get-pjp-by-id.service.js';
-export { updatePjpStopDirectly } from './services/update-pjp-stop-directly.service.js';
 export { generateDailyPjps } from './services/generate-daily-pjps.service.js';

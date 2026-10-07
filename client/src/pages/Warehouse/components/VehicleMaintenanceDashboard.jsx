@@ -1,14 +1,8 @@
+import { useApp } from '../../../context/AppContext';
 import React, { useState, useEffect } from 'react';
 import { vehiclesApi } from '../../../services/api';
 import { LuWrench, LuRefreshCw, LuPlus } from 'react-icons/lu';
-import { FiCheckCircle, FiAlertTriangle } from 'react-icons/fi'; // Use fi-icons for missing lu-icons
-
-// Thresholds in KM
-const THRESHOLDS = {
-  GANTI_OLI: 5000,
-  GANTI_FILTER_OLI: 10000,
-  GANTI_KANVAS_REM: 20000,
-};
+import { FiAlertTriangle } from "react-icons/fi"; // Use fi-icons for missing lu-icons
 
 export const VehicleMaintenanceDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -81,6 +75,7 @@ export const VehicleMaintenanceDashboard = () => {
 };
 
 const VehicleMaintenanceCard = ({ vehicle, onRecord }) => {
+  const { settings } = useApp();
   const { totalKm, lastOilChangeKm, lastOilFilterChangeKm, lastBrakePadChangeKm, maxCartons, maxWeightKg } = vehicle;
 
   return (
@@ -128,19 +123,19 @@ const VehicleMaintenanceCard = ({ vehicle, onRecord }) => {
             label="Oli Mesin"
             currentKm={totalKm}
             lastChangeKm={lastOilChangeKm}
-            threshold={THRESHOLDS.GANTI_OLI}
+            threshold={settings.OIL_CHANGE_INTERVAL_KM}
           />
           <MaintenanceBar
             label="Filter Oli"
             currentKm={totalKm}
             lastChangeKm={lastOilFilterChangeKm}
-            threshold={THRESHOLDS.GANTI_FILTER_OLI}
+            threshold={settings.OIL_FILTER_CHANGE_INTERVAL_KM}
           />
           <MaintenanceBar
             label="Kanvas Rem"
             currentKm={totalKm}
             lastChangeKm={lastBrakePadChangeKm}
-            threshold={THRESHOLDS.GANTI_KANVAS_REM}
+            threshold={settings.BRAKE_CHANGE_INTERVAL_KM}
           />
         </div>
 

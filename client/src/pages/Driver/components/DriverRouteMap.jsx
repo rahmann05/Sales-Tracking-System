@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi } from '../../../services/api';
-import { LuMapPin, LuTruck, LuNavigation, LuCircleCheck, LuClock, LuCircleX } from 'react-icons/lu';
+import { LuMapPin, LuTruck, LuNavigation } from "react-icons/lu";
 
 const STATUS_COLOR = {
   PENDING: '#6b7280',
@@ -101,8 +101,8 @@ export const DriverRouteMap = () => {
                     {idx + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-on-surface truncate">{stop.outlet?.name}</div>
-                    <div className="text-xs text-on-surface-variant truncate">{stop.outlet?.address}</div>
+                    <div className="text-sm font-semibold text-on-surface min-w-0 whitespace-normal break-words">{stop.outlet?.name}</div>
+                    <div className="text-xs text-on-surface-variant min-w-0 whitespace-normal break-words">{stop.outlet?.address}</div>
                     <div className="text-[10px] font-semibold mt-0.5" style={{ color }}>{label}</div>
                   </div>
                   {hasCoords && (

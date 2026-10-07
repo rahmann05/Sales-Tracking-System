@@ -1,8 +1,11 @@
+import { CONFIG_DEFAULTS } from '../../../../../shared/config.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
 
 let cache = {};
 let lastFetch = 0;
+let generation=0;
+let pending=null;
 const CACHE_TTL = 60000; // 1 minute (60000 ms)
 
 /**
@@ -12,30 +15,31 @@ const CACHE_TTL = 60000; // 1 minute (60000 ms)
  * @returns {Promise<any>}
  */
 export const getDynamicConfig = async (key, defaultValue) => {
-  const now = Date.now();
-  if (now - lastFetch > CACHE_TTL) {
-    try {
-      const allConfigs = await prisma.systemConfig.findMany();
-      cache = allConfigs.reduce((acc, curr) => {
-        acc[curr.key] = curr.value;
-        return acc;
-      }, {});
-      lastFetch = now;
-    } catch (error) {
-      console.error('[DynamicConfig] Failed to fetch dynamic configs', error);
-      // Don't update lastFetch so it tries again next time, but we can still rely on old cache if available
+  if (Date.now()-lastFetch>CACHE_TTL) {
+    const revision=generation;
+    if(!pending) {
+      const flight=prisma.systemConfig.findMany().then(rows=>{
+        if(revision===generation){cache=Object.fromEntries(rows.map(row=>[row.key,row.value]));lastFetch=Date.now();}
+      });
+      const holder={flight};pending=holder;
+      flight.finally(()=>{if(pending===holder)pending=null;}).catch(()=>{});
     }
+    await pending.flight;
+    if(revision!==generation)return getDynamicConfig(key,defaultValue);
   }
 
   if (cache[key] !== undefined) {
     const val = cache[key];
     // Cast appropriately based on defaultValue type
-    if (typeof defaultValue === 'number') return Number(val);
+    if (typeof defaultValue === 'number') return Number.isFinite(Number(val)) ? Number(val) : (CONFIG_DEFAULTS[key] ?? defaultValue);
     if (typeof defaultValue === 'boolean') {
       return val === 'true' || val === true;
     }
     return val;
   }
+
+  const legacyLogisticsKey = { LOGISTICS_PRICE_PER_CARTON: 'pricePerCarton', LOGISTICS_MARGIN_PERCENT: 'grossMarginPercent', LOGISTICS_BASE_DROP_COST: 'baseDropCost' }[key];
+  if (legacyLogisticsKey && cache.LOGISTICS_METRICS?.[legacyLogisticsKey] !== undefined) return Number(cache.LOGISTICS_METRICS[legacyLogisticsKey]);
 
   // Fallback to static config mapping if available
   const staticEnvMap = {
@@ -48,12 +52,12 @@ export const getDynamicConfig = async (key, defaultValue) => {
     return staticEnvMap[key];
   }
 
-  return defaultValue;
+  return CONFIG_DEFAULTS[key] ?? defaultValue;
 };
 
 /**
  * Invalidates the dynamic config cache.
  */
 export const invalidateConfigCache = () => {
-  lastFetch = 0;
+  generation++;lastFetch=0;pending=null;cache={};
 };

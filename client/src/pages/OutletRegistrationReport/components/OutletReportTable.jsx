@@ -1,3 +1,4 @@
+import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
 import { OutletReportTableRow } from './OutletReportTableRow';
 
@@ -24,28 +25,28 @@ export const OutletReportTable = ({
         </div>
       ) : (
         <div className="overflow-x-auto w-full mobile-card-table-wrapper">
-          <table className="w-full text-left text-xs border-collapse mobile-card-table">
+          <DataTable className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead className="bg-surface-variant/30">
               <tr>
-                <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Kode Outlet
                 </th>
-                <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Nama Outlet & Alamat
                 </th>
-                <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Area / Divisi
                 </th>
-                <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Channel
                 </th>
-                <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Salesman & SPV
                 </th>
-                <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Status
                 </th>
-                <th className="py-3 px-4 font-semibold text-on-surface-variant border-b border-border-glass text-center">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass text-center">
                   Aksi Admin
                 </th>
               </tr>
@@ -60,7 +61,7 @@ export const OutletReportTable = ({
                 />
               ))}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       )}
     </div>

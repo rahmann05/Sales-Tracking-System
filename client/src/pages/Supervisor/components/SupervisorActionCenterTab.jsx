@@ -5,7 +5,7 @@ import { IncidentCard } from './IncidentCard';
 import { UnlockRequestCard } from '../../Admin/components/UnlockRequestCard';
 import { OffPjpAttendanceCard } from './OffPjpAttendanceCard';
 import { ACTION_CENTER_FILTERS } from '../../../constants/supervisor';
-import { LuCircleCheck, LuClock, LuKey, LuStore } from 'react-icons/lu';
+import { LuCircleCheck, LuClock, LuKey } from "react-icons/lu";
 import { FiAlertCircle } from 'react-icons/fi';
 
 /**
@@ -100,9 +100,9 @@ export const SupervisorActionCenterTab = ({
                   : 'bg-transparent border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface/40'
               }`}
             >
-              <div className="flex items-center gap-1.5 truncate">
+              <div className="flex items-center gap-1.5 min-w-0 whitespace-normal break-words">
                 {Icon && <Icon className="text-sm shrink-0" />}
-                <span className="truncate">{filter.label}</span>
+                <span className="min-w-0 whitespace-normal break-words">{filter.label}</span>
               </div>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${

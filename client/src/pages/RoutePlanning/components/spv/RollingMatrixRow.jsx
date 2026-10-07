@@ -2,15 +2,14 @@ import React from 'react';
 import { RollingMatrixCell } from './RollingMatrixCell';
 import '../../../../styles/components/RollingMatrixRow.css';
 
-const DAYS_LIST = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 /**
  * RollingMatrixRow Component
  * Single Responsibility: Render a single Salesperson row inside the CSS Grid Matrix.
  */
-export const RollingMatrixRow = ({ row, onCellClick }) => {
+export const RollingMatrixRow = ({ row, days, onCellClick }) => {
   // Compute total weekly visits
-  const totalWeeklyVisits = DAYS_LIST.reduce((acc, day) => {
+  const totalWeeklyVisits = days.reduce((acc, day) => {
     return acc + (row.schedule?.[day]?.outletsCount || 0);
   }, 0);
 
@@ -23,7 +22,7 @@ export const RollingMatrixRow = ({ row, onCellClick }) => {
       </div>
 
       {/* Monday to Saturday Schedule Cells */}
-      {DAYS_LIST.map((day) => (
+      {days.map((day) => (
         <RollingMatrixCell
           key={day}
           day={day}

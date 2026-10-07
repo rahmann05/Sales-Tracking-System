@@ -9,7 +9,8 @@ import { SpvOffPjpModal } from './SpvOffPjpModal';
  * Single Responsibility: Render modal aktif untuk SPV field view sesuai `activeModal`.
  */
 export const SpvFieldModals = ({
-    activeModal,
+    activeModal, error, saving, followUp,onChangeFollowUp,
+
     selectedStop,
     inputNotes,
     onChangeNotes,
@@ -25,7 +26,7 @@ export const SpvFieldModals = ({
 }) => {
     if (activeModal === 'ABSEN_IN' && selectedStop) {
         return (
-            <SpvAbsenInModal
+            <SpvAbsenInModal error={error} saving={saving}
                 stop={selectedStop}
                 inputNotes={inputNotes}
                 onChangeNotes={onChangeNotes}
@@ -37,7 +38,7 @@ export const SpvFieldModals = ({
 
     if (activeModal === 'AUDIT' && selectedStop) {
         return (
-            <SpvAuditModal
+            <SpvAuditModal followUp={followUp} onChangeFollowUp={onChangeFollowUp} error={error} saving={saving}
                 stop={selectedStop}
                 checklist={checklist}
                 onChangeChecklist={onChangeChecklist}
@@ -50,12 +51,12 @@ export const SpvFieldModals = ({
     }
 
     if (activeModal === 'ABSEN_OUT' && selectedStop) {
-        return <SpvAbsenOutModal stop={selectedStop} onClose={onClose} onConfirm={onConfirmAbsenOut} />;
+        return <SpvAbsenOutModal error={error} saving={saving} stop={selectedStop} onClose={onClose} onConfirm={onConfirmAbsenOut} />;
     }
 
     if (activeModal === 'OFF_PJP') {
         return (
-            <SpvOffPjpModal
+            <SpvOffPjpModal error={error} saving={saving}
                 form={offPjpForm}
                 onChangeForm={onChangeOffPjpForm}
                 onClose={onClose}

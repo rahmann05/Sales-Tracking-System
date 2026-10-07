@@ -1,3 +1,4 @@
+import { usersApi } from '../../services/api';
 import { useState, useEffect } from 'react';
 
 /**
@@ -17,6 +18,7 @@ export const useLiveGeolocation = (user) => {
 
     if (!navigator.geolocation) return;
 
+    let lastReport = 0;
     let lastLat = null;
     let lastLng = null;
 
@@ -25,6 +27,13 @@ export const useLiveGeolocation = (user) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
 
+        if (user.role==='SALES' && Date.now()-lastReport>=30000) {
+          lastReport=Date.now();
+          const loc={lat,lng};
+          localStorage.setItem('user_gps_location',JSON.stringify(loc));
+          window.dispatchEvent(new CustomEvent('gps_location_updated',{detail:loc}));
+          usersApi.updateLocation({latitude:lat,longitude:lng,accuracy:pos.coords.accuracy,speed:pos.coords.speed || 0,heading:pos.coords.heading || 0}).catch(()=>{});
+        }
         // Skip re-rendering if position didn't meaningfully change (> 5 meters)
         if (
           lastLat !== null &&

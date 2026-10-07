@@ -1,7 +1,10 @@
+import { validateAllocation } from '../../../../../shared/packing.mjs';
+import { getDynamicConfig } from '../../config/config.service.js';
+import { randomUUID } from 'node:crypto';
 /** createDeliveryRoute - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { generateRouteCode } from './delivery.helpers.js';
+
 
 /**
  * Create delivery route with stops
@@ -9,27 +12,41 @@ import { generateRouteCode } from './delivery.helpers.js';
 export const createDeliveryRoute = async (data, userId) => {
   const { date, vehicleId, driverId, notes, stops } = data;
 
+  const allowRedelivery = await getDynamicConfig('DELIVERY_ALLOW_REDELIVERY',true);
+  const allowSplit = await getDynamicConfig('PACKING_ALLOW_SPLIT', true);
+  return prisma.$transaction(async tx => {
   // Verify vehicle exists and is active
-  const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
-  if (!vehicle || !vehicle.isActive) throw new AppError('Kendaraan tidak ditemukan atau tidak aktif', 404);
+  const vehicle = await tx.vehicle.findUnique({ where: { id: vehicleId } });
+  if (!vehicle || vehicle.deletedAt || !vehicle.isActive || vehicle.condition !== 'AVAILABLE') throw new AppError('Kendaraan tidak ditemukan atau tidak aktif', 404);
 
   // Verify driver exists and has SUPIR role
-  const driver = await prisma.user.findUnique({ where: { id: driverId } });
-  if (!driver || driver.role !== 'SUPIR') throw new AppError('Supir tidak ditemukan atau role bukan SUPIR', 404);
+  const driver = await tx.user.findUnique({ where: { id: driverId } });
+  if (!driver || driver.deletedAt || driver.role !== 'SUPIR') throw new AppError('Supir tidak ditemukan atau role bukan SUPIR', 404);
 
   // Verify all packing lists exist
   const plIds = stops.map((s) => s.packingListId);
-  const packingLists = await prisma.packingList.findMany({
+  const packingLists = await tx.packingList.findMany({
     where: { id: { in: plIds } },
-    include: { invoices: true },
+    include: { invoices: true, deliveryStops: true },
   });
   if (packingLists.length !== plIds.length) {
     throw new AppError('Satu atau lebih packing list tidak ditemukan', 404);
   }
 
+  if (new Set(plIds).size !== plIds.length) throw new AppError('Packing list tidak boleh dipilih dua kali', 400);
+  const allocations = [];
+  for (const entry of stops) {
+    const packing = packingLists.find(pl => pl.id === entry.packingListId);
+    if (!allowRedelivery && packing.deliveryStops.some(s=>s.returnReceivedAt)) throw new AppError('Pengiriman ulang dinonaktifkan admin',409);
+    if (packing.outletId !== entry.outletId) throw new AppError('Toko tujuan tidak sesuai packing list', 400);
+    try { allocations.push({ ...entry, ...validateAllocation(packing, entry, allowSplit) }); }
+    catch (error) { throw new AppError(error.message, 409); }
+  }
+  if (new Set(stops.map(s => s.sequence)).size !== stops.length) throw new AppError('Urutan toko harus unik', 400);
+
   // Calculate totals
-  const totalCartons = packingLists.reduce((sum, pl) => sum + pl.totalCartons, 0);
-  const totalWeight = packingLists.reduce((sum, pl) => sum + (pl.totalWeight || 0), 0);
+  const totalCartons = allocations.reduce((sum, a) => sum + a.allocatedCartons, 0);
+  const totalWeight = allocations.reduce((sum, a) => sum + a.allocatedWeight, 0);
 
   // Check vehicle capacity
   if (totalCartons > vehicle.maxCartons) {
@@ -39,9 +56,11 @@ export const createDeliveryRoute = async (data, userId) => {
     );
   }
 
-  const code = await generateRouteCode(date);
+  if (vehicle.maxWeightKg && totalWeight > vehicle.maxWeightKg) throw new AppError('Berat muatan melebihi kapasitas kendaraan', 400);
 
-  const route = await prisma.deliveryRoute.create({
+  const code = `RT-${randomUUID().slice(0, 12).toUpperCase()}`;
+
+  const route = await tx.deliveryRoute.create({
     data: {
       code,
       date: new Date(date),
@@ -49,14 +68,17 @@ export const createDeliveryRoute = async (data, userId) => {
       driverId,
       status: 'DRAFT',
       totalCartons,
+      totalDistanceKm: data.totalDistanceKm,
+      fuelConsumedLiters: data.totalDistanceKm != null ? data.totalDistanceKm / vehicle.fuelKmPerLiter : null,
       totalWeight: totalWeight || null,
       notes,
       createdById: userId,
       stops: {
-        create: stops.map((s) => ({
+        create: allocations.map((s) => ({
           packingListId: s.packingListId,
           outletId: s.outletId,
           sequence: s.sequence,
+          allocatedCartons: s.allocatedCartons, allocatedWeight: s.allocatedWeight, allocatedItems: s.allocatedItems,
         })),
       },
     },
@@ -75,4 +97,5 @@ export const createDeliveryRoute = async (data, userId) => {
   });
 
   return route;
+  }, { isolationLevel: 'Serializable' });
 };

@@ -11,13 +11,13 @@ export const memoryCacheMiddleware = (ttlSeconds = 60) => {
       return next();
     }
 
-    const key = `${req.baseUrl || ''}${req.originalUrl || req.url}`;
+    const key = `${req.user?.id || 'anonymous'}:${req.user?.role || ''}:${JSON.stringify(req.user?.permissions || {})}:${req.originalUrl || req.url}`;
     const cached = memoryCache.get(key);
     const now = Date.now();
 
     if (cached && cached.expiry > now) {
       res.setHeader('X-Cache', 'HIT');
-      res.setHeader('Cache-Control', `public, max-age=${ttlSeconds}`);
+      res.setHeader('Cache-Control', 'private, no-store');
       return res.status(cached.status).json(cached.data);
     }
 
@@ -31,7 +31,7 @@ export const memoryCacheMiddleware = (ttlSeconds = 60) => {
           expiry: now + ttlSeconds * 1000,
         });
         res.setHeader('X-Cache', 'MISS');
-        res.setHeader('Cache-Control', `public, max-age=${ttlSeconds}`);
+        res.setHeader('Cache-Control', 'private, no-store');
       }
       return originalJson(body);
     };

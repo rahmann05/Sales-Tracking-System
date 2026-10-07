@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuRotateCw, LuUsers, LuShieldCheck } from 'react-icons/lu';
+import { LuRotateCw, LuShieldCheck } from "react-icons/lu";
 import { PageHeader } from '../../../../shared/components/common/PageHeader';
 
 /**

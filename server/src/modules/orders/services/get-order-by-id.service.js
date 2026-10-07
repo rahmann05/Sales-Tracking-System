@@ -1,7 +1,8 @@
+import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** getOrderById - single-responsibility service (extracted from orders.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { ORDER_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
+import { ROLES } from "../../../utils/constants.js";
 
 
 export const getOrderById = async (id, currentUser) => {
@@ -21,5 +22,6 @@ export const getOrderById = async (id, currentUser) => {
   const isPrivileged = [ROLES.ADMIN, ROLES.SUPERVISOR].includes(currentUser.role);
   if (!isOwner && !isPrivileged) throw new AppError('Anda tidak memiliki akses ke order ini', 403);
 
+  await assertSalesAccess(currentUser,order.createdBy);
   return order;
 };

@@ -1,7 +1,7 @@
 /** lockOutlet - single-responsibility service (extracted from outlet-lock.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { OUTLET_LOCK_STATUS, ROUTE_CHANGE_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
+import { OUTLET_LOCK_STATUS } from "../../../utils/constants.js";
 
 
 export const lockOutlet = async (outletId) => {

@@ -21,7 +21,7 @@ export const SalesOffPjpCard = ({ item, index }) => {
             </span>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-bold text-on-surface text-base tracking-tight truncate">
+                <h4 className="font-bold text-on-surface text-base tracking-tight min-w-0 whitespace-normal break-words">
                   {item.outletName}
                 </h4>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/30">
@@ -36,7 +36,7 @@ export const SalesOffPjpCard = ({ item, index }) => {
               )}
               <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
                 <LuMapPin className="text-tertiary text-xs shrink-0" />
-                <span className="truncate">{item.address || 'Alamat lokasi kunjungan'}</span>
+                <span className="min-w-0 whitespace-normal break-words">{item.address || 'Alamat lokasi kunjungan'}</span>
               </p>
             </div>
           </div>
@@ -75,7 +75,7 @@ export const SalesOffPjpCard = ({ item, index }) => {
             </span>
             <span className="flex items-center gap-1">
               <LuUser className="text-xs text-on-surface-variant" />
-              SPV Peninjau: <strong className="text-on-surface">{item.spvName || 'Ahmad Subagja'}</strong>
+              SPV Peninjau: <strong className="text-on-surface">{item.spvName || 'Belum Ditugaskan'}</strong>
             </span>
           </div>
         </div>

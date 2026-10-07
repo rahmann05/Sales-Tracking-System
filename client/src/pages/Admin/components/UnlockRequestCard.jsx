@@ -16,7 +16,7 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-bold text-on-surface text-sm line-clamp-1">{request.outletName}</h4>
+                <h4 className="font-bold text-on-surface text-sm ">{request.outletName}</h4>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 uppercase">
                   {request.userRole || 'SALES'}
                 </span>
@@ -35,15 +35,15 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
         </div>
 
         <div className="p-3 bg-surface rounded-xl border border-border-glass text-xs space-y-1">
-          <p className="text-on-surface-variant line-clamp-1">
+          <p className="text-on-surface-variant ">
             <LuMapPin className="text-xs inline mr-1 text-primary" />
             {request.address || 'Alamat outlet'}
           </p>
-          <p className="text-on-surface line-clamp-2">
+          <p className="text-on-surface ">
             <strong>Alasan Unlock:</strong> {request.reason}
           </p>
           {request.activeVisitingOutlet && (
-            <p className="text-[11px] text-amber-700 line-clamp-1">
+            <p className="text-[11px] text-amber-700 ">
               Outlet aktif sebelumnya: {request.activeVisitingOutlet}
             </p>
           )}

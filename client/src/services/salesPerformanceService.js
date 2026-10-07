@@ -1,3 +1,4 @@
+import { summarizeVisits, wibDateKey } from '../../../shared/visit-metrics.mjs';
 /**
  * Sales Performance & RJP Adherence Service
  * Single Responsibility: Pure mathematical & analytical calculation of Sales visit metrics,
@@ -18,24 +19,22 @@
 export const calculateSalesPerformance = ({
   salesStops = [],
   offPjpAttendances = [],
-  targetDailyVisits = 5,
+  targetDailyVisits = 10,
   salesName = null,
 }) => {
   // Filter for specific sales rep if provided
+  const todayOffPjp = offPjpAttendances.filter(a => a.createdAt && wibDateKey(a.createdAt) === wibDateKey());
   const relevantOffPjp = salesName
-    ? offPjpAttendances.filter((a) => !a.salesName || a.salesName.toLowerCase() === salesName.toLowerCase())
-    : offPjpAttendances;
+    ? todayOffPjp.filter((a) => !a.salesName || a.salesName.toLowerCase() === salesName.toLowerCase())
+    : todayOffPjp;
 
   // 1. RJP Metrics
-  const rjpCompleted = salesStops.filter(
-    (s) => s.status === 'ORDERED' || s.status === 'COMPLETED' || s.status === 'VISITED'
-  ).length;
-  const rjpSkipped = salesStops.filter((s) => s.status === 'SKIPPED').length;
-  const rjpClosed = salesStops.filter((s) => s.status === 'CLOSED').length;
-  const rjpRemaining = salesStops.filter(
-    (s) => s.status !== 'ORDERED' && s.status !== 'COMPLETED' && s.status !== 'VISITED' && s.status !== 'SKIPPED'
-  ).length;
-  const rjpTotal = salesStops.length;
+  const visitMetrics = summarizeVisits(salesStops);
+  const rjpCompleted = visitMetrics.completed;
+  const rjpSkipped = salesStops.filter(s => s.status === 'SKIPPED').length;
+  const rjpClosed = salesStops.filter(s => ['CLOSED', 'CLOSED_REPORTED'].includes(s.status)).length;
+  const rjpRemaining = visitMetrics.remaining;
+  const rjpTotal = visitMetrics.total;
 
   // 2. Off-PJP Breakdown by Status
   const offPjpTotal = relevantOffPjp.length;

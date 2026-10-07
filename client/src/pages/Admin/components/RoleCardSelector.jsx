@@ -105,7 +105,7 @@ export const RoleCardSelector = ({ roles, selectedRole, onSelectRole }) => {
                     {r.code}
                   </span>
                 </div>
-                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed line-clamp-2">
+                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed ">
                   {r.description}
                 </p>
               </div>

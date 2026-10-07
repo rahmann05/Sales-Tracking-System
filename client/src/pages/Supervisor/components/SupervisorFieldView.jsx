@@ -1,3 +1,5 @@
+import {FollowUpPanel} from '../../../shared/components/common/FollowUpPanel';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useSupervisorFieldVisits } from '../hooks/useSupervisorFieldVisits';
@@ -7,7 +9,7 @@ import { SpvModeSelector } from './SpvModeSelector';
 import { SpvStopCard } from './SpvStopCard';
 import { SpvFieldModals } from './SpvFieldModals';
 import { LuStore } from 'react-icons/lu';
-import { pjpApi } from '../../../services/api';
+import { pjpApi, collectPages } from '../../../services/api';
 
 /**
  * SupervisorFieldView Component (Orchestrator)
@@ -15,27 +17,32 @@ import { pjpApi } from '../../../services/api';
  * State & business logic didelegasikan ke `useSupervisorFieldVisits`.
  */
 export const SupervisorFieldView = () => {
+  const { user } = useApp();
+  const [loadError,setLoadError] = useState('');
   const [todayPjps, setTodayPjps] = useState([]);
   
   useEffect(() => {
     let isMounted = true;
-    pjpApi.getAllPjps()
+    const load = ()=>collectPages(pjpApi.getAllPjps, { date: wibDateKey() })
       .then((res) => {
         if (!isMounted) return;
         const pjps = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
-        const todayStr = new Date().toDateString();
-        setTodayPjps(pjps.filter((p) => new Date(p.date).toDateString() === todayStr));
+        const todayStr = wibDateKey();
+        setTodayPjps(pjps.filter((p) => wibDateKey(p.date) === todayStr));setLoadError('');
       })
-      .catch(() => { });
-    return () => { isMounted = false; };
-  }, []);
+      .catch(e => {if(isMounted) setLoadError(e.message);});
+    load();
+    window.addEventListener('focus',load);
+    window.addEventListener('operational-data-changed',load);
+    return () => {isMounted=false;window.removeEventListener('focus',load);window.removeEventListener('operational-data-changed',load);};
+  }, [user.id]);
 
   const salesOptions = useMemo(() => {
     const uniqueSales = new Map();
     todayPjps.forEach(p => {
       if (p.user) {
-        uniqueSales.set(p.user.name, {
-          value: p.user.name,
+        uniqueSales.set(p.user.id, {
+          value: p.user.id,
           label: `${p.user.name} (${p.user.cluster?.name || 'RJP'})`
         });
       }
@@ -47,12 +54,15 @@ export const SupervisorFieldView = () => {
 
   return (
     <div className="space-y-6">
+      {loadError && <p role="alert">{loadError}</p>}
+      <FollowUpPanel/>
       <SupervisorShiftHeader />
 
+      {field.error && <p role="alert" className="text-red-600 text-sm">{field.error}</p>}
       <SpvMetricsGrid
         spvStops={field.spvStops}
         spvMode={field.spvMode}
-        selectedSales={field.selectedSales}
+        selectedSales={salesOptions.find(s=>s.value===field.selectedSales)?.label || 'Pilih sales'}
         completedCount={field.completedCount}
         inVisitCount={field.inVisitCount}
       />
@@ -80,6 +90,7 @@ export const SupervisorFieldView = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
+          {!field.spvStops.length && <p className="p-4 text-sm text-on-surface-variant">Belum ada PJP tim untuk disupervisi hari ini.</p>}
           {field.spvStops.map((stop, idx) => (
             <SpvStopCard
               key={stop.id}
@@ -94,7 +105,9 @@ export const SupervisorFieldView = () => {
         </div>
       </div>
 
-      <SpvFieldModals
+      <SpvFieldModals followUp={field.followUp} onChangeFollowUp={field.setFollowUp}
+        error={field.error}
+        saving={field.saving}
         activeModal={field.activeModal}
         selectedStop={field.selectedStop}
         inputNotes={field.inputNotes}

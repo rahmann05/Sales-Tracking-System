@@ -1,4 +1,4 @@
-import { LuUser, LuSparkles, LuClock, LuCompass, LuTrendingUp, LuCircleCheck, LuKey, LuFileText } from 'react-icons/lu';
+import { LuUser, LuSparkles, LuClock, LuCompass, LuCircleCheck, LuKey, LuFileText } from "react-icons/lu";
 import { FiAlertCircle } from 'react-icons/fi';
 
 /**
@@ -15,22 +15,24 @@ export const SPV_MODES = {
 
 export const SPV_MODE_OPTIONS = [
     { id: SPV_MODES.JOINT_VISIT, label: 'Mode Joint Visit (Dampingi Sales)', icon: LuUser },
-    { id: SPV_MODES.PRIORITY_AUDIT, label: 'Mode Audit Toko Prioritas', icon: LuSparkles },
-    { id: SPV_MODES.OPENING_INSPECTION, label: 'Inspeksi Toko Pembuka (Pagi)', icon: LuClock },
+    { id: SPV_MODES.PRIORITY_AUDIT, label: 'Audit Toko Pilihan', icon: LuSparkles },
+    { id: SPV_MODES.OPENING_INSPECTION, label: 'Inspeksi Toko Pilihan', icon: LuClock },
 ];
 
 
 
 // Audit compliance checklist definition (label per key)
 export const SPV_AUDIT_CHECKLIST_ITEMS = [
-    { key: 'stockAvailability', label: 'Ketersediaan Stok Produk Inti (Sembako/Minyak/Beras)' },
-    { key: 'priceCompliance', label: 'Kesesuaian Harga Jual & Ketentuan HET' },
+    { key: 'stockAvailability', label: 'Ketersediaan Produk Katalog' },
+    { key: 'priceCompliance', label: 'Kesesuaian Harga Jual' },
     { key: 'posmDisplay', label: 'Pajangan Produk / Banner POSM Terpasang Rapi' },
     { key: 'salesGreeting', label: 'Pelayanan & Hubungan Sales dengan Pemilik Toko Baik' },
 ];
 
 // Main workspace tabs for SupervisorPage (Action Center & Daily Recap)
 export const SUPERVISOR_TABS = [
+    {id:'planning',label:'Tim & PJP',shortLabel:'Perencanaan',icon:LuUser},
+    { id: 'field', label: 'Kunjungan Lapangan', shortLabel: 'Kunjungan', icon: LuCompass, description: 'Absen dan audit supervisi toko' },
     { 
         id: 'action_center', 
         label: 'Pusat Approval & Kendala', 
@@ -58,10 +60,10 @@ export const ACTION_CENTER_FILTERS = [
 export const APPROVAL_SUB_FILTERS = ACTION_CENTER_FILTERS;
 
 export const DEFAULT_SPV_CHECKLIST = {
-    stockAvailability: true,
-    priceCompliance: true,
-    posmDisplay: true,
-    salesGreeting: true,
+    stockAvailability: false,
+    priceCompliance: false,
+    posmDisplay: false,
+    salesGreeting: false,
 };
 
 

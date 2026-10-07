@@ -12,7 +12,21 @@
     "prisma:db-push": "prisma db push",
     "prisma:seed": "prisma db seed",
     "prisma:import-belfoods": "node prisma/importBelfoods.js",
-    "test": "node --test tests/**/*.test.js"
+    "test": "node --test tests/**/*.test.js",
+    "verify:source": "node scripts/verify-source.mjs",
+    "verify:operational": "node scripts/verify-operational-workflows.mjs",
+    "verify:packing": "node scripts/verify-packing-workflow.mjs",
+    "verify:manual-sales": "node scripts/verify-manual-sales.mjs",
+    "verify:team-outlet": "node scripts/verify-team-outlet.mjs",
+    "verify:ui": "node scripts/verify-ui-contracts.mjs",
+    "verify:seed": "node scripts/verify-seed.mjs",
+    "verify:client-fetch": "node scripts/verify-client-fetch.mjs",
+    "verify:session-reports": "node scripts/verify-session-reports.mjs",
+    "verify:map-markers": "node scripts/verify-map-markers.mjs",
+    "verify:clusters": "node scripts/verify-cluster-management.mjs",
+    "verify:cluster-render": "node scripts/verify-cluster-render.mjs",
+    "verify:cluster-count": "node scripts/verify-cluster-count.mjs",
+    "verify:workspace-data": "node scripts/verify-workspace-data.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

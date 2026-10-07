@@ -1,116 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { LuArrowRight } from 'react-icons/lu';
-import { FiXCircle, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
-import { DecisionOptionCards } from './DecisionOptionCards';
+import React, { useEffect, useState } from 'react';
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
+import { useApp } from '../../../context/AppContext';
 import { outletsApi } from '../../../services/api';
-
-/**
- * IncidentHandleModal Component (Single Responsibility: SPV Decision Modal for Skip vs Reroute Request)
- * 1 File per Component
- */
-export const IncidentHandleModal = ({ incident, onClose, onSkip, onDirectReroute, onRequestReroute }) => {
-  const [actionType, setActionType] = useState('SKIP'); // 'SKIP' or 'DIRECT_REROUTE'
-  const [replacementOutletId, setReplacementOutletId] = useState('');
-  const [rerouteReason, setRerouteReason] = useState('Penggantian toko rute langsung oleh Supervisor');
-  const [outlets, setOutlets] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (actionType === 'DIRECT_REROUTE') {
-      setIsLoading(true);
-      outletsApi.getAll()
-        .then((res) => {
-          setOutlets(res.data || []);
-          if (res.data?.length > 0) setReplacementOutletId(res.data[0].id);
-        })
-        .catch(console.error)
-        .finally(() => setIsLoading(false));
-    }
-  }, [actionType]);
-
-  if (!incident) return null;
-
-  const handleSubmit = () => {
-    if (actionType === 'SKIP') {
-      onSkip(incident.id);
-    } else {
-      if (!replacementOutletId) return alert('Silakan pilih outlet pengganti.');
-      const rerouteFn = onDirectReroute || onRequestReroute;
-      rerouteFn({
-        incidentId: incident.id,
-        replacementOutletId,
-        reason: rerouteReason,
-      });
-    }
-  };
-
-  return (
-    <div className="modal-backdrop">
-      <div className="modal-card max-w-lg space-y-5">
-        <div className="modal-header">
-          <div>
-            <h3 className="section-title">Keputusan Supervisor (SPV)</h3>
-            <p className="card-subtitle">Laporan Toko Tutup: {incident.outletName}</p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant">
-            <FiXCircle className="text-xl" />
-          </button>
-        </div>
-
-        {/* Action Type Selection Cards */}
-        <DecisionOptionCards actionType={actionType} onSelectAction={setActionType} />
-
-        {/* Reroute Options if DIRECT_REROUTE selected */}
-        {actionType === 'DIRECT_REROUTE' && (
-          <div className="space-y-3 p-3 bg-tertiary/5 border border-tertiary/20 rounded-2xl">
-            <div className="space-y-1">
-              <label className="form-label">Toko Pengganti:</label>
-              {isLoading ? (
-                <div className="text-xs text-on-surface-variant">Memuat daftar outlet...</div>
-              ) : (
-                <select
-                  value={replacementOutletId}
-                  onChange={(e) => setReplacementOutletId(e.target.value)}
-                  className="form-input bg-surface border-border-glass text-xs w-full p-2 rounded-lg"
-                >
-                  <option value="" disabled>Pilih Outlet Pengganti</option>
-                  {outlets.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name} - {o.address}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="space-y-1">
-              <label className="form-label">Catatan Reroute SPV:</label>
-              <textarea
-                value={rerouteReason}
-                onChange={(e) => setRerouteReason(e.target.value)}
-                placeholder="Opsional, panduan untuk sales..."
-                className="form-input"
-              />
-            </div>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className={`w-full py-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 ${
-            actionType === 'SKIP'
-              ? 'bg-amber-600 hover:bg-amber-700'
-              : 'bg-primary hover:bg-primary/90'
-          }`}
-        >
-          <span>
-            {actionType === 'SKIP'
-              ? 'Konfirmasi Skip Toko'
-              : 'Terapkan Reroute Langsung Ke Sales'}
-          </span>
-          <LuArrowRight className="text-base" />
-        </button>
-      </div>
-    </div>
-  );
-};
+export function IncidentHandleModal({incident,onClose,onSkip,onDirectReroute}) {
+  const {settings} = useApp();
+  const [action,setAction] = useState('SKIP');
+  const [outletId,setOutletId] = useState('');
+  const [reason,setReason] = useState('');
+  const [outlets,setOutlets] = useState([]);
+  const [loading,setLoading] = useState(false);
+  const [busy,setBusy] = useState(false);
+  const [error,setError] = useState('');
+  useEffect(()=>{if(action!=='REROUTE')return;let live=true;setLoading(true);outletsApi.getAll().then(res=>{if(live)setOutlets((res.data || []).filter(o=>o.id!==incident?.outletId));}).catch(e=>{if(live)setError(e.message);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[action,incident?.outletId]);
+  const save = async e=>{e.preventDefault();setBusy(true);setError('');try{const result=action==='SKIP'?await onSkip(incident.id):await onDirectReroute({incidentId:incident.id,replacementOutletId:outletId,reason});if(result===false)setError('Keputusan belum tersimpan. Periksa notifikasi kesalahan lalu coba kembali.');}catch(err){setError(err.message);}finally{setBusy(false);}};
+  return <NativeDialog open={Boolean(incident)} title={`Keputusan toko tutup: ${incident?.outletName || ''}`} busy={busy} onClose={onClose}><form className="app-form" onSubmit={save}><p>{incident?.reason || 'Laporan toko tutup memerlukan keputusan.'}</p><label className="app-field">Tindakan<select value={action} onChange={e=>setAction(e.target.value)} disabled={busy}><option value="SKIP">Lewati toko tanpa pengganti</option><option value="REROUTE">Ganti dengan toko lain</option></select></label>{action==='REROUTE' && <><p className="app-notice">{settings.REROUTE_REQUIRE_ADMIN_APPROVAL?'Usulan menunggu persetujuan admin sebelum PJP diperbarui.':'Toko pengganti langsung ditambahkan setelah keputusan disimpan.'}</p><label className="app-field">Toko pengganti<select required value={outletId} onChange={e=>setOutletId(e.target.value)} disabled={busy || loading}><option value="">{loading?'Memuat toko…':'Pilih toko pengganti'}</option>{outlets.map(o=><option key={o.id} value={o.id}>{o.name} — {o.address}</option>)}</select></label><label className="app-field">Alasan penggantian<textarea required minLength={5} value={reason} onChange={e=>setReason(e.target.value)} disabled={busy}/></label></>}{error && <p role="alert" className="app-error">{error}</p>}<div className="app-actions"><button type="button" className="app-button" onClick={onClose} disabled={busy}>Batal</button><button className="app-button app-button-primary" disabled={busy || loading}>{busy?'Menyimpan…':'Simpan keputusan'}</button></div></form></NativeDialog>;
+}

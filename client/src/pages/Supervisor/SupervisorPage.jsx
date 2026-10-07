@@ -1,3 +1,7 @@
+import { RoutePlanningPage } from '../RoutePlanning/RoutePlanningPage';
+import { AdminApprovalPage } from '../Admin/AdminApprovalPage';
+import { ManualSalesReview } from '../../shared/components/common/ManualSalesReview';
+import { SupervisorFieldView } from './components/SupervisorFieldView';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useModal } from '../../shared/hooks/useModal';
@@ -7,7 +11,7 @@ import { SupervisorTabBar } from './components/SupervisorTabBar';
 import { SupervisorActionCenterTab } from './components/SupervisorActionCenterTab';
 import { SupervisorDailyRecapTab } from './components/SupervisorDailyRecapTab';
 import { IncidentHandleModal } from './components/IncidentHandleModal';
-import { LuShieldCheck, LuUsers, LuClock, LuRotateCw } from 'react-icons/lu';
+import { LuShieldCheck } from "react-icons/lu";
 
 /**
  * SupervisorPage Component (Orchestrator)
@@ -27,7 +31,6 @@ export const SupervisorPage = () => {
     handleSupervisorValidateOffPJP,
     handleSupervisorSkipOutlet,
     handleSupervisorDirectReroute,
-    handleSupervisorApproveOffPJP,
     handleApproveUnlockRequest,
     handleRejectUnlockRequest,
   } = useApp();
@@ -40,55 +43,51 @@ export const SupervisorPage = () => {
   const offPjpRequests = incidents.filter((i) => i.type === 'OFF_PJP_REQUEST');
   const unlockRequests = incidents.filter((i) => i.type === 'UNLOCK_REQUEST');
   const pendingUnlockCount = unlockRequests.filter((r) => r.status === 'PENDING' || !r.status).length;
-  const pendingOffPjpCount = offPjpAttendances.filter((a) => a.status === 'PENDING' || a.status === 'WAITING_SPV').length;
+  const pendingOffPjpCount = offPjpAttendances.filter((a) => a.status === 'PENDING' || a.validationStatus === 'MENUNGGU').length;
 
-  const totalPendingActions = pendingClosedIncidents + pendingUnlockCount + pendingOffPjpCount + offPjpRequests.length;
+  const pendingOrders = orders.filter(o=>['PENDING','PENDING_APPROVAL'].includes(o.status)).length;
+  const totalPendingActions = pendingOrders + pendingClosedIncidents + pendingUnlockCount + pendingOffPjpCount + offPjpRequests.filter(r=>['PENDING','PENDING_SPV'].includes(r.status)).length;
 
   const completedStopsCount = salesStops.filter(
     (s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime
   ).length;
 
-  const handleSkipConfirm = (incidentId) => {
-    handleSupervisorSkipOutlet(incidentId);
+  const handleSkipConfirm = async (incidentId) => {
+    if (await handleSupervisorSkipOutlet(incidentId) === false) return false;
     closeModal();
     notifySuccess('Outlet berhasil di-SKIP! Sales dapat melanjutkan ke outlet berikutnya.');
   };
 
-  const handleDirectRerouteConfirm = (payload) => {
-    handleSupervisorDirectReroute(payload);
+  const handleDirectRerouteConfirm = async (payload) => {
+    const result = await handleSupervisorDirectReroute(payload);
+    if (result === false) return false;
     closeModal();
-    notifySuccess('Reroute langsung berhasil! Toko baru telah ditambahkan ke jadwal Sales.');
+    notifySuccess(result?.pending ? 'Usulan reroute menunggu persetujuan admin.' : 'Toko pengganti ditambahkan ke PJP sales.');
   };
 
-  const handleRerouteConfirm = (payload) => {
-    handleSupervisorDirectReroute(payload);
-    closeModal();
-    notifySuccess('Reroute langsung berhasil! Toko baru telah ditambahkan ke jadwal Sales.');
+  const handleApproveUnlock = async (requestId, stopId, userRole) => {
+    if (await handleApproveUnlockRequest(requestId, stopId, userRole) === false) return false;
+    notifySuccess('Permintaan Unlock disetujui! Pengecualian presensi berlaku untuk pemohon sesuai masa berlaku.');
   };
 
-  const handleApproveUnlock = (requestId, stopId, userRole) => {
-    handleApproveUnlockRequest(requestId, stopId, userRole);
-    notifySuccess('Permintaan Unlock disetujui! Outlet telah dibuka untuk presensi tim lapangan.');
-  };
-
-  const handleRejectUnlock = (requestId) => {
-    handleRejectUnlockRequest(requestId);
+  const handleRejectUnlock = async (requestId) => {
+    if (await handleRejectUnlockRequest(requestId) === false) return false;
     notifySuccess('Permintaan Unlock ditolak.');
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-24">
+    <div className="workspace-page space-y-6">
       {/* 1. Standardized Universal Page Header */}
       <PageHeader
         badge={
           <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuShieldCheck className="text-sm" /> SUPERVISI LAPANGAN • COMMAND CENTER
+            <LuShieldCheck className="text-sm" /> SUPERVISOR
           </span>
         }
-        title="Pusat Kendali & Supervisi Lapangan"
-        subtitle="Pantau rute sales secara real-time, tuntaskan persetujuan kendala operasional (skip/reroute & unlock presensi), dan evaluasi capaian target tim harian."
+        title="Operasional tim sales"
+        subtitle="Siapkan tim dan PJP, tangani permintaan, dampingi kunjungan, lalu evaluasi hasil harian."
         stats={[
-          { label: 'Salesman', value: `${salesList.length || 2} Personel`, color: 'neutral' },
+          { label: 'Salesman', value: `${salesList.length} Personel`, color: 'neutral' },
           { label: 'Kendala Butuh Aksi', value: `${totalPendingActions} Antrean`, color: totalPendingActions > 0 ? 'rose' : 'emerald' },
           { label: 'Kunjungan Selesai', value: `${completedStopsCount} Toko`, color: 'neutral' },
         ]}
@@ -101,7 +100,10 @@ export const SupervisorPage = () => {
         pendingActions={totalPendingActions}
       />
 
+      {activeTab === 'planning' && <RoutePlanningPage/>}
+      {activeTab === 'action_center' && <><AdminApprovalPage embedded/><ManualSalesReview /></>}
       {/* 3. Tab Contents */}
+      {activeTab === 'field' && <SupervisorFieldView />}
       {activeTab === 'action_center' && (
         <SupervisorActionCenterTab
           closedShopIncidents={closedShopIncidents}
@@ -134,7 +136,6 @@ export const SupervisorPage = () => {
           onClose={closeModal}
           onSkip={handleSkipConfirm}
           onDirectReroute={handleDirectRerouteConfirm}
-          onRequestReroute={handleRerouteConfirm}
         />
       )}
     </div>

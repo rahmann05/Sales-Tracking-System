@@ -1,3 +1,6 @@
+import {prisma} from '../../config/prisma.js';
+import { createPackingListSchema, updatePackingListSchema, createDeliveryRouteSchema } from './delivery.schema.js';
+import { savePacking, transitionPacking } from './services/packing-workflow.service.js';
 import * as deliveryService from './delivery.service.js';
 import { AppError } from '../../utils/errors.js';
 
@@ -7,7 +10,7 @@ import { AppError } from '../../utils/errors.js';
 
 export const createPackingList = async (req, res, next) => {
   try {
-    const result = await deliveryService.createPackingList(req.body, req.user.id);
+    const result = await deliveryService.createPackingList(createPackingListSchema.parse({ body: req.body }).body, req.user.id);
     res.status(201).json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -16,7 +19,7 @@ export const createPackingList = async (req, res, next) => {
 
 export const getPackingLists = async (req, res, next) => {
   try {
-    const result = await deliveryService.getPackingLists(req.query);
+    const result = await deliveryService.getPackingLists(req.query, req.user.role);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -26,6 +29,7 @@ export const getPackingLists = async (req, res, next) => {
 export const getPackingListById = async (req, res, next) => {
   try {
     const result = await deliveryService.getPackingListById(req.params.id);
+    if (req.user.role !== 'ADMIN' && result.status !== 'RELEASED') throw new AppError('Dokumen belum dilepas admin', 403);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -47,7 +51,7 @@ export const deletePackingList = async (req, res, next) => {
 
 export const createDeliveryRoute = async (req, res, next) => {
   try {
-    const result = await deliveryService.createDeliveryRoute(req.body, req.user.id);
+    const result = await deliveryService.createDeliveryRoute(createDeliveryRouteSchema.parse({ body: req.body }).body, req.user.id);
     res.status(201).json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -66,6 +70,7 @@ export const getDeliveryRoutes = async (req, res, next) => {
 export const getDeliveryRouteById = async (req, res, next) => {
   try {
     const result = await deliveryService.getDeliveryRouteById(req.params.id);
+    if (req.user.role === 'SUPIR' && result.driverId !== req.user.id) throw new AppError('Rute bukan tugas Anda', 403);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -74,7 +79,7 @@ export const getDeliveryRouteById = async (req, res, next) => {
 
 export const updateRouteStatus = async (req, res, next) => {
   try {
-    const result = await deliveryService.updateRouteStatus(req.params.id, req.body.status);
+    const result = await deliveryService.updateRouteStatus(req.params.id, req.body.status, req.body.totalDistanceKm);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -105,6 +110,8 @@ export const submitDriverAttendance = async (req, res, next) => {
 
 export const updateStopStatus = async (req, res, next) => {
   try {
+    const out=await prisma.deliveryAttendance.findFirst({where:{deliveryStopId:req.params.id,driverId:req.user.id,type:'OUT'},select:{id:true}});
+    if(!out)throw new AppError('Gunakan absensi keluar dengan hasil pengiriman',409);
     const result = await deliveryService.updateStopStatus(req.params.id, req.body, req.user.id);
     res.json({ success: true, data: result });
   } catch (err) {
@@ -132,4 +139,11 @@ export const getDrivers = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+export const updatePackingList = async (req, res, next) => {
+  try { res.json({ success: true, data: await savePacking(updatePackingListSchema.parse({ body: req.body, params: req.params }).body, req.user.id, req.params.id) }); } catch (error) { next(error); }
+};
+export const changePackingStatus = async (req, res, next) => {
+  try { res.json({ success: true, data: await transitionPacking(req.params.id, req.body.action, req.user.id) }); } catch (error) { next(error); }
 };

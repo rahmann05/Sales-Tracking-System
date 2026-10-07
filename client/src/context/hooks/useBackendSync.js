@@ -1,5 +1,6 @@
+import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import { useEffect } from 'react';
-import { getAuthToken, pjpApi, ordersApi, productsApi, absensiApi, outletsApi, usersApi, routeChangesApi } from '../../services/api';
+import { collectPages, getAuthToken, pjpApi, ordersApi, productsApi, absensiApi, outletsApi, usersApi, routeChangesApi } from '../../services/api';
 import { mapServerOrder } from '../../utils/orderMapper';
 import { mapServerRouteChange, mapServerUnlockRequest } from '../../utils/incidentMapper';
 
@@ -8,26 +9,18 @@ const formatTimeWib = (ts) => {
   const d = new Date(ts);
   return isNaN(d.getTime())
     ? null
-    : d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    : d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) + ' WIB';
 };
 
 const resolveStopStatus = (s, inAtt, outAtt) => {
   if (outAtt || s.status === 'VISITED' || s.status === 'COMPLETED') return 'VISITED';
-  if (inAtt || s.status === 'ARRIVED' || s.status === 'IN_VISIT') return 'ARRIVED';
   if (s.status === 'SKIPPED') return 'SKIPPED';
   if (s.status === 'CLOSED_REPORTED' || s.status === 'CLOSED') return 'CLOSED';
+  if (inAtt || s.status === 'ARRIVED' || s.status === 'IN_VISIT') return 'ARRIVED';
   return 'PENDING';
 };
 
-const isDateToday = (dStr) => {
-  if (!dStr) return false;
-  const d = new Date(dStr);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) return true;
-  const dWib = new Date(d.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  const nowWib = new Date(now.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  return dWib === nowWib;
-};
+const isDateToday = value => value && wibDateKey(value) === wibDateKey();
 
 /**
  * useBackendSync - Live backend synchronization effect.
@@ -78,12 +71,12 @@ export const useBackendSync = ({
         ] = await Promise.all([
           fetchClusters(),
           fetchDivisions(),
-          isManager ? usersApi.getAll().catch(() => null) : Promise.resolve(null),
+          isManager ? collectPages(usersApi.getAll).catch(() => null) : Promise.resolve(null),
           isSales ? pjpApi.getTodayPjp().catch(() => null) : Promise.resolve(null),
-          (isSupervisor || isSales) ? pjpApi.getAllPjps().catch(() => null) : Promise.resolve(null),
-          isSupervisor ? absensiApi.getOffPjpList().catch(() => null) : Promise.resolve(null),
-          (isManager || isSales) ? ordersApi.getAllOrders().catch(() => null) : Promise.resolve(null),
-          (isManager || isSales) ? routeChangesApi.getAll().catch(() => null) : Promise.resolve(null),
+          isManager ? collectPages(pjpApi.getAllPjps, { date: wibDateKey() }).catch(() => null) : Promise.resolve(null),
+          (isManager || isSales) ? collectPages(absensiApi.getOffPjpList, { date: wibDateKey() }).catch(() => null) : Promise.resolve(null),
+          (isManager || isSales) ? collectPages(ordersApi.getAllOrders).catch(() => null) : Promise.resolve(null),
+          (isManager || isSales) ? collectPages(routeChangesApi.getAll).catch(() => null) : Promise.resolve(null),
           (isManager || isSales) ? outletsApi.getUnlockRequests().catch(() => null) : Promise.resolve(null),
           isSales ? productsApi.getAll().catch(() => null) : Promise.resolve(null),
         ]);
@@ -95,33 +88,34 @@ export const useBackendSync = ({
         // 1. Process Live Users (Supervisor / Admin)
         if (isManager && usersRes) {
           const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
-          if (userList.length > 0) {
+          {
             const salesUsers = userList.filter((u) => u.role === 'SALES');
             const spvUsers = userList.filter((u) => u.role === 'SUPERVISOR');
-            const primarySpv = spvUsers[0]?.name || 'Ahmad Subagja';
+            const visibleSupervisors = isSupervisor ? [user] : spvUsers;
 
             const mappedSales = salesUsers.map((s) => ({
               id: s.id,
               name: s.name,
               email: s.email,
-              phone: s.phone || '0812-3456-7890',
-              cluster: s.cluster?.name || s.clusterName || 'Klaster Terjadwal',
-              spvName: s.spvName || s.cluster?.supervisor?.name || primarySpv,
-              spvTeamName: `Tim SPV ${s.spvName || s.cluster?.supervisor?.name || primarySpv}`,
+              phone: s.phone || '—',
+              cluster: s.cluster?.name || s.clusterName || 'Belum ditugaskan',
+              supervisorId:s.supervisorId,
+              spvName: s.supervisor?.name || s.spvName || 'Belum ditugaskan',
+              spvTeamName: `Tim ${s.supervisor?.name || s.spvName || 'belum ditugaskan'}`,
               rjpTeamName: `RJP ${s.cluster?.name || 'Klaster'}`,
               status: 'Active',
-              location: s.region || s.cluster?.region || 'Cimahi & KBB',
+              location: s.region || s.cluster?.region || '—',
             }));
             setSalesList(mappedSales);
 
-            const mappedSpvTeams = (spvUsers.length > 0 ? spvUsers : [{ id: 'usr-spv-1', name: 'Ahmad Subagja', email: 'spv@sinaranugrah.com' }]).map((spv) => ({
+            const mappedSpvTeams = visibleSupervisors.map((spv) => ({
               id: spv.id,
               spvName: spv.name,
               spvEmail: spv.email,
               teamName: `Tim SPV ${spv.name}`,
-              teamCount: mappedSales.length,
-              clusters: clustersList.map((c) => c.name),
-              members: mappedSales.map((s) => s.name),
+              teamCount: mappedSales.filter(s=>s.supervisorId===spv.id).length,
+              clusters: clustersList.filter(c=>c.supervisorId===spv.id).map(c=>c.name),
+              members: mappedSales.filter(s=>s.supervisorId===spv.id).map(s=>s.name),
             }));
             setSupervisorTeams(mappedSpvTeams);
 
@@ -130,8 +124,8 @@ export const useBackendSync = ({
               name: `RJP ${c.name}`,
               cluster: c.name,
               region: c.region,
-              spvName: c.supervisor?.name || primarySpv,
-              salesName: c.assignedSales?.name || mappedSales.find((s) => s.cluster === c.name)?.name || 'Belum Ditugaskan',
+              spvName: c.supervisor?.name || 'Belum ditugaskan',
+              salesName: c.assignedSales?.name || 'Belum Ditugaskan',
               outletCount: c._count?.outlets || c.allocatedOutletsCount || c.outlets?.length || 0,
               status: 'ACTIVE',
             }));
@@ -140,7 +134,7 @@ export const useBackendSync = ({
         }
 
         // 2. Process Sales Today PJP
-        if (isSales && todayPjpRes?.data?.stops && todayPjpRes.data.stops.length > 0) {
+        if (isSales && todayPjpRes?.data?.stops) {
           const pjpData = todayPjpRes.data;
           const cluster = pjpData.user?.cluster;
 
@@ -178,6 +172,7 @@ export const useBackendSync = ({
               assignedSalesName: user?.name || '',
               customerId: s.outlet?.outletCode || '',
               outletCode: s.outlet?.outletCode || '',
+              lockStatus: s.outlet?.lockStatus || 'NORMAL',
               status: stopStatus,
               inTimestamp: inAtt?.timestamp ? new Date(inAtt.timestamp).toISOString() : null,
               outTimestamp: outAtt?.timestamp ? new Date(outAtt.timestamp).toISOString() : null,
@@ -194,12 +189,14 @@ export const useBackendSync = ({
           setSalesStops(mappedStops);
         }
 
+        if (isSales && todayPjpRes && !todayPjpRes.data) setSalesStops([]);
+
         // 3. Process Active Routes (Supervisor / Admin / Sales)
         if (pjpsRes) {
           const pjps = Array.isArray(pjpsRes?.data) ? pjpsRes.data : (Array.isArray(pjpsRes?.data?.data) ? pjpsRes.data.data : (Array.isArray(pjpsRes) ? pjpsRes : []));
-          if (pjps.length > 0) {
+          {
             const todays = pjps.filter((p) => isDateToday(p.date));
-            const listToUse = todays.length > 0 ? todays : pjps.slice(0, 20);
+            const listToUse = todays;
 
             const routes = listToUse.map((p) => {
               const cluster = p.user?.cluster || p.cluster;
@@ -209,6 +206,8 @@ export const useBackendSync = ({
                 const stopStatus = resolveStopStatus(s, inAtt, outAtt);
                 return {
                   id: s.id,
+                  salesId: p.userId,
+                  salesName: p.user?.name,
                   sequence: s.sequence || idx + 1,
                   outletName: s.outlet?.name || '',
                   customerName: s.outlet?.name || '',
@@ -226,6 +225,7 @@ export const useBackendSync = ({
                   assignedSalesName: p.user?.name || '',
                   customerId: s.outlet?.outletCode || '',
                   outletCode: s.outlet?.outletCode || '',
+                  lockStatus: s.outlet?.lockStatus || 'NORMAL',
                   status: stopStatus,
                   inTimestamp: inAtt?.timestamp ? new Date(inAtt.timestamp).toISOString() : null,
                   outTimestamp: outAtt?.timestamp ? new Date(outAtt.timestamp).toISOString() : null,
@@ -256,13 +256,18 @@ export const useBackendSync = ({
               };
             });
             setActiveRoutes(routes);
+            if (isManager) setSalesStops(routes.flatMap(route => route.stops));
           }
         }
 
         // 4. Process Off-PJP Attendances
-        if (offPjpRes?.data?.length > 0) {
-          const mappedOffPjp = offPjpRes.data.map((att) => ({
+        if (offPjpRes?.data) {
+          const list = Array.isArray(offPjpRes.data) ? offPjpRes.data : offPjpRes.data.data || [];
+          const mappedOffPjp = list.map((att) => ({
             id: att.id,
+            status: att.status,
+            userId: att.userId,
+            createdAt: att.createdAt,
             salesId: att.userId,
             salesName: att.user?.name || '',
             outletName: att.outletName || '',
@@ -272,7 +277,7 @@ export const useBackendSync = ({
             reason: att.reason,
             photoUrl: att.photoUrl,
             gpsLocation: { lat: att.latitude, lng: att.longitude },
-            time: new Date(att.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+            time: new Date(att.createdAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) + ' WIB',
             date: new Date(att.createdAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }),
             validationStatus: att.status === 'APPROVED' ? 'TERVALIDASI' : att.status === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU',
           }));
@@ -282,9 +287,7 @@ export const useBackendSync = ({
         // 5. Process Orders
         if (ordersRes?.data) {
           const rawOrders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.items || [];
-          if (rawOrders.length > 0) {
-            setOrders(rawOrders.map(mapServerOrder));
-          }
+          setOrders(rawOrders.map(mapServerOrder));
         }
 
         // 6. Process Incidents
@@ -299,16 +302,12 @@ export const useBackendSync = ({
           ...rawRouteChanges.map(mapServerRouteChange),
           ...rawUnlocks.map(mapServerUnlockRequest),
         ];
-        if (mappedIncidents.length > 0) {
-          setIncidents(mappedIncidents);
-        }
+        if (routeChangesRes && unlockRes) setIncidents(mappedIncidents);
 
         // 7. Process Products
         if (productsRes?.data) {
           const rawProducts = Array.isArray(productsRes.data) ? productsRes.data : productsRes.data.items || [];
-          if (rawProducts.length > 0) {
-            setProducts(rawProducts);
-          }
+          setProducts(rawProducts);
         }
       } catch (err) {
         console.warn('[useBackendSync] Sync with backend notice:', err.message);
@@ -316,9 +315,15 @@ export const useBackendSync = ({
     };
 
     syncWithBackend();
+    const timer = setInterval(syncWithBackend, 60000);
+    window.addEventListener('focus', syncWithBackend);
+    window.addEventListener('operational-data-changed', syncWithBackend);
 
     return () => {
       isMounted = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', syncWithBackend);
+      window.removeEventListener('operational-data-changed', syncWithBackend);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);

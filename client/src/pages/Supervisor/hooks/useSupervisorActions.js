@@ -17,11 +17,11 @@ export const useSupervisorActions = ({
   // Supervisor Action: Validate or Reject Off-PJP Absen
   const handleSupervisorValidateOffPJP = useCallback(async ({ attendanceId, approved, rejectionNote }) => {
     try {
-      await absensiApi.validateOffPjp(attendanceId, approved, rejectionNote);
+      const res = await absensiApi.validateOffPjp(attendanceId, approved, rejectionNote);
 
       const status = approved ? 'TERVALIDASI' : 'DITOLAK';
       setOffPjpAttendances((prev) =>
-        prev.map((a) => (a.id === attendanceId ? { ...a, validationStatus: status, spvName: user?.name || 'Supervisor' } : a))
+        prev.map((a) => (a.id === attendanceId ? { ...a, ...res.data, status:approved ? 'APPROVED' : 'REJECTED', validationStatus: status, spvName: user?.name || 'Supervisor' } : a))
       );
 
       addNotification({
@@ -36,18 +36,15 @@ export const useSupervisorActions = ({
         message: err.message,
         roleTarget: ['SUPERVISOR'],
       });
+      return false;
     }
   }, [user?.name, setOffPjpAttendances, addNotification]);
 
   // Supervisor Action: Skip Outlet
   const handleSupervisorSkipOutlet = useCallback(async (incidentId) => {
     try {
-      let incident = null;
-      setIncidents((prev) => {
-        incident = prev.find((i) => i.id === incidentId);
-        return prev;
-      });
-      if (!incident) return;
+      const incident = incidents.find(i=>i.id===incidentId);
+      if (!incident) throw new Error('Kendala tidak ditemukan. Muat ulang data.');
 
       await routeChangesApi.skip(incidentId);
 
@@ -71,18 +68,15 @@ export const useSupervisorActions = ({
         message: err.message,
         roleTarget: ['SUPERVISOR'],
       });
+      return false;
     }
-  }, [user?.name, setIncidents, setSalesStops, addNotification]);
+  }, [user?.name, incidents, setIncidents, setSalesStops, addNotification]);
 
   // Supervisor Action: Direct Reroute Sales Route
   const handleSupervisorDirectReroute = useCallback(async ({ incidentId, replacementOutletId, reason }) => {
     try {
-      let incident = null;
-      setIncidents((prev) => {
-        incident = prev.find((i) => i.id === incidentId);
-        return prev;
-      });
-      if (!incident) return;
+      const incident = incidents.find(i=>i.id===incidentId);
+      if (!incident) throw new Error('Kendala tidak ditemukan. Muat ulang data.');
 
       const res = await routeChangesApi.reroute(incidentId, replacementOutletId, reason);
       const createdStop = res?.data?.createdPjpStop || null;
@@ -120,7 +114,7 @@ export const useSupervisorActions = ({
           i.id === incidentId
             ? {
                 ...i,
-                status: 'RESOLVED_DIRECT_REROUTE',
+                status: res?.data?.routeChangeRequest?.status || (createdStop ? 'RESOLVED_DIRECT_REROUTE' : 'PENDING_ADMIN'),
                 rerouteReason: reason,
                 newOutletName: replacementOutlet?.name || null,
                 spvName: user?.name || 'Supervisor',
@@ -130,10 +124,11 @@ export const useSupervisorActions = ({
       );
 
       addNotification({
-        title: 'Rute Dialihkan Langsung oleh Supervisor',
-        message: `Supervisor ${user?.name || 'Supervisor'} mengalihkan kunjungan langsung ke toko pengganti.`,
+        title: createdStop ? 'Rute dialihkan' : 'Usulan reroute menunggu admin',
+        message: createdStop ? 'Toko pengganti ditambahkan ke jadwal.' : 'PJP akan diperbarui setelah persetujuan admin.',
         roleTarget: ['SALES', 'ADMIN'],
       });
+      return {pending:!createdStop};
     } catch (err) {
       console.warn('[API] Direct Reroute error:', err.message);
       addNotification({
@@ -141,8 +136,9 @@ export const useSupervisorActions = ({
         message: err.message,
         roleTarget: ['SUPERVISOR'],
       });
+      return false;
     }
-  }, [user?.name, setIncidents, setSalesStops, addNotification]);
+  }, [user?.name, incidents, setIncidents, setSalesStops, addNotification]);
 
   // Supervisor Action: Approve Off-PJP Request
   const handleSupervisorApproveOffPJP = useCallback(async ({ requestId, approved }) => {
@@ -174,6 +170,7 @@ export const useSupervisorActions = ({
         message: err.message,
         roleTarget: ['SUPERVISOR'],
       });
+      return false;
     }
   }, [user?.name, setSalesStops, setIncidents, addNotification]);
 
@@ -209,8 +206,9 @@ export const useSupervisorActions = ({
         message: err.message,
         roleTarget: ['SUPERVISOR'],
       });
+      return false;
     }
-  }, [user?.name, setIncidents, setSalesStops, addNotification]);
+  }, [user?.name, incidents, setIncidents, setSalesStops, addNotification]);
 
   // Supervisor Action: Reject Unlock Request
   const handleRejectUnlockRequest = useCallback(async (requestId) => {

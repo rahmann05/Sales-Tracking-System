@@ -9,7 +9,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
 export const updateSalesLocation = async (userId, locationData = {}) => {
   const { latitude, longitude, accuracy = 10, speed = 0, heading = 0, battery = null } = locationData;
 
-  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude)>90 || Math.abs(longitude)>180) {
     throw new AppError('Koordinat latitude dan longitude wajib berupa angka', 400);
   }
 

@@ -4,38 +4,10 @@
  * their access-control rules, and display metadata.
  */
 
-import {
-    LuLayoutDashboard,
-    LuNavigation,
-    LuUsers,
-    LuShieldCheck,
-    LuFileCheck,
-    LuBriefcase,
-    LuStore,
-    LuUserPlus,
-    LuClipboardList,
-    LuPhoneCall,
-    LuTruck,
-    LuPackage,
-    LuMap,
-    LuLayoutGrid,
-    LuSettings,
-} from 'react-icons/lu';
+import { LuLayoutDashboard, LuNavigation, LuUsers, LuShieldCheck, LuFileCheck, LuStore, LuUserPlus, LuClipboardList, LuPhoneCall, LuTruck, LuPackage, LuMap, LuLayoutGrid, LuSettings } from "react-icons/lu";
 import { FiBarChart2 } from 'react-icons/fi';
 import { LuMapPin } from 'react-icons/lu';
-import { 
-    ROLES, 
-    ROUTE_PLANNING_ROLES, 
-    TEAM_TRACKING_ROLES, 
-    REPORTS_ROLES, 
-    OUTLET_VALIDATION_ROLES,
-    OUTLET_REGISTRATION_ROLES,
-    OUTLET_APPROVAL_ROLES,
-    OUTLET_REGISTRATION_REPORT_ROLES,
-    DAILY_CALL_ROLES,
-    DELIVERY_MANAGEMENT_ROLES,
-    DELIVERY_FIELD_ROLES,
-} from './roles';
+import { ROLES, ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES, OUTLET_VALIDATION_ROLES, OUTLET_APPROVAL_ROLES, OUTLET_REGISTRATION_REPORT_ROLES, DAILY_CALL_ROLES, DELIVERY_MANAGEMENT_ROLES, DELIVERY_FIELD_ROLES } from "./roles";
 
 /** Tab IDs used across the app */
 export const TAB_IDS = Object.freeze({
@@ -45,6 +17,7 @@ export const TAB_IDS = Object.freeze({
     DAILY_CALL_MONITOR: 'daily-call-monitor',
     ROUTE_PLANNING: 'route-planning',
     CREATE_CLUSTER: 'create-cluster',
+    MASTER_CLUSTERS: 'master-clusters',
     TEAM_TRACKING: 'team-tracking',
     OUTLET_MANAGEMENT: 'outlet-management',
     OUTLET_REGISTRATION: 'outlet-registration',
@@ -63,7 +36,7 @@ export const TAB_IDS = Object.freeze({
 
 /** Role-specific "home workspace" tab metadata */
 const ROLE_WORKSPACE_MAP = Object.freeze({
-    [ROLES.SALES]: { label: 'PJP Sales Field', icon: LuNavigation },
+    [ROLES.SALES]: { label: 'Kunjungan hari ini', icon: LuNavigation },
     [ROLES.SUPERVISOR]: { label: 'Supervisi Lapangan', icon: LuShieldCheck },
     [ROLES.ADMIN]: { label: 'Menu Utama Admin', icon: LuLayoutGrid },
     [ROLES.KEPALA_GUDANG]: { label: 'Dashboard Pengiriman', icon: LuTruck },
@@ -175,15 +148,6 @@ export const getNavigationTabs = (userOrRole) => {
         });
     }
 
-    // 8b. Kelola Master Kluster
-    if (role === ROLES.ADMIN || [ROLES.ADMIN, ROLES.SUPERVISOR].includes(role) || permissions.can_manage_clusters) {
-        tabs.push({
-            id: TAB_IDS.CREATE_CLUSTER,
-            label: 'Kelola Master Kluster',
-            icon: LuMap,
-        });
-    }
-
     // 9. Kelola Packing List Gudang (Admin, Kepala Gudang, atau yang punya izin)
     if (role === ROLES.ADMIN || DELIVERY_MANAGEMENT_ROLES.includes(role) || permissions.can_manage_delivery || permissions.can_manage_packing_list) {
         tabs.push({
@@ -241,5 +205,30 @@ export const getNavigationTabs = (userOrRole) => {
         tabs.push({ id: TAB_IDS.DASHBOARD, label: 'Peta', icon: LuLayoutDashboard });
     }
 
-    return tabs;
+    return tabs.filter(tab=>isTabPermissionAllowed(tab.id,user));
 };
+
+const TAB_PERMISSION_KEYS = {
+  [TAB_IDS.ADMIN_APPROVAL]: ['can_approve_order','can_unlock_absensi'],
+  [TAB_IDS.DASHBOARD]: ['can_view_dashboard'],
+  [TAB_IDS.DAILY_CALL_MONITOR]: ['can_view_daily_call'],
+  [TAB_IDS.ROUTE_PLANNING]: ['can_access_rjp','can_manage_rjp'],
+  [TAB_IDS.CREATE_CLUSTER]: ['can_manage_clusters'],
+  [TAB_IDS.MASTER_CLUSTERS]: ['can_manage_clusters'],
+  [TAB_IDS.TEAM_TRACKING]: ['can_view_team','can_view_live_tracking'],
+  [TAB_IDS.OUTLET_MANAGEMENT]: ['can_manage_outlets'],
+  [TAB_IDS.OUTLET_REGISTRATION]: ['can_register_outlet'],
+  [TAB_IDS.OUTLET_APPROVAL]: ['can_approve_outlet'],
+  [TAB_IDS.OUTLET_REGISTRATION_REPORT]: ['can_view_outlet_report'],
+  [TAB_IDS.REPORTS]: ['can_view_reports'],
+  [TAB_IDS.OUTLET_VALIDATION]: ['can_validate_outlet'],
+  [TAB_IDS.DELIVERY_PACKING_LIST]: ['can_manage_packing_list'],
+  [TAB_IDS.DELIVERY_ROUTES]: ['can_manage_delivery_routes'],
+  [TAB_IDS.DELIVERY_MONITOR]: ['can_monitor_delivery'],
+  [TAB_IDS.DELIVERY_DRIVER_MAP]: ['can_access_driver_map'],
+};
+export function isTabPermissionAllowed(tabId,user) {
+  if ([TAB_IDS.SYSTEM_CONFIG,TAB_IDS.USER_MANAGEMENT].includes(tabId)) return user.role===ROLES.ADMIN;
+  const keys=TAB_PERMISSION_KEYS[tabId];
+  return !keys || keys.some(key=>user.permissions?.[key]!==false);
+}

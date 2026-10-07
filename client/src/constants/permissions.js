@@ -141,7 +141,7 @@ export const ALL_PERMISSIONS = [
   {
     key: 'can_manage_outlets',
     label: 'Master Database Outlet',
-    desc: 'Kelola database toko, ubah plafon piutang, status kredit, dan info kontak',
+    desc: 'Kelola database toko, ubah informasi kontak, lokasi, dan penugasan',
     categoryId: 'outlet',
     icon: LuStore,
   },

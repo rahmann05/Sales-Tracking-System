@@ -1,3 +1,5 @@
+import {assertClusterTrade} from '../../clusters/services/cluster-trade-policy.service.js';
+import { assertSalesAccess } from '../../../utils/team-scope.js';
 /** finalizeAndRegisterByAdmin - single-responsibility service (extracted from customer-registrations.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -17,6 +19,14 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   const registration = await prisma.customerRegistration.findUnique({ where: { id } });
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
+  // B01: Prasyarat SPV_APPROVED wajib dipenuhi sebelum aktivasi
+  if (registration.registrationStatus === 'REGISTERED_ACTIVE') {
+    throw new AppError('Outlet ini sudah aktif terdaftar sebelumnya', 400);
+  }
+  if (registration.registrationStatus !== 'SPV_APPROVED') {
+    throw new AppError(`Pengajuan outlet belum disetujui supervisor (Status saat ini: ${registration.registrationStatus})`, 400);
+  }
+
   const finalCode = payload.outletCode || payload.customerCode || registration.customerCode;
   if (!finalCode) {
     throw new AppError('Kode outlet / customer code wajib diisi', 400);
@@ -30,61 +40,64 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
     throw new AppError(`Kode outlet "${finalCode}" sudah digunakan oleh toko "${existingOutlet.name}"`, 400);
   }
 
+  // Koordinat GPS wajib nyata dan valid, tidak boleh memakai titik koordinat palsu diam-diam
+  const lat = payload.latitude ?? registration.latitude;
+  const lng = payload.longitude ?? registration.longitude;
+  if (lat === null || lat === undefined || lng === null || lng === undefined) {
+    throw new AppError('Koordinat GPS fisik outlet wajib diisi sebelum aktivasi', 400);
+  }
+
+  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng)) || Math.abs(Number(lat))>90 || Math.abs(Number(lng))>180) throw new AppError('Koordinat GPS tidak valid',400);
+  await assertSalesAccess(currentUser,registration.salesmanId);
   // Tentukan Cluster: prioritaskan clusterId dari payload, atau cari cluster berdasarkan Area
-  let targetClusterId = payload.clusterId;
-  if (!targetClusterId) {
-    const matchedCluster = await prisma.cluster.findFirst({
-      where: {
-        OR: [
-          { name: { contains: registration.area, mode: 'insensitive' } },
-          { region: { contains: registration.area, mode: 'insensitive' } },
-        ],
-        deletedAt: null,
+  const targetClusterId = payload.clusterId || registration.clusterId;
+
+  if (!targetClusterId) throw new AppError('Pilih klaster wilayah secara eksplisit sebelum aktivasi',400);
+  const cluster=await prisma.cluster.findFirst({where:{id:targetClusterId,deletedAt:null}});
+  if(!cluster)throw new AppError('Klaster aktif tidak ditemukan',400);
+  if(currentUser.role==='SUPERVISOR'&&cluster.supervisorId!==currentUser.id)throw new AppError('Klaster berada di luar tim Anda',403);
+
+  const defaultRadius = await getDynamicConfig('DEFAULT_OUTLET_RADIUS_METERS', 50);
+
+  // B01: Transaksi atomik agar update registrasi dan pembuatan master outlet konsisten
+  const [updatedRegistration, newOutlet] = await prisma.$transaction(async (tx) => {
+    const changed=await tx.customerRegistration.updateMany({where:{id,registrationStatus:'SPV_APPROVED'},data:{registrationStatus:'REGISTERED_ACTIVE'}});
+    if(!changed.count)throw new AppError('Pengajuan sudah diproses, muat ulang',409);
+    const reg = await tx.customerRegistration.update({
+      where: { id },
+      data: {
+        customerCode: finalCode,
+        registrationStatus: 'REGISTERED_ACTIVE',
+        adminId: currentUser.id,
+        adminName: currentUser.name,
+        adminRegisteredAt: new Date(),
       },
     });
-    targetClusterId = matchedCluster?.id;
-  }
 
-  // Jika belum ada cluster, gunakan cluster aktif pertama
-  if (!targetClusterId) {
-    const firstCluster = await prisma.cluster.findFirst({ where: { deletedAt: null } });
-    targetClusterId = firstCluster?.id;
-  }
+    await assertClusterTrade(tx,targetClusterId,registration.channel || 'GENERAL_TRADE');
+    const outlet = await tx.outlet.create({
+      data: {
+        outletCode: finalCode,
+        name: registration.name,
+        address: registration.address,
+        latitude: Number(lat),
+        longitude: Number(lng),
+        clusterId: targetClusterId,
+        channel: registration.channel || 'GENERAL_TRADE',
+        type: registration.channel || 'GENERAL_TRADE',
+        subChannel: registration.subChannel || 'TOKO_RETAIL',
+        ownerName: registration.ownerName || registration.taxName,
+        phone: registration.phone,
+        paymentType: registration.paymentType,
+        termOfPaymentDays: registration.termOfPaymentDays,
+        visitSchedule: {weekType:registration.visitWeekSchedule,days:registration.visitDays},
+        radiusMeters: defaultRadius,
+        validationStatus: 'UNVALIDATED',
+      },
+    });
 
-  if (!targetClusterId) {
-    throw new AppError('Tidak ada klaster wilayah yang tersedia untuk mengaitkan outlet baru', 400);
-  }
-
-  // 1. Update status CustomerRegistration
-  const updatedRegistration = await prisma.customerRegistration.update({
-    where: { id },
-    data: {
-      customerCode: finalCode,
-      registrationStatus: 'REGISTERED_ACTIVE',
-      adminName: currentUser.name,
-      adminRegisteredAt: new Date(),
-    },
-  });
-
-  // 2. Masukkan ke tabel master Outlet aktif
-  const outletType = registration.channel === 'MODERN_TRADE' ? 'MODERN_TRADE' : 'GENERAL_TRADE';
-  const newOutlet = await prisma.outlet.create({
-    data: {
-      outletCode: finalCode,
-      name: registration.name,
-      address: registration.address,
-      latitude: registration.latitude || -6.8722,
-      longitude: registration.longitude || 107.5422,
-      clusterId: targetClusterId,
-      type: outletType,
-      ownerName: registration.ownerName || registration.taxName,
-      phone: registration.phone,
-      radiusMeters: await getDynamicConfig('DEFAULT_OUTLET_RADIUS_METERS', 50),
-      validationStatus: 'VALID',
-      validationConfidence: 95,
-      validatedAt: new Date(),
-    },
-  });
+    return [reg, outlet];
+  },{isolationLevel:'Serializable'});
 
   // Notifikasi ke Salesman dan Ops
   if (registration.salesmanId) {

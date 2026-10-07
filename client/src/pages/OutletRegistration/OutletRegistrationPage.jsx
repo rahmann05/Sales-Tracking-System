@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LuSend, LuCheck, LuInfo, LuFileText, LuClock } from 'react-icons/lu';
+import { LuCheck, LuInfo, LuFileText, LuClock } from "react-icons/lu";
 import { useApp } from '../../context/AppContext';
 import { useOutletRegistrationForm } from './hooks/useOutletRegistrationForm';
 import { useOutletRegistrationHistory } from './hooks/useOutletRegistrationHistory';

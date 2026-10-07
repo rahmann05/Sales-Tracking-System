@@ -8,6 +8,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
 export const refreshAccessToken = async (refreshToken) => {
   try {
     const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret);
+    if(typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())throw new AppError('Refresh token tidak valid',401);
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
     });
@@ -32,6 +33,7 @@ export const refreshAccessToken = async (refreshToken) => {
 
     return { accessToken: newAccessToken };
   } catch (err) {
-    throw new AppError('Refresh token tidak valid atau telah kadaluwarsa', 401);
+    if(['JsonWebTokenError','TokenExpiredError','NotBeforeError'].includes(err.name))throw new AppError('Refresh token tidak valid atau telah kadaluwarsa', 401);
+    throw err;
   }
 };

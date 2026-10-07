@@ -132,11 +132,11 @@ export const ActiveRoutesList = ({
                                 : 'hover:bg-surface-container text-on-surface'
                             }`}
                           >
-                            <div className="flex items-center gap-1.5 truncate">
+                            <div className="flex items-center gap-1.5 min-w-0 whitespace-normal break-words">
                               <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                                 {sIdx + 1}
                               </span>
-                              <span className="truncate">{stop.outletName || stop.customerName || `Toko #${sIdx + 1}`}</span>
+                              <span className="min-w-0 whitespace-normal break-words">{stop.outletName || stop.customerName || `Toko #${sIdx + 1}`}</span>
                             </div>
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                               stop.status === 'VISITED'

@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import { useBrowserNavigation } from './hooks/useBrowserNavigation';
+import { useOperationalSettings } from './hooks/useOperationalSettings';
+import React, { createContext, useContext, useMemo } from 'react';
 
 import { useSalesActions } from '../pages/Sales/hooks/useSalesActions';
 import { useSupervisorActions } from '../pages/Supervisor/hooks/useSupervisorActions';
@@ -24,19 +26,21 @@ export const AppProvider = ({ children }) => {
   const domain = useDomainState();
 
   // 2. Auth session (resets domain state on logout/expiry)
-  const { user, setUser, setUserFromAuth } = useAuthSession(domain.resetDomainState);
+  const { user, setUser, setUserFromAuth, sessionLoading, sessionError } = useAuthSession(domain.resetDomainState);
+
+  const { settings, refreshSettings } = useOperationalSettings(user);
 
   // 3. Live GPS tracking while logged in
   const currentLocation = useLiveGeolocation(user);
 
   // 4. Global Tab Navigation State
-  const [activeTab, setActiveTab] = useState('role-workspace');
+  const [activeTab, setActiveTab] = useBrowserNavigation(user);
 
   // 5. Master data (clusters & divisions) + fetchers
   const { clusters, setClusters, fetchClusters, divisions, setDivisions, fetchDivisions } = useMasterData();
 
   // 6. Shift attendance slice
-  const { shiftAttendance, handleShiftClockIn, handleShiftClockOut } = useShiftAttendance();
+  const { shiftAttendance, handleShiftClockIn, handleShiftClockOut, shiftBusy, shiftError } = useShiftAttendance(user);
 
   // 7. Notification center slice
   const { notifications, addNotification, markNotificationAsRead, clearNotifications } = useNotifications();
@@ -47,8 +51,6 @@ export const AppProvider = ({ children }) => {
     fetchClusters,
     fetchDivisions,
     setSalesList: domain.setSalesList,
-    setSupervisorTeams: domain.setSupervisorTeams,
-    setRjpTeams: domain.setRjpTeams,
     setSalesStops: domain.setSalesStops,
     setActiveRoutes: domain.setActiveRoutes,
     setOffPjpAttendances: domain.setOffPjpAttendances,
@@ -89,6 +91,7 @@ export const AppProvider = ({ children }) => {
   });
 
   const value = useMemo(() => ({
+    settings, refreshSettings, sessionLoading, sessionError,
     // Current User Session
     user,
     setUser,
@@ -99,6 +102,7 @@ export const AppProvider = ({ children }) => {
     activeTab,
     setActiveTab,
 
+    shiftBusy, shiftError,
     // Shift Clock-In State
     shiftAttendance,
     handleShiftClockIn,
@@ -107,8 +111,6 @@ export const AppProvider = ({ children }) => {
     // Core Domain State
     salesStops: domain.salesStops,
     setSalesStops: domain.setSalesStops,
-    supervisorTeams: domain.supervisorTeams,
-    setSupervisorTeams: domain.setSupervisorTeams,
     teamMembers: domain.teamMembers,
     setTeamMembers: domain.setTeamMembers,
     activeRoutes: domain.activeRoutes,
@@ -117,8 +119,6 @@ export const AppProvider = ({ children }) => {
     setMasterRoutes: domain.setMasterRoutes,
     salesList: domain.salesList,
     setSalesList: domain.setSalesList,
-    rjpTeams: domain.rjpTeams,
-    setRjpTeams: domain.setRjpTeams,
     offPjpAttendances: domain.offPjpAttendances,
     setOffPjpAttendances: domain.setOffPjpAttendances,
     orders: domain.orders,
@@ -149,18 +149,18 @@ export const AppProvider = ({ children }) => {
     ...supervisorActions,
     ...adminActions,
   }), [
+    settings, refreshSettings, sessionLoading, sessionError,
     user,
     setUser,
     setUserFromAuth,
     currentLocation,
     activeTab,
     shiftAttendance,
+    shiftBusy, shiftError,
     handleShiftClockIn,
     handleShiftClockOut,
     domain.salesStops,
     domain.setSalesStops,
-    domain.supervisorTeams,
-    domain.setSupervisorTeams,
     domain.teamMembers,
     domain.setTeamMembers,
     domain.activeRoutes,
@@ -169,8 +169,6 @@ export const AppProvider = ({ children }) => {
     domain.setMasterRoutes,
     domain.salesList,
     domain.setSalesList,
-    domain.rjpTeams,
-    domain.setRjpTeams,
     domain.offPjpAttendances,
     domain.setOffPjpAttendances,
     domain.orders,
@@ -192,6 +190,7 @@ export const AppProvider = ({ children }) => {
     salesActions,
     supervisorActions,
     adminActions,
+    sessionLoading, sessionError,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

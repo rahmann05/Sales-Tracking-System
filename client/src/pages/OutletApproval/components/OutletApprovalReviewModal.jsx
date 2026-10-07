@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuExternalLink, LuCheck, LuX } from 'react-icons/lu';
+import { LuCheck, LuX } from "react-icons/lu";
 import { GooglePlaceDetailCard } from '../../OutletRegistration/components/GooglePlaceDetailCard';
 
 /**

@@ -1,3 +1,4 @@
+import {wibDayRange} from '../../../../../shared/visit-metrics.mjs';
 /** getDeliveryRoutes - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
 
@@ -17,12 +18,7 @@ export const getDeliveryRoutes = async (query, userId, userRole) => {
     if (driverId) where.driverId = driverId;
   }
 
-  if (date) {
-    const d = new Date(date);
-    const nextDay = new Date(d);
-    nextDay.setDate(nextDay.getDate() + 1);
-    where.date = { gte: d, lt: nextDay };
-  }
+  if(date)where.date=wibDayRange(date);
   if (status) where.status = status;
   if (vehicleId) where.vehicleId = vehicleId;
 
@@ -39,7 +35,7 @@ export const getDeliveryRoutes = async (query, userId, userRole) => {
           orderBy: { sequence: 'asc' },
           include: {
             outlet: { select: { id: true, name: true, address: true, latitude: true, longitude: true } },
-            packingList: { select: { id: true, code: true, totalCartons: true } },
+            packingList: { select: { id: true, code: true, totalCartons: true, items: true } },
           },
         },
         createdBy: { select: { id: true, name: true } },
@@ -48,5 +44,5 @@ export const getDeliveryRoutes = async (query, userId, userRole) => {
     prisma.deliveryRoute.count({ where }),
   ]);
 
-  return { items, total, page: parseInt(page), limit: parseInt(limit) };
+  return { items, total, page: parseInt(page), limit: parseInt(limit), pagination:{totalPages:Math.ceil(total/Number(limit)),hasNextPage:Number(page)*Number(limit)<total} };
 };

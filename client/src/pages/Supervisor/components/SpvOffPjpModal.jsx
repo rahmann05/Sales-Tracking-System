@@ -6,8 +6,8 @@ import { SpvModalShell } from './SpvModalShell';
  * SpvOffPjpModal Component
  * Single Responsibility: Modal absen kunjungan supervisi luar jadwal / toko dadakan.
  */
-export const SpvOffPjpModal = ({ form, onChangeForm, onClose, onConfirm }) => (
-    <SpvModalShell
+export const SpvOffPjpModal = ({ form, onChangeForm, onClose, onConfirm, error, saving }) => (
+    <SpvModalShell error={error} saving={saving}
         title="Kunjungan Supervisi Luar RJP"
         subtitle="Catat kunjungan toko di luar agenda harian"
         onClose={onClose}

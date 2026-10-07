@@ -1,23 +1,17 @@
+import { ManualSalesReview } from '../../shared/components/common/ManualSalesReview';
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PendingOrderCard } from './components/PendingOrderCard';
 import { UnlockRequestCard } from './components/UnlockRequestCard';
 import { TAB_IDS } from '../../constants/navigation';
 import { PageHeader } from '../../shared/components/common/PageHeader';
-import {
-  LuArrowLeft,
-  LuFileCheck,
-  LuClock,
-  LuLayers,
-  LuFilter,
-  LuShieldAlert,
-} from 'react-icons/lu';
+import { LuArrowLeft, LuFileCheck, LuClock } from "react-icons/lu";
 
 /**
  * AdminApprovalPage Component (Container Page for Admin Order & Unlock Approvals)
  * Single Responsibility: Admin workspace for order approval and unlock requests.
  */
-export const AdminApprovalPage = ({ onGoBack }) => {
+export const AdminApprovalPage = ({ onGoBack, embedded=false }) => {
   const {
     orders = [],
     handleAdminOrderDecision,
@@ -27,7 +21,7 @@ export const AdminApprovalPage = ({ onGoBack }) => {
     setActiveTab,
   } = useApp();
 
-  const [orderFilter, setOrderFilter] = useState('ALL'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [orderFilter, setOrderFilter] = useState('PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
 
   const unlockRequests = (incidents || []).filter((i) => i.type === 'UNLOCK_REQUEST');
   const pendingUnlockCount = unlockRequests.filter((r) => r.status === 'PENDING').length;
@@ -41,22 +35,22 @@ export const AdminApprovalPage = ({ onGoBack }) => {
     [orders]
   );
 
-  const handleDecision = (payload) => {
-    handleAdminOrderDecision(payload);
+  const handleDecision = async (payload) => {
+    if (await handleAdminOrderDecision(payload) === false) return;
     if (payload.approved) {
-      alert('Order APPROVED! Stok penjualan telah disetujui.');
+      alert('Order berhasil disetujui.');
     } else {
       alert('Order REJECTED.');
     }
   };
 
-  const handleApproveUnlock = (requestId, stopId) => {
-    handleApproveUnlockRequest(requestId, stopId);
-    alert('Permintaan Unlock disetujui! Outlet telah dibuka untuk presensi tim sales.');
+  const handleApproveUnlock = async (requestId, stopId) => {
+    if (await handleApproveUnlockRequest(requestId, stopId) === false) return;
+    alert('Permintaan Unlock disetujui! Pengecualian presensi diberikan kepada pemohon sesuai masa berlaku.');
   };
 
-  const handleRejectUnlock = (requestId) => {
-    handleRejectUnlockRequest(requestId);
+  const handleRejectUnlock = async (requestId) => {
+    if (await handleRejectUnlockRequest(requestId) === false) return;
     alert('Permintaan Unlock ditolak.');
   };
 
@@ -83,9 +77,9 @@ export const AdminApprovalPage = ({ onGoBack }) => {
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-24">
+    <div className={`${embedded ? 'space-y-4' : 'workspace-page space-y-6'}`}>
       {/* ── Standard PageHeader (Unified with Design System) ── */}
-      <PageHeader
+      {!embedded && <PageHeader
         badge={
           <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
             <LuFileCheck className="text-sm" /> MODUL PERSETUJUAN & VALIDASI ORDER
@@ -125,10 +119,12 @@ export const AdminApprovalPage = ({ onGoBack }) => {
             <span>Kembali ke Menu Utama</span>
           </button>
         }
-      />
+      />}
+
+      {!embedded && <ManualSalesReview />}
 
       {/* ── Section 1: Permintaan Unlock Outlet dari Sales ── */}
-      {unlockRequests.length > 0 && (
+      {!embedded && unlockRequests.length > 0 && (
         <div className="space-y-3.5">
           <div className="flex items-center justify-between border-b border-border-glass pb-2">
             <div className="flex items-center gap-2">

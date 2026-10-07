@@ -1,3 +1,4 @@
+import { request } from './httpClient';
 /**
  * Routing Service (Client)
  * Single Responsibility: Minta rute mengikuti jalan ke backend.
@@ -13,17 +14,7 @@ export const routingService = {
      * @returns {Promise<{ legs: Array<{path, distanceKm, durationMin}>, provider: 'google'|'osrm' }>}
      */
     fetchRoadRoute: async (waypoints) => {
-        const response = await fetch('/api/v1/routing/road-route', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ waypoints }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || `Routing API Error: ${response.status}`);
-        }
+        const result=await request('/routing/road-route',{method:'POST',body:JSON.stringify({waypoints})});
 
         return { legs: result.data.legs, provider: result.data.provider };
     },

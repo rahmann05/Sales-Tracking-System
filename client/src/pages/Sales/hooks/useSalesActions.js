@@ -22,8 +22,8 @@ export const useSalesActions = ({
     try {
       // Call Backend API first
       await absensiApi.checkIn(stopId, {
-        latitude: payload.gpsLocation?.lat || -6.8722,
-        longitude: payload.gpsLocation?.lng || 107.5423,
+        latitude: payload.gpsLocation?.lat,
+        longitude: payload.gpsLocation?.lng,
         photoUrl: payload.photoUrl || null,
         notes: payload.notes || 'Kunjungan Rutin',
       });
@@ -60,14 +60,15 @@ export const useSalesActions = ({
   const handleSalesAbsenOut = useCallback(async (stopId, payload = {}) => {
     try {
       // Call Backend API first
-      await absensiApi.checkOut(stopId, {
-        latitude: payload.gpsLocation?.lat || -6.8722,
-        longitude: payload.gpsLocation?.lng || 107.5423,
+      const response = await absensiApi.checkOut(stopId, {
+        latitude: payload.gpsLocation?.lat,
+        longitude: payload.gpsLocation?.lng,
         photoUrl: payload.photoUrl || null,
         notes: payload.notes || 'Kunjungan Selesai',
         earlyReason: payload.earlyReason || null,
         reason: payload.reason || payload.earlyReason || null,
-        durationMinutes: payload.durationMinutes,
+        orderAmount: payload.orderAmount,
+        productIds: payload.productIds,
       });
 
       const now = new Date();
@@ -83,7 +84,9 @@ export const useSalesActions = ({
                 checkOutPhoto: payload.photoUrl || null,
                 checkOutGps: payload.gpsLocation || null,
                 checkOutNotes: payload.notes || 'Kunjungan Selesai',
-                durationMinutes: payload.durationMinutes,
+                durationMinutes: response.data.durationMinutes,
+                orderAmount: response.data.orderAmount,
+                skuSold: response.data.skuSold,
               }
             : s
         )
@@ -128,17 +131,14 @@ export const useSalesActions = ({
         message: err.message,
         roleTarget: ['SALES'],
       });
+      throw err;
     }
   }, [user?.name, setOrders, addNotification]);
 
   // Report Closed Outlet
   const handleReportClosedOutlet = useCallback(async ({ stopId, reason, photoUrl }) => {
     try {
-      let stopTarget = null;
-      setSalesStops((prev) => {
-        stopTarget = prev.find((s) => s.id === stopId);
-        return prev;
-      });
+      const stopTarget = salesStops.find(s => s.id === stopId);
       if (!stopTarget) return;
 
       const res = await routeChangesApi.reportClosed({
@@ -166,18 +166,15 @@ export const useSalesActions = ({
         message: err.message,
         roleTarget: ['SALES'],
       });
+      throw err;
     }
-  }, [user?.name, setSalesStops, setIncidents, addNotification]);
+  }, [user?.name, salesStops, setSalesStops, setIncidents, addNotification]);
 
   // Sales Action: Request Unlock Outlet
   const handleRequestUnlockOutlet = useCallback(async ({ stopId, reason }) => {
     try {
-      let outletId = stopId;
-      setSalesStops((prev) => {
-        const stop = prev.find((s) => s.id === stopId);
-        if (stop?.outletId) outletId = stop.outletId;
-        return prev;
-      });
+      const outletId = salesStops.find(s => s.id === stopId)?.outletId;
+      if (!outletId) throw new Error('Outlet tidak ditemukan');
 
       const res = await outletsApi.requestUnlock(outletId, reason);
       const newRequest = mapServerUnlockRequest(res.data);
@@ -195,8 +192,9 @@ export const useSalesActions = ({
         message: err.message,
         roleTarget: ['SALES'],
       });
+      throw err;
     }
-  }, [user?.name, setSalesStops, setIncidents, addNotification]);
+  }, [user?.name, salesStops, setSalesStops, setIncidents, addNotification]);
 
   // Sales Action: Absen Toko Luar RJP (Off-PJP)
   const handleSalesAbsenOffPJP = useCallback(async ({
@@ -207,20 +205,23 @@ export const useSalesActions = ({
     reason,
     photoUrl,
     gpsLocation,
+    orderAmount, productIds,
   }) => {
     try {
       const res = await absensiApi.submitOffPjp({
+        orderAmount, productIds,
         outletName,
         customerName,
         phone,
         address,
         reason,
         photoUrl,
-        latitude: gpsLocation?.lat || -6.8722,
-        longitude: gpsLocation?.lng || 107.5423,
+        latitude: gpsLocation?.lat,
+        longitude: gpsLocation?.lng,
       });
 
-      const newRecord = res.data;
+      const att = res.data;
+      const newRecord = { ...att, salesId: att.userId, salesName: user?.name, createdAt: att.createdAt, validationStatus: att.status === 'APPROVED' ? 'TERVALIDASI' : att.status === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU' };
       setOffPjpAttendances((prev) => [newRecord, ...prev]);
 
       addNotification({
@@ -235,6 +236,7 @@ export const useSalesActions = ({
         message: err.message,
         roleTarget: ['SALES'],
       });
+      throw err;
     }
   }, [user?.name, setOffPjpAttendances, addNotification]);
 

@@ -42,7 +42,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-on-surface truncate">{outletName}</span>
+            <span className="text-sm font-bold text-on-surface min-w-0 whitespace-normal break-words">{outletName}</span>
             <span
               className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 shadow-2xs"
               style={{ color: statusCfg.color, backgroundColor: statusCfg.bg }}
@@ -50,9 +50,9 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
               <StatusIcon className="inline mr-1 text-xs" /> {statusCfg.label}
             </span>
           </div>
-          <div className="text-xs text-on-surface-variant mt-1 flex items-center gap-1 truncate">
+          <div className="text-xs text-on-surface-variant mt-1 flex items-center gap-1 min-w-0 whitespace-normal break-words">
             <LuMapPin className="text-primary text-xs shrink-0" />
-            <span className="truncate">{stop.outlet?.address || '-'}</span>
+            <span className="min-w-0 whitespace-normal break-words">{stop.outlet?.address || '-'}</span>
           </div>
         </div>
       </div>
@@ -62,9 +62,10 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
         <div className="flex items-center gap-2 text-xs bg-surface-variant/20 p-2.5 rounded-xl border border-border-glass">
           <LuPackage className="text-primary text-sm shrink-0" />
           <span className="font-bold text-on-surface">{stop.packingList?.code}</span>
-          <span className="text-on-surface-variant">— {stop.packingList?.totalCartons || 0} Karton</span>
+          <span className="text-on-surface-variant">— {stop.allocatedCartons ?? stop.packingList?.totalCartons ?? 0} Karton</span>
         </div>
 
+        {(stop.allocatedItems || []).map(i => { const item = stop.packingList?.items?.find(p => p.lineId === i.lineId); return <p key={i.lineId} className="text-sm">{item?.name || i.lineId}: {i.quantity} {item?.unit || 'unit'}</p>; })}
         {/* Invoice List */}
         {invoices.length > 0 && (
           <div className="pl-4 space-y-1">
@@ -72,7 +73,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
               <div key={inv.id || idx} className="flex items-center gap-2 text-xs text-on-surface-variant">
                 <LuFileText className="shrink-0" />
                 <span className="font-semibold text-on-surface">{inv.invoiceNumber}</span>
-                <span>{inv.totalCartons} krt</span>
+                <span>{inv.totalCartons} krt total faktur</span>
                 {inv.isDelivered && <LuCircleCheck className="text-emerald-500 shrink-0" />}
               </div>
             ))}

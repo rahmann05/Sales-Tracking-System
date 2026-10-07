@@ -1,47 +1,21 @@
-/** handleUnlockRequest - single-responsibility service (extracted from outlet-lock.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { OUTLET_LOCK_STATUS, ROUTE_CHANGE_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
-import { createNotification, createBulkNotificationByRoles } from '../../notifications/notifications.service.js';
-
-
-export const handleUnlockRequest = async (requestId, handlerId, approved) => {
-  const request = await prisma.outletUnlockRequest.findUnique({
-    where: { id: requestId },
-    include: { outlet: true, requestedByUser: { select: { id: true, name: true } } },
-  });
-
-  if (!request) throw new AppError('Permintaan unlock tidak ditemukan', 404);
-  if (request.status !== ROUTE_CHANGE_STATUS.PENDING_APPROVAL) {
-    throw new AppError(`Permintaan sudah diproses sebelumnya (Status: ${request.status})`, 409);
-  }
-
-  const newStatus = approved ? ROUTE_CHANGE_STATUS.APPROVED : ROUTE_CHANGE_STATUS.REJECTED;
-  const newLockStatus = approved ? OUTLET_LOCK_STATUS.NORMAL : OUTLET_LOCK_STATUS.LOCKED;
-
-  await prisma.$transaction([
-    prisma.outletUnlockRequest.update({
-      where: { id: requestId },
-      data: { status: newStatus, handledBy: handlerId, handledAt: new Date() },
-    }),
-    prisma.outlet.update({
-      where: { id: request.outletId },
-      data: { lockStatus: newLockStatus },
-    }),
-  ]);
-
-  const notifTitle = approved ? 'Permintaan Unlock Disetujui' : 'Permintaan Unlock Ditolak';
-  const notifMsg = approved
-    ? `Permintaan buka kunci outlet "${request.outlet.name}" telah disetujui. Anda dapat absen sekarang.`
-    : `Permintaan buka kunci outlet "${request.outlet.name}" ditolak.`;
-
-  await createNotification(
-    request.requestedByUser.id,
-    approved ? NOTIFICATION_TYPES.UNLOCK_APPROVED : NOTIFICATION_TYPES.UNLOCK_REJECTED,
-    notifTitle,
-    notifMsg,
-    { outletId: request.outletId }
-  );
-
-  return { message: notifMsg, approved };
+import { assertSalesAccess } from '../../../utils/team-scope.js';
+import { getDynamicConfig } from '../../config/config.service.js';
+import { createNotification } from '../../notifications/notifications.service.js';
+export const handleUnlockRequest = async (requestId,handlerId,approved) => {
+  if (typeof approved !== 'boolean') throw new AppError('Keputusan persetujuan tidak valid',400);
+  const handler = await prisma.user.findUnique({where:{id:handlerId}});
+  if (!handler || !['ADMIN','SUPERVISOR'].includes(handler.role)) throw new AppError('Khusus admin/supervisor',403);
+  const request = await prisma.outletUnlockRequest.findUnique({where:{id:requestId},include:{outlet:true}});
+  if (!request) throw new AppError('Pengajuan tidak ditemukan',404);
+  await assertSalesAccess(handler,request.requestedBy);
+  if (handler.id === request.requestedBy) throw new AppError('Tidak boleh menyetujui pengajuan sendiri',403);
+  const minutes = await getDynamicConfig('UNLOCK_VALIDITY_MINUTES',120);
+  const expiresAt = approved ? new Date(Date.now()+minutes*60000) : null;
+  const changed = await prisma.outletUnlockRequest.updateMany({where:{id:requestId,status:'PENDING_APPROVAL'},data:{status:approved?'APPROVED':'REJECTED',handledBy:handlerId,handledAt:new Date(),expiresAt}});
+  if (!changed.count) throw new AppError('Pengajuan sudah diproses',409);
+  const message = approved ? `Pengecualian untuk ${request.outlet.name} disetujui selama ${minutes} menit, khusus akun Anda.` : `Pengajuan pengecualian untuk ${request.outlet.name} ditolak.`;
+  await createNotification(request.requestedBy,approved?'UNLOCK_APPROVED':'UNLOCK_REJECTED','Keputusan pengecualian absensi',message,{outletId:request.outletId,expiresAt});
+  return {message,approved,expiresAt};
 };

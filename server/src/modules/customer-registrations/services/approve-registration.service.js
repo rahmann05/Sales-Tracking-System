@@ -1,3 +1,4 @@
+import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** approveRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -18,6 +19,17 @@ export const approveRegistration = async (id, note, currentUser) => {
     throw new AppError('Anda tidak memiliki wewenang untuk menyetujui pengajuan ini', 403);
   }
 
+  // B01: Status guard — hanya status awal (SUBMITTED / PENDING) yang dapat disetujui
+  if (registration.registrationStatus === 'SPV_APPROVED') {
+    throw new AppError('Pengajuan outlet sudah disetujui sebelumnya', 400);
+  }
+  if (registration.registrationStatus === 'REGISTERED_ACTIVE') {
+    throw new AppError('Pengajuan outlet sudah aktif di sistem master', 400);
+  }
+  if (!['SUBMITTED','PENDING'].includes(registration.registrationStatus)) {
+    throw new AppError('Pengajuan outlet sudah ditolak dan tidak dapat disetujui', 400);
+  }
+
   const updateData = {
     spvId: currentUser.id,
     spvName: currentUser.name,
@@ -25,10 +37,10 @@ export const approveRegistration = async (id, note, currentUser) => {
     registrationStatus: 'SPV_APPROVED',
   };
 
-  const updated = await prisma.customerRegistration.update({
-    where: { id },
-    data: updateData,
-  });
+  await assertSalesAccess(currentUser,registration.salesmanId);
+  const changed = await prisma.customerRegistration.updateMany({where:{id,registrationStatus:registration.registrationStatus},data:updateData});
+  if (!changed.count) throw new AppError('Status pengajuan berubah, muat ulang',409);
+  const updated = await prisma.customerRegistration.findUnique({where:{id}});
 
   // Notifikasi ke Salesman dan Admin
   if (registration.salesmanId) {

@@ -26,7 +26,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
     setSearch,
     salesTeam,
     reportData,
-    isLoading,
+    isLoading, error,
     selectedRow,
     setSelectedRow,
     refreshData,
@@ -58,6 +58,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
 
   return (
     <div className={`space-y-5 max-w-7xl mx-auto ${showHeader ? 'p-4 md:p-6 pb-24' : ''}`}>
+      {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={refreshData} disabled={isLoading}>Coba lagi</button></div>}
       {/* 1. Page Header Title Banner (Only rendered when standalone) */}
       {showHeader && (
         <PageHeader
@@ -97,9 +98,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <div className="flex items-center gap-2 truncate">
+              <div className="flex items-center gap-2 min-w-0 whitespace-normal break-words">
                 <LuListOrdered className="text-sm shrink-0" />
-                <span className="truncate">Tabel Master Call</span>
+                <span className="min-w-0 whitespace-normal break-words">Tabel Master Call</span>
               </div>
               <span
                 className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
@@ -120,9 +121,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <div className="flex items-center gap-2 truncate">
+              <div className="flex items-center gap-2 min-w-0 whitespace-normal break-words">
                 <LuUserCheck className="text-sm shrink-0" />
-                <span className="truncate">Timeline & Rute</span>
+                <span className="min-w-0 whitespace-normal break-words">Timeline & Rute</span>
               </div>
               <span
                 className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
@@ -143,9 +144,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <div className="flex items-center gap-2 truncate">
+              <div className="flex items-center gap-2 min-w-0 whitespace-normal break-words">
                 <LuShieldAlert className="text-sm shrink-0" />
-                <span className="truncate">Absensi Janggal</span>
+                <span className="min-w-0 whitespace-normal break-words">Absensi Janggal</span>
               </div>
               {totalAnomalies > 0 ? (
                 <span

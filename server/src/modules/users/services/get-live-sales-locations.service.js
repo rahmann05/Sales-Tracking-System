@@ -1,3 +1,5 @@
+import {salesScope} from '../../../utils/team-scope.js';
+import {wibDayRange} from '../../../../../shared/visit-metrics.mjs';
 /** getLiveSalesLocations - single-responsibility service (extracted from users.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
@@ -7,15 +9,13 @@ import { getDynamicConfig } from '../../config/config.service.js';
 /**
  * Get Live Locations of all Sales Representatives (for Admin, Ops, Supervisor)
  */
-export const getLiveSalesLocations = async () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+export const getLiveSalesLocations = async (currentUser) => {
+  const today=wibDayRange().gte;
+  const tomorrow=new Date(wibDayRange().lte.getTime()+1);
 
   // 1. Get all Sales users with lean projection (Google Web Vitals DB Optimization)
   const salesUsers = await prisma.user.findMany({
-    where: { role: 'SALES', deletedAt: null },
+    where: { role: 'SALES', deletedAt: null, ...salesScope(currentUser) },
     select: {
       id: true,
       name: true,

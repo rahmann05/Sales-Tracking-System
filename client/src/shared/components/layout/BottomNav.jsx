@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { LuX } from 'react-icons/lu';
+import { NativeDialog } from '../common/NativeDialog';
+import React, { useState } from 'react';
 import { FiMoreHorizontal } from 'react-icons/fi';
 import { useApp } from '../../../context/AppContext';
+import {getAdminMobileNavigation,getAdminNavigationGroups,adminParentTab} from '../../../constants/adminNavigation';
 import { getNavigationTabs } from '../../../constants/navigation';
 import '../../../styles/layout/BottomNav.css';
 
@@ -17,104 +18,37 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const navItems = getNavigationTabs(user);
+  const currentTab=user?.role==='ADMIN'?adminParentTab(activeTab):activeTab;
 
-  // If items are 5 or fewer, show directly without "Lainnya" drawer
-  const hasMore = navItems.length > 5;
-  const primaryItems = hasMore ? navItems.slice(0, 4) : navItems;
-  const secondaryItems = hasMore ? navItems.slice(4) : [];
+  const adminNavigation=user?.role==='ADMIN'?getAdminMobileNavigation(user):null;
+  const hasMore = adminNavigation?adminNavigation.secondary.length>0:navItems.length>5;
+  const primaryItems = adminNavigation?adminNavigation.primary:hasMore?navItems.slice(0,4):navItems;
+  const secondaryItems = adminNavigation?adminNavigation.secondary:hasMore?navItems.slice(4):[];
+  const menuGroups=user?.role==='ADMIN'?getAdminNavigationGroups(user).map(group=>({...group,items:group.items.filter(item=>secondaryItems.some(tab=>tab.id===item.id))})).filter(group=>group.items.length):[{id:'more',items:secondaryItems}];
 
   // Check if current active tab is inside secondary drawer
-  const activeSecondaryItem = secondaryItems.find((item) => item.id === activeTab);
+  const activeSecondaryItem = secondaryItems.find((item) => item.id === currentTab);
   const isSecondaryActive = Boolean(activeSecondaryItem);
 
-  // Close drawer if user presses Escape
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setIsMoreOpen(false);
-    };
-    if (isMoreOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMoreOpen]);
-
-  const totalCols = hasMore ? 5 : primaryItems.length;
+  const totalCols = primaryItems.length + (hasMore?1:0);
+  const shortLabels = { 'role-workspace':'Beranda', 'admin-approval':'Order & izin', 'daily-call-monitor':'Absensi', 'route-planning':'Jadwal', 'outlet-registration':'Outlet baru', 'outlet-management':'Outlet', 'delivery-packing-list':'Packing', 'delivery-routes':'Rute', 'delivery-monitor':'Monitor', 'dashboard':'Peta' };
 
   return (
     <>
-      {/* 1. Backdrop for "Lainnya" drawer */}
-      {isMoreOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-200 md:hidden"
-          onClick={() => setIsMoreOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* 2. Secondary Navigation Bottom Sheet (Drawer) */}
-      {isMoreOpen && (
-        <div
-          className="fixed bottom-[65px] left-3 right-3 z-50 bg-surface border border-border-glass rounded-3xl p-4 shadow-2xl transition-transform duration-200 md:hidden animate-in slide-in-from-bottom-5"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu Tambahan"
-        >
-          <div className="flex items-center justify-between pb-3 mb-2.5 border-b border-border-glass">
-            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              Menu & Fitur Lainnya
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsMoreOpen(false)}
-              className="p-1.5 rounded-full hover:bg-surface-variant text-on-surface-variant transition-colors cursor-pointer"
-              title="Tutup Menu"
-            >
-              <LuX className="text-base" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5 max-h-[60vh] overflow-y-auto pr-0.5">
-            {secondaryItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setIsMoreOpen(false);
-                  }}
-                  className={`flex items-center gap-2.5 p-3 rounded-2xl text-left text-xs font-bold transition-all cursor-pointer border ${
-                    isActive
-                      ? 'bg-primary text-on-primary border-primary shadow-xs'
-                      : 'bg-surface-container-low text-on-surface border-border-glass hover:bg-surface-variant/40'
-                  }`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-surface text-on-surface shadow-2xs'
-                    }`}
-                  >
-                    <Icon />
-                  </div>
-                  <span className="leading-tight line-clamp-2">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <NativeDialog open={isMoreOpen} title={user?.role==='ADMIN'?'Menu admin':'Menu lainnya'} onClose={()=>setIsMoreOpen(false)}>
+          <div className="mobile-menu-groups">{menuGroups.map(group=><section key={group.id}>{group.label&&<h3>{group.label}</h3>}<div>{group.items.map(item=>{const Icon=item.icon;const isActive=currentTab===item.id;return <button key={item.id} type="button" className={`mobile-menu-link ${isActive?'mobile-menu-link-active':''}`} aria-current={isActive?'page':undefined} onClick={()=>{setActiveTab(item.id);setIsMoreOpen(false);}}><Icon aria-hidden="true"/><span>{item.label}</span></button>;})}</div></section>)}</div>
+      </NativeDialog>
 
       {/* 3. Main Bottom Navigation Bar (Symmetric Grid) */}
       <nav
+        aria-label="Navigasi mobile"
         className="bottom-nav-container pointer-events-auto"
         style={{
           gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))`,
         }}
       >
         {primaryItems.map((item) => {
-          const isActive = activeTab === item.id;
+          const isActive = currentTab === item.id;
           const Icon = item.icon;
           return (
             <button
@@ -124,6 +58,8 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
                 setActiveTab(item.id);
                 setIsMoreOpen(false);
               }}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
               className={`bottom-nav-btn ${
                 isActive ? 'bottom-nav-btn-active' : 'bottom-nav-btn-inactive'
               }`}
@@ -132,7 +68,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
                 <Icon className="bottom-nav-icon" />
               </div>
               <span className="bottom-nav-label">
-                {item.label}
+                {shortLabels[item.id] || item.label}
               </span>
             </button>
           );
@@ -143,7 +79,9 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
           <button
             type="button"
             onClick={() => setIsMoreOpen((prev) => !prev)}
-            className={`bottom-nav-btn ${
+            aria-label={activeSecondaryItem?`Menu lainnya, halaman aktif: ${activeSecondaryItem.label}`:'Menu lainnya'}
+              aria-current={isSecondaryActive ? 'page' : undefined}
+              className={`bottom-nav-btn ${
               isSecondaryActive || isMoreOpen
                 ? 'bottom-nav-btn-active'
                 : 'bottom-nav-btn-inactive'
@@ -154,7 +92,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
               <FiMoreHorizontal className="bottom-nav-icon" />
             </div>
             <span className="bottom-nav-label">
-              {activeSecondaryItem ? activeSecondaryItem.label : 'Lainnya'}
+              {user?.role==='ADMIN'?'Menu':activeSecondaryItem ? activeSecondaryItem.label : 'Lainnya'}
             </span>
           </button>
         )}

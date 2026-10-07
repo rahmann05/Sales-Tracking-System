@@ -1,3 +1,4 @@
+import { AttendanceSalesInput } from './AttendanceSalesInput';
 import React from 'react';
 import { FiXCircle, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
@@ -80,6 +81,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
           onRefreshAddress={form.handleManualRefreshAddress}
         />
 
+        <AttendanceSalesInput value={form.salesResult} onChange={form.setSalesResult} />
         <AbsenNotesInput
           notes={form.notes}
           onChangeNotes={form.setNotes}
@@ -87,10 +89,12 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
           placeholder="Tuliskan keterangan kunjungan atau alasan toko non-RJP..."
         />
 
+        {form.error && <p role="alert" className="text-red-600 text-sm">{form.error}</p>}
         {form.capturedPhoto && (
           <button
             type="button"
             onClick={form.handleConfirm}
+            disabled={form.saving}
             className="w-full py-3.5 bg-primary text-on-primary font-bold text-xs rounded-2xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
             <FiCheckCircle className="text-base" />

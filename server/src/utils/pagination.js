@@ -54,10 +54,4 @@ export const buildDateRange = (startDate, endDate) => {
  * @param {string} dateStr - ISO date string (e.g. '2026-08-05')
  * @returns {{ gte: Date, lte: Date }}
  */
-export const buildDayRange = (dateStr) => {
-  const start = new Date(dateStr);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(dateStr);
-  end.setHours(23, 59, 59, 999);
-  return { gte: start, lte: end };
-};
+export { wibDayRange as buildDayRange } from '../../../shared/visit-metrics.mjs';

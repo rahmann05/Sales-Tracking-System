@@ -53,7 +53,7 @@ export const getRegistrations = async (req, res, next) => {
 
 export const getRegistrationById = async (req, res, next) => {
   try {
-    const result = await registrationService.getRegistrationById(req.params.id);
+    const result = await registrationService.getRegistrationById(req.params.id,req.user);
     res.status(200).json({
       status: 'success',
       data: result,

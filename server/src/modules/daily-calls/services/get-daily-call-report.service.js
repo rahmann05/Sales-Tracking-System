@@ -1,7 +1,9 @@
+import { teamSalesWhere } from '../../../utils/team-scope.js';
+import { offPjpSalesResult, visitSalesResult, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 /** getDailyCallReport - single-responsibility service (extracted from daily-calls.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
-import { ATTENDANCE_TYPE, VISIT_STATUS } from '../../../utils/constants.js';
+import { ATTENDANCE_TYPE } from "../../../utils/constants.js";
 import { buildDayRange, formatTimeOnly, formatDurationHhMm } from './daily-calls.helpers.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
@@ -10,7 +12,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
  */
 export const getDailyCallReport = async (query = {}) => {
   const targetDate = query.date ? new Date(query.date) : new Date();
-  const dateStr = targetDate.toISOString().split('T')[0];
+  const dateStr = query.date || wibDateKey(targetDate);
   const dayRange = buildDayRange(dateStr);
 
   const { userId, filterType, search } = query;
@@ -22,10 +24,12 @@ export const getDailyCallReport = async (query = {}) => {
   const GAP_SHORT_MINS = await getDynamicConfig('TRAVEL_GAP_SHORT_MINUTES', 45);
   const GAP_MED_KM = await getDynamicConfig('TRAVEL_GAP_MED_KM', 8);
   const GAP_MED_MINS = await getDynamicConfig('TRAVEL_GAP_MED_MINUTES', 90);
+  const manualSalesMode = await getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY');
 
   const wherePjp = {
     date: dayRange,
   };
+  if (query.supervisorId) wherePjp.user = teamSalesWhere(query.supervisorId);
   if (userId) {
     wherePjp.userId = userId;
   }
@@ -47,6 +51,7 @@ export const getDailyCallReport = async (query = {}) => {
           outlet: true,
           attendances: { orderBy: { timestamp: 'asc' } },
           routeChanges: true,
+          orders: { include: { items: true } },
         },
         orderBy: { sequence: 'asc' },
       },
@@ -58,6 +63,7 @@ export const getDailyCallReport = async (query = {}) => {
   const whereOffPjp = {
     createdAt: dayRange,
   };
+  if (query.supervisorId) whereOffPjp.user = teamSalesWhere(query.supervisorId);
   if (userId) whereOffPjp.userId = userId;
   const offPjpList = await prisma.offPjpAttendance.findMany({
     where: whereOffPjp,
@@ -109,7 +115,7 @@ export const getDailyCallReport = async (query = {}) => {
           const inT = new Date(checkIn.timestamp).getTime();
           const outT = new Date(checkOut.timestamp).getTime();
           durationMins = Math.max(0, Math.round(((outT - inT) / 60000) * 10) / 10);
-        } else if (checkIn && (stop.status === 'ARRIVED' || stop.status === 'IN_VISIT')) {
+        } else if (checkIn && !checkOut) {
           const inT = new Date(checkIn.timestamp).getTime();
           durationMins = Math.max(0, Math.round(((Date.now() - inT) / 60000) * 10) / 10);
         } else {
@@ -117,10 +123,8 @@ export const getDailyCallReport = async (query = {}) => {
         }
       }
 
-      const isActual = !!checkIn || stop.status === 'VISITED';
-      const orderAmount = Number(checkOut?.orderAmount || 0);
-      const skuSold = Number(checkOut?.skuSold || 0);
-      const isEc = isActual && (checkOut?.isEffectiveCall || orderAmount > 0 || skuSold > 0);
+      const result = visitSalesResult(stop, { manualSalesMode });
+      const { actual: isActual, orderAmount, skuSold, effective: isEc } = result;
 
       const isDurationAnomaly = isActual && checkOut && durationMins > 0 && durationMins < MIN_VISIT_DURATION;
       const isDistanceAnomaly = isActual && distWarning === 'WARNING';
@@ -175,6 +179,7 @@ export const getDailyCallReport = async (query = {}) => {
 
   // Append Off-PJP calls into salesMap
   for (const off of offPjpList) {
+    const offResult = offPjpSalesResult(off, { manualSalesMode });
     const sId = off.user?.id || 'UNKNOWN';
     if (!salesMap[sId]) {
       salesMap[sId] = {
@@ -196,8 +201,8 @@ export const getDailyCallReport = async (query = {}) => {
       timeOut: formatTimeOnly(off.createdAt),
       rawTimeIn: new Date(off.createdAt).toISOString(),
       rawTimeOut: new Date(off.createdAt).toISOString(),
-      durationMinutes: 5,
-      durationFormatted: '00:05',
+      durationMinutes: 0,
+      durationFormatted: '-',
       customerId: off.outlet?.outletCode || 'EXTRA-CALL',
       customerName: off.outletName || 'Outlet Extra',
       customerAddress: off.address || '-',
@@ -205,11 +210,11 @@ export const getDailyCallReport = async (query = {}) => {
       freq: 'F1',
       itny: 'EXTRA',
       planCall: 'N',
-      actualCall: 'Y',
-      effectiveCall: 'N',
+      actualCall: off.status === 'APPROVED' ? 'Y' : 'N',
+      effectiveCall: offResult.effective ? 'Y' : 'N',
       extraCall: 'Y',
-      skuSold: 0,
-      orderAmount: 0,
+      skuSold: offResult.skuSold,
+      orderAmount: offResult.orderAmount,
       reason: off.reason || 'Extra Call / Off-PJP',
       earlyReason: null,
       remark: `Off-PJP: ${off.reason}`,
@@ -248,6 +253,7 @@ export const getDailyCallReport = async (query = {}) => {
     let prevStop = null;
     let sPlan = 0;
     let sActual = 0;
+    let sPlannedActual = 0;
     let sEc = 0;
     let sExtra = 0;
     let sSkipped = 0;
@@ -262,6 +268,7 @@ export const getDailyCallReport = async (query = {}) => {
       stop.no = globalSeq++;
       if (stop.planCall === 'Y') sPlan += 1;
       if (stop.actualCall === 'Y') sActual += 1;
+      if (stop.actualCall === 'Y' && stop.planCall === 'Y') sPlannedActual += 1;
       if (stop.effectiveCall === 'Y') sEc += 1;
       if (stop.isExtraCall) sExtra += 1;
       if (stop.isSkipped) sSkipped += 1;
@@ -334,7 +341,7 @@ export const getDailyCallReport = async (query = {}) => {
     });
 
     const sTotalAnomalies = sDurationAnomalies + sDistanceAnomalies + sTravelAnomalies;
-    const complianceRate = sPlan > 0 ? `${Math.round((sActual / sPlan) * 100)}%` : '0%';
+    const complianceRate = sPlan > 0 ? `${Math.round((sPlannedActual / sPlan) * 100)}%` : '0%';
     const ecRate = sActual > 0 ? `${Math.round((sEc / sActual) * 100)}%` : '0%';
 
     salesmanDailySummaries.push({
@@ -416,15 +423,16 @@ export const getDailyCallReport = async (query = {}) => {
   const durationCount = allEnrichedRows.filter((r) => r.durationMinutes > 0).length;
   const avgDuration = durationCount > 0 ? Math.round((durationSum / durationCount) * 10) / 10 : 0;
 
-  const complianceRate = totalPlan > 0 ? `${Math.round((totalActual / totalPlan) * 100)}%` : '0%';
+  const totalPlannedActual = allEnrichedRows.filter(r => r.planCall === 'Y' && r.actualCall === 'Y').length;
+  const complianceRate = totalPlan > 0 ? `${Math.round((totalPlannedActual / totalPlan) * 100)}%` : '0%';
   const ecRate = totalActual > 0 ? `${Math.round((totalEc / totalActual) * 100)}%` : '0%';
 
   return {
     meta: {
       date: dateStr,
       reportTitle: 'DAILY CALL & ATTENDANCE AUDIT REPORT',
-      company: 'CV. SINAR ANUGRAH',
-      branch: 'PADALARANG',
+      company: await getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
+      branch: await getDynamicConfig('DEFAULT_BRANCH', 'PADALARANG'),
     },
     summary: {
       totalPlanCalls: totalPlan,

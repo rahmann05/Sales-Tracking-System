@@ -18,7 +18,7 @@ export const SupervisorTabBar = ({
 }) => {
   return (
     <div className="w-full bg-surface-container/60 p-1.5 rounded-2xl border border-border-glass shadow-xs">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 w-full">
+      <div className="workspace-tabs">
         {SUPERVISOR_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -28,6 +28,7 @@ export const SupervisorTabBar = ({
             <button
               key={tab.id}
               type="button"
+              aria-pressed={isActive}
               onClick={() => onSelectTab(tab.id)}
               className={`w-full py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
                 isActive
@@ -36,10 +37,10 @@ export const SupervisorTabBar = ({
               }`}
             >
               <Icon className={`text-base shrink-0 ${isActive ? 'text-primary' : 'text-on-surface-variant'}`} />
-              <span className="truncate tracking-tight">{tab.label}</span>
+              <span className="min-w-0 whitespace-normal break-words tracking-tight">{tab.shortLabel || tab.label}</span>
               {showBadge && (
                 <span
-                  className="px-2 py-0.5 rounded-full text-[10px] font-black tracking-tight shrink-0 bg-rose-500 text-white shadow-xs animate-pulse"
+                  className="px-2 py-0.5 rounded-full text-[10px] font-black tracking-tight shrink-0 bg-rose-500 text-white shadow-xs"
                 >
                   {pendingActions}
                 </span>

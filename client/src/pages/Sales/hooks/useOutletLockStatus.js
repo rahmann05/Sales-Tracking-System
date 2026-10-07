@@ -1,3 +1,4 @@
+import {useApp} from '../../../context/AppContext';
 import { useMemo } from 'react';
 
 /**
@@ -5,13 +6,9 @@ import { useMemo } from 'react';
  * Single Responsibility: Evaluate if a specific outlet is locked, active in-visit, or accessible for attendance.
  */
 export const useOutletLockStatus = (currentStop, allStops = []) => {
+  const {user,incidents,settings}=useApp();
   return useMemo(() => {
     if (!currentStop) {
-      return { isLocked: false, activeVisitingStop: null, lockReason: '' };
-    }
-
-    // If this outlet has already been unlocked by Admin/Supervisor override
-    if (currentStop.unlockedByAdmin) {
       return { isLocked: false, activeVisitingStop: null, lockReason: '' };
     }
 
@@ -28,10 +25,14 @@ export const useOutletLockStatus = (currentStop, allStops = []) => {
       };
     }
 
+    const hasException=(incidents||[]).some(r=>r.outletId===currentStop.outletId&&r.requestedBy===user?.id&&r.status==='APPROVED'&&new Date(r.expiresAt)>new Date());
+    if(['LOCKED','UNLOCK_REQUESTED'].includes(currentStop.lockStatus)&&!hasException) return {isLocked:true,activeVisitingStop:null,lockReason:'Outlet terkunci. Ajukan pengecualian kepada supervisor.'};
+    const earlier=allStops.find(s=>s.sequence<currentStop.sequence&&(['PENDING','ARRIVED','ORDERED'].includes(s.status)||(!settings.ALLOW_CONTINUE_PENDING_CLOSED&&s.status==='CLOSED_REPORTED')));
+    if(earlier&&currentStop.status==='PENDING') return {isLocked:true,activeVisitingStop:null,lockReason:`Selesaikan toko urutan ${earlier.sequence} terlebih dahulu.`};
     return {
       isLocked: false,
       activeVisitingStop: null,
       lockReason: '',
     };
-  }, [currentStop, allStops]);
+  }, [currentStop, allStops,incidents,user,settings]);
 };

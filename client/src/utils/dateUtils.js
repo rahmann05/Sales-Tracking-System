@@ -6,7 +6,7 @@
 const DAY_NAMES_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 /** Nama hari ini dalam Bahasa Indonesia, mis. "Senin" */
-export const getTodayNameId = () => DAY_NAMES_ID[new Date().getDay()];
+export const getTodayNameId = () => new Date().toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',weekday:'long'});
 
 /** Normalisasi dayOfWeek (string | array) → array lowercase ter-trim */
 const toDayList = (dayOfWeek) => {

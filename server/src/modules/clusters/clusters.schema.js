@@ -2,9 +2,9 @@ import { z } from 'zod';
 
 export const createClusterSchema = z.object({
   body: z.object({
-    name: z.string().min(2, 'Nama cluster minimal 2 karakter'),
-    region: z.string().min(2, 'Region minimal 2 karakter'),
-    colorHex: z.string().optional(),
+    name: z.string().trim().min(2, 'Nama kluster minimal 2 karakter').max(150).refine(value=>value.toLowerCase()!=='belum ditugaskan','Nama ini digunakan oleh wilayah penampung outlet'),
+    region: z.string().trim().min(2, 'Region minimal 2 karakter').max(100),
+    colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Warna tidak valid').optional(),
     assignedSalesId: z.string().nullable().optional(),
     supervisorId: z.string().nullable().optional(),
   }),
@@ -12,9 +12,9 @@ export const createClusterSchema = z.object({
 
 export const updateClusterSchema = z.object({
   body: z.object({
-    name: z.string().min(2, 'Nama cluster minimal 2 karakter').optional(),
-    region: z.string().min(2, 'Region minimal 2 karakter').optional(),
-    colorHex: z.string().optional(),
+    name: z.string().trim().min(2, 'Nama kluster minimal 2 karakter').max(150).refine(value=>value.toLowerCase()!=='belum ditugaskan','Nama ini digunakan oleh wilayah penampung outlet').optional(),
+    region: z.string().trim().min(2, 'Region minimal 2 karakter').max(100).optional(),
+    colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Warna tidak valid').optional(),
     assignedSalesId: z.string().nullable().optional(),
     assignedSalesName: z.string().nullable().optional(),
     supervisorId: z.string().nullable().optional(),
@@ -28,32 +28,32 @@ export const updateClusterSchema = z.object({
 
 export const getNearestOutletsSchema = z.object({
   body: z.object({
-    lat: z.number(),
-    lng: z.number(),
-    count: z.number().int().min(1),
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+    count: z.number().int().min(1).max(100),
     type: z.enum(['GENERAL_TRADE', 'MODERN_TRADE']).optional(),
   }),
 });
 
 export const generateRoutesSchema = z.object({
   body: z.object({
-    outletIds: z.array(z.string()),
+    outletIds: z.array(z.string().trim().min(1)).min(1).max(100),
   }),
 });
 
 export const createFullClusterSchema = z.object({
   body: z.object({
-    name: z.string().min(2, 'Nama cluster minimal 2 karakter'),
-    region: z.string().min(2, 'Region minimal 2 karakter'),
+    name: z.string().trim().min(2, 'Nama kluster minimal 2 karakter').max(150).refine(value=>value.toLowerCase()!=='belum ditugaskan','Nama ini digunakan oleh wilayah penampung outlet'),
+    region: z.string().trim().min(2, 'Region minimal 2 karakter').max(100),
     color: z.string().optional(),
-    colorHex: z.string().optional(),
-    centerLat: z.number().nullable().optional(),
-    centerLng: z.number().nullable().optional(),
+    colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Warna tidak valid').optional(),
+    centerLat: z.number().min(-90).max(90).nullable().optional(),
+    centerLng: z.number().min(-180).max(180).nullable().optional(),
     outletCount: z.number().int().optional(),
     assignedSalesId: z.string().nullable().optional(),
     supervisorId: z.string().nullable().optional(),
     assignedSpvId: z.string().nullable().optional(),
-    outletIds: z.array(z.string()),
+    outletIds: z.array(z.string().trim().min(1)).min(1).max(100),
     routes: z.array(z.object({
       routeIndex: z.number().int().optional(),
       isActive: z.boolean().optional(),
@@ -66,28 +66,28 @@ export const createFullClusterSchema = z.object({
 });
 
 export const updateOutletsSchema = z.object({
-  params: z.object({ id: z.string().uuid() }),
+  params: z.object({ id: z.string().trim().min(1).max(128) }),
   body: z.object({
-    outletIds: z.array(z.string().uuid()),
+    outletIds: z.array(z.string().trim().min(1).max(128)),
   }),
 });
 
 export const updateRoutesSchema = z.object({
-  params: z.object({ id: z.string().uuid() }),
+  params: z.object({ id: z.string().trim().min(1).max(128) }),
   body: z.object({
     routes: z.array(z.object({
       routeIndex: z.number().int(),
       isActive: z.boolean(),
       totalDistanceKm: z.number(),
       outletOrder: z.any(),
-      startOutletId: z.string().uuid().optional(),
+      startOutletId: z.string().trim().min(1).max(128).optional(),
     })),
   }),
 });
 
 export const setActiveRouteSchema = z.object({
   params: z.object({
-    id: z.string().uuid(),
+    id: z.string().trim().min(1).max(128),
     routeIndex: z.string().regex(/^\d+$/),
   }),
 });

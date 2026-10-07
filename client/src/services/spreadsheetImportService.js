@@ -13,43 +13,22 @@
 export const parseSpreadsheetCsv = (csvText = '') => {
   if (!csvText || typeof csvText !== 'string') return [];
 
-  const lines = csvText
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-
-  if (lines.length <= 1) return [];
-
-  const parsedRecords = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map((c) => c.trim().replace(/^["']|["']$/g, ''));
-    if (cols.length < 3) continue;
-
-    // Strict parsing without dummy fallbacks
-    const outletCode = cols[1];
-    const customerName = cols[2];
-    
-    // Skip if essential data is missing
-    if (!outletCode || !customerName) continue;
-
-    const record = {
-      clusterName: cols[0] || '',
-      outletCode: outletCode,
-      customerName: customerName,
-      outletName: customerName, // alias for consistency
-      address: cols[3] || '',
-      area: cols[4] || '',
-      latitude: parseFloat(cols[5]) || null,
-      longitude: parseFloat(cols[6]) || null,
-      callFrequency: cols[7] ? cols[7].toUpperCase() : 'F1',
-      radiusMeters: 50,
-      status: 'ACTIVE',
-    };
-
-    parsedRecords.push(record);
+  const records=[];let current=[],cell='',quoted=false;
+  for(let i=0;i<csvText.length;i++){
+    const c=csvText[i];
+    if(c==='"'){if(quoted&&csvText[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}
+    else if(c===','&&!quoted){current.push(cell.trim());cell='';}
+    else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&csvText[i+1]==='\n')i++;current.push(cell.trim());if(current.some(Boolean))records.push(current);current=[];cell='';}
+    else cell+=c;
   }
-
+  if(quoted)throw new Error('CSV mengandung tanda kutip yang belum ditutup');
+  current.push(cell.trim());if(current.some(Boolean))records.push(current);
+  const parsedRecords=records.slice(1).map((cols,i)=>{
+    if(cols.length<7)throw new Error(`Baris ${i+2}: kolom belum lengkap`);
+    const latitude=cols[5]===''?null:Number(cols[5]);const longitude=cols[6]===''?null:Number(cols[6]);
+    if(latitude===null||longitude===null||!Number.isFinite(latitude)||!Number.isFinite(longitude))throw new Error(`Baris ${i+2}: koordinat wajib berupa angka`);
+    return {clusterName:cols[0],outletCode:cols[1],customerName:cols[2],outletName:cols[2],address:cols[3],area:cols[4],latitude,longitude,callFrequency:cols[7]?cols[7].toUpperCase():'F1'};
+  });
   return parsedRecords;
 };
 

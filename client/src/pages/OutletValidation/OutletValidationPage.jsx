@@ -1,7 +1,7 @@
 import React from 'react';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import { OutletValidationPanel } from './components/OutletValidationPanel';
-import { LuMapPin, LuCompass } from 'react-icons/lu';
+import { LuMapPin } from "react-icons/lu";
 
 /**
  * OutletValidationPage Component
@@ -9,7 +9,7 @@ import { LuMapPin, LuCompass } from 'react-icons/lu';
  */
 export const OutletValidationPage = () => {
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-24">
+    <div className="workspace-page space-y-6">
       <PageHeader
         badge={
           <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
@@ -17,7 +17,7 @@ export const OutletValidationPage = () => {
           </span>
         }
         title="Validasi Titik Koordinat GPS Outlet"
-        subtitle="Validasi akurasi koordinat GPS fisik toko menggunakan integrasi Google Maps Geocoding & Places API untuk memastikan radius presensi sales presisi."
+        subtitle="Bandingkan nama, alamat, dan koordinat dengan peta, lalu tinjau serta catat koreksi sebelum dipakai untuk radius presensi."
       />
 
       <OutletValidationPanel />

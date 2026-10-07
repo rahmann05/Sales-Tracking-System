@@ -5,7 +5,11 @@ export const USER_SELECT = {
   name: true,
   email: true,
   role: true,
+  roleCode: true,
   permissions: true,
+  supervisorId: true,
+  supervisor: { select: { id:true, name:true, email:true } },
+  updatedAt: true,
   clusterId: true,
   cluster: {
     select: {
@@ -37,8 +41,8 @@ export const enrichUserResponse = (user) => ({
   ...user,
   region: user.cluster?.region ?? null,
   clusterName: user.cluster?.name ?? null,
-  spvName: user.cluster?.supervisor?.name ?? (user.role === 'SALES' ? 'Ahmad Subagja' : null),
-  supervisorName: user.cluster?.supervisor?.name ?? (user.role === 'SALES' ? 'Ahmad Subagja' : null),
+  spvName: user.supervisor?.name ?? null,
+  supervisorName: user.supervisor?.name ?? null,
   roleLabel: ROLE_LABELS[user.role] ?? user.role,
   permissions: user.permissions || {},
 });

@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import { ConnectivityNotice } from './shared/components/layout/ConnectivityNotice';
+import React from 'react';
 import { ErrorBoundary } from './shared/components/common/ErrorBoundary';
 import { AppProvider, useApp } from './context/AppContext';
 import { MapProvider } from './context/MapContext';
@@ -10,8 +11,6 @@ import { BottomNav } from './shared/components/layout/BottomNav';
 import { LoginPage } from './pages/Login/LoginPage';
 import { AppRouter } from './app/AppRouter';
 import { useAuth } from './shared/hooks/useAuth';
-import { useSearch } from './shared/hooks/useSearch';
-import { usersApi } from './services/api';
 import { PersistentMapShell } from './shared/components/map/PersistentMapShell';
 
 /**
@@ -25,45 +24,8 @@ const AppContent = () => {
   // Tab navigation lives in AppContext – do NOT create a second useState here
   const { user, setUserFromAuth, activeTab, setActiveTab } = useApp();
   const { isAuthenticated, authLoading, authError, login, logout } = useAuth();
-  const { searchQuery, setSearchQuery } = useSearch();
 
   const goToWorkspace = () => setActiveTab('role-workspace');
-
-  useEffect(() => {
-    // Only track and broadcast device GPS location for field sales reps on mobile
-    if (isAuthenticated && user?.role === 'SALES' && navigator.geolocation) {
-      const reportLocation = (position) => {
-        const coords = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: Math.round(position.coords.accuracy || 10),
-          speed: position.coords.speed || 0,
-          heading: position.coords.heading || 0,
-        };
-        const loc = { lat: coords.latitude, lng: coords.longitude };
-        localStorage.setItem('user_gps_location', JSON.stringify(loc));
-        window.dispatchEvent(new CustomEvent('gps_location_updated', { detail: loc }));
-
-        usersApi.updateLocation(coords).catch(() => {});
-      };
-
-      navigator.geolocation.getCurrentPosition(reportLocation, () => {}, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 10000,
-      });
-
-      const watchId = navigator.geolocation.watchPosition(reportLocation, () => {}, {
-        enableHighAccuracy: true,
-        maximumAge: 30000,
-        timeout: 27000,
-      });
-
-      return () => {
-        navigator.geolocation.clearWatch(watchId);
-      };
-    }
-  }, [isAuthenticated, user?.role]);
 
   const handleLogin = async ({ email, password }) => {
     const ok = await login(email, password);
@@ -91,29 +53,28 @@ const AppContent = () => {
 
   return (
     <ErrorBoundary>
-      <div className="flex w-screen h-screen overflow-hidden bg-background">
+      <div className="app-shell flex overflow-hidden bg-background">
+        <a className="skip-link" href="#main-content" onClick={e=>{e.preventDefault();document.getElementById('main-content')?.focus();}}>Ke konten utama</a>
         {!isAdmin && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
 
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           <Header
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
             onLogout={handleLogout}
           />
           <MobileHeader onLogout={handleLogout} />
 
-          <main className={`flex-1 relative overflow-y-auto bg-background ${isAdmin ? 'pb-8' : 'pb-16 md:pb-8'} min-h-0 pointer-events-none`}>
+          <ConnectivityNotice/>
+          <main id="main-content" tabIndex={-1} className={`flex-1 relative overflow-y-auto bg-background pb-16 md:pb-8 min-h-0 pointer-events-none`}>
             <ErrorBoundary>
               <PersistentMapShell />
               <AppRouter
                 activeTab={activeTab}
-                searchQuery={searchQuery}
-                onGoBack={goToWorkspace}
+                    onGoBack={goToWorkspace}
               />
             </ErrorBoundary>
           </main>
 
-          {!isAdmin && <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />}
+          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
       </div>
     </ErrorBoundary>

@@ -105,6 +105,7 @@ export const RoleTemplateManager = () => {
     setSubmitting(true);
     try {
       await rolesApi.create({
+        baseRole: roles.find(r=>r.code===newRoleForm.cloneFromRole)?.baseRole || newRoleForm.cloneFromRole,
         code: newRoleForm.code,
         name: newRoleForm.name,
         description: newRoleForm.description,
@@ -180,7 +181,7 @@ export const RoleTemplateManager = () => {
             Master Role & Template Hak Akses
           </h4>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Kelola definisi peran pengguna dan sesuaikan izin fitur default yang akan otomatis diterapkan saat pembuatan akun.
+            Role kustom mengikuti alur role dasar yang disalin. Template izin berlaku saat akses, dan izin khusus akun dapat menimpa template.
           </p>
         </div>
 
@@ -245,7 +246,7 @@ export const RoleTemplateManager = () => {
                   </div>
 
                   {/* Description */}
-                  <p className="text-xs text-on-surface-variant leading-relaxed min-h-[36px] line-clamp-2 mb-4">
+                  <p className="text-xs text-on-surface-variant leading-relaxed min-h-[36px]  mb-4">
                     {r.description || 'Tidak ada deskripsi peran.'}
                   </p>
 

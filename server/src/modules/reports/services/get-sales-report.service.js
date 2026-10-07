@@ -1,7 +1,8 @@
+import { teamSalesWhere } from '../../../utils/team-scope.js';
 /** getSalesReport - single-responsibility service (extracted from reports.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { buildDateRange } from '../../../utils/pagination.js';
-import { PJP_STATUS, VISIT_STATUS } from '../../../utils/constants.js';
+import { PJP_STATUS } from "../../../utils/constants.js";
 
 /**
  * Per-Sales performance recap.
@@ -11,7 +12,7 @@ export const getSalesReport = async (query = {}) => {
   const dateRange = buildDateRange(startDate, endDate);
 
   const salesUsers = await prisma.user.findMany({
-    where: { role: 'SALES', deletedAt: null },
+    where: { role: 'SALES', deletedAt: null, ...(query.userId ? {id: query.userId} : {}), ...(query.supervisorId ? teamSalesWhere(query.supervisorId) : {}) },
     select: {
       id: true,
       name: true,
@@ -29,8 +30,8 @@ export const getSalesReport = async (query = {}) => {
         prisma.pjp.count({ where: pjpFilter }),
         prisma.pjp.count({ where: { ...pjpFilter, status: PJP_STATUS.COMPLETED } }),
         prisma.pjpStop.count({ where: { pjp: pjpFilter } }),
-        prisma.pjpStop.count({ where: { pjp: pjpFilter, status: VISIT_STATUS.VISITED } }),
-        prisma.customerRegistration.count({ where: { salesmanId: sales.id, deletedAt: null } }),
+        prisma.pjpStop.count({ where: { pjp: pjpFilter, attendances: { some: { type: 'IN' } } } }),
+        prisma.customerRegistration.count({ where: { salesmanId: sales.id, deletedAt: null, ...(dateRange ? {createdAt: dateRange} : {}) } }),
       ]);
 
       const realizationRate = totalStops > 0 ? Math.round((visitedStops / totalStops) * 100) : 0;

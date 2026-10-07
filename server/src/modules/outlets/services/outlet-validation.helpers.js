@@ -1,3 +1,5 @@
+import { cleanAddressForSearch } from './clean-address-for-search.service.js';
+import { calculateNameSimilarity } from './calculate-name-similarity.service.js';
 /** Shared helpers for outlet-validation services (internal). */
 import { cacheInvalidate } from '../../../utils/cacheHelper.js';
 import { CACHE_KEYS } from '../../../config/cache.js';
@@ -183,7 +185,7 @@ export const extractAddressTokens = (addr) => {
 export const runReverseGeocode = async (lat, lng, apiKey) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=id`;
-    const res = await fetch(url);
+    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
     const data = await res.json();
 
     if (data.status === 'OK' && data.results?.length > 0) {
@@ -211,7 +213,7 @@ export const runForwardGeocode = async (address, apiKey, adminAnchor = null) => 
     const queryAddress = cleanAddressForSearch(address, adminAnchor);
 
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(queryAddress)}&key=${apiKey}&language=id&region=id`;
-    const res = await fetch(url);
+    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
     const data = await res.json();
 
     if (data.status === 'OK' && data.results?.length > 0) {
@@ -246,7 +248,7 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
     if (lat != null && lng != null) {
       const cleanKeyword = cleanName.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
       const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=500&keyword=${encodeURIComponent(cleanKeyword)}&key=${apiKey}&language=id`;
-      const nearbyRes = await fetch(nearbyUrl);
+      const nearbyRes = await fetch(nearbyUrl,{signal:AbortSignal.timeout(10000)});
       const nearbyData = await nearbyRes.json();
 
       if (nearbyData.status === 'OK' && nearbyData.results?.length > 0) {
@@ -293,7 +295,7 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
     let biasParam = lat != null && lng != null ? `circle:10000@${lat},${lng}` : 'circle:50000@-6.9,107.6';
 
     const url = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(cleanQuery)}&inputtype=textquery&fields=${fields}&key=${apiKey}&language=id&locationbias=${biasParam}`;
-    const res = await fetch(url);
+    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
     const data = await res.json();
 
     if (data.status === 'OK' && data.candidates?.length > 0) {
@@ -324,7 +326,7 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
 export const runNearbySearch = async (lat, lng, apiKey, radius = 200) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${apiKey}&language=id`;
-    const res = await fetch(url);
+    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
     const data = await res.json();
 
     if (data.status === 'OK' && data.results?.length > 0) {

@@ -39,6 +39,8 @@ export const mapServerRouteChange = (req = {}) => ({
 export const mapServerUnlockRequest = (req = {}) => ({
   id: req.id,
   type: 'UNLOCK_REQUEST',
+  requestedBy: req.requestedBy,
+  expiresAt: req.expiresAt,
   stopId: req.outletId,
   outletId: req.outletId,
   outletName: req.outlet?.name || req.outletName || '',

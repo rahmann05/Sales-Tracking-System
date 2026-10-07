@@ -1,7 +1,7 @@
 /** getClusterById - single-responsibility service (extracted from clusters.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { cacheGetOrFetch, cacheInvalidate } from '../../../utils/cacheHelper.js';
+import { cacheGetOrFetch } from "../../../utils/cacheHelper.js";
 import { CACHE_KEYS } from '../../../config/cache.js';
 
 

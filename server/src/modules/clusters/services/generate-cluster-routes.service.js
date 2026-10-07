@@ -17,7 +17,7 @@ export const generateClusterRoutes = async (outletIds) => {
   if (outlets.length === 0) return [];
 
   // Convert lat/lng to Number and filter out invalid coordinates
-  const sanitizedOutlets = outlets.map(o => ({
+  const sanitizedOutlets = outlets.filter(o=>o.latitude != null && o.longitude != null).map(o => ({
     ...o,
     latitude: Number(o.latitude),
     longitude: Number(o.longitude)

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from "react";
 import { deliveryApi } from '../../../services/api';
-import { LuTruck, LuPackage, LuMapPin, LuCircleCheck, LuClock, LuRefreshCw, LuCalendar } from 'react-icons/lu';
+import { LuTruck, LuPackage, LuMapPin, LuRefreshCw, LuCalendar } from "react-icons/lu";
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Draft', color: 'var(--on-surface-variant)', bg: 'var(--surface-variant)' },
@@ -206,11 +206,11 @@ const RouteCard = ({ route }) => {
               <span className="w-5 h-5 rounded-full bg-surface-variant flex items-center justify-center text-[10px] font-bold text-on-surface-variant shrink-0">
                 {idx + 1}
               </span>
-              <span className="flex-1 text-on-surface font-medium truncate">{stop.outlet?.name}</span>
+              <span className="flex-1 text-on-surface font-medium min-w-0 whitespace-normal break-words">{stop.outlet?.name}</span>
               <span className="text-[10px] font-semibold shrink-0" style={{ color: stopCfg.color }}>
                 {stopCfg.label}
               </span>
-              <span className="text-on-surface-variant shrink-0">{stop.packingList?.totalCartons || 0} krt</span>
+              <span className="text-on-surface-variant shrink-0">{stop.allocatedCartons ?? stop.packingList?.totalCartons ?? 0} krt</span>
             </div>
           );
         })}

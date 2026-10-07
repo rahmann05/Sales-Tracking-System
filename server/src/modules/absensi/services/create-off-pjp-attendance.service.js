@@ -1,17 +1,23 @@
+import { resolveSalesResult } from './resolve-sales-result.service.js';
+import { getDynamicConfig } from '../../config/config.service.js';
+import { AppError } from '../../../utils/errors.js';
 /** createOffPjpAttendance - single-responsibility service (extracted from off-pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { OFF_PJP_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
-import { createNotification, createBulkNotificationByRoles } from '../../notifications/notifications.service.js';
+import { createBulkNotificationByRoles } from "../../notifications/notifications.service.js";
 
 /**
  * Sales submits an off-PJP attendance.
  */
 export const createOffPjpAttendance = async (userId, data) => {
+  if (!await getDynamicConfig('OFF_PJP_ENABLED', true)) throw new AppError('Kunjungan luar PJP dinonaktifkan admin', 403);
   const { outletName, customerName, phone, address, reason, latitude, longitude, photoUrl, outletId } = data;
 
+  const salesResult = await resolveSalesResult(data);
   const record = await prisma.offPjpAttendance.create({
     data: {
       userId,
+      ...salesResult,
       outletId: outletId || null,
       outletName,
       customerName: customerName || null,

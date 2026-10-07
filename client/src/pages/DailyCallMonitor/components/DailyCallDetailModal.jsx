@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuX, LuMapPin, LuClock, LuCamera, LuShoppingBag, LuExternalLink, LuCircleCheck } from 'react-icons/lu';
+import { LuX, LuMapPin, LuCamera, LuShoppingBag, LuExternalLink, LuCircleCheck } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
 
 /**

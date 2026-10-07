@@ -14,8 +14,8 @@ export const RjpMasterHeader = ({ onNavigateCreateCluster, onOpenImportModal }) 
           <LuShieldCheck className="text-sm" /> PENGATURAN KLUSTER WILAYAH RJP
         </span>
       }
-      title="Master Cluster & Alokasi Region RJP"
-      subtitle="Tentukan pembagian wilayah, kuota outlet Bandung Barat & Cimahi, atau impor langsung dari spreadsheet"
+      title="Kelola Master Kluster"
+      subtitle="Kelola wilayah, anggota outlet, dan penanggung jawab. Jadwal kunjungan diatur melalui Master RJP."
       actions={
         <div className="flex items-center gap-2.5 flex-wrap shrink-0">
           <button
@@ -35,7 +35,7 @@ export const RjpMasterHeader = ({ onNavigateCreateCluster, onOpenImportModal }) 
             id="btn-create-cluster"
           >
             <LuPlus className="text-base" />
-            <span>Buat Cluster Baru</span>
+            <span>Buat kluster</span>
           </button>
         </div>
       }

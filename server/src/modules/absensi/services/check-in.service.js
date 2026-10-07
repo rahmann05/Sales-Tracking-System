@@ -1,14 +1,15 @@
+import { requireActiveShift, attendanceException } from './attendance-policy.service.js';
 /** checkIn - single-responsibility service (extracted from absensi.service.js). */
-import { prisma } from '../../../config/prisma.js';
-import { config } from '../../../config/index.js';
+import {withUserTransaction} from '../../../utils/user-transaction.js';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
 import { AppError } from '../../../utils/errors.js';
 import { ATTENDANCE_TYPE, VISIT_STATUS, PJP_STATUS } from '../../../utils/constants.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
 
-export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null) => {
-  const stop = await prisma.pjpStop.findUnique({
+const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null) => {
+  const stop = await db.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: {
       outlet: true,
@@ -22,8 +23,15 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
     throw new AppError('Anda tidak berhak melakukan absensi pada PJP ini', 403);
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-  const bypassEmailsRaw = await getDynamicConfig('BYPASS_GEOFENCE_EMAILS', 'sales@sinaranugrah.com');
+  if (wibDateKey(stop.pjp.date) !== wibDateKey()) throw new AppError('Absensi hanya untuk PJP hari ini', 400);
+  if (['VISITED', 'SKIPPED', 'CLOSED_REPORTED'].includes(stop.status)) throw new AppError('Toko sudah selesai atau ditutup pada rute ini', 409);
+  const hasException = await attendanceException(stop.outlet.id,userId,db);
+  if (['LOCKED','UNLOCK_REQUESTED'].includes(stop.outlet.lockStatus) && !hasException) {
+    throw new AppError('Outlet sedang terkunci. Ajukan permintaan unlock kepada supervisor sebelum dapat melakukan kunjungan.', 403);
+  }
+  await requireActiveShift(userId,db);
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
+  const bypassEmailsRaw = await getDynamicConfig('BYPASS_GEOFENCE_EMAILS', '');
   const bypassEmails = String(bypassEmailsRaw).split(',').map((e) => e.trim().toLowerCase());
   const isBypassUser = Boolean(user?.email && bypassEmails.includes(user.email.toLowerCase()));
 
@@ -37,8 +45,8 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
   const maxRadius = stop.outlet.radiusMeters || globalRadius;
   const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
 
-  // Enforce Geofence: Block attendance if outside radius, except for testing account sales@sinaranugrah.com
-  if (!isBypassUser && distance > maxRadius) {
+  // Enforce Geofence: Block attendance if outside radius, except for an explicitly configured exception
+  if (!isBypassUser && !hasException && distance > maxRadius) {
     throw new AppError(
       `Presensi ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius toko (${maxRadius}m). Harap dekati lokasi fisik outlet.`,
       422
@@ -54,9 +62,10 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
   if (currentSeq > 1) {
     const prevStops = stop.pjp.stops.filter((s) => s.sequence < currentSeq);
     for (const prevStop of prevStops) {
-      const isSkippedOrClosed = [VISIT_STATUS.SKIPPED, VISIT_STATUS.CLOSED_REPORTED].includes(prevStop.status);
+      const allowPending = await getDynamicConfig('ALLOW_CONTINUE_PENDING_CLOSED', true);
+      const isSkippedOrClosed = prevStop.status === VISIT_STATUS.SKIPPED || (prevStop.status === VISIT_STATUS.CLOSED_REPORTED && (allowPending || await db.routeChangeRequest.findFirst({where:{pjpStopId:prevStop.id,status:{in:['APPROVED','ACKNOWLEDGED']}}})));
       if (isSkippedOrClosed) continue;
-      const prevOutAttendance = await prisma.attendance.findFirst({
+      const prevOutAttendance = await db.attendance.findFirst({
         where: { pjpStopId: prevStop.id, userId, type: ATTENDANCE_TYPE.OUT },
       });
       if (!prevOutAttendance) {
@@ -68,8 +77,7 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
     }
   }
 
-  const [attendance] = await prisma.$transaction([
-    prisma.attendance.create({
+  const attendance = await db.attendance.create({
       data: {
         pjpStopId,
         userId,
@@ -81,9 +89,10 @@ export const checkIn = async (pjpStopId, userId, latitude, longitude, photoUrl =
         deviationMeters,
         distanceWarning,
       },
-    }),
-    prisma.pjp.update({ where: { id: stop.pjpId }, data: { status: PJP_STATUS.IN_PROGRESS } }),
-  ]);
+    });
+    await db.pjp.update({ where: { id: stop.pjpId }, data: { status: PJP_STATUS.IN_PROGRESS } });
 
   return attendance;
 };
+
+export const checkIn=(pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null)=>withUserTransaction(userId,db=>perform(db,pjpStopId,userId,latitude,longitude,photoUrl,notes));

@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { parseSpreadsheetCsv } from '../../../services/spreadsheetImportService';
-import { clustersApi, outletsApi } from '../../../services/api';
+import { clustersApi, outletsApi, collectPages } from '../../../services/api';
 
 /**
  * useRjpManagement Hook
@@ -8,6 +8,10 @@ import { clustersApi, outletsApi } from '../../../services/api';
  * Data murni dari PostgreSQL (bukan mockup).
  */
 export const useRjpManagement = () => {
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [deletingId,setDeletingId]=useState(null);
+  const revision=useRef(0);
   const [masterClusters, setMasterClusters] = useState([]);
   const [coverageOutlets, setCoverageOutlets] = useState([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -15,30 +19,33 @@ export const useRjpManagement = () => {
   const [editingCluster, setEditingCluster] = useState(null);
 
   // Load master clusters & coverage outlets dari PostgreSQL
-  useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
+  const load = useCallback(async () => {
+      const current=++revision.current;setLoading(true);setError('');
+      try {
       const [clustersRes, outletsRes] = await Promise.all([
-        clustersApi.getAll().catch(() => null),
-        outletsApi.getAll().catch(() => null),
+        clustersApi.getAll(),
+        collectPages(outletsApi.getAll),
       ]);
-      if (!isMounted) return;
 
+      if(current!==revision.current)return;
       const clusters = Array.isArray(clustersRes?.data) ? clustersRes.data : [];
       setMasterClusters(clusters.map((c, idx) => {
-        const assignedSales = c.assignedSales || c.users?.find((u) => u.role === 'SALES');
-        const supervisor = c.supervisor || c.users?.find((u) => u.role === 'SUPERVISOR');
-        const spvName = supervisor?.name || (c.assignedSpvName && c.assignedSpvName !== '-' ? c.assignedSpvName : 'Ahmad Subagja');
+        const assignedSales = c.assignedSales;
+        const supervisor = c.supervisor;
+        const spvName = supervisor?.name || (c.assignedSpvName && c.assignedSpvName !== '-' ? c.assignedSpvName : 'Belum Ditugaskan');
         return {
           id: c.id,
           code: c.code || `CLS-${idx + 1}`,
           name: c.name,
-          region: c.region || 'Cimahi',
+          tradeType:new Set((c.outlets || []).map(outlet=>outlet.type)).size>1?'MIXED':c.outlets?.[0]?.type || null,
+          region: c.region || '—',
           colorHex: c.colorHex || '#3B82F6',
           subDistricts: c.subDistricts || [],
           allocatedOutletsCount: c._count?.outlets ?? c.allocatedOutletsCount ?? 0,
           assignedSalesId: c.assignedSalesId || assignedSales?.id || null,
           assignedSalesName: assignedSales?.name || 'Belum Ditugaskan',
+          supervisorId: c.supervisorId || null,
+          assignedSpvId: c.supervisorId || null,
           assignedSpvName: spvName,
           spvTeamName: `Tim SPV ${spvName}`,
           status: c.status || 'ACTIVE',
@@ -52,15 +59,15 @@ export const useRjpManagement = () => {
         name: o.name,
         outletCode: o.outletCode,
         address: o.address,
-        clusterName: (!o.cluster || o.cluster.deletedAt) ? '-' : (o.cluster.name || o.clusterName || '-'),
+        clusterName: (!o.cluster || o.cluster.deletedAt || o.cluster.name==='Belum Ditugaskan') ? '-' : (o.cluster.name || o.clusterName || '-'),
         type: o.type || 'MODERN_TRADE',
         latitude: Number(o.latitude),
         longitude: Number(o.longitude),
       })));
-    };
-    load();
-    return () => { isMounted = false; };
-  }, []);
+      } catch(err){if(current===revision.current)setError(err.message);}
+      finally{if(current===revision.current)setLoading(false);}
+  },[]);
+  useEffect(()=>{load();return()=>{revision.current++;};},[load]);
 
   // Computed Allocation Statistics
   const stats = useMemo(() => {
@@ -89,36 +96,10 @@ export const useRjpManagement = () => {
   }, [masterClusters, coverageOutlets]);
 
   // CRUD Cluster via API
-  const handleCreateCluster = async (newClusterData) => {
-    try {
-      const res = await clustersApi.create(newClusterData);
-      setMasterClusters((prev) => [res.data, ...prev]);
-      setIsFormModalOpen(false);
-      return res.data;
-    } catch (error) {
-      console.error('Failed to create cluster:', error);
-      throw error;
-    }
-  };
-
   const handleUpdateCluster = async (id, updatedData) => {
     try {
       const res = await clustersApi.update(id, updatedData);
-      const updated = res.data;
-      setMasterClusters((prev) => prev.map((c) => {
-        if (c.id !== id) return c;
-        const spv = updated?.users?.find((u) => u.role === 'SUPERVISOR') || updated?.assignedSales;
-        const assignedName = spv?.name || updatedData.assignedSpvName || updatedData.assignedSalesName || c.assignedSpvName;
-        return {
-          ...c,
-          name: updated?.name ?? updatedData.name ?? c.name,
-          region: updated?.region ?? updatedData.region ?? c.region,
-          colorHex: updated?.colorHex ?? updatedData.colorHex ?? c.colorHex,
-          assignedSalesId: updated?.assignedSalesId ?? updatedData.assignedSalesId ?? c.assignedSalesId,
-          assignedSpvName: assignedName,
-          spvTeamName: null,
-        };
-      }));
+      await load();
       setIsFormModalOpen(false);
       setEditingCluster(null);
       return res.data;
@@ -129,58 +110,24 @@ export const useRjpManagement = () => {
   };
 
   const handleDeleteCluster = async (id) => {
+    if(deletingId)return false;
+    setDeletingId(id);
     try {
       await clustersApi.delete(id);
-      const clusterToDelete = masterClusters.find(c => c.id === id);
-      setMasterClusters((prev) => prev.filter((c) => c.id !== id));
-      if (clusterToDelete) {
-        setCoverageOutlets((prev) => prev.map(o => o.clusterName === clusterToDelete.name ? { ...o, clusterName: '-' } : o));
-      }
+      await load();
     } catch (error) {
-      console.error('Failed to delete cluster:', error);
-      throw error;
-    }
+      setError(error.message);
+      return false;
+    } finally {setDeletingId(null);}
   };
 
-  // Import Spreadsheet & Auto-Generate Clusters
-  const handleImportSpreadsheet = (csvText) => {
-    const parsedOutlets = parseSpreadsheetCsv(csvText);
-    if (parsedOutlets.length === 0) {
-      throw new Error('Format spreadsheet tidak valid atau kosong.');
-    }
-
-    // Merge new outlets into coverage database
-    setCoverageOutlets((prev) => [...parsedOutlets, ...prev]);
-
-    // Group by cluster name
-    const clusterGroups = {};
-    parsedOutlets.forEach((o) => {
-      if (!clusterGroups[o.clusterName]) {
-        clusterGroups[o.clusterName] = [];
-      }
-      clusterGroups[o.clusterName].push(o);
-    });
-
-    // Create new clusters from import if not existing
-    const newClusters = Object.keys(clusterGroups).map((clusterName, idx) => ({
-      id: `cluster-imp-${Date.now()}-${idx}`,
-      code: `CLS-IMP-${idx + 1}`,
-      name: clusterName,
-      region: 'Imported Region',
-      subDistricts: [],
-      allocatedOutletsCount: clusterGroups[clusterName].length,
-      assignedSpvName: '-',
-      spvTeamName: null,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString().split('T')[0],
-    }));
-
-    setMasterClusters((prev) => [...newClusters, ...prev]);
-    setIsImportModalOpen(false);
-    return { importedOutletsCount: parsedOutlets.length, importedClustersCount: newClusters.length };
+  const handleImportSpreadsheet=async csvText=>{
+    const rows=parseSpreadsheetCsv(csvText);
+    if(!rows.length)throw new Error('CSV tidak berisi data');
+    const res=await clustersApi.importRjp(rows);await load();setIsImportModalOpen(false);return res.data;
   };
 
-  return {
+  return {reload:load,error,loading,deletingId,
     masterClusters,
     coverageOutlets,
     stats,
@@ -190,7 +137,6 @@ export const useRjpManagement = () => {
     setIsFormModalOpen,
     editingCluster,
     setEditingCluster,
-    handleCreateCluster,
     handleUpdateCluster,
     handleDeleteCluster,
     handleImportSpreadsheet,

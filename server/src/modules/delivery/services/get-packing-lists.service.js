@@ -1,14 +1,18 @@
+import { packingBalance } from '../../../../../shared/packing.mjs';
 /** getPackingLists - single-responsibility service (extracted from delivery.service.js). */
+import { parsePagination } from '../../../utils/pagination.js';
 import { prisma } from '../../../config/prisma.js';
 
 /**
  * List packing lists with filters
  */
-export const getPackingLists = async (query) => {
-  const { page = 1, limit = 20, search, outletId, dateFrom, dateTo } = query;
-  const skip = (page - 1) * limit;
+export const getPackingLists = async (query, role) => {
+  const { search, outletId, dateFrom, dateTo } = query;
+  const { page, limit, skip } = parsePagination(query);
 
   const where = {};
+  if (role !== 'ADMIN' || query.status === 'RELEASED') where.status = 'RELEASED';
+  else if (query.status === 'DRAFT') where.status = 'DRAFT';
   if (outletId) where.outletId = outletId;
   if (search) {
     where.OR = [
@@ -32,11 +36,11 @@ export const getPackingLists = async (query) => {
         outlet: { select: { id: true, name: true, address: true, outletCode: true } },
         invoices: true,
         createdBy: { select: { id: true, name: true } },
-        deliveryStops: { select: { id: true, status: true } },
+        deliveryStops: true,
       },
     }),
     prisma.packingList.count({ where }),
   ]);
 
-  return { items, total, page: parseInt(page), limit: parseInt(limit) };
+  return { items: items.map(packingBalance), total, page: parseInt(page), limit: parseInt(limit) };
 };

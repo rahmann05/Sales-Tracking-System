@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { dailyCallsApi, usersApi } from '../../../services/api';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { collectPages, dailyCallsApi, usersApi } from '../../../services/api';
 
 /**
  * useDailyCallMonitor Hook
  * Single Responsibility: Fetch Daily Call Report data from backend with filters, sales team list, and export support.
  */
 export const useDailyCallMonitor = () => {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(wibDateKey);
   const [salesmanId, setSalesmanId] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -32,13 +33,15 @@ export const useDailyCallMonitor = () => {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const loadRevision = useRef(0);
   const [selectedRow, setSelectedRow] = useState(null);
 
   // 1. Fetch Sales Team for dropdown
   useEffect(() => {
     const fetchSalesTeam = async () => {
       try {
-        const res = await usersApi.getAll({ role: 'SALES' });
+        const res = await collectPages(usersApi.getAll,{role:'SALES'});
         if (res?.data) {
           setSalesTeam(res.data);
         }
@@ -51,7 +54,8 @@ export const useDailyCallMonitor = () => {
 
   // 2. Load Report Data
   const loadData = useCallback(async () => {
-    setIsLoading(true);
+    const revision=++loadRevision.current;
+    setIsLoading(true);setError('');
     try {
       const res = await dailyCallsApi.getReport({
         date,
@@ -60,18 +64,19 @@ export const useDailyCallMonitor = () => {
         search: search || undefined,
       });
 
-      if (res?.data) {
+      if (revision===loadRevision.current && res?.data) {
         setReportData(res.data);
       }
     } catch (err) {
-      console.warn('[useDailyCallMonitor] Failed to load daily calls report:', err.message);
+      if(revision===loadRevision.current)setError(err.message);
     } finally {
-      setIsLoading(false);
+      if(revision===loadRevision.current)setIsLoading(false);
     }
   }, [date, salesmanId, filterType, search]);
 
   useEffect(() => {
     loadData();
+    return ()=>{loadRevision.current++;};
   }, [loadData]);
 
   // 3. Export to CSV/Excel format compatible with ND6 Daily Call
@@ -154,7 +159,7 @@ export const useDailyCallMonitor = () => {
     setSearch,
     salesTeam,
     reportData,
-    isLoading,
+    isLoading, error,
     selectedRow,
     setSelectedRow,
     refreshData: loadData,

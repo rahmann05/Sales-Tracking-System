@@ -1,3 +1,4 @@
+import {AuditFollowUpFields} from './AuditFollowUpFields';
 import React from 'react';
 import { LuCheck } from 'react-icons/lu';
 import { SpvModalShell } from './SpvModalShell';
@@ -7,8 +8,8 @@ import { SPV_AUDIT_CHECKLIST_ITEMS } from '../../../constants/supervisor';
  * SpvAuditModal Component
  * Single Responsibility: Modal checklist audit kepatuhan toko & evaluasi sales.
  */
-export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave }) => (
-    <SpvModalShell
+export const SpvAuditModal = ({ followUp,onChangeFollowUp,stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving }) => (
+    <SpvModalShell error={error} saving={saving}
         title="Form Audit & Evaluasi Supervisi"
         subtitle={stop.outletName}
         onClose={onClose}
@@ -34,6 +35,7 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
         }
     >
         <div className="space-y-4 py-2">
+          <AuditFollowUpFields value={followUp} onChange={onChangeFollowUp}/>
             <div>
                 <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider mb-2.5">
                     Checklist Kepatuhan Toko & Evaluasi Sales:

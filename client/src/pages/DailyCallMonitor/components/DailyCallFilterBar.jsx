@@ -1,4 +1,4 @@
-import { LuSearch, LuCalendar, LuUser, LuDownload, LuRefreshCw, LuFilter, LuPrinter, LuPlus, LuHourglass, LuTriangleAlert, LuClock, LuShieldAlert, LuCheck } from 'react-icons/lu';
+import { LuSearch, LuCalendar, LuUser, LuDownload, LuRefreshCw, LuPrinter, LuPlus, LuHourglass, LuTriangleAlert, LuClock, LuShieldAlert, LuCheck } from "react-icons/lu";
 
 /**
  * DailyCallFilterBar Component
@@ -149,7 +149,7 @@ export const DailyCallFilterBar = ({
                 }`}
               >
                 {Icon && <Icon className="text-xs shrink-0" />}
-                <span className="truncate">{opt.label}</span>
+                <span className="min-w-0 whitespace-normal break-words">{opt.label}</span>
               </button>
             );
           })}

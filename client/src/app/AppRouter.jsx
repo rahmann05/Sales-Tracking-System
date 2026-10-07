@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { useApp } from '../context/AppContext';
 import { AccessDenied } from '../shared/components/common/AccessDenied';
-import { TAB_IDS } from '../constants/navigation';
+import { TAB_IDS, isTabPermissionAllowed } from '../constants/navigation';
 import {
     ROUTE_PLANNING_ROLES,
     TEAM_TRACKING_ROLES,
@@ -136,6 +136,7 @@ const ACCESS_CONTROL = {
         title: 'Akses Dibatasi (Access Denied)',
         description: 'Fitur Validasi Outlet dapat diakses oleh Supervisor dan Admin.',
     },
+    [TAB_IDS.MASTER_CLUSTERS]: {roles: ['ADMIN', 'SUPERVISOR'], title: 'Akses dibatasi', description: 'Pengelolaan kluster memerlukan izin pengelolaan wilayah.'},
     [TAB_IDS.CREATE_CLUSTER]: {
         roles: ['ADMIN', 'SUPERVISOR'],
         title: 'Akses Dibatasi (Access Denied)',
@@ -191,7 +192,7 @@ const MapOverlay = ({ children }) => <div className="w-full h-full pointer-event
  * Single Responsibility: Route the activeTab to the correct page component
  * with built-in Role-Based Access Control (RBAC).
  */
-export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapState, setMapHandlers }) => {
+export const AppRouter = ({ activeTab, onGoBack, mapState, setMapState, setMapHandlers }) => {
     const { user } = useApp();
     const role = user?.role;
     const permissions = user?.permissions || {};
@@ -220,7 +221,7 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             if (activeTab === TAB_IDS.TEAM_TRACKING && (permissions.can_view_team || permissions.can_view_live_tracking)) hasAccess = true;
             if (activeTab === TAB_IDS.REPORTS && permissions.can_view_reports) hasAccess = true;
             if (activeTab === TAB_IDS.OUTLET_VALIDATION && permissions.can_validate_outlet) hasAccess = true;
-            if (activeTab === TAB_IDS.CREATE_CLUSTER && permissions.can_manage_clusters) hasAccess = true;
+            if ([TAB_IDS.CREATE_CLUSTER, TAB_IDS.MASTER_CLUSTERS].includes(activeTab) && permissions.can_manage_clusters) hasAccess = true;
             if (activeTab === TAB_IDS.DELIVERY_PACKING_LIST && (permissions.can_manage_delivery || permissions.can_manage_packing_list)) hasAccess = true;
             if (activeTab === TAB_IDS.DELIVERY_ROUTES && (permissions.can_manage_delivery || permissions.can_manage_delivery_routes)) hasAccess = true;
             if (activeTab === TAB_IDS.DELIVERY_MONITOR && (permissions.can_manage_delivery || permissions.can_monitor_delivery)) hasAccess = true;
@@ -232,6 +233,7 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
         hasAccess = true; // No rule = public
     }
 
+    hasAccess = hasAccess && isTabPermissionAllowed(activeTab,user);
     if (!hasAccess) {
         return (
             <AccessDenied
@@ -249,7 +251,7 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             tabContent = <Interactive><AdminApprovalPage onGoBack={onGoBack} /></Interactive>;
             break;
         case TAB_IDS.DASHBOARD:
-            tabContent = <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
+            tabContent = <MapOverlay><DashboardPage /></MapOverlay>;
             break;
         case TAB_IDS.DAILY_CALL_MONITOR:
             tabContent = <Interactive><DailyCallMonitorPage /></Interactive>;
@@ -264,20 +266,23 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             tabContent = <Interactive><OutletRegistrationReportPage /></Interactive>;
             break;
         case TAB_IDS.ROUTE_PLANNING:
-            tabContent = <Interactive><RoutePlanningPage searchQuery={searchQuery} /></Interactive>;
+            tabContent = <Interactive><RoutePlanningPage /></Interactive>;
+            break;
+        case TAB_IDS.MASTER_CLUSTERS:
+            tabContent = <Interactive><RoutePlanningPage /></Interactive>;
             break;
         case TAB_IDS.CREATE_CLUSTER:
             // Map spacer (left) is transparent, but control panel (right) must be clickable
-            tabContent = <Interactive><CreateClusterPage onGoBack={onGoBack} /></Interactive>;
+            tabContent = <MapOverlay><CreateClusterPage /></MapOverlay>;
             break;
         case TAB_IDS.TEAM_TRACKING:
-            tabContent = <Interactive><TeamTrackingPage searchQuery={searchQuery} /></Interactive>;
+            tabContent = <Interactive><TeamTrackingPage /></Interactive>;
             break;
         case TAB_IDS.OUTLET_MANAGEMENT:
-            tabContent = <Interactive><OutletManagementPage searchQuery={searchQuery} /></Interactive>;
+            tabContent = <Interactive><OutletManagementPage /></Interactive>;
             break;
         case TAB_IDS.REPORTS:
-            tabContent = <Interactive><ReportsPage searchQuery={searchQuery} /></Interactive>;
+            tabContent = <Interactive><ReportsPage /></Interactive>;
             break;
         case TAB_IDS.OUTLET_VALIDATION:
             tabContent = <Interactive><OutletValidationPage /></Interactive>;
@@ -306,7 +311,7 @@ export const AppRouter = ({ activeTab, searchQuery, onGoBack, mapState, setMapSt
             break;
 
         default:
-            tabContent = <MapOverlay><DashboardPage searchQuery={searchQuery} /></MapOverlay>;
+            tabContent = <MapOverlay><DashboardPage /></MapOverlay>;
             break;
     }
 

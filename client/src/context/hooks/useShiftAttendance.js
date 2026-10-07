@@ -1,34 +1,31 @@
-import { useState } from 'react';
-
-/**
- * useShiftAttendance - Shift clock-in/out state.
- * Single Responsibility: owns the daily shift attendance slice
- * and its clock-in / clock-out transitions.
- */
-export const useShiftAttendance = () => {
-  const [shiftAttendance, setShiftAttendance] = useState({
-    clockedIn: false,
-    clockInTime: null,
-    clockOutTime: null,
-    photoUrl: null,
-  });
-
-  const handleShiftClockIn = (photoUrl) => {
-    setShiftAttendance({
-      clockedIn: true,
-      clockInTime: new Date().toLocaleTimeString(),
-      clockOutTime: null,
-      photoUrl,
-    });
-  };
-
-  const handleShiftClockOut = () => {
-    setShiftAttendance((prev) => ({
-      ...prev,
-      clockedIn: false,
-      clockOutTime: new Date().toLocaleTimeString(),
-    }));
-  };
-
-  return { shiftAttendance, handleShiftClockIn, handleShiftClockOut };
-};
+import { useState, useEffect, useCallback } from 'react';
+import { staffAttendanceApi } from '../../services/api';
+const emptyShift = { clockedIn: false, clockInTime: null, clockOutTime: null };
+const time = value => value ? new Date(value).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) : null;
+const mapShift = record => record ? { clockedIn: !record.checkOutAt, clockInTime: time(record.checkInAt), clockOutTime: time(record.checkOutAt), lateMinutes: record.lateMinutes } : emptyShift;
+export function useShiftAttendance(user) {
+  const [shiftAttendance, setShiftAttendance] = useState(emptyShift);
+  const [shiftBusy, setBusy] = useState(false);
+  const [shiftError, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    setShiftAttendance(emptyShift); setError('');
+    if (!user?.id) return;
+    const load = async () => {
+      try {
+        const res = await staffAttendanceApi.getToday();
+        if (active) setShiftAttendance(mapShift(res.data.find(r => r.kind === 'SHIFT')));
+      } catch (error) { if (active) setError(error.message); }
+    };
+    load();
+    const timer = setInterval(load, 60000);
+    return () => { active = false; clearInterval(timer); };
+  }, [user?.id]);
+  const submit = useCallback(async action => {
+    setBusy(true); setError('');
+    try { const res = await staffAttendanceApi.record({ action }); setShiftAttendance(mapShift(res.data)); }
+    catch (error) { setError(error.message); }
+    finally { setBusy(false); }
+  }, []);
+  return { shiftAttendance, shiftBusy, shiftError, handleShiftClockIn: () => submit('SHIFT_IN'), handleShiftClockOut: () => submit('SHIFT_OUT') };
+}

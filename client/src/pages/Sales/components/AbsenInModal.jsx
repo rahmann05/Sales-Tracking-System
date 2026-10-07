@@ -1,3 +1,4 @@
+import { useApp } from '../../../context/AppContext';
 import React, { useState } from 'react';
 import { FiXCircle, FiCheckCircle } from 'react-icons/fi';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
@@ -8,6 +9,9 @@ import { AbsenNotesInput } from './AbsenNotesInput';
  * Single Responsibility: Sales Rep Absen In with Live Camera, Real-Time GPS Tracking, and Keterangan Masuk.
  */
 export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
+  const { settings } = useApp();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const cacheKey = stop?.id ? `sales_cached_photo_in_${stop.id}` : null;
   const [capturedPhoto, setCapturedPhoto] = useState(() => {
     try {
@@ -40,25 +44,26 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (saving) return;
+    if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
     if (!capturedPhoto) {
       alert('Harap ambil foto selfie presensi terlebih dahulu menggunakan kamera.');
       return;
     }
-    if (cacheKey) {
-      try {
-        sessionStorage.removeItem(cacheKey);
-      } catch (e) {}
-    }
-    onConfirm(stop.id, {
+    setSaving(true); setError('');
+    try {
+    await onConfirm(stop.id, {
       photoUrl: capturedPhoto,
       gpsLocation: gpsData,
       notes: notes || 'Kunjungan Rutin',
     });
+    if (cacheKey) sessionStorage.removeItem(cacheKey);
+    } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Absensi toko">
       <div className="bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
         <div className="modal-header">
           <div>
@@ -68,6 +73,8 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
           <button
             type="button"
             onClick={onClose}
+            aria-label="Tutup absensi"
+            disabled={saving}
             className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant"
           >
             <FiXCircle className="text-xl" />
@@ -75,14 +82,14 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
         </div>
 
         {/* 1. Live Device Camera & GPS Verification (Top Section) */}
-        <DeviceCameraCapture
+        <DeviceCameraCapture outletId={stop.outletId}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
           onRetake={handleRetake}
           requireGps={true}
           targetLat={stop.latitude}
           targetLng={stop.longitude}
-          maxRadiusMeters={50}
+          maxRadiusMeters={stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS}
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen In"
@@ -96,11 +103,13 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
           placeholder="Tuliskan keterangan kunjungan atau rencana aktivitas..."
         />
 
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {/* 3. Confirmation Button */}
         {capturedPhoto && (
           <button
             type="button"
             onClick={handleConfirm}
+            disabled={saving}
             className="w-full py-3 bg-primary text-on-primary font-bold text-sm rounded-xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
           >
             <FiCheckCircle className="text-lg" />

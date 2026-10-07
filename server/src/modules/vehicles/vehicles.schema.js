@@ -4,11 +4,11 @@ export const createVehicleSchema = z.object({
   body: z.object({
     code: z.string().min(2, 'Kode kendaraan minimal 2 karakter'),
     name: z.string().min(2, 'Nama kendaraan minimal 2 karakter'),
-    maxCartons: z.number().int().min(1),
+    maxCartons: z.number().int().min(1).optional(),
     maxWeightKg: z.number().min(1),
     fuelKmPerLiter: z.number().min(1),
     fuelType: z.string().min(2),
-    fuelPricePerLiter: z.number().min(1),
+    fuelPricePerLiter: z.number().min(1).optional(),
     isActive: z.boolean().optional().default(true),
   }),
 });

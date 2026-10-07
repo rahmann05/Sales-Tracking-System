@@ -1,3 +1,4 @@
+import { userAssignment } from '../../roles/role-assignment.service.js';
 /** createUser - single-responsibility service (extracted from users.service.js). */
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../../config/prisma.js';
@@ -5,7 +6,8 @@ import { AppError } from '../../../utils/errors.js';
 import { USER_SELECT, enrichUserResponse } from './users.helpers.js';
 
 
-export const createUser = async (data) => {
+export const createUser = async (raw) => {
+  const data = await userAssignment(raw);
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
     throw new AppError('Email sudah terdaftar', 400);

@@ -9,22 +9,28 @@ import { LuKey, LuSend } from 'react-icons/lu';
 export const RequestUnlockModal = ({ stop, activeVisitingStop, onClose, onSubmitUnlockRequest }) => {
   const [reason, setReason] = useState('Toko sebelumnya belum selesai proses atau terkendala akses');
 
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   if (!stop) return null;
 
-  const handleSubmit = () => {
-    onSubmitUnlockRequest({
+  const handleSubmit = async () => {
+    if (saving) return;
+    setSaving(true); setError('');
+    try {
+    await onSubmitUnlockRequest({
       stopId: stop.id,
       outletName: stop.outletName,
       address: stop.address,
       activeVisitingOutlet: activeVisitingStop?.outletName || 'Outlet Sebelumnya',
       reason,
     });
-    onClose();
+    } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
   return (
     <div className="modal-backdrop">
       <div className="bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
+        {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
         <div className="modal-header">
           <div>
             <h3 className="font-bold text-lg text-on-surface">Minta Buka Kunci (Unlock)</h3>
@@ -70,6 +76,7 @@ export const RequestUnlockModal = ({ stop, activeVisitingStop, onClose, onSubmit
         <button
           type="button"
           onClick={handleSubmit}
+            disabled={saving}
           className="w-full py-3 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
         >
           <LuSend className="text-sm" />

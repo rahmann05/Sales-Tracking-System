@@ -1,3 +1,4 @@
+import { resolveIdentity } from '../../roles/role-assignment.service.js';
 /** loginUser - single-responsibility service (extracted from auth.service.js). */
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -24,13 +25,16 @@ export const loginUser = async (rawEmail, password) => {
     throw new AppError('Email atau password salah', 401);
   }
 
+  const identity = await resolveIdentity(user);
   const payload = {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: identity.role,
+    roleCode: identity.roleCode,
+    roleLabel: identity.roleLabel,
     clusterId: user.clusterId,
-    permissions: user.permissions || {},
+    permissions: identity.permissions,
   };
 
   const jwtExpiresIn = await getDynamicConfig('JWT_EXPIRES_IN', config.jwtExpiresIn);

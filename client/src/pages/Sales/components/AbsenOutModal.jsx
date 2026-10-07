@@ -1,3 +1,5 @@
+import { AttendanceSalesInput } from './AttendanceSalesInput';
+import { useApp } from '../../../context/AppContext';
 import React, { useState, useEffect } from 'react';
 import { FiXCircle, FiCheckCircle, FiAlertTriangle, FiClock } from 'react-icons/fi';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
@@ -17,6 +19,9 @@ const EARLY_REASON_OPTIONS = [
  * Duration Anti-Fraud Check, and Result Notes.
  */
 export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
+  const { settings } = useApp();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const cacheKey = stop?.id ? `sales_cached_photo_out_${stop.id}` : null;
   const [capturedPhoto, setCapturedPhoto] = useState(() => {
     try {
@@ -26,11 +31,12 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     }
   });
   const [gpsData, setGpsData] = useState(null);
-  const [notes, setNotes] = useState('Kunjungan Selesai & Transaksi Berhasil');
+  const [notes, setNotes] = useState('');
+  const [salesResult, setSalesResult] = useState({ orderAmount: '', productIds: [] });
   const [earlyReason, setEarlyReason] = useState('');
   const [elapsedSecs, setElapsedSecs] = useState(0);
 
-  const checkInTimestamp = stop?.checkInTime || stop?.inTimestamp || stop?.createdAt;
+  const checkInTimestamp = stop?.inTimestamp;
 
   useEffect(() => {
     const startMs = checkInTimestamp ? new Date(checkInTimestamp).getTime() : Date.now() - 60000;
@@ -47,7 +53,8 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
 
   if (!stop) return null;
 
-  const minDurationSecs = 5 * 60; // 5 minutes
+  const minMinutes = settings.MINIMUM_VISIT_DURATION_MINUTES;
+  const minDurationSecs = minMinutes * 60;
   const isEarlyCheckout = elapsedSecs < minDurationSecs;
   const remainingSecs = Math.max(0, minDurationSecs - elapsedSecs);
 
@@ -76,34 +83,36 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (saving) return;
+    if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
     if (!capturedPhoto) {
       alert('Harap ambil foto selfie presensi keluar terlebih dahulu menggunakan kamera.');
       return;
     }
 
     if (isEarlyCheckout && !earlyReason) {
-      alert('Durasi kunjungan belum mencapai 5 menit. Harap pilih alasan checkout lebih awal.');
+      setError(`Durasi belum mencapai ${minMinutes} menit. Pilih alasan checkout lebih awal.`);
       return;
     }
 
-    if (cacheKey) {
-      try {
-        sessionStorage.removeItem(cacheKey);
-      } catch (e) {}
-    }
-
-    onConfirm(stop.id, {
+    if (settings.ATTENDANCE_ALLOW_MANUAL_SALES && (!Number.isFinite(Number(salesResult.orderAmount)) || Number(salesResult.orderAmount) < 0)) { setError('Nominal penjualan harus angka positif atau nol.'); return; }
+    setSaving(true); setError('');
+    try {
+    await onConfirm(stop.id, {
       photoUrl: capturedPhoto,
       gpsLocation: gpsData,
       notes: notes || 'Kunjungan Selesai',
       earlyReason: isEarlyCheckout ? earlyReason : null,
+      ...(settings.ATTENDANCE_ALLOW_MANUAL_SALES ? { orderAmount: Number(salesResult.orderAmount || 0), productIds: salesResult.productIds } : {}),
       durationMinutes: Math.round((elapsedSecs / 60) * 10) / 10,
     });
+    if (cacheKey) sessionStorage.removeItem(cacheKey);
+    } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Absensi toko">
       <div className="bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
         {/* Header Modal */}
         <div className="modal-header">
@@ -114,6 +123,8 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           <button
             type="button"
             onClick={onClose}
+            aria-label="Tutup absensi"
+            disabled={saving}
             className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant"
           >
             <FiXCircle className="text-xl" />
@@ -136,7 +147,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           >
             {!isEarlyCheckout ? (
               <>
-                <FiCheckCircle className="text-xs" /> Standar Terpenuhi (≥ 5m)
+                <FiCheckCircle className="text-xs" /> Standar Terpenuhi (≥ {minMinutes}m)
               </>
             ) : (
               <>
@@ -152,9 +163,9 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
             <div className="flex items-start gap-2">
               <FiAlertTriangle className="text-base text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="text-amber-700 block font-bold">Peringatan: Checkout Dini (&lt; 5 Menit)</strong>
+                <strong className="text-amber-700 block font-bold">Peringatan: Checkout Dini (&lt; {minMinutes} Menit)</strong>
                 <span className="text-[11px] text-amber-800">
-                  Standar minimal kunjungan toko adalah 5 menit. Karena Anda checkout lebih awal, mohon pilih alasan wajib:
+                  Standar minimal kunjungan toko adalah {minMinutes} menit. Karena Anda checkout lebih awal, mohon pilih alasan wajib:
                 </span>
               </div>
             </div>
@@ -175,19 +186,20 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
         )}
 
         {/* 1. Live Device Camera & GPS Verification */}
-        <DeviceCameraCapture
+        <DeviceCameraCapture outletId={stop.outletId}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
           onRetake={handleRetake}
           requireGps={true}
           targetLat={stop.latitude}
           targetLng={stop.longitude}
-          maxRadiusMeters={50}
+          maxRadiusMeters={stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS}
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen Out"
         />
 
+        <AttendanceSalesInput value={salesResult} onChange={setSalesResult} />
         {/* 2. Keterangan Hasil Kunjungan */}
         <AbsenNotesInput
           notes={notes}
@@ -196,12 +208,13 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           placeholder="Tuliskan ringkasan hasil kunjungan toko..."
         />
 
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {/* 3. Confirmation Button */}
         {capturedPhoto && (
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={isEarlyCheckout && !earlyReason}
+            disabled={saving || (isEarlyCheckout && !earlyReason)}
             className={`w-full py-3 font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 ${
               isEarlyCheckout && !earlyReason
                 ? 'bg-slate-400 text-slate-200 cursor-not-allowed opacity-60'

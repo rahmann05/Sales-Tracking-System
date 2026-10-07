@@ -1,19 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { reportsApi, usersApi } from '../../../services/api';
+import { DataTable } from '../../../shared/components/common/DataTable';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { collectPages, reportsApi, usersApi } from '../../../services/api';
 import { MtdReportPdfView } from './MtdReportPdfView';
-import {
-  LuCalendar,
-  LuTarget,
-  LuTrendingUp,
-  LuShoppingBag,
-  LuCircleCheck,
-  LuDownload,
-  LuPrinter,
-  LuRefreshCw,
-  LuUser,
-  LuSearch,
-  LuLayers,
-} from 'react-icons/lu';
+import { LuCalendar, LuTarget, LuTrendingUp, LuCircleCheck, LuDownload, LuPrinter, LuRefreshCw, LuUser, LuSearch, LuLayers } from "react-icons/lu";
 
 const MONTH_OPTIONS = [
   { value: 1, label: 'Januari' },
@@ -35,12 +25,14 @@ const MONTH_OPTIONS = [
  * Single Responsibility: Month-to-Date (MTD) Target Achievement, LMA Comparison & Channel Performance ala ND6.
  */
 export const MtdReportView = () => {
-  const [month, setMonth] = useState(() => new Date().getMonth() + 1);
-  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [month, setMonth] = useState(() => Number(wibDateKey().slice(5,7)));
+  const [year, setYear] = useState(() => Number(wibDateKey().slice(0,4)));
   const [salesmanId, setSalesmanId] = useState('');
   const [search, setSearch] = useState('');
   const [salesTeam, setSalesTeam] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const loadRevision = useRef(0);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   const [reportData, setReportData] = useState({
@@ -68,7 +60,7 @@ export const MtdReportView = () => {
   useEffect(() => {
     const fetchTeam = async () => {
       try {
-        const res = await usersApi.getUsers();
+        const res = await collectPages(usersApi.getAll,{role:'SALES'});
         if (res?.data) {
           setSalesTeam(res.data.filter((u) => u.role === 'SALES'));
         }
@@ -81,25 +73,27 @@ export const MtdReportView = () => {
 
   // Fetch MTD Data
   const loadData = useCallback(async () => {
-    setIsLoading(true);
+    const revision=++loadRevision.current;
+    setIsLoading(true);setError('');
     try {
       const res = await reportsApi.getMtd({
         month,
         year,
         userId: salesmanId || undefined,
       });
-      if (res?.data) {
+      if (revision===loadRevision.current && res?.data) {
         setReportData(res.data);
       }
     } catch (err) {
-      console.warn('[MtdReportView] Failed to load MTD report:', err.message);
+      if(revision===loadRevision.current)setError(err.message);
     } finally {
-      setIsLoading(false);
+      if(revision===loadRevision.current)setIsLoading(false);
     }
   }, [month, year, salesmanId]);
 
   useEffect(() => {
     loadData();
+    return ()=>{loadRevision.current++;};
   }, [loadData]);
 
   const selectedSalesman = salesTeam.find((s) => s.id === salesmanId);
@@ -170,6 +164,8 @@ export const MtdReportView = () => {
 
   return (
     <div className="space-y-5">
+      {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={loadData} disabled={isLoading}>Coba lagi</button></div>}
+      {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
         {/* Working Days Card */}
@@ -188,7 +184,7 @@ export const MtdReportView = () => {
               {period.workingDaysRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">Progress {period.monthName} {period.year}</p>
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Progress {period.monthName} {period.year}</p>
         </div>
 
         {/* Target vs Actual MTD */}
@@ -207,7 +203,7 @@ export const MtdReportView = () => {
               {summary.overallAchievementRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
             Target: Rp {(summary.monthlyTargetAmount || 0).toLocaleString('id-ID')}
           </p>
         </div>
@@ -228,7 +224,7 @@ export const MtdReportView = () => {
               MoM Growth
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
             LMA: Rp {(summary.lastMonthActual || 0).toLocaleString('id-ID')}
           </p>
         </div>
@@ -249,7 +245,7 @@ export const MtdReportView = () => {
               Call: {summary.mtdCallComplianceRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
             {summary.totalMtdEffectiveCalls} toko order ({summary.totalMtdSkuSold} SKU)
           </p>
         </div>
@@ -407,20 +403,20 @@ export const MtdReportView = () => {
 
         {/* Workspace Body: Salesman MTD Breakdown Table */}
         <div className="overflow-x-auto mobile-card-table-wrapper">
-          <table className="w-full text-left border-collapse text-xs mobile-card-table">
+          <DataTable className="w-full text-left border-collapse text-xs mobile-card-table">
             <thead>
               <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
-                <th className="py-3 px-3">Salesman</th>
-                <th className="py-3 px-3">Klaster</th>
-                <th className="py-3 px-3 text-right">Target (Rp)</th>
-                <th className="py-3 px-3 text-right">MTD Actual (Rp)</th>
-                <th className="py-3 px-3 text-center">% Achv</th>
-                <th className="py-3 px-3 text-right">LMA (Rp)</th>
-                <th className="py-3 px-3 text-center">% MTD/LMA</th>
-                <th className="py-3 px-3 text-center">MTD Call (A/P)</th>
-                <th className="py-3 px-3 text-center">Call %</th>
-                <th className="py-3 px-3 text-center">EC %</th>
-                <th className="py-3 px-3 text-center">SKU Sold</th>
+                <th className="">Salesman</th>
+                <th className="">Klaster</th>
+                <th className="text-right">Target (Rp)</th>
+                <th className="text-right">MTD Actual (Rp)</th>
+                <th className="text-center">% Achv</th>
+                <th className="text-right">LMA (Rp)</th>
+                <th className="text-center">% MTD/LMA</th>
+                <th className="text-center">MTD Call (A/P)</th>
+                <th className="text-center">Call %</th>
+                <th className="text-center">EC %</th>
+                <th className="text-center">SKU Sold</th>
               </tr>
             </thead>
             <tbody>
@@ -429,41 +425,41 @@ export const MtdReportView = () => {
                   key={s.salesmanId}
                   className="hover:bg-surface-variant/20 transition-colors border-b border-border-glass/60"
                 >
-                  <td data-label="Salesman" className="py-3 px-3 font-bold text-on-surface whitespace-nowrap">
+                  <td data-label="Salesman" className="font-bold text-on-surface whitespace-nowrap">
                     {s.salesmanName}
                   </td>
-                  <td data-label="Klaster" className="py-3 px-3 text-on-surface-variant text-[11px] whitespace-nowrap">
+                  <td data-label="Klaster" className="text-on-surface-variant text-[11px] whitespace-nowrap">
                     {s.clusterName}
                   </td>
-                  <td data-label="Target" className="py-3 px-3 text-right font-mono text-on-surface-variant whitespace-nowrap">
+                  <td data-label="Target" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
                     Rp {(s.monthlyTarget || 0).toLocaleString('id-ID')}
                   </td>
-                  <td data-label="MTD Actual" className="py-3 px-3 text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td data-label="MTD Actual" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.mtdActualAmount || 0).toLocaleString('id-ID')}
                   </td>
-                  <td data-label="% Achv" className="py-3 px-3 text-center font-mono font-bold text-purple-600">
+                  <td data-label="% Achv" className="text-center font-mono font-bold text-purple-600">
                     <span className="px-2 py-0.5 rounded-md bg-purple-500/10">
                       {s.achievementRate}
                     </span>
                   </td>
-                  <td data-label="LMA" className="py-3 px-3 text-right font-mono text-on-surface-variant whitespace-nowrap">
+                  <td data-label="LMA" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
                     Rp {(s.lastMonthActual || 0).toLocaleString('id-ID')}
                   </td>
-                  <td data-label="% MTD/LMA" className="py-3 px-3 text-center font-mono font-bold text-emerald-600">
+                  <td data-label="% MTD/LMA" className="text-center font-mono font-bold text-emerald-600">
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/10">
                       {s.mtdToLmaRate}
                     </span>
                   </td>
-                  <td data-label="MTD Call" className="py-3 px-3 text-center font-mono whitespace-nowrap">
+                  <td data-label="MTD Call" className="text-center font-mono whitespace-nowrap">
                     {s.mtdActualCalls} / {s.mtdPlanCalls}
                   </td>
-                  <td data-label="Call %" className="py-3 px-3 text-center font-mono text-blue-600 font-bold">
+                  <td data-label="Call %" className="text-center font-mono text-blue-600 font-bold">
                     {s.callComplianceRate}
                   </td>
-                  <td data-label="EC %" className="py-3 px-3 text-center font-mono text-emerald-600 font-bold">
+                  <td data-label="EC %" className="text-center font-mono text-emerald-600 font-bold">
                     {s.effectiveCallRate}
                   </td>
-                  <td data-label="SKU Sold" className="py-3 px-3 text-center font-mono">
+                  <td data-label="SKU Sold" className="text-center font-mono">
                     {s.totalSkuSold} SKU
                   </td>
                 </tr>
@@ -471,7 +467,7 @@ export const MtdReportView = () => {
 
               {filteredSalesmen.length === 0 && (
                 <tr>
-                  <td colSpan="11" className="py-12 text-center text-on-surface-variant font-semibold">
+                  <td colSpan="11" className="text-center text-on-surface-variant font-semibold">
                     Tidak ada data MTD untuk filter yang dipilih.
                   </td>
                 </tr>
@@ -482,40 +478,40 @@ export const MtdReportView = () => {
             {filteredSalesmen.length > 0 && (
               <tfoot>
                 <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
-                  <td className="py-3 px-3" colSpan="2">
+                  <td className="" colSpan="2">
                     TOTAL TIM DISTRIBUSI ({filteredSalesmen.length} Sales)
                   </td>
-                  <td className="py-3 px-3 text-right font-mono whitespace-nowrap">
+                  <td className="text-right font-mono whitespace-nowrap">
                     Rp {(summary.monthlyTargetAmount || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-purple-700">
+                  <td className="text-center font-mono text-purple-700">
                     {summary.overallAchievementRate}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono whitespace-nowrap text-on-surface-variant">
+                  <td className="text-right font-mono whitespace-nowrap text-on-surface-variant">
                     Rp {(summary.lastMonthActual || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-emerald-700">
+                  <td className="text-center font-mono text-emerald-700">
                     {summary.mtdToLmaRate}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono">
+                  <td className="text-center font-mono">
                     {summary.totalMtdActualCalls}/{summary.totalMtdPlanCalls}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-blue-600">
+                  <td className="text-center font-mono text-blue-600">
                     {summary.mtdCallComplianceRate}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-emerald-600">
+                  <td className="text-center font-mono text-emerald-600">
                     {summary.mtdEffectiveCallRate}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono">
+                  <td className="text-center font-mono">
                     {summary.totalMtdSkuSold} SKU
                   </td>
                 </tr>
               </tfoot>
             )}
-          </table>
+          </DataTable>
         </div>
       </div>
 

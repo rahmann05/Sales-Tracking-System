@@ -1,3 +1,4 @@
+import {useApp} from '../../../context/AppContext';
 import React, { useState } from 'react';
 import { LuCheckCheck, LuX, LuStore } from 'react-icons/lu';
 
@@ -11,19 +12,20 @@ export const AdminFinalizeModal = ({
   onClose,
   onConfirmFinalize,
 }) => {
-  if (!item) return null;
-
+  const {clusters}=useApp();
+  const [clusterId,setClusterId]=useState(item?.clusterId||'');
   const [customerCode, setCustomerCode] = useState(
-    item.customerCode || `PVC00${Math.floor(10 + Math.random() * 90)}`
+    item?.customerCode || ''
   );
 
+  if(!item)return null;
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!customerCode.trim()) {
       alert('Kode Outlet wajib diisi!');
       return;
     }
-    onConfirmFinalize(item.id, customerCode.trim());
+    onConfirmFinalize(item.id, customerCode.trim(),clusterId);
   };
 
   return (
@@ -60,10 +62,11 @@ export const AdminFinalizeModal = ({
               placeholder="Contoh: PVC0015"
             />
             <p className="text-[10px] text-on-surface-variant mt-1 m-0">
-              Format standar: PVC + 4 digit angka (misal: PVC0001, PVC0015)
+              Gunakan kode pelanggan resmi yang belum dipakai outlet lain.
             </p>
           </div>
 
+          <label className="block">Klaster wilayah <select required value={clusterId} onChange={e=>setClusterId(e.target.value)} className="block w-full p-3 border rounded-xl"><option value="">Pilih klaster</option>{clusters.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           <div className="p-3 bg-surface-container-low rounded-xl border border-border-glass space-y-1">
             <div>
               <strong>Wilayah Area:</strong> {item.area} ({item.subAreaKecamatan || '-'})

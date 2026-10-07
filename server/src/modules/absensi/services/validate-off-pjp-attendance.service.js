@@ -1,8 +1,9 @@
+import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** validateOffPjpAttendance - single-responsibility service (extracted from off-pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { OFF_PJP_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
-import { createNotification, createBulkNotificationByRoles } from '../../notifications/notifications.service.js';
+import { OFF_PJP_STATUS, NOTIFICATION_TYPES } from "../../../utils/constants.js";
+import { createNotification } from "../../notifications/notifications.service.js";
 
 /**
  * Supervisor validates an off-PJP attendance.
@@ -14,16 +15,16 @@ export const validateOffPjpAttendance = async (id, supervisorId, approved, rejec
     throw new AppError(`Absen ini sudah diproses sebelumnya (Status: ${record.status})`, 409);
   }
 
+  const reviewer=await prisma.user.findUnique({where:{id:supervisorId}});
+  if(!reviewer||!['ADMIN','SUPERVISOR'].includes(reviewer.role)||reviewer.id===record.userId)throw new AppError('Tidak berwenang menyetujui kunjungan',403);
+  await assertSalesAccess(reviewer,record.userId);
+  if(!approved&&!rejectionNote?.trim())throw new AppError('Alasan penolakan wajib',400);
   const newStatus = approved ? OFF_PJP_STATUS.APPROVED : OFF_PJP_STATUS.REJECTED;
 
-  const updated = await prisma.offPjpAttendance.update({
+  const changed=await prisma.offPjpAttendance.updateMany({where:{id,status:OFF_PJP_STATUS.PENDING},data:{status:newStatus,validatedBy:supervisorId,validatedAt:new Date(),rejectionNote:rejectionNote||null}});
+  if(!changed.count)throw new AppError('Kunjungan sudah diproses',409);
+  const updated = await prisma.offPjpAttendance.findUnique({
     where: { id },
-    data: {
-      status: newStatus,
-      validatedBy: supervisorId,
-      validatedAt: new Date(),
-      rejectionNote: rejectionNote || null,
-    },
   });
 
   const notifTitle = approved ? 'Absen Luar RJP Divalidasi' : 'Absen Luar RJP Ditolak';

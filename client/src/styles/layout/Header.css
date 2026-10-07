@@ -1,46 +1,19 @@
-@import "../global.css";
+@reference "../global.css";
+.header-container { @apply hidden md:flex items-center justify-between shrink-0; gap:20px; padding:12px 24px; min-height:72px; background:var(--surface); border-bottom:1px solid var(--border-glass); }
+.header-context {display:flex;align-items:center;gap:12px;min-width:0;flex:1; font-size:.875rem;}
+.header-brand-name {color:var(--on-surface-variant);}
+.header-page-name {font-weight:650;overflow-wrap:anywhere;}
+.header-actions {display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.header-user-badge {display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;border:1px solid var(--border-glass);border-radius:12px;background:var(--surface-container-low);cursor:pointer;max-width:280px;text-align:left;}
+.header-user-badge:hover {background:var(--surface-container);}
+.profile-copy {display:flex;flex-direction:column;min-width:0;line-height:1.35;}
+.profile-name {font-size:.875rem;font-weight:650;overflow-wrap:anywhere;}
+.profile-role {font-size:.75rem;color:var(--on-surface-variant);overflow-wrap:anywhere;}
+@media (min-width:768px) and (max-width:1100px) {.header-brand-name {display:none;} .header-actions {gap:8px;} .header-container {padding-inline:16px;}}
+@media (max-width:767px) {.mobile-profile {max-width:180px;border:0;background:transparent;padding:4px;gap:6px;} .mobile-profile .profile-name {font-size:.75rem;} .mobile-profile .profile-role {font-size:.6875rem;} .mobile-brand-title {font-size:.875rem;} .mobile-brand-subtitle {font-size:.625rem;} }
+.admin-breadcrumb {display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px;line-height:1.5;}
+.admin-breadcrumb button {cursor:pointer;background:transparent;border:0;color:var(--on-surface-variant);padding:10px 0;min-height:44px;}
+.admin-breadcrumb button:hover {text-decoration:underline;}
+.admin-breadcrumb svg {flex-shrink:0;}
 
-/* ── Header — Apple Editorial ── */
-
-.header-container {
-  @apply hidden md:flex items-center justify-between px-6 py-3 min-h-[64px] shrink-0;
-  background: #FFFFFF;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.header-search {
-  @apply flex items-center gap-2.5 px-3.5 py-1.5 rounded-full w-full transition-all duration-150;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid transparent;
-}
-
-.header-search:focus-within {
-  background: #FFFFFF;
-  border-color: #1D1D1F;
-}
-
-.header-search-input {
-  @apply bg-transparent border-none outline-none text-xs text-on-surface w-full;
-}
-
-.header-search-input::placeholder {
-  color: #86868B;
-}
-
-.header-actions {
-  @apply flex items-center gap-3;
-}
-
-.header-user-badge {
-  @apply flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-border-glass bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer select-none;
-}
-
-.header-avatar {
-  @apply w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold cursor-pointer transition-all duration-150;
-  background: #1D1D1F;
-  color: #FFFFFF;
-}
-
-.header-avatar:hover {
-  transform: scale(1.05);
-}
+.admin-breadcrumb button:focus-visible {outline:2px solid var(--primary);outline-offset:3px;border-radius:4px;}

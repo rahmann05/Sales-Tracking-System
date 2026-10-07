@@ -39,13 +39,13 @@ export const SpvStopCard = ({ stop, index, record, onAbsenIn, onOpenAudit, onAbs
                             Sales: <strong className="text-on-surface font-semibold">{stop.assignedSales}</strong>
                         </span>
                         <span
-                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${stop.currentDistance <= stop.radiusMeters
+                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${stop.currentDistance !== null && stop.currentDistance <= stop.radiusMeters
                                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                                     : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
                                 }`}
                         >
                             <LuNavigation className="text-[10px]" />
-                            {stop.currentDistance}m dari Toko (Radius {stop.radiusMeters}m)
+                            GPS diverifikasi saat absen · Radius {stop.radiusMeters}m
                         </span>
                     </div>
 

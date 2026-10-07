@@ -6,8 +6,8 @@ import { SpvModalShell } from './SpvModalShell';
  * SpvAbsenOutModal Component
  * Single Responsibility: Modal konfirmasi absen keluar (selesai kunjungan supervisi).
  */
-export const SpvAbsenOutModal = ({ stop, onClose, onConfirm }) => (
-    <SpvModalShell
+export const SpvAbsenOutModal = ({ stop, onClose, onConfirm, error, saving }) => (
+    <SpvModalShell error={error} saving={saving}
         title="Absen Keluar (Selesai Kunjungan)"
         subtitle={stop.outletName}
         onClose={onClose}

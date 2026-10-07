@@ -1,3 +1,4 @@
+import { ClusterOutletsModal } from './components/master/ClusterOutletsModal';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ROLES } from '../../constants/roles';
@@ -22,7 +23,7 @@ import { AutoRollingConfirmModal } from './components/spv/AutoRollingConfirmModa
 import { useRjpManagement } from './hooks/useRjpManagement';
 
 import { useSupervisorRollingMatrix } from './hooks/useSupervisorRollingMatrix';
-import { useSalesRouteSelection } from './hooks/useSalesRouteSelection';
+
 
 import '../../styles/pages/RoutePlanning.css';
 
@@ -32,10 +33,11 @@ import '../../styles/pages/RoutePlanning.css';
  * role Supervisor / Admin / Sales.
  */
 export const RoutePlanningPage = () => {
-  const { user, salesStops = [], rjpTeams = [], setActiveTab: setGlobalActiveTab } = useApp();
+  const { user, setActiveTab: setGlobalActiveTab } = useApp();
 
   const isSupervisorOrAdmin = [ROLES.SUPERVISOR, ROLES.ADMIN].includes(user?.role);
 
+  const [outletCluster,setOutletCluster]=useState(null);
   const allowedTabs = useMemo(() => {
     if (isSupervisorOrAdmin) return RJP_ROLE_TAB_MAP.SPV;
     return RJP_ROLE_TAB_MAP.SALES;
@@ -50,7 +52,7 @@ export const RoutePlanningPage = () => {
   }, [allowedTabs, activeTab]);
 
   const {
-    masterClusters,
+    reload:reloadMaster, error:masterError, masterClusters, loading:masterLoading, deletingId,
     stats,
     isImportModalOpen,
     setIsImportModalOpen,
@@ -64,7 +66,7 @@ export const RoutePlanningPage = () => {
   } = useRjpManagement();
 
   const {
-    matrixRows,
+    reload:reloadTemplates, loading:scheduleLoading, weekMode, matrixRows, days: scheduleDays, weekType, setWeekType, error: scheduleError, busy: scheduleBusy,
     selectedCell,
     isReassignModalOpen,
     setIsReassignModalOpen,
@@ -75,7 +77,7 @@ export const RoutePlanningPage = () => {
     handleExecuteAutoRolling,
   } = useSupervisorRollingMatrix();
 
-  const selection = useSalesRouteSelection({ user, matrixRows, salesStops });
+
 
   // Navigasi ke CreateClusterPage
   const navigateToCreateCluster = () => {
@@ -88,7 +90,10 @@ export const RoutePlanningPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container workspace-page">
+      <header className="workspace-heading"><div><h1>Wilayah & jadwal RJP</h1><p>Atur kluster outlet, susun jadwal mingguan, lalu pantau PJP harian. Anggota sales dikelola pada menu Tim.</p></div></header>
+      {masterError&&<p role="alert" className="app-error">{masterError} <button className="app-button" onClick={reloadMaster}>Coba lagi</button></p>}
+      {isSupervisorOrAdmin&&<div className="app-actions"><button className="app-button" onClick={()=>setGlobalActiveTab(TAB_IDS.TEAM_TRACKING)}>Kelola tim sales</button></div>}
       <RjpRoleTabBar tabs={allowedTabs} activeTab={activeTab} onSelectTab={setActiveTab} />
 
       {activeTab === 'MASTER_CLUSTER' && isSupervisorOrAdmin && (
@@ -99,7 +104,7 @@ export const RoutePlanningPage = () => {
           />
           <RjpAllocationStats stats={stats} />
           <MasterClusterTable
-            clusters={masterClusters}
+            clusters={masterClusters} loading={masterLoading} deletingId={deletingId} onManageOutlets={setOutletCluster}
             onEdit={(c) => { setEditingCluster(c); setIsFormModalOpen(true); }}
             onDelete={handleDeleteCluster}
           />
@@ -108,23 +113,20 @@ export const RoutePlanningPage = () => {
 
       {activeTab === 'SPV_ROLLING' && isSupervisorOrAdmin && (
         <div className="space-y-6">
+          <label className="flex items-center gap-3">Siklus template <select value={weekType} onChange={e=>setWeekType(e.target.value)} disabled={scheduleBusy} className="p-2 border rounded-xl"><option value="ALL">Template umum (berlaku kedua siklus)</option><option value="WEEK_1">{weekMode==='MONTH_CYCLE'?'Siklus 1: tanggal 1–7, 15–21, 29–31':'Minggu ISO ganjil'}</option><option value="WEEK_2">{weekMode==='MONTH_CYCLE'?'Siklus 2: tanggal 8–14, 22–28':'Minggu ISO genap'}</option></select></label>
+          {scheduleError && <p role="alert" className="text-red-600">{scheduleError}</p>}
           <RjpSpvHeader onOpenAutoRollingModal={() => setIsAutoRollingModalOpen(true)} />
-          <WeeklyRollingMatrixTable
-            matrixRows={matrixRows}
+          <button className="app-button" onClick={()=>reloadTemplates().catch(()=>{})} disabled={scheduleLoading}>Muat ulang jadwal</button>
+          {scheduleLoading?<p role="status">Memuat template jadwal…</p>:<WeeklyRollingMatrixTable
+            matrixRows={matrixRows} days={scheduleDays}
             onCellClick={(salesId, day, currentData) => openReassignModal(salesId, day, currentData)}
-          />
+          />}
         </div>
       )}
 
       {activeTab === 'SALES_VIEW' && (
         <SalesViewTab
-          currentSalesRow={selection.currentSalesRow}
-          selectedDay={selection.selectedDay}
-          onSelectDay={selection.setSelectedDay}
-          dailyScheduleInfo={selection.dailyScheduleInfo}
-          filteredDailyStops={selection.filteredDailyStops}
           matrixRows={matrixRows}
-          onSelectSales={selection.setSelectedSalesPerson}
           canSwitchSales={isSupervisorOrAdmin}
         />
       )}
@@ -136,6 +138,7 @@ export const RoutePlanningPage = () => {
             onClose={() => setIsImportModalOpen(false)}
             onImportSuccess={handleImportSpreadsheet}
           />
+          <ClusterOutletsModal cluster={outletCluster} onClose={()=>setOutletCluster(null)} onSaved={reloadMaster}/>
           <EditClusterModal
             isOpen={isFormModalOpen}
             cluster={editingCluster}
@@ -154,7 +157,7 @@ export const RoutePlanningPage = () => {
           <AutoRollingConfirmModal
             isOpen={isAutoRollingModalOpen}
             onClose={() => setIsAutoRollingModalOpen(false)}
-            onConfirm={handleExecuteAutoRolling}
+            onConfirm={handleExecuteAutoRolling} busy={scheduleBusy} error={scheduleError}
           />
         </>
       )}

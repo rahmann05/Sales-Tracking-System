@@ -11,7 +11,7 @@
   --color-surface-container-highest: #D2D2D7;
 
   --color-on-surface: #1D1D1F;
-  --color-on-surface-variant: #86868B;
+  --color-on-surface-variant: #61616A;
 
   --color-inverse-surface: #1D1D1F;
   --color-inverse-on-surface: #F5F5F7;
@@ -29,26 +29,26 @@
   --color-on-secondary-container: #1D1D1F;
 
   /* Semantic — Good */
-  --color-tertiary: #34C759;
+  --color-tertiary: #15803D;
   --color-on-tertiary: #FFFFFF;
   --color-tertiary-container: #E4F7EA;
   --color-on-tertiary-container: #1E7E34;
 
   /* Semantic — Warning */
-  --color-warning: #FF9500;
+  --color-warning: #B45309;
   --color-on-warning: #FFFFFF;
   --color-warning-container: #FFF0D9;
   --color-on-warning-container: #B36A00;
 
   /* Semantic — Alert */
-  --color-error: #FF3B30;
+  --color-error: #DC2626;
   --color-on-error: #FFFFFF;
   --color-error-container: #FFE5E3;
   --color-on-error-container: #B3261E;
 
   --color-outline: #D2D2D7;
   --color-outline-variant: #E8E8ED;
-  --color-border-glass: rgba(0, 0, 0, 0.06);
+  --color-border-glass: rgba(24, 24, 27, 0.09);
 
   /* Typography */
   --font-headline: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

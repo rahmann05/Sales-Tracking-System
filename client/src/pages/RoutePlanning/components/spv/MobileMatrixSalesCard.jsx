@@ -24,7 +24,7 @@ export const MobileMatrixSalesCard = ({ row, days, onCellClick }) => {
                 {days.map((day) => {
                     const dayData = row.schedule?.[day];
                     return (
-                        <div
+                        <button type="button"
                             key={day}
                             onClick={() => onCellClick(row.salesId, day, dayData)}
                             className="bg-surface-container-low border border-border-glass rounded-xl p-2.5 flex flex-col justify-between gap-1.5 cursor-pointer hover:border-primary active:scale-[0.99] transition-all"
@@ -45,7 +45,7 @@ export const MobileMatrixSalesCard = ({ row, days, onCellClick }) => {
                             <div className="text-[10px] text-on-surface-variant font-medium">
                                 Kecamatan: {dayData?.subDistrict || '-'}
                             </div>
-                        </div>
+                        </button>
                     );
                 })}
             </div>

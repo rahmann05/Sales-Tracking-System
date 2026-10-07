@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuUser, LuX, LuNavigation, LuMapPin } from 'react-icons/lu';
+import { LuUser, LuX, LuNavigation } from "react-icons/lu";
 
 /**
  * SelectedSalesMapHeader Component

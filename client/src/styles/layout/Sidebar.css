@@ -1,15 +1,15 @@
-@import "../global.css";
+@reference "../global.css";
 
 /* ── Sidebar — Apple Editorial ── */
 
 .sidebar-container {
-  @apply hidden md:flex md:w-[260px] lg:w-[280px] flex-col h-full shrink-0;
-  background: #FFFFFF;
+  @apply hidden md:flex md:w-[224px] lg:w-[248px] flex-col h-full shrink-0;
+  background: var(--surface-container-low);
   border-right: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-brand {
-  @apply px-6 pt-8 pb-6;
+  @apply px-5 pt-6 pb-6;
 }
 
 .sidebar-brand-icon {
@@ -31,7 +31,7 @@
 }
 
 .sidebar-nav-btn {
-  @apply flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-150 cursor-pointer border-none w-full text-left;
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl leading-snug text-[14px] font-medium transition-all duration-150 cursor-pointer border-none w-full text-left;
   color: var(--color-on-surface-variant);
   background: transparent;
 }
@@ -51,8 +51,8 @@
   color: var(--color-on-surface-variant);
 }
 
-.sidebar-footer-card {
-  @apply mx-4 mb-6 p-4 rounded-xl flex flex-col gap-2;
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-}
+.sidebar-nav {min-height:0;padding-bottom:24px;}
+.sidebar-nav-group {margin-top:14px;}
+.sidebar-nav-group h2 {padding:0 12px;margin:0 0 6px;font-size:11px;font-weight:650;letter-spacing:.04em;color:var(--on-surface-variant);}
+.sidebar-nav-group .sidebar-nav-btn {padding:10px 12px;min-height:44px;border-radius:8px;font-size:13px;}
+.sidebar-nav-btn:focus-visible {outline:2px solid var(--primary);outline-offset:2px;}

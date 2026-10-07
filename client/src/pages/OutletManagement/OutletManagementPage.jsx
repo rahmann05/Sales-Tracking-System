@@ -1,19 +1,8 @@
+import { DataTable } from '../../shared/components/common/DataTable';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { 
-  LuStore, 
-  LuPlus, 
-  LuSearch, 
-  LuFilter, 
-  LuMapPin, 
-  LuTrash2, 
-  LuPhone, 
-  LuX,
-  LuIdCard,
-  LuDownload,
-  LuFileSpreadsheet
-} from 'react-icons/lu';
-import { FiEdit, FiCheckCircle } from 'react-icons/fi';
+import { LuStore, LuPlus, LuSearch, LuFilter, LuTrash2, LuX, LuIdCard, LuFileSpreadsheet } from "react-icons/lu";
+import { FiEdit } from "react-icons/fi";
 import { Card } from '../../shared/components/common/Card';
 import { outletsApi, clustersApi } from '../../services/api';
 import { notifySuccess } from '../../services/notificationService';
@@ -282,35 +271,35 @@ export const OutletManagementPage = () => {
           <div className="p-12 text-center text-xs text-on-surface-variant">Tidak ada outlet yang sesuai dengan pencarian.</div>
         ) : (
           <div className="overflow-x-auto md:max-h-[600px] md:overflow-y-auto mobile-card-table-wrapper">
-            <table className="w-full text-left text-xs border-collapse mobile-card-table">
+            <DataTable className="w-full text-left text-xs border-collapse mobile-card-table">
               <thead className="bg-surface-variant/30 text-on-surface-variant font-bold border-b border-border-glass sticky top-0 backdrop-blur-md">
                 <tr>
-                  <th className="py-3 px-4">Kode & Nama Toko</th>
-                  <th className="py-3 px-4">Alamat</th>
-                  <th className="py-3 px-4">Klaster</th>
-                  <th className="py-3 px-4">Koordinat GPS</th>
-                  <th className="py-3 px-4 text-center">Aksi</th>
+                  <th className="">Kode & Nama Toko</th>
+                  <th className="">Alamat</th>
+                  <th className="">Klaster</th>
+                  <th className="">Koordinat GPS</th>
+                  <th className="text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-glass">
                 {filteredOutlets.slice(0, 50).map((outlet) => (
                   <tr key={outlet.id} className="hover:bg-surface-variant/10 transition-colors">
-                    <td data-label="Nama Toko" className="py-3 px-4">
+                    <td data-label="Nama Toko" className="">
                       <div className="font-bold text-on-surface">{outlet.name}</div>
                       <div className="text-[10px] text-on-surface-variant font-mono">{outlet.outletCode || outlet.id?.substring(0, 8)}</div>
                     </td>
-                    <td data-label="Alamat" className="py-3 px-4 text-on-surface-variant md:max-w-[220px] md:truncate" title={outlet.address}>
+                    <td data-label="Alamat" className="text-on-surface-variant md:max-w-[220px] md:min-w-0 whitespace-normal break-words" title={outlet.address}>
                       {outlet.address || '-'}
                     </td>
-                    <td data-label="Klaster" className="py-3 px-4">
+                    <td data-label="Klaster" className="">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                         {outlet.cluster?.name || 'Klaster Belfoods'}
                       </span>
                     </td>
-                    <td data-label="GPS" className="py-3 px-4 font-mono text-[11px] text-on-surface-variant">
+                    <td data-label="GPS" className="font-mono text-[11px] text-on-surface-variant">
                       {outlet.latitude?.toFixed(4)}, {outlet.longitude?.toFixed(4)}
                     </td>
-                    <td className="py-3 px-4 text-center mobile-full-width">
+                    <td className="text-center mobile-full-width">
                       <div className="flex items-center justify-center gap-2 w-full">
                         <button
                           type="button"
@@ -333,7 +322,7 @@ export const OutletManagementPage = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           </div>
         )}
       </Card>

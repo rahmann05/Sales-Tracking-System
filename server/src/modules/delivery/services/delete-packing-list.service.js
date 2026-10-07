@@ -11,7 +11,7 @@ export const deletePackingList = async (id) => {
     include: { deliveryStops: true },
   });
   if (!pl) throw new AppError('Packing list tidak ditemukan', 404);
-  if (pl.deliveryStops.length > 0) {
+  if (pl.status !== 'DRAFT' || pl.deliveryStops.length > 0) {
     throw new AppError('Packing list sudah ditetapkan ke rute pengiriman, tidak bisa dihapus', 400);
   }
 

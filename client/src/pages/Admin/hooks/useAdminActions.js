@@ -18,12 +18,8 @@ export const useAdminActions = ({
 }) => {
   // Admin Action: Approve / Reject Order
   const handleAdminOrderDecision = useCallback(async ({ orderId, approved, rejectionReason }) => {
-    let orderTarget = null;
-    setOrders((prev) => {
-      orderTarget = prev.find((o) => o.id === orderId);
-      return prev;
-    });
-    if (!orderTarget) return;
+    const orderTarget = orders.find(o => o.id === orderId);
+    if (!orderTarget) return false;
 
     try {
       if (approved) {
@@ -62,8 +58,9 @@ export const useAdminActions = ({
         message: err.message,
         roleTarget: ['ADMIN'],
       });
+      return false;
     }
-  }, [setOrders, addNotification]);
+  }, [orders, setOrders, addNotification]);
 
   // Admin Action: Approve Unlock Request
   const handleApproveUnlockRequest = useCallback(async (requestId, stopId) => {
@@ -92,6 +89,7 @@ export const useAdminActions = ({
         message: err.message,
         roleTarget: ['ADMIN'],
       });
+      return false;
     }
   }, [setIncidents, setSalesStops, addNotification]);
 
@@ -116,6 +114,7 @@ export const useAdminActions = ({
         message: err.message,
         roleTarget: ['ADMIN'],
       });
+      return false;
     }
   }, [setIncidents, addNotification]);
 

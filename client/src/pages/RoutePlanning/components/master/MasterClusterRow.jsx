@@ -7,7 +7,7 @@ import '../../../../styles/components/MasterClusterRow.css';
  * Single Responsibility: Render a single row inside MasterClusterTable.
  * 1 File = 1 Component
  */
-export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
+export const MasterClusterRow = ({ cluster, onEdit, onDelete, onManageOutlets, deletingId }) => {
   return (
     <tr className="master-cluster-row">
       {/* Code */}
@@ -17,9 +17,9 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
 
       {/* Cluster Name & Sub-Districts */}
       <td data-label="Cluster" className="master-cluster-td">
-        <div className="master-cluster-name">{cluster.name}</div>
+        <div className="master-cluster-name">{cluster.name}</div><span className="text-xs">{cluster.tradeType==='MIXED'?'Campuran · perlu dipisahkan':cluster.tradeType==='MODERN_TRADE'?'Modern Trade':cluster.tradeType==='GENERAL_TRADE'?'General Trade':'Jenis mengikuti outlet pertama'}</span>
         <div className="master-cluster-subdistricts">
-          {Array.isArray(cluster.subDistricts) ? cluster.subDistricts.join(', ') : 'Area Bandung Barat'}
+          {cluster.subDistricts?.length ? cluster.subDistricts.join(', ') : 'Area mengikuti outlet terdaftar'}
         </div>
       </td>
 
@@ -64,15 +64,16 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
 
       {/* Aksi */}
       <td className="master-cluster-td text-center mobile-full-width">
-        <div className="flex items-center justify-center gap-2 w-full">
-          <button 
+        <div className="flex items-center justify-center gap-2 w-full flex-wrap">
+          {onManageOutlets&&<button type="button" className="app-button" onClick={()=>onManageOutlets(cluster)}>Outlet</button>}
+          <button type="button" disabled={Boolean(deletingId)||cluster.name==='Belum Ditugaskan'}
             onClick={() => onEdit && onEdit(cluster)}
             className="flex-1 md:flex-initial py-2 md:py-1.5 px-3 text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 font-bold rounded-lg text-xs transition-colors cursor-pointer"
             title="Edit Klaster"
           >
             Edit
           </button>
-          <button 
+          <button type="button" disabled={Boolean(deletingId)||cluster.name==='Belum Ditugaskan'}
             onClick={() => {
               if (window.confirm(`Hapus klaster ${cluster.name}?`)) {
                 onDelete && onDelete(cluster.id);
@@ -81,7 +82,7 @@ export const MasterClusterRow = ({ cluster, onEdit, onDelete }) => {
             className="flex-1 md:flex-initial py-2 md:py-1.5 px-3 text-red-600 bg-red-500/10 hover:bg-red-500/20 font-bold rounded-lg text-xs transition-colors cursor-pointer"
             title="Hapus Klaster"
           >
-            Hapus
+            {deletingId===cluster.id?'Menghapus…':'Hapus'}
           </button>
         </div>
       </td>

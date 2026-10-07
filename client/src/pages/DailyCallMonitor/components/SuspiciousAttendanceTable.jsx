@@ -1,17 +1,7 @@
+import { DataTable } from '../../../shared/components/common/DataTable';
 import React, { useState } from 'react';
-import {
-  LuClock,
-  LuMapPin,
-  LuImage,
-  LuShieldAlert,
-  LuFileSpreadsheet,
-  LuSearch,
-  LuExternalLink,
-  LuCircleCheck,
-  LuNavigation,
-  LuCar,
-} from 'react-icons/lu';
-import { FiAlertTriangle } from 'react-icons/fi';
+import { LuClock, LuMapPin, LuImage, LuShieldAlert, LuFileSpreadsheet, LuSearch, LuExternalLink, LuCircleCheck, LuCar } from "react-icons/lu";
+
 
 /**
  * SuspiciousAttendanceTable Component
@@ -236,19 +226,19 @@ export const SuspiciousAttendanceTable = ({
       {/* 3. Dedicated Anomaly Table */}
       <div className="bg-surface border border-rose-500/20 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto mobile-card-table-wrapper">
-          <table className="w-full text-left border-collapse text-xs mobile-card-table">
+          <DataTable className="w-full text-left border-collapse text-xs mobile-card-table">
             <thead>
               <tr className="bg-rose-500/10 border-b border-rose-500/20 text-[11px] font-black text-rose-800 uppercase tracking-wider">
-                <th className="py-3 px-3 text-center">No</th>
-                <th className="py-3 px-3">Salesman & Klaster</th>
-                <th className="py-3 px-3">Outlet / Toko</th>
-                <th className="py-3 px-2 text-center">Jam In / Out</th>
-                <th className="py-3 px-3 text-center">Jarak & Jeda Travel</th>
-                <th className="py-3 px-3 text-center">Durasi di Toko</th>
-                <th className="py-3 px-3 text-center">Deviasi GPS</th>
-                <th className="py-3 px-3">Jenis Anomali & Temuan</th>
-                <th className="py-3 px-3 text-center">Bukti Foto</th>
-                <th className="py-3 px-3 text-center">Aksi</th>
+                <th className="text-center">No</th>
+                <th className="">Salesman & Klaster</th>
+                <th className="">Outlet / Toko</th>
+                <th className="text-center">Jam In / Out</th>
+                <th className="text-center">Jarak & Jeda Travel</th>
+                <th className="text-center">Durasi di Toko</th>
+                <th className="text-center">Deviasi GPS</th>
+                <th className="">Jenis Anomali & Temuan</th>
+                <th className="text-center">Bukti Foto</th>
+                <th className="text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -264,34 +254,34 @@ export const SuspiciousAttendanceTable = ({
                     className="hover:bg-rose-500/5 transition-colors border-b border-border-glass/60 cursor-pointer"
                     onClick={() => onSelectRow && onSelectRow(r)}
                   >
-                    <td data-label="No" className="py-3 px-3 text-center font-mono text-[11px] font-bold text-on-surface-variant">
+                    <td data-label="No" className="text-center font-mono text-[11px] font-bold text-on-surface-variant">
                       {idx + 1}
                     </td>
 
                     {/* Salesman */}
-                    <td data-label="Salesman" className="py-3 px-3 font-semibold text-on-surface">
+                    <td data-label="Salesman" className="font-semibold text-on-surface">
                       <div className="font-bold">{r.salesmanName}</div>
                       <div className="text-[10px] text-on-surface-variant">{r.clusterName}</div>
                     </td>
 
                     {/* Outlet */}
-                    <td data-label="Outlet" className="py-3 px-3 text-on-surface md:max-w-[200px]">
-                      <div className="font-bold md:truncate" title={r.customerName}>
+                    <td data-label="Outlet" className="text-on-surface md:max-w-[200px]">
+                      <div className="font-bold md:min-w-0 whitespace-normal break-words" title={r.customerName}>
                         {r.customerName}
                       </div>
-                      <div className="text-[10px] text-on-surface-variant md:truncate font-mono" title={r.customerAddress}>
+                      <div className="text-[10px] text-on-surface-variant md:min-w-0 whitespace-normal break-words font-mono" title={r.customerAddress}>
                         {r.customerId} • {r.customerAddress}
                       </div>
                     </td>
 
                     {/* Time In / Out */}
-                    <td data-label="Jam In/Out" className="py-3 px-2 md:text-center text-left font-mono text-[11px]">
+                    <td data-label="Jam In/Out" className="md:text-center text-left font-mono text-[11px]">
                       <div className="text-emerald-600 font-semibold">{r.timeIn || '-'}</div>
                       <div className="text-on-surface-variant">{r.timeOut || '-'}</div>
                     </td>
 
                     {/* Travel Time & Distance */}
-                    <td data-label="Jarak & Jeda" className="py-3 px-3 md:text-center text-left font-mono">
+                    <td data-label="Jarak & Jeda" className="md:text-center text-left font-mono">
                       {r.prevStopName ? (
                         <div
                           className={`inline-block p-1.5 rounded-lg text-[11px] ${
@@ -309,7 +299,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Duration Flag */}
-                    <td data-label="Durasi" className="py-3 px-3 md:text-center text-left">
+                    <td data-label="Durasi" className="md:text-center text-left">
                       <div
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black font-mono ${
                           isShort
@@ -328,7 +318,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* GPS Deviation Flag */}
-                    <td data-label="Deviasi GPS" className="py-3 px-3 md:text-center text-left">
+                    <td data-label="Deviasi GPS" className="md:text-center text-left">
                       <div
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold ${
                           isFar
@@ -347,7 +337,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Anomaly Badge & Notes */}
-                    <td data-label="Anomali" className="py-3 px-3 md:max-w-[240px]">
+                    <td data-label="Anomali" className="md:max-w-[240px]">
                       <div className="space-y-1">
                         {isTravel && (
                           <div className="p-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-[10.5px] text-rose-900 font-bold flex items-center gap-1">
@@ -375,7 +365,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Photo Evidence */}
-                    <td data-label="Bukti Foto" className="py-3 px-3 md:text-center text-left">
+                    <td data-label="Bukti Foto" className="md:text-center text-left">
                       <div className="flex items-center justify-start md:justify-center gap-1">
                         {r.photoIn ? (
                           <span className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center text-xs font-bold" title="Foto Check-In Tersedia">
@@ -394,7 +384,7 @@ export const SuspiciousAttendanceTable = ({
                     </td>
 
                     {/* Action Button */}
-                    <td className="py-3 px-3 text-center mobile-full-width">
+                    <td className="text-center mobile-full-width">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -413,7 +403,7 @@ export const SuspiciousAttendanceTable = ({
 
               {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan="10" className="py-12 text-center text-on-surface-variant">
+                  <td colSpan="10" className="text-center text-on-surface-variant">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <LuCircleCheck className="text-emerald-500 text-2xl" />
                       <span className="font-bold text-sm text-on-surface">Tidak Ditemukan Absensi Janggal</span>
@@ -425,7 +415,7 @@ export const SuspiciousAttendanceTable = ({
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       </div>
     </div>

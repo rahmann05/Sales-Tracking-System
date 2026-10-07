@@ -6,14 +6,15 @@ import { prisma } from '../../../config/prisma.js';
 /**
  * Get validation summary statistics for all outlets.
  */
-export const getValidationSummary = async () => {
+export const getValidationSummary = async (actor) => {
+  const where = {deletedAt:null,...(actor?.role==='SUPERVISOR'?{cluster:{supervisorId:actor.id,deletedAt:null}}:{})};
   const counts = await prisma.outlet.groupBy({
     by: ['validationStatus'],
-    where: { deletedAt: null },
+    where,
     _count: { id: true },
   });
 
-  const total = await prisma.outlet.count({ where: { deletedAt: null } });
+  const total = await prisma.outlet.count({ where });
 
   const summary = {
     total,

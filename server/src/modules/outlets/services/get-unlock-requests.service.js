@@ -1,3 +1,4 @@
+import { teamSalesWhere } from '../../../utils/team-scope.js';
 /** getUnlockRequests - single-responsibility service (extracted from outlet-lock.service.js). */
 import { prisma } from '../../../config/prisma.js';
 
@@ -7,6 +8,7 @@ export const getUnlockRequests = async (query = {}, user = null) => {
   const where = {};
   if (status) where.status = status;
   // Sales users may only see their own unlock requests
+  if (user?.role === 'SUPERVISOR') where.requestedByUser = teamSalesWhere(user.id);
   if (user?.role === 'SALES') where.requestedBy = user.id;
 
   return await prisma.outletUnlockRequest.findMany({

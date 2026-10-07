@@ -19,6 +19,7 @@ import { CameraNativeFileTrigger } from './CameraNativeFileTrigger';
  * Single Responsibility: Compose camera stream, GPS tracking, and snapshot preview sub-components.
  */
 export const DeviceCameraCapture = ({
+  outletId = null,
   onCapture,
   capturedPhoto,
   onRetake,
@@ -31,10 +32,11 @@ export const DeviceCameraCapture = ({
   buttonLabel = 'Jepret Foto Presensi (GPS Terverifikasi)',
 }) => {
   const canvasRef = useRef(null);
-  const { user } = useApp();
+  const { user, settings, incidents } = useApp();
 
-  // Whitelist bypass: khusus akun sales@sinaranugrah.com diizinkan untuk absen di luar radius
-  const isBypassUser = user?.email === 'sales@sinaranugrah.com';
+  // Only the current account’s administrator-configured exception permits bypass.
+  const hasException = (incidents||[]).some(r=>r.type==='UNLOCK_REQUEST'&&r.outletId===outletId&&r.requestedBy===user?.id&&r.status==='APPROVED'&&new Date(r.expiresAt)>new Date());
+  const isBypassUser = hasException || settings.ATTENDANCE_GEOFENCE_BYPASS_ALLOWED === true;
 
   // 1. Dedicated Live Clock Hook
   const { currentTime } = useLiveClock();

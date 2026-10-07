@@ -61,7 +61,7 @@ export const ALL_PERMISSIONS = [
   {
     key: 'can_manage_outlets',
     label: 'Master Database Outlet',
-    desc: 'Kelola database toko, ubah plafon piutang, status kredit, dan info kontak',
+    desc: 'Kelola database toko, ubah informasi kontak, lokasi, dan penugasan',
     category: 'Master Outlet & NOO',
   },
   {
@@ -87,7 +87,7 @@ export const ALL_PERMISSIONS = [
   {
     key: 'can_approve_order',
     label: 'Persetujuan Order (PO)',
-    desc: 'Boleh menyetujui transaksi order (Override batas kredit / piutang macet)',
+    desc: 'Boleh memutuskan pengajuan order sesuai lingkup tim',
     category: 'Transaksi & Approval',
   },
   {
@@ -251,7 +251,7 @@ export const BUILT_IN_ROLES = [
   {
     code: 'KEPALA_GUDANG',
     name: 'Kepala Gudang',
-    description: 'Manajemen logistik gudang, pembuatan packing list pesanan, alokasi rute supir, dan monitor pengiriman.',
+    description: 'Manajemen logistik gudang, menerima packing list dari admin, alokasi rute supir, dan monitor pengiriman.',
     badgeColor: 'amber',
     isSystem: true,
     workspaceTab: 'role-workspace',

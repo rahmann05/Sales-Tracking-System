@@ -1,3 +1,4 @@
+import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
 import { OutletApprovalTableRow } from './OutletApprovalTableRow';
 
@@ -18,28 +19,28 @@ export const OutletApprovalTable = ({ items = [], isLoading = false, onReview })
         </div>
       ) : (
         <div className="overflow-x-auto w-full mobile-card-table-wrapper">
-          <table className="w-full text-left text-xs border-collapse mobile-card-table">
+          <DataTable className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead className="bg-surface-variant/30">
               <tr>
-                <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Tanggal Pengajuan
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Nama Toko & Alamat
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Salesman Pengaju
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Wilayah & Divisi
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Channel & Payment
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
                   Status
                 </th>
-                <th className="py-3.5 px-4 font-semibold text-on-surface-variant border-b border-border-glass text-center">
+                <th className="font-semibold text-on-surface-variant border-b border-border-glass text-center">
                   Aksi
                 </th>
               </tr>
@@ -53,7 +54,7 @@ export const OutletApprovalTable = ({ items = [], isLoading = false, onReview })
                 />
               ))}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       )}
     </div>

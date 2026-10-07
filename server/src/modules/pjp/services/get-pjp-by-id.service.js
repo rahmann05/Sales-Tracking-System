@@ -1,7 +1,8 @@
+import { assertSalesAccess } from '../../../utils/team-scope.js';
 /** getPjpById - single-responsibility service (extracted from pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { PJP_STATUS, PJP_TYPE, ROLES } from '../../../utils/constants.js';
+import { ROLES } from "../../../utils/constants.js";
 import { PJP_STOP_INCLUDE } from './pjp.helpers.js';
 
 
@@ -22,5 +23,6 @@ export const getPjpById = async (id, currentUser) => {
     throw new AppError('Anda tidak memiliki akses ke PJP ini', 403);
   }
 
+  await assertSalesAccess(currentUser, pjp.userId);
   return pjp;
 };

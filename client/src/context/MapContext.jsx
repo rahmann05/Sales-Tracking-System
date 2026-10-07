@@ -1,3 +1,4 @@
+import { createMapMarker } from '../services/mapMarkerService';
 import React, { createContext, useContext, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 
 const DEFAULT_CENTER = { lat: -6.88498411526505, lng: 107.48995363176957 };
@@ -26,7 +27,7 @@ const GPS_BLUE_DOT_SVG = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
  */
 export const MapProvider = ({ children }) => {
     const mapInstanceRef = useRef(null);
-    const markersRef = useRef(new Map());   // Map<string|number, google.maps.Marker>
+    const markersRef = useRef(new Map());   // Map<string|number, marker adapter>
     const polylinesRef = useRef(new Map()); // Map<string|number, google.maps.Polyline>
     const polygonsRef = useRef(new Map());  // Map<string|number, google.maps.Polygon>
     const clickListenerRef = useRef(null);
@@ -52,7 +53,7 @@ export const MapProvider = ({ children }) => {
             if (!map || !window.google) return;
 
             if (!gpsMarkerRef.current) {
-                gpsMarkerRef.current = new window.google.maps.Marker({
+                gpsMarkerRef.current = createMapMarker({
                     position: location,
                     map,
                     title: 'Lokasi Anda (GPS)',
@@ -175,12 +176,12 @@ export const MapProvider = ({ children }) => {
                 if (m.label !== undefined) existing.setLabel(m.label);
                 if (m.zIndex !== undefined) existing.setZIndex(m.zIndex);
                 // Always re-register onClick so stale step/handler closures are never stuck
+                existing.clearClickListeners();
                 if (typeof m.onClick === 'function') {
-                    window.google.maps.event.clearListeners(existing, 'click');
                     existing.addListener('click', () => m.onClick(m));
                 }
             } else {
-                const marker = new window.google.maps.Marker({
+                const marker = createMapMarker({
                     position,
                     map,
                     title: m.title,
@@ -207,7 +208,7 @@ export const MapProvider = ({ children }) => {
         if (!map || !window.google) return;
         const key = String(markerData.id);
         if (markersRef.current.has(key)) return;
-        const marker = new window.google.maps.Marker({
+        const marker = createMapMarker({
             position: { lat: Number(markerData.lat), lng: Number(markerData.lng) },
             map,
             title: markerData.title,

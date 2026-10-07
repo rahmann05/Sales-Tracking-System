@@ -1,3 +1,4 @@
+import { StaffAttendanceReport } from '../../shared/components/common/StaffAttendanceReport';
 import React, { useState, useEffect, useCallback } from 'react';
 import { configApi } from '../../services/api';
 import { useApp } from '../../context/AppContext';
@@ -8,7 +9,6 @@ import {
   LuSave,
   LuRefreshCw,
   LuMapPin,
-  LuClock,
   LuShieldCheck,
   LuBuilding,
   LuTruck,
@@ -22,425 +22,9 @@ import {
   LuCreditCard,
 } from 'react-icons/lu';
 
-/**
- * CONFIG_DEFINITIONS
- * Central registry of all configurable parameters organized by category.
- * Each parameter has metadata for UI rendering, validation, and defaults.
- */
-const CONFIG_DEFINITIONS = [
-  {
-    groupKey: 'GEOFENCE',
-    groupLabel: 'Geofence & Presensi',
-    groupDescription: 'Parameter radius GPS, durasi kunjungan, dan timeout live tracking sales di lapangan.',
-    groupIcon: LuMapPin,
-    groupColor: 'blue',
-    params: [
-      {
-        key: 'ATTENDANCE_RADIUS_METERS',
-        label: 'Radius Presensi Default',
-        description: 'Jarak maksimal (meter) dari titik GPS outlet agar sales dapat absen masuk/keluar. Berlaku bila outlet tidak memiliki radius khusus.',
-        type: 'number',
-        unit: 'meter',
-        defaultValue: 100,
-        min: 10,
-        max: 1000,
-      },
-      {
-        key: 'DEFAULT_OUTLET_RADIUS_METERS',
-        label: 'Radius Default Outlet Baru',
-        description: 'Nilai radius (meter) yang otomatis diterapkan saat membuat outlet baru di database.',
-        type: 'number',
-        unit: 'meter',
-        defaultValue: 50,
-        min: 10,
-        max: 500,
-      },
-      {
-        key: 'MINIMUM_VISIT_DURATION_MINUTES',
-        label: 'Durasi Kunjungan Minimum',
-        description: 'Waktu minimum (menit) yang wajib dipenuhi sales di setiap outlet sebelum bisa checkout. Checkout lebih awal memerlukan alasan.',
-        type: 'number',
-        unit: 'menit',
-        defaultValue: 5,
-        min: 1,
-        max: 60,
-      },
-      {
-        key: 'LIVE_TRACKING_PING_TIMEOUT_MINUTES',
-        label: 'Timeout Ping GPS',
-        description: 'Batas waktu (menit) sejak ping GPS terakhir agar sales masih dianggap ONLINE (warna hijau).',
-        type: 'number',
-        unit: 'menit',
-        defaultValue: 15,
-        min: 1,
-        max: 60,
-      },
-      {
-        key: 'LIVE_TRACKING_ATTENDANCE_TIMEOUT_MINUTES',
-        label: 'Timeout Status Absen',
-        description: 'Batas waktu (menit) sejak absen terakhir agar lokasi absen masih ditampilkan sebagai lokasi terkini sales.',
-        type: 'number',
-        unit: 'menit',
-        defaultValue: 60,
-        min: 15,
-        max: 240,
-      },
-      {
-        key: 'LIVE_TRACKING_MAX_BREADCRUMBS',
-        label: 'Maksimal Rekam Jejak GPS',
-        description: 'Jumlah riwayat titik koordinat (breadcrumbs) pergerakan sales yang disimpan untuk visualisasi jejak rute.',
-        type: 'number',
-        unit: 'titik',
-        defaultValue: 20,
-        min: 5,
-        max: 100,
-      },
-      {
-        key: 'DEFAULT_OFFICE_LATITUDE',
-        label: 'Latitude Kantor Pusat / Gudang',
-        description: 'Koordinat lintang (latitude) default kantor atau gudang pusat yang menjadi titik awal tracking/fallback.',
-        type: 'number',
-        unit: 'derajat',
-        defaultValue: -6.884984,
-        min: -90,
-        max: 90,
-      },
-      {
-        key: 'DEFAULT_OFFICE_LONGITUDE',
-        label: 'Longitude Kantor Pusat / Gudang',
-        description: 'Koordinat bujur (longitude) default kantor atau gudang pusat yang menjadi titik awal tracking/fallback.',
-        type: 'number',
-        unit: 'derajat',
-        defaultValue: 107.489953,
-        min: -180,
-        max: 180,
-      },
-    ],
-  },
-  {
-    groupKey: 'VALIDATION',
-    groupLabel: 'Validasi Outlet & Anomali GPS',
-    groupDescription: 'Ambang batas jarak dan skor keyakinan untuk audit geocoding serta verifikasi toko baru.',
-    groupIcon: LuTarget,
-    groupColor: 'amber',
-    params: [
-      {
-        key: 'VALIDATION_DISTANCE_WARNING',
-        label: 'Ambang Peringatan (Warning)',
-        description: 'Jarak (meter) antara GPS tercatat vs Google Geocode. Melebihi ini akan diberi label WARNING.',
-        type: 'number',
-        unit: 'meter',
-        defaultValue: 200,
-        min: 50,
-        max: 2000,
-      },
-      {
-        key: 'VALIDATION_DISTANCE_SUSPECT',
-        label: 'Ambang Kecurigaan (Suspect)',
-        description: 'Jarak (meter) di atas mana koordinat GPS dianggap SUSPECT dan memerlukan audit manual.',
-        type: 'number',
-        unit: 'meter',
-        defaultValue: 500,
-        min: 100,
-        max: 5000,
-      },
-      {
-        key: 'VALIDATION_NEARBY_RADIUS_METERS',
-        label: 'Radius Deteksi Outlet Sekitar',
-        description: 'Jarak maksimal (meter) pencarian outlet yang ada di sekitar saat proses audit dan registrasi toko.',
-        type: 'number',
-        unit: 'meter',
-        defaultValue: 200,
-        min: 50,
-        max: 1000,
-      },
-      {
-        key: 'VALIDATION_CONFIDENCE_THRESHOLD_VALID',
-        label: 'Ambang Skor Valid',
-        description: 'Batas skor kecocokan validasi (0-100) agar status outlet otomatis ditetapkan VALID.',
-        type: 'number',
-        unit: 'skor',
-        defaultValue: 75,
-        min: 50,
-        max: 100,
-      },
-      {
-        key: 'VALIDATION_CONFIDENCE_THRESHOLD_LIKELY',
-        label: 'Ambang Skor Cukup Layak (Likely)',
-        description: 'Batas skor kecocokan validasi (0-100) agar status outlet berstatus LIKELY_VALID.',
-        type: 'number',
-        unit: 'skor',
-        defaultValue: 50,
-        min: 30,
-        max: 80,
-      },
-      {
-        key: 'VALIDATION_CONFIDENCE_THRESHOLD_WARNING',
-        label: 'Ambang Skor Butuh Perhatian (Warning)',
-        description: 'Batas skor kecocokan validasi (0-100) di bawah mana toko ditandai WARNING/NEEDS_REVIEW.',
-        type: 'number',
-        unit: 'skor',
-        defaultValue: 30,
-        min: 10,
-        max: 60,
-      },
-    ],
-  },
-  {
-    groupKey: 'DAILY_CALLS',
-    groupLabel: 'Daily Call & Anomali Rute',
-    groupDescription: 'Aturan deteksi lonjakan jarak/waktu tempuh dan target panggilan kunjungan sales harian.',
-    groupIcon: LuPhoneCall,
-    groupColor: 'indigo',
-    params: [
-      {
-        key: 'DAILY_CALL_TARGET_CALLS',
-        label: 'Target Kunjungan Harian',
-        description: 'Standar jumlah outlet yang harus dikunjungi setiap sales per hari kerja.',
-        type: 'number',
-        unit: 'outlet',
-        defaultValue: 10,
-        min: 1,
-        max: 50,
-      },
-      {
-        key: 'TRAVEL_GAP_SHORT_KM',
-        label: 'Batas Jarak Dekat Anomali',
-        description: 'Jarak tempuh (km) untuk deteksi waktu tempuh tidak wajar rute pendek.',
-        type: 'number',
-        unit: 'km',
-        defaultValue: 3,
-        min: 1,
-        max: 20,
-      },
-      {
-        key: 'TRAVEL_GAP_SHORT_MINUTES',
-        label: 'Batas Waktu Tempuh Jarak Dekat',
-        description: 'Waktu tempuh (menit) maksimal untuk jarak dekat sebelum dikategorikan anomali perjalanan lambat.',
-        type: 'number',
-        unit: 'menit',
-        defaultValue: 45,
-        min: 10,
-        max: 180,
-      },
-      {
-        key: 'TRAVEL_GAP_MED_KM',
-        label: 'Batas Jarak Menengah Anomali',
-        description: 'Jarak tempuh (km) untuk deteksi perjalanan rute menengah antar toko.',
-        type: 'number',
-        unit: 'km',
-        defaultValue: 8,
-        min: 2,
-        max: 50,
-      },
-      {
-        key: 'TRAVEL_GAP_MED_MINUTES',
-        label: 'Batas Waktu Tempuh Jarak Menengah',
-        description: 'Waktu tempuh (menit) maksimal untuk jarak menengah sebelum dicatat sebagai anomali.',
-        type: 'number',
-        unit: 'menit',
-        defaultValue: 90,
-        min: 20,
-        max: 300,
-      },
-    ],
-  },
-  {
-    groupKey: 'TRANSAKSI',
-    groupLabel: 'Transaksi & Keuangan',
-    groupDescription: 'Ketentuan perpajakan, termin pembayaran (TOP), dan target omzet penjualan.',
-    groupIcon: LuCreditCard,
-    groupColor: 'purple',
-    params: [
-      {
-        key: 'TAX_RATE_PERCENT',
-        label: 'Persentase PPN',
-        description: 'Besaran tarif Pajak Pertambahan Nilai (%) yang diterapkan pada kalkulasi faktur dan invoice.',
-        type: 'number',
-        unit: '%',
-        defaultValue: 11,
-        min: 0,
-        max: 100,
-      },
-      {
-        key: 'DEFAULT_TERM_OF_PAYMENT_DAYS',
-        label: 'Termin Pembayaran Default (TOP)',
-        description: 'Jumlah hari jatuh tempo pembayaran kredit default saat pembuatan order baru.',
-        type: 'number',
-        unit: 'hari',
-        defaultValue: 30,
-        min: 0,
-        max: 180,
-      },
-      {
-        key: 'SALES_MONTHLY_TARGET_AMOUNT',
-        label: 'Target Omzet Bulanan per Sales',
-        description: 'Target pencapaian penjualan bulanan standar (Rp) untuk evaluasi performa di laporan MTD.',
-        type: 'number',
-        unit: 'Rp',
-        defaultValue: 100000000,
-        min: 1000000,
-        max: 10000000000,
-      },
-      {
-        key: 'SALES_BASELINE_LMA_AMOUNT',
-        label: 'Baseline LMA Sales',
-        description: 'Nilai perbandingan Last Month Actual default (Rp) jika riwayat bulan sebelumnya belum ada.',
-        type: 'number',
-        unit: 'Rp',
-        defaultValue: 85000000,
-        min: 1000000,
-        max: 10000000000,
-      },
-    ],
-  },
-  {
-    groupKey: 'DIVISI',
-    groupLabel: 'Divisi & Cabang',
-    groupDescription: 'Konfigurasi divisi aktif, cabang default, dan radius pencarian lokasi registrasi toko.',
-    groupIcon: LuBuilding,
-    groupColor: 'emerald',
-    params: [
-      {
-        key: 'ACTIVE_DIVISION',
-        label: 'Divisi Aktif',
-        description: 'Divisi utama yang ditampilkan pada laporan registrasi outlet dan formulir pendaftaran customer baru.',
-        type: 'select',
-        options: ['BELFOODS', 'UNICHARM', 'GENERAL'],
-        defaultValue: 'BELFOODS',
-      },
-      {
-        key: 'DEFAULT_BRANCH',
-        label: 'Cabang Default',
-        description: 'Nama cabang distribusi yang menjadi default pada formulir pendaftaran customer baru.',
-        type: 'text',
-        defaultValue: 'PADALARANG',
-      },
-      {
-        key: 'COMPANY_NAME',
-        label: 'Nama Perusahaan',
-        description: 'Nama perusahaan yang tampil di header laporan dan notifikasi sistem.',
-        type: 'text',
-        defaultValue: 'PT. SINAR ANUGRAH',
-      },
-      {
-        key: 'CUSTOMER_REG_PLACES_RADIUS_METERS',
-        label: 'Radius Pencarian Tempat Baru',
-        description: 'Jarak pencarian maksimal (meter) ke Google Places API saat registrasi customer baru dari lokasi fisik sales.',
-        type: 'number',
-        unit: 'meter',
-        defaultValue: 100,
-        min: 20,
-        max: 1000,
-      },
-    ],
-  },
-  {
-    groupKey: 'LOGISTIK',
-    groupLabel: 'Logistik & Pengiriman',
-    groupDescription: 'Parameter operasional logistik, bahan bakar, dan kapasitas kendaraan pengiriman armada.',
-    groupIcon: LuTruck,
-    groupColor: 'violet',
-    params: [
-      {
-        key: 'DEFAULT_FUEL_PRICE_PER_LITER',
-        label: 'Harga BBM per Liter',
-        description: 'Harga bahan bakar (Rp) per liter untuk kalkulasi biaya pengiriman armada.',
-        type: 'number',
-        unit: 'Rp',
-        defaultValue: 12500,
-        min: 5000,
-        max: 50000,
-      },
-      {
-        key: 'DEFAULT_VEHICLE_CAPACITY_CARTONS',
-        label: 'Kapasitas Kendaraan Default',
-        description: 'Jumlah karton maksimum yang dapat dimuat per kendaraan pengiriman default.',
-        type: 'number',
-        unit: 'karton',
-        defaultValue: 200,
-        min: 10,
-        max: 2000,
-      },
-      {
-        key: 'OIL_CHANGE_INTERVAL_KM',
-        label: 'Interval Ganti Oli',
-        description: 'Jarak tempuh (km) kendaraan sebelum harus ganti oli berikutnya.',
-        type: 'number',
-        unit: 'km',
-        defaultValue: 5000,
-        min: 1000,
-        max: 20000,
-      },
-    ],
-  },
-  {
-    groupKey: 'SESI',
-    groupLabel: 'Sesi & Keamanan',
-    groupDescription: 'Pengaturan durasi sesi login, expiry token JWT, whitelist akun testing, dan notifikasi.',
-    groupIcon: LuKey,
-    groupColor: 'rose',
-    params: [
-      {
-        key: 'JWT_EXPIRES_IN',
-        label: 'Durasi Token Akses',
-        description: 'Berapa lama token login aktif sebelum harus login ulang (contoh: 1d = 1 hari, 12h = 12 jam).',
-        type: 'text',
-        defaultValue: '1d',
-      },
-      {
-        key: 'JWT_REFRESH_EXPIRES_IN',
-        label: 'Durasi Refresh Token',
-        description: 'Berapa lama refresh token berlaku untuk memperpanjang sesi (contoh: 7d = 7 hari).',
-        type: 'text',
-        defaultValue: '7d',
-      },
-      {
-        key: 'BYPASS_GEOFENCE_EMAILS',
-        label: 'Email Bypass Geofence',
-        description: 'Daftar email akun testing yang boleh absen di luar radius (pisahkan dengan koma).',
-        type: 'text',
-        defaultValue: 'sales@sinaranugrah.com',
-      },
-      {
-        key: 'NOTIFICATIONS_LIMIT_PER_USER',
-        label: 'Batas Riwayat Notifikasi per User',
-        description: 'Jumlah maksimum notifikasi terbaru yang disimpan dan dimuat pada panel notifikasi pengguna.',
-        type: 'number',
-        unit: 'pesan',
-        defaultValue: 50,
-        min: 10,
-        max: 500,
-      },
-    ],
-  },
-  {
-    groupKey: 'TAMPILAN',
-    groupLabel: 'Kustomisasi Tampilan',
-    groupDescription: 'Parameter konfigurasi legenda, label, dan tampilan antarmuka pada modul sales.',
-    groupIcon: LuGlobe,
-    groupColor: 'cyan',
-    params: [
-      {
-        key: 'CALLPLAN_LEGEND',
-        label: 'Legenda Callplan/PJP',
-        description: 'Teks legenda yang ditampilkan pada kartu ringkasan rute harian sales di halaman RJP.',
-        type: 'text',
-        defaultValue: 'F4 = Kunjungan 4 minggu, F2 = Kunjungan 2 minggu',
-      },
-      {
-        key: 'DEFAULT_PRODUCT_STOCK',
-        label: 'Stok Default Produk Baru',
-        description: 'Jumlah stok awal yang ditetapkan saat membuat produk baru di database.',
-        type: 'number',
-        unit: 'unit',
-        defaultValue: 100,
-        min: 0,
-        max: 100000,
-      },
-    ],
-  },
-];
+import { CONFIG_DEFINITIONS, parseConfigValue } from '../../../../shared/config.mjs';
+import { ProductCatalogManager } from './components/ProductCatalogManager';
+const groupIcons = { LuMapPin, LuTarget, LuPhoneCall, LuCreditCard, LuBuilding, LuTruck, LuKey, LuGlobe, LuShieldCheck };
 
 const groupColorMap = {
   blue: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'bg-blue-100 text-blue-600' },
@@ -458,8 +42,10 @@ const groupColorMap = {
  * Full-featured system configuration management for Admin.
  * Loads all parameters from SystemConfig and allows editing/saving.
  */
-export const AdminConfigPage = ({ onGoBack }) => {
-  const { setActiveTab } = useApp();
+export const AdminConfigPage = () => {
+  const { setActiveTab, refreshSettings } = useApp();
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [search, setSearch] = useState('');
   const [configs, setConfigs] = useState({});
   const [editedValues, setEditedValues] = useState({});
   const [loading, setLoading] = useState(true);
@@ -469,6 +55,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
+    setLoadFailed(false);
     setError(null);
     try {
       const res = await configApi.getAll();
@@ -488,6 +75,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
       setEditedValues(initial);
     } catch (err) {
       console.warn('[AdminConfigPage] Load configs error:', err.message);
+      setLoadFailed(true);
       // Fallback to defaults
       const initial = {};
       CONFIG_DEFINITIONS.forEach((group) => {
@@ -509,6 +97,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
   const handleChange = (key, value) => {
     setEditedValues((prev) => ({ ...prev, [key]: value }));
     setSaveSuccess(false);
+    setError(null);
   };
 
   const hasChanges = () => {
@@ -525,6 +114,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
   };
 
   const handleSave = async () => {
+    if (loading || saving || loadFailed) return;
     setSaving(true);
     setSaveSuccess(false);
     setError(null);
@@ -533,15 +123,13 @@ export const AdminConfigPage = ({ onGoBack }) => {
       CONFIG_DEFINITIONS.forEach((group) => {
         group.params.forEach((param) => {
           const rawVal = editedValues[param.key];
-          if (param.type === 'number') {
-            configMap[param.key] = Number(rawVal) || param.defaultValue;
-          } else {
-            configMap[param.key] = rawVal || param.defaultValue;
-          }
+          const previous = configs[param.key] ?? param.defaultValue;
+          if (String(previous) !== rawVal) configMap[param.key] = parseConfigValue(param, rawVal);
         });
       });
 
       const res = await configApi.bulkUpdate(configMap);
+      await refreshSettings();
       setConfigs(res?.data || configMap);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -554,6 +142,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
   };
 
   const handleReset = () => {
+    if (loading || saving || loadFailed) return;
     const defaults = {};
     CONFIG_DEFINITIONS.forEach((group) => {
       group.params.forEach((param) => {
@@ -588,7 +177,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
       {saveSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3 text-sm text-emerald-800 animate-in fade-in">
           <LuCheck className="text-lg shrink-0" />
-          <span className="font-bold">Semua parameter berhasil disimpan ke database.</span>
+          <span className="font-bold">Perubahan pengaturan berhasil disimpan.</span>
         </div>
       )}
 
@@ -603,11 +192,11 @@ export const AdminConfigPage = ({ onGoBack }) => {
           <span>Kembali</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={loadConfigs}
-            disabled={loading}
+            disabled={loading || saving}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs font-bold text-on-surface-variant hover:bg-surface-variant transition-all cursor-pointer disabled:opacity-50"
           >
             <LuRefreshCw className={`text-sm ${loading ? 'animate-spin' : ''}`} />
@@ -625,7 +214,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || !hasChanges()}
+            disabled={loading || loadFailed || saving || !hasChanges()}
             className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
               hasChanges()
                 ? 'bg-primary text-white hover:bg-neutral-800'
@@ -638,6 +227,11 @@ export const AdminConfigPage = ({ onGoBack }) => {
         </div>
       </div>
 
+      <ProductCatalogManager />
+      <StaffAttendanceReport />
+      <label className="block space-y-2 text-sm font-semibold">Cari pengaturan
+        <input className="form-input w-full" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari absensi, izin sales, logistik…" />
+      </label>
       {/* Config Groups */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -645,9 +239,9 @@ export const AdminConfigPage = ({ onGoBack }) => {
         </div>
       ) : (
         <div className="space-y-6">
-          {CONFIG_DEFINITIONS.map((group) => {
+          {CONFIG_DEFINITIONS.map(group => ({ ...group, params: group.params.filter(param => `${param.label} ${param.description}`.toLowerCase().includes(search.toLowerCase())) })).filter(group => group.params.length).map((group) => {
             const colorSet = groupColorMap[group.groupColor] || groupColorMap.blue;
-            const GroupIcon = group.groupIcon;
+            const GroupIcon = groupIcons[group.groupIcon];
 
             return (
               <div
@@ -683,7 +277,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
                         {/* Label & Description */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <label className="text-sm font-bold text-on-surface">
+                            <label htmlFor={param.key} className="text-sm font-bold text-on-surface">
                               {param.label}
                             </label>
                             {isModified && (
@@ -696,14 +290,15 @@ export const AdminConfigPage = ({ onGoBack }) => {
                             {param.description}
                           </p>
                           <span className="text-[10px] text-on-surface-variant/60 font-mono mt-1 block">
-                            Key: {param.key} • Default: {param.defaultValue}{param.unit ? ` ${param.unit}` : ''}
+                            Default: {String(param.defaultValue)}{param.unit ? ` ${param.unit}` : ''}
                           </span>
                         </div>
 
                         {/* Input */}
-                        <div className="w-full sm:w-52 shrink-0">
-                          {param.type === 'select' ? (
+                        <div className="w-full sm:w-64 shrink-0">
+                          {param.type === 'boolean' ? (<select id={param.key} className="form-select w-full" value={value} onChange={e => handleChange(param.key, e.target.value)}><option value="true">Diizinkan / Aktif</option><option value="false">Tidak diizinkan / Nonaktif</option></select>) : param.type === 'select' ? (
                             <select
+                              id={param.key}
                               value={value}
                               onChange={(e) => handleChange(param.key, e.target.value)}
                               className="w-full px-3 py-2.5 rounded-xl bg-surface-container border border-border-glass text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer appearance-none"
@@ -715,6 +310,8 @@ export const AdminConfigPage = ({ onGoBack }) => {
                           ) : param.type === 'number' ? (
                             <div className="relative">
                               <input
+                                id={param.key}
+                                step="any"
                                 type="number"
                                 value={value}
                                 onChange={(e) => handleChange(param.key, e.target.value)}
@@ -730,6 +327,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
                             </div>
                           ) : (
                             <input
+                              id={param.key}
                               type="text"
                               value={value}
                               onChange={(e) => handleChange(param.key, e.target.value)}
@@ -756,7 +354,7 @@ export const AdminConfigPage = ({ onGoBack }) => {
           <div>
             <span className="font-bold text-on-surface block">Perubahan Memerlukan Hak Akses Admin</span>
             <span className="text-[11px]">
-              Seluruh konfigurasi disimpan di tabel SystemConfig PostgreSQL dan berlaku real-time setelah disimpan.
+              Pengaturan diterapkan setelah disimpan. Sesi pengguna lain diperbarui otomatis dalam satu menit.
             </span>
           </div>
         </div>

@@ -1,6 +1,7 @@
+import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
 import { DailyCallTableRow } from './DailyCallTableRow';
-import { LuFileText, LuInbox } from 'react-icons/lu';
+import { LuInbox } from "react-icons/lu";
 
 /**
  * DailyCallTable Component
@@ -48,20 +49,20 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
   return (
     <div className="overflow-hidden">
       <div className="overflow-x-auto mobile-card-table-wrapper">
-        <table className="w-full text-left border-collapse mobile-card-table">
+        <DataTable className="w-full text-left border-collapse mobile-card-table">
           <thead>
             <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
-              <th className="py-3 px-3 text-center">No</th>
-              <th className="py-3 px-3">Salesman</th>
-              <th className="py-3 px-3">Jam In / Out</th>
-              <th className="py-3 px-3">Durasi</th>
-              <th className="py-3 px-3">Customer ID & Nama Toko</th>
-              <th className="py-3 px-3">Sub Channel</th>
-              <th className="py-3 px-3 text-center">Call Status</th>
-              <th className="py-3 px-3 text-right">Order (Rp) / SKU</th>
-              <th className="py-3 px-3">Alasan / Catatan</th>
-              <th className="py-3 px-3 text-center">Deviasi GPS</th>
-              <th className="py-3 px-3 text-center">Foto</th>
+              <th className="text-center">No</th>
+              <th className="">Salesman</th>
+              <th className="">Jam In / Out</th>
+              <th className="">Durasi</th>
+              <th className="">Customer ID & Nama Toko</th>
+              <th className="">Sub Channel</th>
+              <th className="text-center">Call Status</th>
+              <th className="text-right">Order (Rp) / SKU</th>
+              <th className="">Alasan / Catatan</th>
+              <th className="text-center">Deviasi GPS</th>
+              <th className="text-center">Foto</th>
             </tr>
           </thead>
           <tbody>
@@ -69,7 +70,7 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
               <DailyCallTableRow key={row.id} row={row} onSelectRow={onSelectRow} />
             ))}
           </tbody>
-        </table>
+        </DataTable>
       </div>
 
       <div className="p-3 bg-surface-container/60 border-t border-border-glass flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-on-surface-variant">

@@ -1,64 +1,35 @@
-/** submitDriverAttendance - single-responsibility service (extracted from delivery.service.js). */
+import { routeDistance, routeDistanceFields } from './route-distance.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-
-// ═══════════════════════════════════════════════════════════════
-// DELIVERY STOP ATTENDANCE (Supir)
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Submit driver attendance at a delivery stop
- * When type=IN: marks arrival
- * When type=OUT: marks completion & auto-ACC all invoices in packing list
- */
-export const submitDriverAttendance = async (stopId, data, driverId) => {
-  const { type, latitude, longitude, photoUrl, notes } = data;
-
-  const stop = await prisma.deliveryStop.findUnique({
-    where: { id: stopId },
-    include: {
-      deliveryRoute: true,
-      packingList: { include: { invoices: true } },
-    },
-  });
-
-  if (!stop) throw new AppError('Stop pengiriman tidak ditemukan', 404);
-  if (stop.deliveryRoute.driverId !== driverId) {
-    throw new AppError('Anda bukan supir yang ditugaskan untuk rute ini', 403);
+import { calculateDistanceMeters } from '../../../utils/geolocation.js';
+import { getDynamicConfig } from '../../config/config.service.js';
+import { recordStopResult } from './update-stop-status.service.js';
+export const submitDriverAttendance = async(stopId,data,driverId)=>{
+  let estimatedFields;
+  if (data.type==='IN') {
+    const planned = await prisma.deliveryStop.findUnique({where:{id:stopId},include:{deliveryRoute:{include:{vehicle:true,stops:{include:{outlet:true},orderBy:{sequence:'asc'}}}}}});
+    if (!planned || planned.deliveryRoute.driverId!==driverId) throw new AppError('Stop bukan tugas Anda',403);
+    if (planned.deliveryRoute.status==='READY') estimatedFields = routeDistanceFields(planned.deliveryRoute,await routeDistance(planned.deliveryRoute));
   }
-
-  // Create attendance record
-  const attendance = await prisma.deliveryAttendance.create({
-    data: {
-      deliveryStopId: stopId,
-      driverId,
-      type,
-      latitude,
-      longitude,
-      photoUrl,
-      notes,
-    },
-  });
-
-  // Update stop based on attendance type
-  if (type === 'IN') {
-    await prisma.deliveryStop.update({
-      where: { id: stopId },
-      data: {
-        arrivedAt: new Date(),
-        latitude,
-        longitude,
-      },
-    });
-
-    // Update route status to IN_TRANSIT if it's still READY
-    if (stop.deliveryRoute.status === 'READY') {
-      await prisma.deliveryRoute.update({
-        where: { id: stop.deliveryRouteId },
-        data: { status: 'IN_TRANSIT' },
-      });
-    }
+  return prisma.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`delivery:${stopId}`}))`;
+  const stop=await tx.deliveryStop.findUnique({where:{id:stopId},include:{deliveryRoute:true,outlet:true,attendances:true}});
+  if(!stop)throw new AppError('Stop tidak ditemukan',404);
+  if(stop.deliveryRoute.driverId!==driverId)throw new AppError('Rute bukan tugas Anda',403);
+  if(stop.status!=='PENDING'||!['READY','IN_TRANSIT'].includes(stop.deliveryRoute.status))throw new AppError('Stop tidak aktif',409);
+  if(!['IN','OUT'].includes(data.type)||!Number.isFinite(data.latitude)||!Number.isFinite(data.longitude)||Math.abs(data.latitude)>90||Math.abs(data.longitude)>180)throw new AppError('Jenis absensi atau GPS tidak valid',400);
+  if(await getDynamicConfig('DELIVERY_REQUIRE_PHOTO',true)&&!data.photoUrl)throw new AppError('Foto bukti wajib',400);
+  if(stop.attendances.some(a=>a.type===data.type))throw new AppError('Absensi sudah tercatat',409);
+  if(data.type==='OUT'&&!stop.attendances.some(a=>a.type==='IN'))throw new AppError('Absen masuk terlebih dahulu',409);
+  if(await getDynamicConfig('DELIVERY_REQUIRE_GEOFENCE',false) && calculateDistanceMeters(data.latitude,data.longitude,stop.outlet.latitude,stop.outlet.longitude)>(stop.outlet.radiusMeters||await getDynamicConfig('ATTENDANCE_RADIUS_METERS',50)))throw new AppError('Posisi di luar radius toko',422);
+  const attendance=await tx.deliveryAttendance.create({data:{deliveryStopId:stopId,driverId,type:data.type,latitude:data.latitude,longitude:data.longitude,photoUrl:data.photoUrl,notes:data.notes}});
+  if(data.type==='IN'){
+    await tx.deliveryStop.update({where:{id:stopId},data:{arrivedAt:new Date(),latitude:data.latitude,longitude:data.longitude}});
+    await tx.deliveryRoute.updateMany({where:{id:stop.deliveryRouteId,status:'READY'},data:{status:'IN_TRANSIT',...estimatedFields}});
+  }else{
+    if(!data.result)throw new AppError('Hasil pengiriman wajib saat absen keluar',400);
+    await recordStopResult(tx,stopId,{...data.result,photoUrl:data.photoUrl,notes:data.notes},driverId);
   }
-
   return attendance;
+},{isolationLevel:'Serializable'});
 };

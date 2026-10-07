@@ -1,9 +1,10 @@
 /** createCluster - single-responsibility service (extracted from clusters.service.js). */
+import { validateAssignments } from './cluster-assignment-policy.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { invalidateClusterCache } from './clusters.helpers.js';
 
 
-export const createCluster = async (data) => {
+export const createCluster = async (data, actor) => {
   const { name, region, colorHex, assignedSalesId, assignedSpvId, supervisorId, centerLat, centerLng, outletCount } = data;
   const createPayload = { name, region };
   if (colorHex !== undefined) createPayload.colorHex = colorHex;
@@ -14,22 +15,21 @@ export const createCluster = async (data) => {
   const finalSpvId = supervisorId || assignedSpvId;
   if (finalSpvId) createPayload.supervisorId = finalSpvId;
 
-  const result = await prisma.cluster.create({
+  const result = await prisma.$transaction(async tx => {
+    await validateAssignments(tx,data,actor);
+    const result = await tx.cluster.create({
     data: createPayload,
     include: {
-      _count: { select: { outlets: true, users: true } },
+      _count: { select: { outlets: {where:{deletedAt:null}}, users: {where:{deletedAt:null}} } },
       routes: true,
       assignedSales: { select: { id: true, name: true, role: true } },
       supervisor: { select: { id: true, name: true, role: true } },
       users: { select: { id: true, name: true, role: true } }
     },
   });
-  if (assignedSalesId) {
-    await prisma.user.update({
-      where: { id: assignedSalesId },
-      data: { clusterId: result.id }
-    }).catch(e => console.warn('[createCluster] User cluster sync notice:', e.message));
-  }
+    if (assignedSalesId) await tx.user.update({where:{id:assignedSalesId},data:{clusterId:result.id}});
+    return result;
+  });
   invalidateClusterCache();
   return result;
 };

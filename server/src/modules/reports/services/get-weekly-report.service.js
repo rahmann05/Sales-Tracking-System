@@ -1,4 +1,7 @@
+import { loadReportRecords } from './report-records.service.js';
+import { offPjpSalesResult, visitSalesResult, wibDayRange, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 /** getWeeklyReport - single-responsibility service (extracted from reports.service.js). */
+import { workingDays } from '../../../../../shared/working-calendar.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
@@ -8,42 +11,37 @@ import { getDynamicConfig } from '../../config/config.service.js';
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export const getWeeklyReport = async (query = {}) => {
-  const { startDate, endDate, userId, clusterId } = query;
+  const { startDate, endDate, userId, clusterId, supervisorId } = query;
   const minVisitDuration = await getDynamicConfig('MINIMUM_VISIT_DURATION_MINUTES', 5);
 
-  // Default to current week's Monday to Saturday if not provided
-  let start = startDate ? new Date(startDate) : new Date();
-  if (!startDate) {
-    const dayOfWeek = start.getDay(); // 0 is Sunday, 1 is Monday
-    const distanceToMonday = (dayOfWeek + 6) % 7;
-    start.setDate(start.getDate() - distanceToMonday);
-  }
-  start.setHours(0, 0, 0, 0);
+  const weeklyTarget = await getDynamicConfig('SALES_WEEKLY_TARGET_AMOUNT', 25000000);
+  const manualSalesMode = await getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY');
 
-  let end = endDate ? new Date(endDate) : new Date(start);
-  if (!endDate) {
-    end.setDate(start.getDate() + 5); // Saturday
-  }
-  end.setHours(23, 59, 59, 999);
-
-  // Generate 6 working days array (Monday - Saturday)
-  const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  // Plan dates and attendance dates use the same WIB business day.
+  const anchorKey = startDate || wibDateKey();
+  const anchor = new Date(`${anchorKey}T12:00:00Z`);
+  if (!startDate) anchor.setUTCDate(anchor.getUTCDate() - (anchor.getUTCDay() + 6) % 7);
+  const firstKey = anchor.toISOString().slice(0, 10);
+  const start = wibDayRange(firstKey).gte;
+  const last = new Date(anchor);
+  last.setUTCDate(last.getUTCDate() + 6);
+  const end = wibDayRange(endDate || last.toISOString().slice(0, 10)).lte;
+  const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
   const weekDays = [];
-  const curr = new Date(start);
-  for (let i = 0; i < 6; i++) {
-    const dStr = curr.toISOString().split('T')[0];
-    weekDays.push({
-      dateStr: dStr,
-      dayName: DAY_NAMES[i] || `Hari ${i + 1}`,
-      formattedDate: curr.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-    });
-    curr.setDate(curr.getDate() + 1);
+  const configuredDays = workingDays(await getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6'));
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(anchor);
+    day.setUTCDate(day.getUTCDate() + i);
+    const dateStr = day.toISOString().slice(0, 10);
+    if (wibDayRange(dateStr).gte > end) break;
+    weekDays.push({ isWorkingDay: configuredDays.includes(day.getUTCDay()), dateStr, dayName: DAY_NAMES[day.getUTCDay()], formattedDate: day.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short' }) });
   }
 
   // Fetch Salesmen
   const salesWhere = { role: 'SALES', deletedAt: null };
   if (userId) salesWhere.id = userId;
   if (clusterId) salesWhere.clusterId = clusterId;
+  if (supervisorId) salesWhere.supervisorId = supervisorId;
 
   const salesmen = await prisma.user.findMany({
     where: salesWhere,
@@ -58,6 +56,7 @@ export const getWeeklyReport = async (query = {}) => {
 
   let totalWeeklyPlan = 0;
   let totalWeeklyActual = 0;
+  let totalOffPjp = 0;
   let totalWeeklyEc = 0;
   let totalWeeklyOmzet = 0;
   let totalWeeklySku = 0;
@@ -78,12 +77,15 @@ export const getWeeklyReport = async (query = {}) => {
     anomalies: 0,
   }));
 
+  const records=await loadReportRecords(salesmen.map(s=>s.id),start,end,{byDay:true});
+
   const salesmanRows = await Promise.all(
     salesmen.map(async (sales) => {
       const dayBreakdowns = {};
 
       let salesPlan = 0;
       let salesActual = 0;
+      let salesOffPjp = 0;
       let salesEc = 0;
       let salesOmzet = 0;
       let salesSku = 0;
@@ -92,23 +94,7 @@ export const getWeeklyReport = async (query = {}) => {
 
       for (let i = 0; i < weekDays.length; i++) {
         const wd = weekDays[i];
-        const dayStart = new Date(`${wd.dateStr}T00:00:00.000Z`);
-        const dayEnd = new Date(`${wd.dateStr}T23:59:59.999Z`);
-
-        // Find PJP for this salesman on this date
-        const pjps = await prisma.pjp.findMany({
-          where: {
-            userId: sales.id,
-            date: { gte: dayStart, lte: dayEnd },
-          },
-          include: {
-            stops: {
-              include: {
-                attendances: true,
-              },
-            },
-          },
-        });
+        const pjps=records.pjps.get(`${sales.id}:${wd.dateStr}`) || [];
 
         let dPlan = 0;
         let dActual = 0;
@@ -121,21 +107,21 @@ export const getWeeklyReport = async (query = {}) => {
         pjps.forEach((pjp) => {
           (pjp.stops || []).forEach((stop) => {
             dPlan += 1;
-            const att = stop.attendances?.[0];
-            const hasAttIn = Boolean(att?.inTimestamp);
-            const hasAttOut = Boolean(att?.outTimestamp);
+            const result = visitSalesResult(stop, { manualSalesMode });
+            const att = result.checkOut;
+            const hasAttIn = result.actual;
 
-            if (hasAttIn || stop.status === 'VISITED' || stop.status === 'ARRIVED') {
+            if (hasAttIn) {
               dActual += 1;
             }
 
-            const orderTotal = att?.orderAmount || 0;
-            if (orderTotal > 0 || att?.isEffectiveCall) {
+            const orderTotal = result.orderAmount;
+            if (result.effective) {
               dEc += 1;
               dOmzet += orderTotal;
             }
 
-            dSku += att?.skuSold || 0;
+            dSku += result.skuSold;
             const dur = att?.durationMinutes || 0;
             dDuration += dur;
 
@@ -144,13 +130,24 @@ export const getWeeklyReport = async (query = {}) => {
           });
         });
 
+        const offVisits=records.offVisits.get(`${sales.id}:${wd.dateStr}`) || [];
+        dActual += offVisits.length;
+        salesOffPjp += offVisits.length;
+        for (const off of offVisits) {
+          const offResult = offPjpSalesResult(off, { manualSalesMode });
+          dOmzet += offResult.orderAmount;
+          dSku += offResult.skuSold;
+          if (offResult.effective) dEc += 1;
+        }
+
         // Track day breakdown
         dayBreakdowns[wd.dayName.toLowerCase()] = {
           plan: dPlan,
           actual: dActual,
+          offPjpCalls: offVisits.length,
           ec: dEc,
           omzet: dOmzet,
-          callRate: dPlan > 0 ? `${Math.round((dActual / dPlan) * 100)}%` : '0%',
+          callRate: dPlan > 0 ? `${Math.round(((dActual - offVisits.length) / dPlan) * 100)}%` : '0%',
         };
 
         // Accumulate sales total
@@ -175,13 +172,13 @@ export const getWeeklyReport = async (query = {}) => {
       // Add to overall totals
       totalWeeklyPlan += salesPlan;
       totalWeeklyActual += salesActual;
+      totalOffPjp += salesOffPjp;
       totalWeeklyEc += salesEc;
       totalWeeklyOmzet += salesOmzet;
       totalWeeklySku += salesSku;
       totalWeeklyDuration += salesDuration;
       totalWeeklyAnomalies += salesAnomalies;
 
-      const weeklyTarget = 25000000; // Rp 25.000.000 standard weekly target
       const achievementRate = weeklyTarget > 0 ? `${Math.round((salesOmzet / weeklyTarget) * 100)}%` : '0%';
 
       return {
@@ -193,7 +190,8 @@ export const getWeeklyReport = async (query = {}) => {
         weeklyTotal: {
           plan: salesPlan,
           actual: salesActual,
-          callRate: salesPlan > 0 ? `${Math.round((salesActual / salesPlan) * 100)}%` : '0%',
+          offPjpCalls: salesOffPjp,
+          callRate: salesPlan > 0 ? `${Math.round(((salesActual - salesOffPjp) / salesPlan) * 100)}%` : '0%',
           ec: salesEc,
           ecRate: salesActual > 0 ? `${Math.round((salesEc / salesActual) * 100)}%` : '0%',
           omzet: salesOmzet,
@@ -209,14 +207,15 @@ export const getWeeklyReport = async (query = {}) => {
 
   return {
     period: {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: wibDateKey(start),
+      endDate: wibDateKey(end),
       weekDays,
     },
     summary: {
       totalPlanCalls: totalWeeklyPlan,
       totalActualCalls: totalWeeklyActual,
-      callComplianceRate: totalWeeklyPlan > 0 ? `${Math.round((totalWeeklyActual / totalWeeklyPlan) * 100)}%` : '0%',
+      totalOffPjpCalls: totalOffPjp,
+      callComplianceRate: totalWeeklyPlan > 0 ? `${Math.round(((totalWeeklyActual - totalOffPjp) / totalWeeklyPlan) * 100)}%` : '0%',
       totalEffectiveCalls: totalWeeklyEc,
       effectiveCallRate: totalWeeklyActual > 0 ? `${Math.round((totalWeeklyEc / totalWeeklyActual) * 100)}%` : '0%',
       totalOrderAmount: totalWeeklyOmzet,

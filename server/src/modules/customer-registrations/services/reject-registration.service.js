@@ -1,3 +1,4 @@
+import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** rejectRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -18,13 +19,24 @@ export const rejectRegistration = async (id, reason, currentUser) => {
     throw new AppError('Anda tidak memiliki wewenang untuk menolak pengajuan ini', 403);
   }
 
-  const updated = await prisma.customerRegistration.update({
-    where: { id },
+  // B01: Status guard — tidak bisa menolak outlet yang sudah aktif di master
+  if (registration.registrationStatus === 'REGISTERED_ACTIVE') {
+    throw new AppError('Pengajuan outlet sudah aktif di sistem master dan tidak dapat ditolak', 400);
+  }
+
+  if (!['SUBMITTED','PENDING'].includes(registration.registrationStatus)) throw new AppError('Status pengajuan tidak dapat ditolak',400);
+  if (!String(reason || '').trim()) throw new AppError('Alasan penolakan wajib',400);
+  await assertSalesAccess(currentUser,registration.salesmanId);
+  const changed = await prisma.customerRegistration.updateMany({
+    where: { id, registrationStatus: registration.registrationStatus },
     data: {
       registrationStatus: 'REJECTED',
       rejectionNote: reason,
     },
   });
+
+  if (!changed.count) throw new AppError('Status pengajuan berubah, muat ulang',409);
+  const updated = await prisma.customerRegistration.findUnique({where:{id}});
 
   // Notifikasi ke Salesman
   if (registration.salesmanId) {

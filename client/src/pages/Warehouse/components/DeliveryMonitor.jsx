@@ -1,6 +1,8 @@
+import {ReturnReceiptAction} from './ReturnReceiptAction';
+import {wibDateKey} from '../../../../../shared/visit-metrics.mjs';
 import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi } from '../../../services/api';
-import { LuTruck, LuRefreshCw, LuCalendar, LuMapPin, LuClock, LuCircleCheck, LuCircleX } from 'react-icons/lu';
+import { LuTruck, LuRefreshCw, LuClock, LuCircleCheck, LuCircleX } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
 
 const STATUS_ICON = {
@@ -38,7 +40,7 @@ const ROUTE_STATUS = {
 export const DeliveryMonitor = () => {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(() => wibDateKey());
   const [expandedRoute, setExpandedRoute] = useState(null);
 
   const fetchData = useCallback(async () => {
@@ -108,7 +110,7 @@ export const DeliveryMonitor = () => {
           {activeRoutes.map((route) => (
             <MonitorRouteCard
               key={route.id}
-              route={route}
+              route={route} onReceived={fetchData}
               expanded={expandedRoute === route.id}
               onToggle={() => setExpandedRoute(expandedRoute === route.id ? null : route.id)}
             />
@@ -123,7 +125,7 @@ export const DeliveryMonitor = () => {
           {pendingRoutes.map((route) => (
             <MonitorRouteCard
               key={route.id}
-              route={route}
+              route={route} onReceived={fetchData}
               expanded={expandedRoute === route.id}
               onToggle={() => setExpandedRoute(expandedRoute === route.id ? null : route.id)}
             />
@@ -138,7 +140,7 @@ export const DeliveryMonitor = () => {
           {completedRoutes.map((route) => (
             <MonitorRouteCard
               key={route.id}
-              route={route}
+              route={route} onReceived={fetchData}
               expanded={expandedRoute === route.id}
               onToggle={() => setExpandedRoute(expandedRoute === route.id ? null : route.id)}
             />
@@ -156,7 +158,7 @@ export const DeliveryMonitor = () => {
   );
 };
 
-const MonitorRouteCard = ({ route, expanded, onToggle }) => {
+const MonitorRouteCard = ({ route, expanded, onToggle, onReceived }) => {
   const statusCfg = ROUTE_STATUS[route.status] || {};
   const deliveredCount = route.stops.filter((s) => s.status === 'DELIVERED').length;
   const totalStops = route.stops.length;
@@ -194,15 +196,15 @@ const MonitorRouteCard = ({ route, expanded, onToggle }) => {
             const color = STATUS_COLOR[stop.status] || '#6b7280';
             const label = STATUS_LABEL[stop.status] || '-';
             return (
-              <div key={stop.id || idx} className="flex items-center gap-3 text-xs py-2 px-3 rounded-lg bg-surface-variant/30">
+              <div key={stop.id || idx}><div className="flex items-center gap-3 text-xs py-2 px-3 rounded-lg bg-surface-variant/30">
                 <Icon className="text-base shrink-0" style={{ color }} />
                 <span className="w-6 h-6 rounded-full bg-surface flex items-center justify-center text-[10px] font-bold text-on-surface-variant shrink-0">{idx + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-on-surface truncate">{stop.outlet?.name}</div>
+                  <div className="font-semibold text-on-surface min-w-0 whitespace-normal break-words">{stop.outlet?.name}</div>
                 </div>
                 <span className="text-[10px] font-semibold shrink-0" style={{ color }}>{label}</span>
-                <span className="text-on-surface-variant shrink-0">{stop.packingList?.totalCartons || 0} krt</span>
-              </div>
+                <span className="text-on-surface-variant shrink-0">{stop.allocatedCartons ?? stop.packingList?.totalCartons ?? 0} krt</span>
+              </div><ReturnReceiptAction stop={stop} onReceived={onReceived}/></div>
             );
           })}
         </div>

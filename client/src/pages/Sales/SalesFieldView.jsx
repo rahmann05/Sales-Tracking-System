@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import {FollowUpPanel} from '../../shared/components/common/FollowUpPanel';
+import React, { useState, useMemo, useEffect } from 'react';
 import { getTodayNameId } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
 import { useModal } from '../../shared/hooks/useModal';
@@ -9,7 +10,8 @@ import { DailyPjpOverview } from './components/DailyPjpOverview';
 import { SalesStopCard } from './components/SalesStopCard';
 import { SalesOffPjpSection } from './components/SalesOffPjpSection';
 import { SalesModals } from './components/SalesModals';
-import { LuCalendar, LuMapPin, LuStore } from 'react-icons/lu';
+import { DayPlanTabs } from './components/DayPlanTabs';
+import { LuMapPin, LuStore } from 'react-icons/lu';
 
 /**
  * SalesFieldView Component
@@ -18,7 +20,7 @@ import { LuCalendar, LuMapPin, LuStore } from 'react-icons/lu';
  */
 export const SalesFieldView = () => {
   const {
-    user,
+    user, settings,
     salesStops,
     offPjpAttendances,
     handleSalesAbsenIn,
@@ -75,6 +77,10 @@ export const SalesFieldView = () => {
     return salesStops.filter((stop) => (stop.dayOfWeek || todayDayName) === selectedDay);
   }, [salesStops, selectedDay, todayDayName]);
 
+  useEffect(() => {
+    if (!dynamicDaysList.some(item => item.day === selectedDay)) setSelectedDay(dynamicDaysList[0]?.day || todayDayName);
+  }, [dynamicDaysList, selectedDay, todayDayName]);
+
   const onAbsenIn = (s) => openModal('ABSEN_IN', s);
   const onAbsenOut = (s) => openModal('ABSEN_OUT', s);
   const onRequestUnlock = (s) => openModal('UNLOCK_REQUEST', s);
@@ -86,43 +92,44 @@ export const SalesFieldView = () => {
   );
 
   const modalHandlers = {
-    handleSalesAbsenIn: (stopId, payload) => {
-      handleSalesAbsenIn(stopId, payload);
+    handleSalesAbsenIn: async (stopId, payload) => {
+      await handleSalesAbsenIn(stopId, payload);
       closeModal();
       notifySuccess(`Absen In berhasil dicatat untuk ${selectedStop?.outletName}!\n\nCatatan: ${payload.notes || '-'}`);
     },
-    handleSalesAbsenOut: (stopId, payload) => {
-      handleSalesAbsenOut(stopId, payload);
+    handleSalesAbsenOut: async (stopId, payload) => {
+      await handleSalesAbsenOut(stopId, payload);
       closeModal();
       notifySuccess(`Absen Out berhasil dicatat untuk ${selectedStop?.outletName}!\n\nKunjungan selesai dan outlet berikutnya kini terbuka.`);
     },
-    handleSubmitOrder: (payload) => {
-      handleSubmitOrder(payload);
+    handleSubmitOrder: async (payload) => {
+      await handleSubmitOrder(payload);
       closeModal();
       notifySuccess(`Order berhasil dibuat untuk ${selectedStop?.outletName}! Lakukan Absen Out untuk menyelesaikan kunjungan.`);
     },
-    handleReportClosedOutlet: (payload) => {
-      handleReportClosedOutlet(payload);
+    handleReportClosedOutlet: async (payload) => {
+      await handleReportClosedOutlet(payload);
       closeModal();
       notifySuccess(`Laporan Toko Tutup untuk ${selectedStop?.outletName} dikirim ke Supervisor.`);
     },
-    handleRequestUnlockOutlet: (payload) => {
-      handleRequestUnlockOutlet(payload);
+    handleRequestUnlockOutlet: async (payload) => {
+      await handleRequestUnlockOutlet(payload);
       closeModal();
       notifySuccess(`Permintaan Unlock untuk ${payload.outletName} telah dikirimkan ke Admin & Supervisor!`);
     },
-    handleSalesAbsenOffPJP: (payload) => {
-      handleSalesAbsenOffPJP(payload);
+    handleSalesAbsenOffPJP: async (payload) => {
+      await handleSalesAbsenOffPJP(payload);
       closeModal();
       notifySuccess('Absen Toko Luar RJP berhasil dicatat!\n\nStatus: MENUNGGU VALIDASI\n(Data telah tersimpan di sistem dan menunggu validasi Supervisor)');
     },
   };
 
-  const activePlanName = activeDayStops[0]?.callplanName || 'RJP-CIMAHI-01';
-  const activeClusterName = activeDayStops[0]?.clusterName || 'Klaster Cimahi Tengah';
+  const activePlanName = activeDayStops[0]?.callplanName || 'Belum ada jadwal';
+  const activeClusterName = activeDayStops[0]?.clusterName || 'Belum ditetapkan';
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto pb-16 md:pb-8">
+      <FollowUpPanel/>
       <SalesShiftHeader />
 
       {/* PJP Plan & Day Selection Header Bar */}
@@ -131,7 +138,7 @@ export const SalesFieldView = () => {
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
               <LuMapPin className="text-xs" />
-              {user?.region || 'Region Cimahi - Bandung Barat'}
+              {user?.region || 'Wilayah belum ditetapkan'}
             </span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-surface-variant text-on-surface-variant flex items-center gap-1">
               <LuStore className="text-xs" />
@@ -144,44 +151,15 @@ export const SalesFieldView = () => {
         </div>
 
         {/* Day / Call Plan Selector Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 w-full">
-          {dynamicDaysList.map((item) => {
-            const isActive = selectedDay === item.day;
-            const count = salesStops.filter((s) => (s.dayOfWeek || todayDayName) === item.day).length;
-            return (
-              <button
-                key={item.day}
-                type="button"
-                onClick={() => handleSelectDay(item.day)}
-                className={`px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-between gap-1.5 w-full ${
-                  isActive
-                    ? 'bg-primary text-on-primary shadow-sm font-bold'
-                    : 'bg-surface-variant/50 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <LuCalendar className="text-xs shrink-0" />
-                  <span className="truncate font-bold">{item.day}</span>
-                  <span className="text-[10px] opacity-75 hidden sm:inline truncate">({item.plan})</span>
-                </div>
-                <span
-                  className={`px-1.5 py-0.5 text-[10px] rounded-md font-bold shrink-0 ${
-                    isActive ? 'bg-on-primary/20 text-on-primary' : 'bg-surface text-on-surface-variant'
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <DayPlanTabs days={dynamicDaysList} selectedDay={selectedDay} onSelect={handleSelectDay} stops={salesStops} todayDayName={todayDayName}/>
+
       </div>
 
       {/* Live Daily Visit Quota & RJP Compliance Tracker */}
       <SalesDailyPerformanceTracker
         salesStops={activeDayStops}
         offPjpAttendances={offPjpAttendances}
-        targetDailyVisits={5}
+        targetDailyVisits={settings.DAILY_CALL_TARGET_CALLS}
       />
 
       {/* Regular Scheduled PJP Stops List */}
@@ -192,6 +170,7 @@ export const SalesFieldView = () => {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+          {activeDayStops.length === 0 && <p className="text-sm text-on-surface-variant p-4">Belum ada toko terjadwal untuk hari ini. Hubungi supervisor untuk memeriksa PJP.</p>}
           {activeDayStops.map((stop) => (
             <SalesStopCard
               key={stop.id}

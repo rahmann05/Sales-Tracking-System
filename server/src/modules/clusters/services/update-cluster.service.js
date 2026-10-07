@@ -1,9 +1,11 @@
 /** updateCluster - single-responsibility service (extracted from clusters.service.js). */
+import { validateAssignments } from './cluster-assignment-policy.service.js';
+import { AppError } from '../../../utils/errors.js';
 import { prisma } from '../../../config/prisma.js';
 import { invalidateClusterCache } from './clusters.helpers.js';
 
 
-export const updateCluster = async (id, data) => {
+export const updateCluster = async (id, data, actor) => {
   const { name, region, colorHex, centerLat, centerLng, outletCount, assignedSalesId, assignedSpvId, supervisorId } = data;
   const updatePayload = {};
   if (name !== undefined) updatePayload.name = name;
@@ -16,23 +18,27 @@ export const updateCluster = async (id, data) => {
   const finalSpvId = supervisorId !== undefined ? supervisorId : assignedSpvId;
   if (finalSpvId !== undefined) updatePayload.supervisorId = finalSpvId || null;
 
-  if (assignedSalesId) {
-    await prisma.user.update({
-      where: { id: assignedSalesId },
-      data: { clusterId: id }
-    }).catch(e => console.warn('[updateCluster] User cluster sync notice:', e.message));
-  }
-
-  const result = await prisma.cluster.update({
+  const result = await prisma.$transaction(async tx => {
+    const previous = await tx.cluster.findUnique({where:{id},select:{name:true,deletedAt:true,assignedSalesId:true,supervisorId:true}});
+    if(!previous||previous.deletedAt)throw new AppError('Kluster tidak ditemukan',404);
+    if(previous.name==='Belum Ditugaskan')throw new AppError('Wilayah penampung outlet tidak dapat diubah',409);
+    await validateAssignments(tx,{...previous,...updatePayload},actor);
+    if (assignedSalesId !== undefined && previous?.assignedSalesId !== (assignedSalesId || null)) {
+      await tx.user.updateMany({where:{clusterId:id},data:{clusterId:null}});
+    }
+    const result = await tx.cluster.update({
     where: { id },
     data: updatePayload,
     include: {
-      _count: { select: { outlets: true, users: true } },
+      _count: { select: { outlets: {where:{deletedAt:null}}, users: {where:{deletedAt:null}} } },
       routes: true,
       assignedSales: { select: { id: true, name: true, role: true } },
       supervisor: { select: { id: true, name: true, role: true } },
       users: { select: { id: true, name: true, role: true } }
     },
+  });
+    if (assignedSalesId) await tx.user.update({where:{id:assignedSalesId},data:{clusterId:id}});
+    return result;
   });
   invalidateClusterCache(id);
   return result;

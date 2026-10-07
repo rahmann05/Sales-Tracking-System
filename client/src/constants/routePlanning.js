@@ -8,9 +8,9 @@ import { LuShieldCheck, LuUsers, LuNavigation } from 'react-icons/lu';
 
 export const RJP_ROLE_TAB_MAP = {
     SPV: [
-        { id: 'MASTER_CLUSTER', shortLabel: 'Master Kluster', label: 'Master Kluster & Alokasi Region RJP', icon: LuShieldCheck },
-        { id: 'SPV_ROLLING', shortLabel: 'Matriks Rolling', label: 'Matriks Rolling Mingguan', icon: LuUsers },
-        { id: 'SALES_VIEW', shortLabel: 'Pratinjau Sales', label: 'Pratinjau Rute Sales Harian & TSP', icon: LuNavigation },
+        { id: 'MASTER_CLUSTER', shortLabel: '1. Wilayah', label: '1. Wilayah & outlet', icon: LuShieldCheck },
+        { id: 'SPV_ROLLING', shortLabel: '2. Template', label: '2. Jadwal mingguan', icon: LuUsers },
+        { id: 'SALES_VIEW', shortLabel: '3. PJP harian', label: '3. PJP harian', icon: LuNavigation },
     ],
     SALES: [
         { id: 'SALES_VIEW', shortLabel: 'Rute Saya', label: 'Rute Kunjungan Hari Ini', icon: LuNavigation },

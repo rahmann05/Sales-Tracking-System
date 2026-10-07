@@ -1,7 +1,8 @@
 import React from 'react';
 import { LuLayers } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
-import { getNavigationTabs } from '../../../constants/navigation';
+import {getAdminNavigationGroups,adminParentTab} from '../../../constants/adminNavigation';
+import { getNavigationTabs, TAB_IDS } from '../../../constants/navigation';
 import '../../../styles/layout/Sidebar.css';
 
 /**
@@ -30,35 +31,18 @@ const SidebarNavItem = ({ item, isActive, onClick }) => {
   const Icon = item.icon;
   return (
     <button
+      type="button"
+      aria-current={isActive ? 'page' : undefined}
       onClick={() => onClick(item.id)}
       className={`sidebar-nav-btn ${isActive ? 'sidebar-nav-btn-active' : 'sidebar-nav-btn-inactive'}`}
     >
       <div className="w-5 h-5 flex items-center justify-center shrink-0">
         <Icon className="text-lg" />
       </div>
-      <span className="truncate">{item.label}</span>
+      <span className="min-w-0 whitespace-normal leading-snug">{item.label}</span>
     </button>
   );
 };
-
-/**
- * SidebarRoleBadge Component
- * Single Responsibility: Display the current active role badge with cohesive styling.
- */
-const SidebarRoleBadge = ({ roleLabel }) => (
-  <div className="sidebar-footer-card">
-    <div className="flex items-center justify-between">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
-        Peran Aktif
-      </span>
-      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-    </div>
-    <p className="text-xs font-bold text-on-surface m-0">{roleLabel}</p>
-    <span className="text-[11px] text-on-surface-variant m-0">
-      Sistem Distribusi Terhubung
-    </span>
-  </div>
-);
 
 /**
  * Sidebar Layout Component (Desktop Rail)
@@ -67,23 +51,20 @@ const SidebarRoleBadge = ({ roleLabel }) => (
 export const Sidebar = ({ activeTab, setActiveTab }) => {
   const { user } = useApp();
   const navItems = getNavigationTabs(user);
+  const groups=user?.role==='ADMIN'?getAdminNavigationGroups(user):null;
 
   return (
     <aside className="sidebar-container">
       <SidebarBrand />
 
-      <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <SidebarNavItem
-            key={item.id}
-            item={item}
-            isActive={activeTab === item.id}
-            onClick={setActiveTab}
-          />
-        ))}
+      <nav className="sidebar-nav" aria-label="Navigasi utama">
+        {groups?<>
+          <SidebarNavItem item={{...navItems[0],label:'Beranda admin'}} isActive={activeTab===TAB_IDS.ROLE_WORKSPACE} onClick={setActiveTab}/>
+          {groups.map(group=><section className="sidebar-nav-group" key={group.id} aria-labelledby={`sidebar-${group.id}`}><h2 id={`sidebar-${group.id}`}>{group.label}</h2>{group.items.map(item=><SidebarNavItem key={item.id} item={item} isActive={adminParentTab(activeTab)===item.id} onClick={setActiveTab}/>)}</section>)}
+        </>:navItems.map(item=><SidebarNavItem key={item.id} item={item} isActive={activeTab===item.id} onClick={setActiveTab}/>)}
       </nav>
 
-      <SidebarRoleBadge roleLabel={user?.roleLabel || user?.role} />
+
     </aside>
   );
 };

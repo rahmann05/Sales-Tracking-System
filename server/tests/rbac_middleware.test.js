@@ -1,3 +1,4 @@
+import { prisma } from '../src/config/prisma.js';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
@@ -34,7 +35,13 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
       assert.equal(caughtError.statusCode, 401);
     });
 
-    it('should successfully decode valid JWT token and populate req.user', () => {
+    it('should load current account rather than stale JWT privileges', async t => {
+      const originalConfig = prisma.systemConfig.findUnique;
+      prisma.systemConfig.findUnique = async () => null;
+      t.after(() => {prisma.systemConfig.findUnique=originalConfig;});
+      const original = prisma.user.findUnique;
+      prisma.user.findUnique = async () => ({id:'usr-123',role:'SALES',deletedAt:null});
+      t.after(() => {prisma.user.findUnique = original;});
       const payload = { id: 'usr-123', role: 'SUPERVISOR', clusterId: 'cluster-cmh' };
       const token = jwt.sign(payload, config.jwtSecret, { expiresIn: '1h' });
 
@@ -42,13 +49,13 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
       const res = {};
       let nextCalled = false;
 
-      authenticate(req, res, (err) => {
+      await authenticate(req, res, (err) => {
         if (!err) nextCalled = true;
       });
 
       assert.equal(nextCalled, true);
       assert.equal(req.user.id, 'usr-123');
-      assert.equal(req.user.role, 'SUPERVISOR');
+      assert.equal(req.user.role, 'SALES');
     });
   });
 

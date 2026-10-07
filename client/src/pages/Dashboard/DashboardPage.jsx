@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ActiveRoutesList } from './components/ActiveRoutesList';
-import { useRouteFilter } from '../../shared/hooks/useRouteFilter';
-import { useDebounce } from '../../shared/hooks/useDebounce';
 import { filterStopsForToday } from '../../utils/dateUtils';
 import { useMap } from '../../context/MapContext';
 import { useMapData } from '../../context/MapDataContext';
 import { computeClusterPolygons } from '../../utils/clusterBoundaryHelper';
 import '../../styles/pages/Dashboard.css';
 
-export const DashboardPage = ({ searchQuery = '' }) => {
+export const DashboardPage = () => {
   const { user, activeRoutes = [], salesStops = [] } = useApp();
   const {
     setMapMode,
@@ -23,7 +21,7 @@ export const DashboardPage = ({ searchQuery = '' }) => {
     fitBounds,
     isMapReady,
   } = useMap();
-  const { outlets = [], clusters: mapClusters = [] } = useMapData();
+  const { outlets = [], clusters: mapClusters = [], error: mapDataError, refetchAll } = useMapData();
 
   const isSalesRole = user?.role === 'SALES';
 
@@ -53,7 +51,7 @@ export const DashboardPage = ({ searchQuery = '' }) => {
     return todayRoutes.filter((r) => (r.repName || r.name) === selectedSalesName);
   }, [todayRoutes, selectedSalesName]);
 
-  const { routes, setQuery } = useRouteFilter(filteredRoutes);
+  const routes = filteredRoutes;
 
   // Selected Sales route (for SPV/Manager view or drilldown)
   const [selectedRoute, setSelectedRoute] = useState(null);
@@ -71,12 +69,6 @@ export const DashboardPage = ({ searchQuery = '' }) => {
     }
     return todayStops;
   }, [todayStops, isSalesRole, user]);
-
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-  useEffect(() => {
-    setQuery(debouncedSearchQuery);
-  }, [debouncedSearchQuery, setQuery]);
 
   // ─── Map Mode Setup & Teardown ──────────────────────────────────────────────
   useEffect(() => {
@@ -230,6 +222,7 @@ export const DashboardPage = ({ searchQuery = '' }) => {
       {/* Floating Dashboard Left Overlay Panel */}
       <div className="dashboard-overlay">
         <div className="dashboard-left-col">
+          {mapDataError && <div role="alert" className="app-error pointer-events-auto"><p>Data peta belum berhasil diperbarui: {mapDataError}</p><button type="button" className="app-button" onClick={refetchAll}>Coba lagi</button></div>}
           <ActiveRoutesList
             routes={routes}
             salesStops={displayStops}

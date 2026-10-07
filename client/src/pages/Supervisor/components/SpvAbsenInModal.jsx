@@ -1,13 +1,16 @@
-import React from 'react';
-import { LuCamera, LuCheck } from 'react-icons/lu';
+import React, { useState } from 'react';
+import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
+import { LuCheck } from 'react-icons/lu';
 import { SpvModalShell } from './SpvModalShell';
 
 /**
  * SpvAbsenInModal Component
  * Single Responsibility: Modal absen masuk (clock-in) kunjungan supervisi.
  */
-export const SpvAbsenInModal = ({ stop, inputNotes, onChangeNotes, onClose, onConfirm }) => (
-    <SpvModalShell
+export const SpvAbsenInModal = ({ stop, inputNotes, onChangeNotes, onClose, onConfirm, error, saving }) => {
+  const [capture, setCapture] = useState(null);
+  return (
+    <SpvModalShell error={error} saving={saving}
         title="Absen Masuk Kunjungan Supervisi"
         subtitle={stop.outletName}
         onClose={onClose}
@@ -22,7 +25,8 @@ export const SpvAbsenInModal = ({ stop, inputNotes, onChangeNotes, onClose, onCo
                 </button>
                 <button
                     type="button"
-                    onClick={onConfirm}
+                    disabled={saving || !capture?.gps}
+                    onClick={() => onConfirm({ photoUrl: capture.photoUrl, latitude: capture.gps.lat, longitude: capture.gps.lng })}
                     className="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                     <LuCheck className="text-base" />
@@ -32,13 +36,7 @@ export const SpvAbsenInModal = ({ stop, inputNotes, onChangeNotes, onClose, onCo
         }
     >
         <div className="space-y-4 py-3">
-            <div className="h-44 bg-surface-variant/40 rounded-2xl border-2 border-dashed border-border-glass flex flex-col items-center justify-center text-center p-4">
-                <LuCamera className="text-3xl text-primary mb-2" />
-                <span className="text-xs font-bold text-on-surface">Foto Kehadiran di Outlet</span>
-                <span className="text-[10px] text-on-surface-variant mt-0.5">
-                    GPS Terverifikasi: Radius {stop.currentDistance}m dari lokasi outlet
-                </span>
-            </div>
+            <DeviceCameraCapture capturedPhoto={capture?.photoUrl} onCapture={(photoUrl, gps) => setCapture({ photoUrl, gps })} onRetake={() => setCapture(null)} requireGps targetLat={stop.latitude} targetLng={stop.longitude} maxRadiusMeters={stop.radiusMeters} outletName={stop.outletName} />
 
             <div className="space-y-1.5">
                 <label className="text-xs font-bold text-on-surface block">Catatan Awal Kunjungan (Opsional):</label>
@@ -53,3 +51,4 @@ export const SpvAbsenInModal = ({ stop, inputNotes, onChangeNotes, onClose, onCo
         </div>
     </SpvModalShell>
 );
+};

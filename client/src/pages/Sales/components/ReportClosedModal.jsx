@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LuCamera, LuUpload, LuCheck } from 'react-icons/lu';
+import { LuCamera, LuCheck } from "react-icons/lu";
 import { FiXCircle } from 'react-icons/fi';
 
 /**
@@ -10,6 +10,8 @@ export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
   const [closedReason, setClosedReason] = useState('Toko Gembok / Tutup Permanen');
   const [closedPhoto, setClosedPhoto] = useState(null);
 
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   if (!stop) return null;
 
   const handleFileChange = (e) => {
@@ -23,17 +25,22 @@ export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
     }
   };
 
-  const handleSubmit = () => {
-    onSubmitReport({
+  const handleSubmit = async () => {
+    if (saving) return;
+    setSaving(true); setError('');
+    try {
+    await onSubmitReport({
       stopId: stop.id,
       reason: closedReason,
       photoUrl: closedPhoto || null,
     });
+    } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
   return (
     <div className="modal-backdrop">
       <div className="modal-card">
+        {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
         <div className="modal-header">
           <div>
             <h3 className="font-bold text-lg text-on-surface">Lapor Toko Tutup</h3>
@@ -99,6 +106,7 @@ export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
         <button
           type="button"
           onClick={handleSubmit}
+            disabled={saving}
           className="w-full py-3 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 transition-all shadow-md"
         >
           Kirim Laporan ke Supervisor

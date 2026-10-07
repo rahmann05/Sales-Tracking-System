@@ -37,19 +37,8 @@ export const PendingOrderCard = ({ order, onDecision }) => {
         </span>
       </div>
 
-      {/* Debt Check & Total Order */}
-      <div className="poc-credit-check">
-        <div>
-          <span className="poc-credit-label">Piutang Toko Saat Ini:</span>
-          <span className="poc-credit-value">Rp {(order.outstanding || 0).toLocaleString('id-ID')}</span>
-        </div>
-        <div>
-          <span className="poc-credit-label">Total Setelah Order Ini:</span>
-          <span className="poc-credit-value ok">
-            Rp {((order.outstanding || 0) + (order.totalAmount || 0)).toLocaleString('id-ID')}
-          </span>
-        </div>
-      </div>
+      <p className="text-xs text-on-surface-variant px-4 pb-3">Persetujuan ini menilai order. Saldo piutang dan plafon kredit belum dikelola sebagai buku transaksi di aplikasi.</p>
+      {order.rejectionReason && <p className="text-sm text-red-600 px-4 pb-3">Alasan penolakan: {order.rejectionReason}</p>}
 
       {/* Items Breakdown */}
       <OrderItemsTable items={order.items} totalAmount={order.totalAmount} />

@@ -1,5 +1,6 @@
+import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import React, { useState, useEffect, useCallback } from 'react';
-import { deliveryApi } from '../../services/api';
+import { deliveryApi, collectPages } from '../../services/api';
 import { useApp } from '../../context/AppContext';
 import { DriverStopCard } from './components/DriverStopCard';
 import { DriverAttendanceModal } from './components/DriverAttendanceModal';
@@ -15,15 +16,17 @@ export const DriverFieldView = () => {
   const [loading, setLoading] = useState(true);
   const [modalData, setModalData] = useState(null); // { stop, type: 'attendance' | 'status' }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = wibDateKey();
+  const [selectedRouteId,setSelectedRouteId]=useState('');
+  const [error,setError]=useState('');
 
   const fetchRoutes = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await deliveryApi.getDeliveryRoutes({ date: today });
-      if (res.success) setRoutes(res.data.items || []);
+      const res = await collectPages(deliveryApi.getDeliveryRoutes,{date:today});
+      setRoutes(res.data);setError('');
     } catch (err) {
-      console.error('Error fetching driver routes:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -34,7 +37,7 @@ export const DriverFieldView = () => {
   }, [fetchRoutes]);
 
   // Active route (first IN_TRANSIT or READY)
-  const activeRoute = routes.find((r) => r.status === 'IN_TRANSIT') || routes.find((r) => r.status === 'READY') || routes[0];
+  const activeRoute = routes.find(r=>r.id===selectedRouteId) || routes.find((r) => r.status === 'IN_TRANSIT') || routes.find((r) => r.status === 'READY') || routes[0];
   const stops = activeRoute?.stops || [];
 
   // Stats
@@ -44,26 +47,10 @@ export const DriverFieldView = () => {
   const rejectedCount = stops.filter((s) => s.status === 'REJECTED' || s.status === 'PARTIAL_REJECT').length;
   const totalCartons = activeRoute?.totalCartons || 0;
 
-  const handleAttendance = async (stopId, data) => {
-    try {
-      await deliveryApi.submitDriverAttendance(stopId, data);
-      setModalData(null);
-      fetchRoutes();
-    } catch (err) {
-      alert(err.message || 'Gagal mencatat absensi');
-    }
+  const handleAttendance = async (stopId,data) => {
+    await deliveryApi.submitDriverAttendance(stopId,data);
+    setModalData(null);await fetchRoutes();
   };
-
-  const handleStatusUpdate = async (stopId, data) => {
-    try {
-      await deliveryApi.updateStopStatus(stopId, data);
-      setModalData(null);
-      fetchRoutes();
-    } catch (err) {
-      alert(err.message || 'Gagal update status');
-    }
-  };
-
   return (
     <div className="p-4 md:p-6 space-y-5 max-w-3xl mx-auto pb-16 md:pb-8">
       {/* Header */}
@@ -104,6 +91,8 @@ export const DriverFieldView = () => {
         )}
       </div>
 
+      {error&&<p role="alert" className="text-red-600">{error}</p>}
+      {routes.length>1&&<label className="block">Pilih rute <select className="p-3 border rounded-xl" value={activeRoute?.id||''} onChange={e=>setSelectedRouteId(e.target.value)}>{routes.map(r=><option key={r.id} value={r.id}>{r.code} · {r.status}</option>)}</select></label>}
       {/* Progress Summary */}
       {activeRoute && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -165,7 +154,6 @@ export const DriverFieldView = () => {
           type={modalData.type}
           onClose={() => setModalData(null)}
           onSubmitAttendance={handleAttendance}
-          onSubmitStatus={handleStatusUpdate}
         />
       )}
     </div>

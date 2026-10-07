@@ -1,148 +1,22 @@
-.create-cluster-page {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    overflow: hidden;
-    pointer-events: none; /* let all map interactions (scroll, drag, click) pass through */
-}
-
-/* Kiri: Map Spacer (60%) */
-.map-spacer {
-    flex: 0 0 60%;
-    height: 100%;
-    background-color: transparent;
-    pointer-events: none;
-}
-
-/* Kanan: Control Panel (40%) */
-.control-panel-container {
-    flex: 0 0 40%;
-    height: 100%;
-    background-color: #ffffff;
-    border-left: 1px solid #e5e7eb;
-    box-shadow: -4px 0 6px -1px rgba(0, 0, 0, 0.05);
-    z-index: 10;
-    pointer-events: auto;
-}
-
-/* Style tambahan untuk panel jika perlu */
-.cluster-control-panel {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Step Wizard Progress Bar Adjustments (fallback classes since tailwind classes already used) */
-.wizard-step-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.wizard-step-item .step-number {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 9999px;
-    font-weight: bold;
-    font-size: 0.75rem;
-}
-
-.wizard-step-item .step-number.active {
-    background-color: #2563eb;
-    color: #ffffff;
-}
-
-.wizard-step-item .step-number.inactive {
-    background-color: #e5e7eb;
-    color: #4b5563;
-}
-
-.wizard-step-item .step-line {
-    height: 0.25rem;
-    flex: 1;
-    margin: 0 0.5rem;
-}
-
-.wizard-step-item .step-line.active {
-    background-color: #2563eb;
-}
-
-.wizard-step-item .step-line.inactive {
-    background-color: #e5e7eb;
-}
-
-/* Outlet List Panel adjustments */
-.outlet-list-panel {
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    max-height: 15rem;
-    overflow-y: auto;
-    background-color: #f9fafb;
-}
-
-.outlet-list-item {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
-    cursor: pointer;
-    transition: background-color 0.15s ease-in-out;
-}
-
-.outlet-list-item:hover {
-    background-color: #ffffff;
-}
-
-.outlet-list-item:last-child {
-    border-bottom: none;
-}
-
-.outlet-list-item.selected {
-    background-color: #ffffff;
-}
-
-.outlet-list-item.unselected {
-    background-color: #f9fafb;
-    opacity: 0.6;
-}
-
-/* Route Reference Card adjustments */
-.route-reference-card {
-    padding: 0.75rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.15s ease-in-out;
-}
-
-.route-reference-card:hover {
-    border-color: #93c5fd;
-}
-
-.route-reference-card.active {
-    border-color: #2563eb;
-    background-color: #eff6ff;
-    box-shadow: 0 0 0 1px #2563eb;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .create-cluster-page {
-        flex-direction: column;
-    }
-
-    .map-spacer {
-        flex: 0 0 50%;
-        width: 100%;
-    }
-
-    .control-panel-container {
-        flex: 1;
-        width: 100%;
-        border-left: none;
-        border-top: 1px solid #e5e7eb;
-    }
-}
+.create-cluster-page{position:absolute;inset:0;display:flex;pointer-events:none;z-index:2;overflow:hidden}
+.create-cluster-page .map-spacer{flex:1;min-width:0;position:relative;pointer-events:none}
+.cluster-map-hint{margin:16px;display:inline-block;padding:10px 14px;background:var(--color-surface,#fff);border:1px solid var(--color-border-glass,#e5e7eb);border-radius:12px;font-size:13px;box-shadow:0 2px 8px #0000000a}
+.create-cluster-page .control-panel-container{width:clamp(360px,42%,560px);height:100%;min-height:0;pointer-events:auto;background:var(--color-surface,#fff);border-left:1px solid var(--color-border-glass,#e5e7eb);box-shadow:-4px 0 20px #00000008}
+.cluster-control-panel{height:100%;display:flex;flex-direction:column;min-height:0;color:var(--color-on-surface,#171717)}
+.cluster-panel-header,.cluster-panel-footer{padding:18px 20px;flex-shrink:0}
+.cluster-panel-header{border-bottom:1px solid var(--color-border-glass,#e5e7eb)}
+.cluster-panel-header h1{font-size:20px;font-weight:750;margin:0 0 4px}
+.cluster-panel-header p{font-size:13px;color:var(--color-on-surface-variant,#6b7280)}
+.cluster-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:16px 0 0}
+.cluster-steps li{display:flex;flex-direction:column;gap:6px;font-size:11px;overflow-wrap:anywhere;color:var(--color-on-surface-variant,#6b7280)}
+.cluster-steps li span{display:grid;place-items:center;border:1px solid #d4d4d4;border-radius:50%;width:26px;height:26px;font-weight:700}
+.cluster-steps li[aria-current=step]{color:var(--color-on-surface,#171717);font-weight:700}
+.cluster-steps li[aria-current=step] span{background:#202020;color:#fff;border-color:#202020}
+.cluster-panel-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px;font-size:14px}
+.cluster-panel-body p{line-height:1.6;margin:0}
+.cluster-panel-footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid var(--color-border-glass,#e5e7eb)}
+.cluster-summary{display:grid;grid-template-columns:minmax(90px,1fr) minmax(0,2fr);gap:12px;padding:16px;border:1px solid #e5e7eb;border-radius:14px}
+.cluster-summary dt{color:var(--color-on-surface-variant,#6b7280)}
+.cluster-summary dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+@media(max-width:1024px){.create-cluster-page{flex-direction:column}.create-cluster-page .map-spacer{flex:0 0 25%;min-height:90px}.create-cluster-page .control-panel-container{width:100%;height:auto;min-height:0;flex:1;border-left:0;border-top:1px solid #e5e7eb}.cluster-map-hint{font-size:12px;margin:10px}}
+@media(max-width:767px){.create-cluster-page{bottom:calc(72px + env(safe-area-inset-bottom))}.cluster-panel-header,.cluster-panel-footer{padding:12px 16px}.cluster-panel-body{padding:16px}.cluster-steps{margin-top:10px}}

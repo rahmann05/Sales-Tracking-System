@@ -3,6 +3,7 @@ import { LuLayers, LuLogOut, LuArrowLeft } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { Avatar } from '../common/Avatar';
+import {getAdminNavigationGroups} from '../../../constants/adminNavigation';
 import { TAB_IDS } from '../../../constants/navigation';
 import '../../../styles/layout/MobileHeader.css';
 
@@ -12,10 +13,11 @@ import '../../../styles/layout/MobileHeader.css';
 export const MobileHeader = ({ onLogout }) => {
   const { user, activeTab, setActiveTab } = useApp();
   const isAdmin = user?.role === 'ADMIN';
+  const currentAdmin=getAdminNavigationGroups(user).flatMap(group=>group.items).find(item=>item.id===activeTab);
   const isLanding = activeTab === TAB_IDS.ROLE_WORKSPACE;
 
   return (
-    <header className="mobile-header-container pointer-events-auto z-30">
+    <header className={`mobile-header-container pointer-events-auto z-30 ${isAdmin?'mobile-header-admin':''}`}>
       {/* Brand Title & Logo or Admin Back Button */}
       <div className="flex items-center gap-2.5">
         {isAdmin && !isLanding ? (
@@ -34,9 +36,9 @@ export const MobileHeader = ({ onLogout }) => {
           </div>
         )}
         <div>
-          <h1 className="mobile-brand-title">Sinar Anugrah</h1>
+          <h1 className="mobile-brand-title">{isAdmin?(isLanding?'Beranda admin':currentAdmin?.label || 'Buat kluster'):'Sinar Anugrah'}</h1>
           <span className="mobile-brand-subtitle font-bold text-primary">
-            {isAdmin ? 'Portal Admin' : user?.roleLabel || user?.role}
+            Operasional distribusi
           </span>
         </div>
       </div>
@@ -48,13 +50,11 @@ export const MobileHeader = ({ onLogout }) => {
         <button
           type="button"
           onClick={onLogout}
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-surface border border-border-glass cursor-pointer hover:bg-surface-variant active:scale-95 transition-all shadow-sm pointer-events-auto"
+          className="header-user-badge mobile-profile"
           title="Klik untuk Keluar (Logout)"
         >
           <Avatar src={user?.avatar} name={user?.name} size="xs" />
-          <span className="text-xs font-bold text-on-surface truncate max-w-[85px]">
-            {user?.name?.split(' ')[0]}
-          </span>
+          <span className="profile-copy"><span className="profile-name">{user?.name}</span><span className="profile-role">{user?.roleLabel || user?.role}</span></span>
           <LuLogOut className="text-on-surface-variant text-xs shrink-0" />
         </button>
       </div>

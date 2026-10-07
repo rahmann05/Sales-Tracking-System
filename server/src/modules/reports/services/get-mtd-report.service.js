@@ -1,4 +1,7 @@
+import { loadReportRecords } from './report-records.service.js';
+import { offPjpSalesResult, visitSalesResult, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 /** getMtdReport - single-responsibility service (extracted from reports.service.js). */
+import { monthWorkingDays } from '../../../../../shared/working-calendar.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
@@ -8,43 +11,31 @@ import { getDynamicConfig } from '../../config/config.service.js';
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export const getMtdReport = async (query = {}) => {
-  const { month, year, userId, clusterId } = query;
-  const defaultLma = await getDynamicConfig('SALES_BASELINE_LMA_AMOUNT', 85000000);
+  const { month, year, userId, clusterId, supervisorId } = query;
+  const defaultLma = await getDynamicConfig('SALES_BASELINE_LMA_AMOUNT', 0);
   const defaultTarget = await getDynamicConfig('SALES_MONTHLY_TARGET_AMOUNT', 100000000);
+  const manualSalesMode = await getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY');
 
-  const now = new Date();
-  const targetYear = year ? parseInt(year, 10) : now.getFullYear();
-  const targetMonth = month ? parseInt(month, 10) : now.getMonth() + 1; // 1-indexed
+  const now = new Date(`${wibDateKey()}T12:00:00Z`);
+  const targetYear = year ? parseInt(year, 10) : now.getUTCFullYear();
+  const targetMonth = month ? parseInt(month, 10) : now.getUTCMonth() + 1; // 1-indexed
 
   // Month start & end dates
-  const mtdStart = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0));
-  const mtdEnd = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59));
+  const mtdStart = new Date(Date.UTC(targetYear, targetMonth - 1, 1, -7));
+  const mtdEnd = new Date(Date.UTC(targetYear, targetMonth, 1, -7) - 1);
 
   // Last month start & end dates for LMA comparison
-  const lmaStart = new Date(Date.UTC(targetYear, targetMonth - 2, 1, 0, 0, 0));
-  const lmaEnd = new Date(Date.UTC(targetYear, targetMonth - 1, 0, 23, 59, 59));
+  const lmaStart = new Date(Date.UTC(targetYear, targetMonth - 2, 1, -7));
+  const lmaEnd = new Date(mtdStart.getTime() - 1);
 
-  // Calculate working days in month (Mon-Sat, excluding Sun)
-  let totalWorkingDays = 0;
-  let workingDaysElapsed = 0;
-  const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
-  const todayDate = now.getDate();
-  const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === (now.getMonth() + 1);
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    const d = new Date(targetYear, targetMonth - 1, day);
-    if (d.getDay() !== 0) { // Exclude Sunday
-      totalWorkingDays += 1;
-      if (!isCurrentMonth || day <= todayDate) {
-        workingDaysElapsed += 1;
-      }
-    }
-  }
+  const configuredDays = await getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6');
+  const { total: totalWorkingDays, elapsed: workingDaysElapsed } = monthWorkingDays(targetYear, targetMonth, configuredDays, wibDateKey());
 
   // Fetch Salesmen
   const salesWhere = { role: 'SALES', deletedAt: null };
   if (userId) salesWhere.id = userId;
   if (clusterId) salesWhere.clusterId = clusterId;
+  if (supervisorId) salesWhere.supervisorId = supervisorId;
 
   const salesmen = await prisma.user.findMany({
     where: salesWhere,
@@ -59,6 +50,7 @@ export const getMtdReport = async (query = {}) => {
 
   let totalMtdPlan = 0;
   let totalMtdActual = 0;
+  let totalOffPjp = 0;
   let totalMtdEc = 0;
   let totalMtdOmzet = 0;
   let totalMtdSku = 0;
@@ -67,43 +59,19 @@ export const getMtdReport = async (query = {}) => {
 
   // Channel distribution counters
   const channelMap = {
+    OFF_PJP: { name: 'Kunjungan luar PJP', mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
     RETAIL: { name: 'Retail / General Trade', count: 0, mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
     MODERN_TRADE: { name: 'Modern Trade (Supermarket/Minimarket)', count: 0, mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
     SEMI_WHOLESALE: { name: 'Semi Wholesale / Grosir', count: 0, mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
   };
 
+  const ids=salesmen.map(s=>s.id);
+  const [mtdRecords,lmaRecords]=await Promise.all([loadReportRecords(ids,mtdStart,mtdEnd,{includeOutlets:true}),loadReportRecords(ids,lmaStart,lmaEnd)]);
+
   const salesmanRows = await Promise.all(
     salesmen.map(async (sales) => {
-      // 1. Current Month (MTD) PJP & Attendances
-      const mtdPjps = await prisma.pjp.findMany({
-        where: {
-          userId: sales.id,
-          date: { gte: mtdStart, lte: mtdEnd },
-        },
-        include: {
-          stops: {
-            include: {
-              outlet: true,
-              attendances: true,
-            },
-          },
-        },
-      });
-
-      // 2. Last Month (LMA) Orders for sales
-      const lmaPjps = await prisma.pjp.findMany({
-        where: {
-          userId: sales.id,
-          date: { gte: lmaStart, lte: lmaEnd },
-        },
-        include: {
-          stops: {
-            include: {
-              attendances: true,
-            },
-          },
-        },
-      });
+      const mtdPjps=mtdRecords.pjps.get(sales.id) || [];
+      const lmaPjps=lmaRecords.pjps.get(sales.id) || [];
 
       let sMtdPlan = 0;
       let sMtdActual = 0;
@@ -116,11 +84,11 @@ export const getMtdReport = async (query = {}) => {
       mtdPjps.forEach((pjp) => {
         (pjp.stops || []).forEach((stop) => {
           sMtdPlan += 1;
-          const att = stop.attendances?.[0];
-          const isVisited = Boolean(att?.inTimestamp) || stop.status === 'VISITED';
+          const result = visitSalesResult(stop, { manualSalesMode });
+          const isVisited = result.actual;
           if (isVisited) sMtdActual += 1;
 
-          const orderTotal = att?.orderAmount || 0;
+          const orderTotal = result.orderAmount;
 
           const channelKey = (stop.outlet?.subChannel || stop.outlet?.type || 'RETAIL').toUpperCase();
           const targetChan = channelMap[channelKey] || channelMap.RETAIL;
@@ -129,24 +97,38 @@ export const getMtdReport = async (query = {}) => {
             targetChan.mtdVisits += 1;
           }
 
-          if (orderTotal > 0 || att?.isEffectiveCall) {
+          if (result.effective) {
             sMtdEc += 1;
             sMtdOmzet += orderTotal;
             targetChan.mtdEc += 1;
             targetChan.mtdOmzet += orderTotal;
           }
 
-          sMtdSku += att?.skuSold || 0;
+          sMtdSku += result.skuSold;
         });
       });
 
       // Calculate LMA
       lmaPjps.forEach((pjp) => {
         (pjp.stops || []).forEach((stop) => {
-          const orderTotal = stop.attendances?.[0]?.orderAmount || 0;
+          const orderTotal = visitSalesResult(stop, { manualSalesMode }).orderAmount;
           sLmaOmzet += orderTotal;
         });
       });
+
+      const offMtd=mtdRecords.offVisits.get(sales.id) || [];
+      const offLma=lmaRecords.offVisits.get(sales.id) || [];
+      sMtdActual += offMtd.length;
+      totalOffPjp += offMtd.length;
+      channelMap.OFF_PJP.mtdVisits += offMtd.length;
+      for (const off of offMtd) {
+        const offResult = offPjpSalesResult(off, { manualSalesMode });
+        sMtdOmzet += offResult.orderAmount;
+        sMtdSku += offResult.skuSold;
+        channelMap.OFF_PJP.mtdOmzet += offResult.orderAmount;
+        if (offResult.effective) { sMtdEc += 1; channelMap.OFF_PJP.mtdEc += 1; }
+      }
+      sLmaOmzet += offLma.reduce((sum, off) => sum + offPjpSalesResult(off, { manualSalesMode }).orderAmount, 0);
 
       // Default baseline LMA if system is fresh
       if (sLmaOmzet === 0) {
@@ -179,7 +161,8 @@ export const getMtdReport = async (query = {}) => {
         mtdToLmaRateNum: mtdToLmaRate,
         mtdPlanCalls: sMtdPlan,
         mtdActualCalls: sMtdActual,
-        callComplianceRate: sMtdPlan > 0 ? `${Math.round((sMtdActual / sMtdPlan) * 100)}%` : '0%',
+        offPjpCalls: offMtd.length,
+        callComplianceRate: sMtdPlan > 0 ? `${Math.round(((sMtdActual - offMtd.length) / sMtdPlan) * 100)}%` : '0%',
         mtdEffectiveCalls: sMtdEc,
         effectiveCallRate: sMtdActual > 0 ? `${Math.round((sMtdEc / sMtdActual) * 100)}%` : '0%',
         totalSkuSold: sMtdSku,
@@ -221,7 +204,8 @@ export const getMtdReport = async (query = {}) => {
       mtdToLmaRate: totalLmaOmzet > 0 ? `${Math.round((totalMtdOmzet / totalLmaOmzet) * 100)}%` : '0%',
       totalMtdPlanCalls: totalMtdPlan,
       totalMtdActualCalls: totalMtdActual,
-      mtdCallComplianceRate: totalMtdPlan > 0 ? `${Math.round((totalMtdActual / totalMtdPlan) * 100)}%` : '0%',
+      totalOffPjpCalls: totalOffPjp,
+      mtdCallComplianceRate: totalMtdPlan > 0 ? `${Math.round(((totalMtdActual - totalOffPjp) / totalMtdPlan) * 100)}%` : '0%',
       totalMtdEffectiveCalls: totalMtdEc,
       mtdEffectiveCallRate: totalMtdActual > 0 ? `${Math.round((totalMtdEc / totalMtdActual) * 100)}%` : '0%',
       totalMtdSkuSold: totalMtdSku,

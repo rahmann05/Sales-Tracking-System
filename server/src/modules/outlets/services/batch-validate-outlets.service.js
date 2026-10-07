@@ -1,4 +1,6 @@
 /** batchValidateOutlets - single-responsibility service (extracted from outlet-validation.service.js). */
+import { AppError } from '../../../utils/errors.js';
+import { assertOutletAccess } from '../../../utils/team-scope.js';
 import { prisma } from '../../../config/prisma.js';
 import { validateOutlet } from './validate-outlet.service.js';
 import { getValidationSummary } from './get-validation-summary.service.js';
@@ -9,10 +11,13 @@ import { getValidationSummary } from './get-validation-summary.service.js';
  * Validate multiple outlets in batch with concurrency limit to respect API rate limits.
  * @param {Object} options - { outletIds?: string[], filter?: string, limit?: number }
  */
-export const batchValidateOutlets = async (options = {}) => {
-  const { outletIds, filter, limit = 50 } = options;
+export const batchValidateOutlets = async (options = {}, actor) => {
+  const { outletIds, filter } = options;
+  const limit = Math.min(100,Math.max(1,Number(options.limit)||50));
+  if (outletIds && (!Array.isArray(outletIds) || outletIds.some(id=>typeof id!=='string'))) throw new AppError('Daftar outlet tidak valid',400);
+  if(actor && outletIds) for(const id of outletIds) await assertOutletAccess(actor,id);
 
-  const where = { deletedAt: null };
+  const where = { deletedAt: null,...(actor?.role==='SUPERVISOR'?{cluster:{supervisorId:actor.id,deletedAt:null}}:{}) };
 
   if (Array.isArray(outletIds) && outletIds.length > 0) {
     where.id = { in: outletIds };
@@ -58,7 +63,7 @@ export const batchValidateOutlets = async (options = {}) => {
     await Promise.all(chunkPromises);
   }
 
-  const summary = await getValidationSummary();
+  const summary = await getValidationSummary(actor);
 
   return {
     ...results,

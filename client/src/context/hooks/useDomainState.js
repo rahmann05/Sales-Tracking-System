@@ -9,8 +9,6 @@ import { useState } from 'react';
 export const useDomainState = () => {
   // Sales Daily PJP Stops (diisi dari PostgreSQL saat login)
   const [salesStops, setSalesStops] = useState([]);
-  // Supervisor Teams List (dari PostgreSQL)
-  const [supervisorTeams, setSupervisorTeams] = useState([]);
   // Field Team Members List (dari PostgreSQL)
   const [teamMembers, setTeamMembers] = useState([]);
   // Dashboard Active Routes List (diisi dari PostgreSQL)
@@ -19,8 +17,6 @@ export const useDomainState = () => {
   const [masterRoutes, setMasterRoutes] = useState([]);
   // Detailed Sales Reps List (dari PostgreSQL)
   const [salesList, setSalesList] = useState([]);
-  // Tim RJP / Tim Kunjungan List (dari PostgreSQL)
-  const [rjpTeams, setRjpTeams] = useState([]);
   // Off-PJP Store Absen Records (diisi dari PostgreSQL)
   const [offPjpAttendances, setOffPjpAttendances] = useState([]);
   // Sales Orders List
@@ -36,18 +32,19 @@ export const useDomainState = () => {
     setOrders([]);
     setProducts([]);
     setActiveRoutes([]);
-    setSupervisorTeams([]);
     setTeamMembers([]);
+    setSalesList([]);
+    setMasterRoutes([]);
+    setOffPjpAttendances([]);
+    setIncidents([]);
   };
 
   return {
     salesStops, setSalesStops,
-    supervisorTeams, setSupervisorTeams,
     teamMembers, setTeamMembers,
     activeRoutes, setActiveRoutes,
     masterRoutes, setMasterRoutes,
     salesList, setSalesList,
-    rjpTeams, setRjpTeams,
     offPjpAttendances, setOffPjpAttendances,
     orders, setOrders,
     products, setProducts,

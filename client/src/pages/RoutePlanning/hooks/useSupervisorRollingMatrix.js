@@ -1,111 +1,45 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { pjpApi } from '../../../services/api';
-
-// Label hari (Senin-Sabtu) untuk mapping tanggal PJP
-const DAY_LABELS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
-/**
- * useSupervisorRollingMatrix Hook
- * Single Responsibility: Supervisor Weekly Matrix State (Senin-Sabtu), Auto-Rolling Algorithm & Day Reassignments.
- * Data murni dari PostgreSQL (PJP per sales) — bukan mock.
- */
+const DAYS = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 export const useSupervisorRollingMatrix = () => {
-  const [matrixRows, setMatrixRows] = useState([]);
-  const [selectedCell, setSelectedCell] = useState(null); // { salesId, day, currentData }
-  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
-  const [isAutoRollingModalOpen, setIsAutoRollingModalOpen] = useState(false);
-
-  // Bangun matrix rows dari PJP backend (per sales, per hari)
-  useEffect(() => {
-    let isMounted = true;
-    pjpApi.getAllPjps()
-      .then((res) => {
-        if (!isMounted) return;
-        const pjps = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
-        const bySales = {};
-        pjps.forEach((p) => {
-          const sid = p.userId || p.user?.id;
-          if (!sid) return;
-          // Matriks rolling ini khusus untuk sales lapangan (bukan supervisor)
-          if (p.user?.role && p.user.role !== 'SALES') return;
-
-          if (!bySales[sid]) {
-            const spvName = p.user?.cluster?.supervisor?.name || p.user?.spvName || 'Ahmad Subagja';
-            bySales[sid] = {
-              salesId: sid,
-              salesName: p.user?.name || 'Sales',
-              spvName,
-              primaryCluster: p.user?.cluster?.name || p.cluster?.name || '-',
-              schedule: {},
-            };
-          }
-          const dayLabel = DAY_LABELS[new Date(p.date).getDay()];
-          const stops = p.stops || [];
-          const firstOutlet = stops[0]?.outlet || {};
-          bySales[sid].schedule[dayLabel] = {
-            clusterName: p.user?.cluster?.name || p.cluster?.name || p.name || 'RJP',
-            outletsCount: stops.length,
-            subDistrict: firstOutlet.subDistrict || firstOutlet.address || '-',
-          };
-        });
-        setMatrixRows(Object.values(bySales));
-      })
-      .catch(() => { });
-    return () => { isMounted = false; };
-  }, []);
-
-  // Opens modal to reassign a specific day's route for a specific salesman
-  const openReassignModal = useCallback((salesId, day, currentData) => {
-    setSelectedCell({ salesId, day, currentData });
-    setIsReassignModalOpen(true);
-  }, []);
-
-  // Save reassigned day route
-  const handleSaveDayReassignment = useCallback(({ salesId, day, clusterName, outletsCount, subDistrict }) => {
-    setMatrixRows((prev) =>
-      prev.map((row) => {
-        if (row.salesId !== salesId) return row;
-        return {
-          ...row,
-          schedule: {
-            ...row.schedule,
-            [day]: {
-              clusterName,
-              outletsCount: parseInt(outletsCount, 10) || 12,
-              subDistrict: subDistrict || 'Area Baru',
-            },
-          },
-        };
-      })
-    );
-    setIsReassignModalOpen(false);
-  }, []);
-
-  // Auto-Rolling algorithm: Rotates schedule across sales or cycle
-  const handleExecuteAutoRolling = useCallback(() => {
-    setMatrixRows((prev) => {
-      if (prev.length < 2) return prev;
-      // Shift schedules down by 1 salesman in rotation
-      const shifted = [...prev];
-      const lastSchedule = shifted[shifted.length - 1].schedule;
-      for (let i = shifted.length - 1; i > 0; i--) {
-        shifted[i] = { ...shifted[i], schedule: shifted[i - 1].schedule };
-      }
-      shifted[0] = { ...shifted[0], schedule: lastSchedule };
-      return shifted;
-    });
-    setIsAutoRollingModalOpen(false);
-  }, []);
-
-  return {
-    matrixRows,
-    selectedCell,
-    isReassignModalOpen,
-    setIsReassignModalOpen,
-    isAutoRollingModalOpen,
-    setIsAutoRollingModalOpen,
-    openReassignModal,
-    handleSaveDayReassignment,
-    handleExecuteAutoRolling,
+  const [source, setSource] = useState({sales:[],outlets:[]});
+  const [weekType,setWeekType] = useState('WEEK_1');
+  const [error,setError] = useState('');
+  const [loading,setLoading]=useState(true);
+  const revision=useRef(0);
+  const initializedWeek=useRef(false);
+  const [busy,setBusy] = useState(false);
+  const [selectedCell,setSelectedCell] = useState(null);
+  const [isReassignModalOpen,setIsReassignModalOpen] = useState(false);
+  const [isAutoRollingModalOpen,setIsAutoRollingModalOpen] = useState(false);
+  const reload = useCallback(async () => {
+    const current=++revision.current;setLoading(true);setError('');
+    try{const res=await pjpApi.getTemplates();if(current===revision.current){setSource(res.data);if(!initializedWeek.current){setWeekType(res.data.currentWeekType || 'WEEK_1');initializedWeek.current=true;}}}
+    catch(e){if(current===revision.current)setError(e.message);throw e;}
+    finally{if(current===revision.current)setLoading(false);}
+  },[]);
+  useEffect(() => {reload().catch(()=>{});return()=>{revision.current++;};},[reload]);
+  const days = (source.workingDays || [1,2,3,4,5,6]).map(index => DAYS[index]);
+  const matrixRows = source.sales.map(s => ({salesId:s.id,salesName:s.name,spvName:s.supervisor?.name||'Belum ditugaskan',primaryCluster:s.cluster?.name||'—',
+    schedule:Object.fromEntries(DAYS.map((day,dayOfWeek)=>{
+      const exact=s.pjpTemplates.find(t=>t.dayOfWeek===dayOfWeek&&t.weekType===weekType);
+      const t=exact||(weekType!=='ALL'?s.pjpTemplates.find(t=>t.dayOfWeek===dayOfWeek&&t.weekType==='ALL'):null);
+      return [day,{clusterName:t ? (t.stops.length ? 'Jadwal toko' : 'Tanpa kunjungan') : 'Belum ada template',outletsCount:t?.stops.length||0,subDistrict:t?.stops.map(x=>x.outlet.name).join(', ')||'—',outletIds:t?.stops.map(x=>x.outletId)||[],configured:Boolean(t)}];
+    }))}));
+  const openReassignModal = (salesId,day,currentData) => {setSelectedCell({salesId,day,currentData,weekType,outlets:source.outlets.filter(o=>o.cluster?.supervisorId===source.sales.find(s=>s.id===salesId)?.supervisorId)});setIsReassignModalOpen(true);};
+  const handleSaveDayReassignment = async ({salesId,day,outletIds}) => {
+    await pjpApi.saveTemplates([{userId:salesId,dayOfWeek:DAYS.indexOf(day),weekType,outletIds}]);
+    await reload();setIsReassignModalOpen(false);
   };
+  const handleExecuteAutoRolling = async () => {
+    setBusy(true);setError('');
+    try {
+      if(matrixRows.length<2) throw new Error('Rotasi memerlukan minimal dua sales');
+      if(matrixRows.some(r=>days.some(day=>!r.schedule[day].configured))) throw new Error('Lengkapi template semua hari kerja dan sales sebelum rotasi');
+      if (new Set(source.sales.map(s=>s.supervisorId)).size > 1) throw new Error('Rotasi dilakukan dalam satu tim supervisor. Gunakan penyuntingan per sales untuk beberapa tim.');
+      const entries=matrixRows.flatMap((r,i)=>days.map(day=>({userId:r.salesId,dayOfWeek:DAYS.indexOf(day),weekType,outletIds:matrixRows[(i+matrixRows.length-1)%matrixRows.length].schedule[day].outletIds})));
+      await pjpApi.saveTemplates(entries);await reload();setIsAutoRollingModalOpen(false);
+    } catch(e) {setError(e.message);} finally {setBusy(false);}
+  };
+  return {reload,loading,weekMode:source.weekMode,matrixRows,days,weekType,setWeekType,error,busy,selectedCell,isReassignModalOpen,setIsReassignModalOpen,isAutoRollingModalOpen,setIsAutoRollingModalOpen,openReassignModal,handleSaveDayReassignment,handleExecuteAutoRolling};
 };

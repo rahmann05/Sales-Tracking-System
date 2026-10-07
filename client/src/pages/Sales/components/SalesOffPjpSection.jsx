@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuStore, LuInfo } from 'react-icons/lu';
+import { LuInfo } from "react-icons/lu";
 import { SalesOffPjpCard } from './SalesOffPjpCard';
 
 /**

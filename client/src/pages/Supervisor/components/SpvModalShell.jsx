@@ -5,8 +5,8 @@ import { LuX } from 'react-icons/lu';
  * SpvModalShell Component
  * Single Responsibility: Kerangka modal konsisten (backdrop, header, close, body, footer).
  */
-export const SpvModalShell = ({ title, subtitle, onClose, maxWidth = 'max-w-md', children, footer }) => (
-    <div className="modal-backdrop">
+export const SpvModalShell = ({ title, subtitle, onClose, maxWidth = 'max-w-md', children, footer, error, saving }) => (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={title}>
         <div className={`modal-content ${maxWidth}`}>
             <div className="flex items-center justify-between border-b border-border-glass pb-4">
                 <div>
@@ -16,18 +16,22 @@ export const SpvModalShell = ({ title, subtitle, onClose, maxWidth = 'max-w-md',
                 <button
                     type="button"
                     onClick={onClose}
+                    disabled={saving}
+                    aria-label="Tutup dialog"
                     className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-variant cursor-pointer"
                 >
                     <LuX className="text-lg" />
                 </button>
             </div>
 
-            {children}
+<fieldset disabled={saving}>{children}</fieldset>
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+            {saving && <p role="status" className="text-sm">Menyimpan…</p>}
 
             {footer && (
-                <div className="flex items-center justify-end gap-2.5 border-t border-border-glass pt-4">
+                <fieldset disabled={saving} className="flex flex-wrap items-center justify-end gap-2.5 border-t border-border-glass pt-4">
                     {footer}
-                </div>
+                </fieldset>
             )}
         </div>
     </div>

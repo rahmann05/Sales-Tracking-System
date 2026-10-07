@@ -1,18 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { usersApi } from '../../../services/api';
-import {
-  LuNavigation,
-  LuRefreshCw,
-  LuRadio,
-  LuUser,
-  LuStore,
-  LuMapPin,
-  LuClock,
-  LuSearch,
-  LuZap,
-} from 'react-icons/lu';
+import { LuRefreshCw, LuRadio, LuSearch } from "react-icons/lu";
 
 // Icon cache to avoid DOM thrashing in Leaflet (Google Web Performance Best Practice)
 const iconCache = new Map();
@@ -184,7 +174,7 @@ export const LiveSalesGpsTrackingTab = () => {
             <button
               type="button"
               onClick={() => setFilterStatus('ALL')}
-              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full truncate ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full min-w-0 whitespace-normal break-words ${
                 filterStatus === 'ALL'
                   ? 'bg-primary text-on-primary shadow-xs'
                   : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant'
@@ -195,7 +185,7 @@ export const LiveSalesGpsTrackingTab = () => {
             <button
               type="button"
               onClick={() => setFilterStatus('IN_VISIT')}
-              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full truncate ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full min-w-0 whitespace-normal break-words ${
                 filterStatus === 'IN_VISIT'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-surface-container text-emerald-700 hover:bg-emerald-500/10'
@@ -206,7 +196,7 @@ export const LiveSalesGpsTrackingTab = () => {
             <button
               type="button"
               onClick={() => setFilterStatus('ONLINE')}
-              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full truncate ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full min-w-0 whitespace-normal break-words ${
                 filterStatus === 'ONLINE'
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-surface-container text-blue-700 hover:bg-blue-500/10'
@@ -292,7 +282,7 @@ export const LiveSalesGpsTrackingTab = () => {
                   </div>
 
                   {/* Activity Details & Progress */}
-                  <p className="text-[11px] text-on-surface font-semibold m-0 truncate">
+                  <p className="text-[11px] text-on-surface font-semibold m-0 min-w-0 whitespace-normal break-words">
                     {s.activityDescription}
                   </p>
 

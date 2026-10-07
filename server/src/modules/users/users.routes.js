@@ -13,12 +13,12 @@ router.post('/location', userController.updateLocation);
 router.get('/live-locations', authorize('ADMIN', 'SUPERVISOR', 'SALES'), userController.getLiveLocations);
 
 // User CRUD
-router.get('/', authorize('ADMIN', 'SUPERVISOR', 'SALES'), userController.getAllUsers);
+router.get('/', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'KEPALA_GUDANG'), userController.getAllUsers);
 router.get('/:id', userController.getUser);
-router.post('/', authorize('ADMIN', 'SUPERVISOR'), validate(createUserSchema), userController.create);
-router.patch('/:id', authorize('ADMIN', 'SUPERVISOR'), validate(updateUserSchema), userController.update);
-router.put('/:id/password', authorize('ADMIN', 'SUPERVISOR'), validate(updatePasswordSchema), userController.updatePassword);
-router.put('/:id/permissions', authorize('ADMIN', 'SUPERVISOR'), validate(updatePermissionsSchema), userController.updatePermissions);
-router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), userController.remove);
+router.post('/', authorize('ADMIN'), validate(createUserSchema), userController.create);
+router.patch('/:id', authorize('ADMIN'), validate(updateUserSchema), userController.update);
+router.put('/:id/password', authorize('ADMIN'), validate(updatePasswordSchema), userController.updatePassword);
+router.put('/:id/permissions', authorize('ADMIN'), validate(updatePermissionsSchema), userController.updatePermissions);
+router.delete('/:id', authorize('ADMIN'), userController.remove);
 
 export default router;

@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { reportsApi, usersApi } from '../../../services/api';
+import { DataTable } from '../../../shared/components/common/DataTable';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { collectPages, reportsApi, usersApi } from '../../../services/api';
 import { WeeklyReportPdfView } from './WeeklyReportPdfView';
 import {
   LuCalendarRange,
@@ -20,10 +22,10 @@ import { FiAlertTriangle } from 'react-icons/fi';
  */
 export const WeeklyReportView = () => {
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    const day = d.getDay();
+    const d = new Date(`${wibDateKey()}T12:00:00Z`);
+    const day = d.getUTCDay();
     const diff = (day + 6) % 7;
-    d.setDate(d.getDate() - diff);
+    d.setUTCDate(d.getUTCDate() - diff);
     return d.toISOString().split('T')[0];
   });
 
@@ -31,6 +33,8 @@ export const WeeklyReportView = () => {
   const [search, setSearch] = useState('');
   const [salesTeam, setSalesTeam] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const loadRevision = useRef(0);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   const [reportData, setReportData] = useState({
@@ -54,7 +58,7 @@ export const WeeklyReportView = () => {
   useEffect(() => {
     const fetchTeam = async () => {
       try {
-        const res = await usersApi.getUsers();
+        const res = await collectPages(usersApi.getAll,{role:'SALES'});
         if (res?.data) {
           setSalesTeam(res.data.filter((u) => u.role === 'SALES'));
         }
@@ -67,24 +71,26 @@ export const WeeklyReportView = () => {
 
   // Fetch Weekly Data
   const loadData = useCallback(async () => {
-    setIsLoading(true);
+    const revision=++loadRevision.current;
+    setIsLoading(true);setError('');
     try {
       const res = await reportsApi.getWeekly({
         startDate,
         userId: salesmanId || undefined,
       });
-      if (res?.data) {
+      if (revision===loadRevision.current && res?.data) {
         setReportData(res.data);
       }
     } catch (err) {
-      console.warn('[WeeklyReportView] Failed to load weekly report:', err.message);
+      if(revision===loadRevision.current)setError(err.message);
     } finally {
-      setIsLoading(false);
+      if(revision===loadRevision.current)setIsLoading(false);
     }
   }, [startDate, salesmanId]);
 
   useEffect(() => {
     loadData();
+    return ()=>{loadRevision.current++;};
   }, [loadData]);
 
   const selectedSalesman = salesTeam.find((s) => s.id === salesmanId);
@@ -183,6 +189,8 @@ export const WeeklyReportView = () => {
 
   return (
     <div className="space-y-5">
+      {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={loadData} disabled={isLoading}>Coba lagi</button></div>}
+      {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
         <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
@@ -200,7 +208,7 @@ export const WeeklyReportView = () => {
               {summary.callComplianceRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">Kepatuhan rute 6 hari kerja</p>
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Kepatuhan rute 6 hari kerja</p>
         </div>
 
         <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
@@ -218,7 +226,7 @@ export const WeeklyReportView = () => {
               {summary.effectiveCallRate}
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">Rasio toko menghasilkan pesanan</p>
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Rasio toko menghasilkan pesanan</p>
         </div>
 
         <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
@@ -236,7 +244,7 @@ export const WeeklyReportView = () => {
               {summary.totalSkuSold} SKU
             </span>
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">Rata-rata durasi: {summary.avgDurationMinutes} Menit/toko</p>
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Rata-rata durasi: {summary.avgDurationMinutes} Menit/toko</p>
         </div>
 
         <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
@@ -260,7 +268,7 @@ export const WeeklyReportView = () => {
               </span>
             )}
           </div>
-          <p className="text-[11px] text-on-surface-variant m-0 truncate">Total kunjungan &lt; 5m atau deviasi radius</p>
+          <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Total kunjungan &lt; 5m atau deviasi radius</p>
         </div>
       </div>
 
@@ -369,21 +377,21 @@ export const WeeklyReportView = () => {
 
         {/* Workspace Body: Day-by-Day Performance Matrix Table */}
         <div className="overflow-x-auto mobile-card-table-wrapper">
-          <table className="w-full text-left border-collapse text-xs mobile-card-table">
+          <DataTable className="w-full text-left border-collapse text-xs mobile-card-table">
             <thead>
               <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
-                <th className="py-3 px-3">Salesman</th>
-                <th className="py-3 px-3">Klaster</th>
-                <th className="py-3 px-2 text-center">Senin</th>
-                <th className="py-3 px-2 text-center">Selasa</th>
-                <th className="py-3 px-2 text-center">Rabu</th>
-                <th className="py-3 px-2 text-center">Kamis</th>
-                <th className="py-3 px-2 text-center">Jumat</th>
-                <th className="py-3 px-2 text-center">Sabtu</th>
-                <th className="py-3 px-3 text-center">Total Act / Plan</th>
-                <th className="py-3 px-3 text-center">Call %</th>
-                <th className="py-3 px-3 text-center">EC %</th>
-                <th className="py-3 px-3 text-right">Omzet Mingguan (Rp)</th>
+                <th className="">Salesman</th>
+                <th className="">Klaster</th>
+                <th className="text-center">Senin</th>
+                <th className="text-center">Selasa</th>
+                <th className="text-center">Rabu</th>
+                <th className="text-center">Kamis</th>
+                <th className="text-center">Jumat</th>
+                <th className="text-center">Sabtu</th>
+                <th className="text-center">Total Act / Plan</th>
+                <th className="text-center">Call %</th>
+                <th className="text-center">EC %</th>
+                <th className="text-right">Omzet Mingguan (Rp)</th>
               </tr>
             </thead>
             <tbody>
@@ -392,10 +400,10 @@ export const WeeklyReportView = () => {
                   key={s.salesmanId}
                   className="hover:bg-surface-variant/20 transition-colors border-b border-border-glass/60"
                 >
-                  <td data-label="Salesman" className="py-3 px-3 font-bold text-on-surface whitespace-nowrap">
+                  <td data-label="Salesman" className="font-bold text-on-surface whitespace-nowrap">
                     {s.salesmanName}
                   </td>
-                  <td data-label="Klaster" className="py-3 px-3 text-on-surface-variant text-[11px] whitespace-nowrap">
+                  <td data-label="Klaster" className="text-on-surface-variant text-[11px] whitespace-nowrap">
                     {s.clusterName}
                   </td>
 
@@ -404,7 +412,7 @@ export const WeeklyReportView = () => {
                     const d = s.days?.[dayKey] || { plan: 0, actual: 0, ec: 0 };
                     const dayCapitalized = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
                     return (
-                      <td key={dayKey} data-label={dayCapitalized} className="py-3 px-2 text-center font-mono text-[11px]">
+                      <td key={dayKey} data-label={dayCapitalized} className="text-center font-mono text-[11px]">
                         {d.plan > 0 ? (
                           <div className="space-y-0.5">
                             <span className="font-bold text-on-surface">
@@ -422,16 +430,16 @@ export const WeeklyReportView = () => {
                   })}
 
                   {/* Weekly Totals */}
-                  <td data-label="Total Act/Plan" className="py-3 px-3 text-center font-mono font-bold text-on-surface whitespace-nowrap">
+                  <td data-label="Total Act/Plan" className="text-center font-mono font-bold text-on-surface whitespace-nowrap">
                     {s.weeklyTotal?.actual} / {s.weeklyTotal?.plan}
                   </td>
-                  <td data-label="Call %" className="py-3 px-3 text-center font-mono font-bold text-blue-600">
+                  <td data-label="Call %" className="text-center font-mono font-bold text-blue-600">
                     {s.weeklyTotal?.callRate}
                   </td>
-                  <td data-label="EC %" className="py-3 px-3 text-center font-mono font-bold text-emerald-600">
+                  <td data-label="EC %" className="text-center font-mono font-bold text-emerald-600">
                     {s.weeklyTotal?.ecRate}
                   </td>
-                  <td data-label="Omzet" className="py-3 px-3 text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td data-label="Omzet" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.weeklyTotal?.omzet || 0).toLocaleString('id-ID')}
                   </td>
                 </tr>
@@ -439,7 +447,7 @@ export const WeeklyReportView = () => {
 
               {filteredSalesmen.length === 0 && (
                 <tr>
-                  <td colSpan="12" className="py-12 text-center text-on-surface-variant font-semibold">
+                  <td colSpan="12" className="text-center text-on-surface-variant font-semibold">
                     Tidak ada data performa mingguan untuk filter yang dipilih.
                   </td>
                 </tr>
@@ -450,31 +458,31 @@ export const WeeklyReportView = () => {
             {filteredSalesmen.length > 0 && (
               <tfoot>
                 <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
-                  <td className="py-3 px-3" colSpan="2">
+                  <td className="" colSpan="2">
                     TOTAL TIM SALES ({filteredSalesmen.length} Sales)
                   </td>
                   {daysSummary.map((ds, idx) => (
-                    <td key={idx} className="py-3 px-2 text-center font-mono text-[11px]">
+                    <td key={idx} className="text-center font-mono text-[11px]">
                       <div>{ds.actualCalls}/{ds.planCalls}</div>
                       <div className="text-[10px] text-purple-600 font-bold">EC:{ds.effectiveCalls}</div>
                     </td>
                   ))}
-                  <td className="py-3 px-3 text-center font-mono">
+                  <td className="text-center font-mono">
                     {summary.totalActualCalls}/{summary.totalPlanCalls}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-blue-600">
+                  <td className="text-center font-mono text-blue-600">
                     {summary.callComplianceRate}
                   </td>
-                  <td className="py-3 px-3 text-center font-mono text-emerald-600">
+                  <td className="text-center font-mono text-emerald-600">
                     {summary.effectiveCallRate}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono text-emerald-700">
+                  <td className="text-right font-mono text-emerald-700">
                     Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')}
                   </td>
                 </tr>
               </tfoot>
             )}
-          </table>
+          </DataTable>
         </div>
       </div>
 

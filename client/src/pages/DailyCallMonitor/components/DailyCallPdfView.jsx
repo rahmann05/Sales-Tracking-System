@@ -142,7 +142,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
                   <td className="p-1.5 border-r border-gray-300">
                     <span className="font-mono font-bold text-gray-700">[{r.customerId}]</span>{' '}
                     <strong className="text-gray-900">{r.customerName}</strong>
-                    <div className="text-[8.5px] text-gray-500 truncate max-w-[180px]">{r.customerAddress}</div>
+                    <div className="text-[8.5px] text-gray-500 min-w-0 whitespace-normal break-words max-w-[180px]">{r.customerAddress}</div>
                   </td>
                   <td className="p-1.5 border-r border-gray-300 whitespace-nowrap">
                     {r.subChannel}
@@ -189,7 +189,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           <div className="border border-gray-300 p-2.5 rounded-sm">
             <span className="text-gray-500 font-bold block mb-12">Diperiksa Oleh (Supervisor),</span>
             <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( Ahmad Subagja )
+              ( ____________________ )
             </div>
             <span className="text-[8.5px] text-gray-500">Supervisor Distribusi</span>
           </div>

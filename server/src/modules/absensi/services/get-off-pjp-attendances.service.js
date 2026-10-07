@@ -1,7 +1,8 @@
+import {teamSalesWhere} from '../../../utils/team-scope.js';
 /** getOffPjpAttendances - single-responsibility service (extracted from off-pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../../utils/pagination.js';
-import { OFF_PJP_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
+import { ROLES } from "../../../utils/constants.js";
 
 /**
  * List off-PJP attendances.
@@ -11,6 +12,7 @@ export const getOffPjpAttendances = async (currentUser, query = {}) => {
   const { skip, take, page, limit } = parsePagination(query);
 
   const where = {};
+  if(currentUser.role==='SUPERVISOR')where.user=teamSalesWhere(currentUser.id);
   if (status) where.status = status;
   if (userId) where.userId = userId;
   if (date) where.createdAt = buildDayRange(date);

@@ -1,4 +1,5 @@
 /** createRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
+import { AppError } from '../../../utils/errors.js';
 import { prisma } from '../../../config/prisma.js';
 import { ROLES } from '../../../utils/constants.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
@@ -10,6 +11,7 @@ import { validateGooglePlace } from './validate-google-place.service.js';
  * 1. Create Outlet Registration (Salesman)
  */
 export const createRegistration = async (data, currentUser) => {
+  if(data.clusterId && !await prisma.cluster.findFirst({where:{id:data.clusterId,deletedAt:null,...(currentUser.role==='SUPERVISOR'?{supervisorId:currentUser.id}:currentUser.role==='SALES'?{OR:[{assignedSalesId:currentUser.id},{users:{some:{id:currentUser.id}}}]}:{})},select:{id:true}}))throw new AppError('Klaster berada di luar penugasan',403);
   const { latitude = 0, longitude = 0, name, address, photoUrl: incomingPhotoUrl } = data;
 
   // 1. Process and store outlet photo directly in PostgreSQL
@@ -35,18 +37,21 @@ export const createRegistration = async (data, currentUser) => {
     longitude: Number(longitude) || 0,
     salesmanId: currentUser?.id,
     salesmanName: currentUser?.name || 'Salesman',
-    registrationStatus: data.registrationStatus || 'SUBMITTED',
+    registrationStatus: 'SUBMITTED',
   });
 
+  for(const key of ['id','createdAt','updatedAt','deletedAt','spvId','spvName','spvApprovedAt','adminId','adminName','adminRegisteredAt','rejectionNote']) delete cleanData[key];
   const registration = await prisma.customerRegistration.create({
     data: cleanData,
   });
 
   // Kirim notifikasi ke SPV dan Admin
   try {
+    const sales = await prisma.user.findUnique({where:{id:currentUser.id},select:{supervisorId:true}});
+    const supervisorIds = sales?.supervisorId ? [sales.supervisorId] : [];
     const managers = await prisma.user.findMany({
       where: {
-        role: { in: [ROLES.SUPERVISOR, ROLES.ADMIN] },
+        OR: [{role:ROLES.ADMIN},{role:ROLES.SUPERVISOR,id:{in:supervisorIds}}],
         deletedAt: null,
       },
     });

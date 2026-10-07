@@ -1,3 +1,4 @@
+import { DataTable } from '../../../../shared/components/common/DataTable';
 import React from 'react';
 import '../../../../styles/components/SpreadsheetPreviewTable.css';
 
@@ -11,7 +12,7 @@ export const SpreadsheetPreviewTable = ({ previewRows = [] }) => {
 
   return (
     <div className="spreadsheet-preview-container mobile-card-table-wrapper">
-      <table className="spreadsheet-preview-table mobile-card-table">
+      <DataTable className="spreadsheet-preview-table mobile-card-table">
         <thead>
           <tr>
             <th className="spreadsheet-preview-th">Klaster</th>
@@ -32,7 +33,7 @@ export const SpreadsheetPreviewTable = ({ previewRows = [] }) => {
             </tr>
           ))}
         </tbody>
-      </table>
+      </DataTable>
     </div>
   );
 };

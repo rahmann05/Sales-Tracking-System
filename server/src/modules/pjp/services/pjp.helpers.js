@@ -1,169 +1,62 @@
-/** Shared helpers for pjp services (internal). */
+import { wibDateKey, wibDayRange } from '../../../../../shared/visit-metrics.mjs';
+import { workingDays } from '../../../../../shared/working-calendar.mjs';
 import { prisma } from '../../../config/prisma.js';
-import { PJP_STATUS, PJP_TYPE, ROLES } from '../../../utils/constants.js';
+import { getDynamicConfig } from '../../config/config.service.js';
 
-/**
- * Menghitung apakah minggu ini ganjil atau genap berdasarkan ISO Week.
- * Mengembalikan 'WEEK_1' untuk ganjil, 'WEEK_2' untuk genap.
- */
-export const getCurrentWeekType = () => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const diff = now - start + (start.getTimezoneOffset() - now.getTimezoneOffset()) * 60000;
-  const oneDay = 1000 * 60 * 60 * 24;
-  const day = Math.floor(diff / oneDay);
-  const weekNumber = Math.ceil((day + start.getDay() + 1) / 7);
-  return weekNumber % 2 !== 0 ? 'WEEK_1' : 'WEEK_2';
+export const getIsoWeekNumber = (date = new Date()) => {
+  const d = new Date(`${wibDateKey(date)}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  return Math.ceil(((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7);
 };
-
-/**
- * Auto-generate PJP untuk SATU sales pada hari ini berdasarkan PjpTemplate.
- */
+export const getCurrentWeekType = (date = new Date(), mode = 'ISO_PARITY') => {
+  const week = mode === 'MONTH_CYCLE' ? Math.ceil(Number(wibDateKey(date).slice(8)) / 7) : getIsoWeekNumber(date);
+  return week % 2 ? 'WEEK_1' : 'WEEK_2';
+};
+export const PJP_STOP_INCLUDE = {
+  outlet: { include: { cluster: { select: { id: true, name: true, region: true,
+    users: { select: { id: true, name: true, role: true } }, supervisor: { select: { id: true, name: true } } } } } },
+  attendances: true, routeChanges: true, orders: { where: { deletedAt: null }, include: { items: true } },
+};
 export const ensureTodayPjpForSales = async (userId) => {
   const now = new Date();
-  const dayOfWeek = now.getDay();
-  if (dayOfWeek === 0) return null; // Minggu libur
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const sales = await prisma.user.findUnique({ where: { id: userId } });
-  if (!sales || sales.role !== ROLES.SALES || !sales.clusterId) return null;
-
-  const currentWeekType = getCurrentWeekType();
-
-  // Cari template untuk sales ini, hari ini, dan tipe minggu ini (atau ALL)
-  const template = await prisma.pjpTemplate.findFirst({
-    where: {
-      userId,
-      dayOfWeek,
-      OR: [
-        { weekType: currentWeekType },
-        { weekType: 'ALL' }
-      ]
-    },
-    include: {
-      stops: {
-        orderBy: { sequence: 'asc' }
-      }
+  const key = wibDateKey(now);
+  const dayOfWeek = new Date(`${key}T12:00:00Z`).getUTCDay();
+  const [days, mode, fallback] = await Promise.all([
+    getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6'),
+    getDynamicConfig('PJP_WEEK_MODE', 'ISO_PARITY'), getDynamicConfig('PJP_FALLBACK_TO_CLUSTER', true),
+  ]);
+  return prisma.$transaction(async tx => {
+    // All generators serialize on the same sales/day key, without altering historical plans.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${userId}:${key}`}))`;
+    const existing = await tx.pjp.findFirst({ where: { userId, date: wibDayRange(now), type: 'SALES' }, include: { stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } } } });
+    if (existing) return existing;
+    if (!workingDays(days).includes(dayOfWeek)) return null;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
+    const sales = await tx.user.findUnique({ where: { id: userId } });
+    if (!sales || sales.deletedAt || sales.role !== 'SALES' || !sales.supervisorId) return null;
+    const templates = await tx.pjpTemplate.findMany({ where: { userId, dayOfWeek, weekType: { in: [getCurrentWeekType(now, mode), 'ALL'] } }, include: { stops: { orderBy: { sequence: 'asc' }, include: { outlet: {include:{cluster:{select:{supervisorId:true,deletedAt:true}}}} } } } });
+    const template = templates.find(t => t.weekType !== 'ALL') || templates[0];
+    let outletIds;
+    if (template) outletIds = template.stops.filter(s => !s.outlet.deletedAt && !s.outlet.cluster.deletedAt && (!sales.supervisorId || s.outlet.cluster.supervisorId===sales.supervisorId)).map(s => s.outletId);
+    else {
+      if (!fallback || !sales.clusterId || !await tx.cluster.findFirst({where:{id:sales.clusterId,deletedAt:null,...(sales.supervisorId?{supervisorId:sales.supervisorId}:{})},select:{id:true}})) return null;
+      const activeRoute = await tx.clusterRoute.findFirst({ where: { clusterId: sales.clusterId, isActive: true }, orderBy: { updatedAt: 'desc' } });
+      const outlets = await tx.outlet.findMany({ where: { clusterId: sales.clusterId, deletedAt: null }, orderBy: { name: 'asc' } });
+      const validIds = new Set(outlets.map(o => o.id));
+      outletIds = activeRoute ? (activeRoute.outletOrder || []).map(o => typeof o === 'string' ? o : o.id).filter(id => validIds.has(id)) : outlets.map(o => o.id);
     }
-  });
-
-  let stopsToCreate = [];
-  if (template && template.stops.length > 0) {
-    stopsToCreate = template.stops.map((ts, idx) => ({
-      outletId: ts.outletId,
-      sequence: ts.sequence || idx + 1,
-      status: 'PENDING',
-    }));
-  } else {
-    // Fallback ke cluster outlets jika belum ada template manual
-    const activeRoute = await prisma.clusterRoute.findFirst({
-      where: { clusterId: sales.clusterId, isActive: true },
-    });
-    let clusterOutlets = [];
-    if (activeRoute && Array.isArray(activeRoute.outletOrder) && activeRoute.outletOrder.length > 0) {
-      const orderedIds = activeRoute.outletOrder.map(item => item.id).filter(Boolean);
-      const fetched = await prisma.outlet.findMany({
-        where: { id: { in: orderedIds }, deletedAt: null },
-      });
-      const outletMap = new Map(fetched.map(o => [o.id, o]));
-      clusterOutlets = orderedIds.map(id => outletMap.get(id)).filter(Boolean);
-    }
-    if (clusterOutlets.length === 0) {
-      clusterOutlets = await prisma.outlet.findMany({
-        where: { clusterId: sales.clusterId, deletedAt: null },
-        orderBy: { name: 'asc' },
-      });
-    }
-    if (clusterOutlets.length === 0) return null;
-    stopsToCreate = clusterOutlets.map((o, idx) => ({
-      outletId: o.id,
-      sequence: idx + 1,
-      status: 'PENDING',
-    }));
-  }
-
-  return await prisma.pjp.create({
-    data: {
-      userId: sales.id,
-      date: today,
-      type: PJP_TYPE.SALES,
-      status: PJP_STATUS.SCHEDULED,
-      stops: {
-        create: stopsToCreate,
-      },
-    },
-    include: {
-      user: { 
-        select: { 
-          id: true, 
-          name: true, 
-          role: true,
-          cluster: {
-            select: {
-              id: true,
-              name: true,
-              region: true,
-              supervisor: { select: { id: true, name: true } },
-              users: { select: { id: true, name: true, role: true } }
-            }
-          }
-        } 
-      },
-      stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } },
-    },
+    if (!outletIds.length) return null;
+    return tx.pjp.create({ data: { userId, date: wibDayRange(now).gte, type: 'SALES', status: 'SCHEDULED',
+      stops: { create: [...new Set(outletIds)].map((outletId,i) => ({ outletId, sequence: i+1, status: 'PENDING' })) } },
+      include: { user: { select: { id: true, name: true, role: true, cluster: { include: { supervisor: { select: { id: true, name: true } } } } } }, stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } } } });
   });
 };
-
-
-export const PJP_STOP_INCLUDE = {
-  outlet: {
-    include: {
-      cluster: {
-        select: {
-          id: true,
-          name: true,
-          region: true,
-          users: { select: { id: true, name: true, role: true } },
-          supervisor: { select: { id: true, name: true } },
-        }
-      }
-    }
-  },
-  attendances: true,
-  routeChanges: true,
-};
-
-/**
- * Generate PJP hari ini untuk SEMUA sales (idempotent), masing-masing memakai
- * logika clustering per-hari (bukan semua outlet). Dipakai getAllPjps.
- */
-let lastGeneratedDateStr = null;
-
 export const generateTodayPjpsAllSales = async () => {
-  const now = new Date();
-  if (now.getDay() === 0) return 0; // Minggu libur (0 = Sunday)
-
-  const todayStr = now.toISOString().slice(0, 10);
-  if (lastGeneratedDateStr === todayStr) {
-    return 0; // Sudah di-generate untuk hari ini, skip redundant DB loop
-  }
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const salesUsers = await prisma.user.findMany({
-    where: { role: ROLES.SALES, deletedAt: null, clusterId: { not: null } },
-  });
-
+  const sales = await prisma.user.findMany({ where: { role: 'SALES', deletedAt: null }, select: { id: true } });
   let count = 0;
-  for (const sales of salesUsers) {
-    const existing = await prisma.pjp.findFirst({ where: { userId: sales.id, date: { gte: today } } });
-    if (existing) continue;
-    const created = await ensureTodayPjpForSales(sales.id);
-    if (created) count++;
+  for (const user of sales) {
+    const before = await prisma.pjp.findFirst({ where: { userId: user.id, type: 'SALES', date: wibDayRange() }, select: { id: true } });
+    if (!before && await ensureTodayPjpForSales(user.id)) count++;
   }
-  lastGeneratedDateStr = todayStr;
   return count;
 };

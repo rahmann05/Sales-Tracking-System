@@ -1,4 +1,6 @@
 import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import { prisma } from './prisma.js';
 import { config } from './index.js';
 
 let io = null;
@@ -17,8 +19,18 @@ export const initSocket = (httpServer) => {
     },
   });
 
+  io.use(async (socket, next) => {
+    try {
+      const decoded = jwt.verify(socket.handshake.auth?.token, config.jwtSecret);
+      const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, deletedAt: true } });
+      if (!user || user.deletedAt) throw new Error('Akun tidak aktif');
+      socket.data.userId = user.id;
+      next();
+    } catch { next(new Error('Autentikasi socket diperlukan')); }
+  });
   io.on('connection', (socket) => {
-    const userId = socket.handshake.query.userId;
+    const userId = socket.data.userId;
+    socket.join(`user:${userId}`);
     if (userId) {
       userSocketMap.set(userId, socket.id);
       console.log(`[Socket.IO]: User ${userId} connected (socket: ${socket.id})`);
@@ -42,10 +54,7 @@ export const initSocket = (httpServer) => {
  */
 export const emitToUser = (userId, event, payload) => {
   if (!io) return;
-  const socketId = userSocketMap.get(userId);
-  if (socketId) {
-    io.to(socketId).emit(event, payload);
-  }
+  io.to(`user:${userId}`).emit(event, payload);
 };
 
 /**

@@ -1,7 +1,11 @@
+import { PackingAllocationFields } from './PackingAllocationFields';
+import { useApp } from '../../../context/AppContext';
+import { calculateFuelCost, evaluateDropProfitability } from '../../../services/logisticsOptimizerService';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi } from '../../../services/api';
 import { vehiclesApi } from '../../../services/api';
-import { LuNavigation, LuPlus, LuTrash2, LuSearch, LuTruck, LuUser, LuPackage, LuX, LuArrowUp, LuArrowDown, LuCheck } from 'react-icons/lu';
+import { LuNavigation, LuPlus, LuTrash2, LuTruck, LuPackage, LuX, LuArrowUp, LuArrowDown, LuCheck } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
 
 const STATUS_CONFIG = {
@@ -151,11 +155,11 @@ const RouteCard = ({ route, onStatusUpdate, onDelete }) => {
             <div key={stop.id || idx} className="flex items-center gap-3 text-xs py-2 px-3 rounded-lg bg-surface-variant/30">
               <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">{idx + 1}</span>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-on-surface truncate">{stop.outlet?.name}</div>
-                <div className="text-on-surface-variant truncate">{stop.outlet?.address}</div>
+                <div className="font-semibold text-on-surface min-w-0 whitespace-normal break-words">{stop.outlet?.name}</div>
+                <div className="text-on-surface-variant min-w-0 whitespace-normal break-words">{stop.outlet?.address}</div>
               </div>
               <span className="text-on-surface-variant shrink-0">{stop.packingList?.code}</span>
-              <span className="font-semibold text-on-surface shrink-0">{stop.packingList?.totalCartons || 0} krt</span>
+              <span className="font-semibold text-on-surface shrink-0">{stop.allocatedCartons ?? stop.packingList?.totalCartons ?? 0} krt</span>
             </div>
           ))}
           {route.notes && (
@@ -170,7 +174,9 @@ const RouteCard = ({ route, onStatusUpdate, onDelete }) => {
 };
 
 const CreateRouteForm = ({ onCreated, onCancel }) => {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const { settings } = useApp();
+  const [estimatedKm, setEstimatedKm] = useState('');
+  const [date, setDate] = useState(() => wibDateKey());
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [packingLists, setPackingLists] = useState([]);
@@ -186,7 +192,7 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
         const [vRes, dRes, plRes] = await Promise.all([
           vehiclesApi.getAll(),
           deliveryApi.getDrivers(),
-          deliveryApi.getPackingLists({ limit: 100 }),
+          (async () => { let page = 1; const items = []; let result; do { result = await deliveryApi.getPackingLists({ limit: 100, page, status: 'RELEASED' }); items.push(...result.data.items); page++; } while (items.length < result.data.total); return { success: true, data: { items } }; })(),
         ]);
         if (vRes.success) setVehicles(vRes.data || []);
         if (dRes.success) setDrivers(dRes.data || []);
@@ -205,7 +211,9 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
       outletId: pl.outletId,
       outletName: pl.outlet?.name || '-',
       code: pl.code,
-      totalCartons: pl.totalCartons,
+      totalCartons: pl.remainingCartons,
+      remainingCartons: pl.remainingCartons,
+      items: pl.remainingItems.filter(i => i.remaining > 0).map(i => ({ ...i, quantity: i.remaining })),
     }]);
   };
 
@@ -224,8 +232,12 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
   const totalCartons = selectedPLs.reduce((sum, s) => sum + (s.totalCartons || 0), 0);
   const selectedVehicleObj = vehicles.find((v) => v.id === selectedVehicle);
   const overCapacity = selectedVehicleObj && totalCartons > selectedVehicleObj.maxCartons;
+  const fuelEstimate = calculateFuelCost(Number(estimatedKm) || 0, selectedVehicleObj);
+  const marginEstimate = evaluateDropProfitability({ cartonCount: totalCartons, pricePerCarton: settings.LOGISTICS_PRICE_PER_CARTON, grossMarginPercent: settings.LOGISTICS_MARGIN_PERCENT, estimatedDropCost: selectedPLs.length * settings.LOGISTICS_BASE_DROP_COST + fuelEstimate.totalCost });
 
   const handleSubmit = async () => {
+    if (submitting) return;
+    if (overCapacity) return alert('Muatan melebihi kapasitas kendaraan. Kurangi packing list atau pilih kendaraan lain.');
     if (!selectedVehicle) return alert('Pilih kendaraan');
     if (!selectedDriver) return alert('Pilih supir');
     if (selectedPLs.length === 0) return alert('Tambahkan minimal 1 packing list');
@@ -233,6 +245,7 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
     setSubmitting(true);
     try {
       await deliveryApi.createDeliveryRoute({
+        ...(estimatedKm!==''?{totalDistanceKm:Number(estimatedKm)}:{}),
         date,
         vehicleId: selectedVehicle,
         driverId: selectedDriver,
@@ -241,6 +254,8 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
           packingListId: s.packingListId,
           outletId: s.outletId,
           sequence: idx + 1,
+          allocatedCartons: s.totalCartons,
+          allocatedItems: s.items.filter(i => i.quantity > 0).map(i => ({ lineId: i.lineId, quantity: i.quantity })),
         })),
       });
       onCreated();
@@ -253,12 +268,22 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
 
   // Filter out packing lists that are already assigned to a route
   const availablePLs = packingLists.filter(
-    (pl) => !pl.deliveryStops?.length && !selectedPLs.find((s) => s.packingListId === pl.id)
+    (pl) => pl.remainingCartons > 0 && (settings.PACKING_ALLOW_SPLIT || !pl.deliveryStops?.length) && !selectedPLs.find((s) => s.packingListId === pl.id)
   );
 
   return (
     <div className="bg-surface border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4">
       <h3 className="text-sm font-bold text-on-surface">Buat Rute Pengiriman Baru</h3>
+      <p className="text-sm text-on-surface-variant">Pilih kendaraan dan supir, tambahkan packing list, lalu simpan sebagai draft. Ubah status menjadi Siap Kirim setelah muatan siap.</p>
+      <section className="rounded-xl border border-border-glass bg-surface-container p-4 space-y-3">
+        <label className="block text-sm">Estimasi jarak perjalanan (km, opsional)<input type="number" min="0" step="0.1" className="form-input mt-1 w-full" value={estimatedKm} onChange={e => setEstimatedKm(e.target.value)} placeholder="Masukkan estimasi jarak" /></label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <p>Muatan: <strong>{totalCartons} karton</strong></p>
+          <p>Estimasi BBM: <strong>{estimatedKm !== '' && selectedVehicleObj ? `Rp ${fuelEstimate.totalCost.toLocaleString('id-ID')}` : 'Belum dihitung'}</strong></p>
+          <p>Estimasi margin: <strong>{settings.LOGISTICS_PRICE_PER_CARTON > 0 && settings.LOGISTICS_MARGIN_PERCENT > 0 ? `Rp ${marginEstimate.netMargin.toLocaleString('id-ID')}` : 'Parameter belum diisi admin'}</strong></p>
+        </div>
+        <p className="text-xs text-on-surface-variant">Estimasi memakai spesifikasi kendaraan serta nilai karton, margin, dan biaya per titik dari pengaturan admin.</p>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Date */}
@@ -318,7 +343,7 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
               >
                 <LuPackage className="text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-on-surface truncate">{pl.code} • {pl.outlet?.name}</div>
+                  <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{pl.code} • {pl.outlet?.name}</div>
                   <div className="text-[10px] text-on-surface-variant">{pl.totalCartons} Karton • {pl.invoices?.length} Faktur</div>
                 </div>
                 <LuPlus className="text-primary shrink-0" />
@@ -336,10 +361,10 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
           </label>
           <div className="space-y-2">
             {selectedPLs.map((s, idx) => (
-              <div key={s.packingListId} className="flex items-center gap-2 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
+              <div key={s.packingListId} className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
                 <span className="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-xs font-bold shrink-0">{idx + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-on-surface truncate">{s.outletName}</div>
+                  <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{s.outletName}</div>
                   <div className="text-[10px] text-on-surface-variant">{s.code} • {s.totalCartons} krt</div>
                 </div>
                 <button onClick={() => moveStop(idx, -1)} disabled={idx === 0} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
@@ -351,6 +376,7 @@ const CreateRouteForm = ({ onCreated, onCancel }) => {
                 <button onClick={() => removePackingList(s.packingListId)} className="p-1 rounded text-red-500 hover:bg-red-50">
                   <LuX className="text-sm" />
                 </button>
+                <PackingAllocationFields entry={s} allowSplit={settings.PACKING_ALLOW_SPLIT} onChange={updated => setSelectedPLs(selectedPLs.map(v => v.packingListId === updated.packingListId ? updated : v))}/>
               </div>
             ))}
           </div>

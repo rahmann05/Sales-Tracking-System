@@ -40,7 +40,7 @@ export const validateNearby = async (req, res, next) => {
 export const batchValidate = async (req, res, next) => {
   try {
     const { outletIds, filter, limit } = req.body || {};
-    const result = await validationService.batchValidateOutlets({ outletIds, filter, limit });
+    const result = await validationService.batchValidateOutlets({ outletIds, filter, limit },req.user);
     return successResponse(res, 200, result, `Validasi batch selesai: ${result.success} sukses, ${result.failed} gagal`);
   } catch (error) {
     next(error);
@@ -53,7 +53,7 @@ export const batchValidate = async (req, res, next) => {
  */
 export const getValidationSummary = async (req, res, next) => {
   try {
-    const summary = await validationService.getValidationSummary();
+    const summary = await validationService.getValidationSummary(req.user);
     return successResponse(res, 200, summary);
   } catch (error) {
     next(error);

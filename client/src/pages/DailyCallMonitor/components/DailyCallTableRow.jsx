@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuMapPin, LuClock, LuCamera, LuCircleCheck, LuPlus, LuHourglass, LuCar, LuShieldAlert, LuTriangleAlert } from 'react-icons/lu';
+import { LuMapPin, LuClock, LuCamera, LuPlus, LuHourglass, LuCar, LuShieldAlert, LuTriangleAlert } from "react-icons/lu";
 
 /**
  * DailyCallTableRow Component
@@ -17,18 +17,18 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       }`}
     >
       {/* 1. No */}
-      <td data-label="No" className="py-3 px-3 text-center font-mono font-bold text-on-surface-variant">
+      <td data-label="No" className="text-center font-mono font-bold text-on-surface-variant">
         {row.no}
       </td>
 
       {/* 2. Salesman */}
-      <td data-label="Salesman" className="py-3 px-3 whitespace-nowrap">
+      <td data-label="Salesman" className="whitespace-nowrap">
         <div className="font-bold text-on-surface">{row.salesmanName}</div>
         <div className="text-[10px] text-on-surface-variant">{row.clusterName}</div>
       </td>
 
       {/* 3. Jam In / Out */}
-      <td data-label="Jam In/Out" className="py-3 px-3 whitespace-nowrap font-mono text-[11px]">
+      <td data-label="Jam In/Out" className="whitespace-nowrap font-mono text-[11px]">
         <div className="font-bold text-on-surface">{row.timeIn} - {row.timeOut}</div>
         <div className="text-[10px] text-on-surface-variant flex items-center gap-1">
           <LuClock className="text-[10px]" />
@@ -37,7 +37,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 4. Durasi */}
-      <td data-label="Durasi" className="py-3 px-3 whitespace-nowrap text-center">
+      <td data-label="Durasi" className="whitespace-nowrap text-center">
         {row.isDurationAnomaly ? (
           <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 text-[10px] font-bold border border-rose-500/20 inline-flex items-center gap-1">
             <LuTriangleAlert className="text-xs" /> &lt; 5 Menit
@@ -52,7 +52,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 5. Customer Code & Name */}
-      <td data-label="Customer" className="py-3 px-3 md:min-w-[180px]">
+      <td data-label="Customer" className="md:min-w-[180px]">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-mono font-bold text-primary text-[11px] px-1.5 py-0.2 bg-primary/10 rounded">
             {row.customerId}
@@ -70,7 +70,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             </span>
           )}
         </div>
-        <div className="text-[10px] text-on-surface-variant md:truncate md:max-w-[220px] mt-0.5 flex items-center gap-1">
+        <div className="text-[10px] text-on-surface-variant md:min-w-0 whitespace-normal break-words md:max-w-[220px] mt-0.5 flex items-center gap-1">
           <LuMapPin className="text-primary text-[10px] shrink-0" />
           <span>{row.customerAddress}</span>
         </div>
@@ -88,13 +88,13 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 6. Sub Channel & Itinerary */}
-      <td data-label="Sub Channel" className="py-3 px-3 whitespace-nowrap">
+      <td data-label="Sub Channel" className="whitespace-nowrap">
         <div className="font-bold text-on-surface">{row.subChannel}</div>
         <div className="text-[10px] text-on-surface-variant font-mono">{row.itny}</div>
       </td>
 
       {/* 7. Call Indicators (Plan / Actual / EC) */}
-      <td data-label="Call Status" className="py-3 px-3 whitespace-nowrap text-center">
+      <td data-label="Call Status" className="whitespace-nowrap text-center">
         <div className="flex items-center justify-start md:justify-center gap-1 flex-wrap">
           <span
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
@@ -128,7 +128,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 8. Order (Rp) & SKU */}
-      <td data-label="Order (Rp)" className="py-3 px-3 whitespace-nowrap md:text-right text-left">
+      <td data-label="Order (Rp)" className="whitespace-nowrap md:text-right text-left">
         {row.orderAmount > 0 ? (
           <div>
             <div className="font-bold text-emerald-600">
@@ -142,7 +142,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 9. Reason & Remark */}
-      <td data-label="Catatan" className="py-3 px-3 md:max-w-[170px]">
+      <td data-label="Catatan" className="md:max-w-[170px]">
         {row.isTravelAnomaly && (
           <div className="text-[10px] font-bold text-rose-700 leading-tight mb-0.5 flex items-center gap-1">
             <LuShieldAlert className="text-[10px] shrink-0" />
@@ -150,16 +150,16 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           </div>
         )}
         {row.reason ? (
-          <div className="text-[11px] font-semibold text-rose-600 md:truncate" title={row.reason}>
+          <div className="text-[11px] font-semibold text-rose-600 md:min-w-0 whitespace-normal break-words" title={row.reason}>
             {row.reason}
           </div>
         ) : (
-          <div className="text-[11px] text-on-surface-variant md:truncate" title={row.remark}>
+          <div className="text-[11px] text-on-surface-variant md:min-w-0 whitespace-normal break-words" title={row.remark}>
             {row.remark || '-'}
           </div>
         )}
         {row.earlyReason && (
-          <div className="text-[10px] text-amber-700 font-semibold md:truncate flex items-center gap-1" title={row.earlyReason}>
+          <div className="text-[10px] text-amber-700 font-semibold md:min-w-0 whitespace-normal break-words flex items-center gap-1" title={row.earlyReason}>
             <LuTriangleAlert className="text-[10px] shrink-0" />
             <span>{row.earlyReason}</span>
           </div>
@@ -167,7 +167,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 10. GPS Deviation */}
-      <td data-label="Deviasi GPS" className="py-3 px-3 whitespace-nowrap text-center">
+      <td data-label="Deviasi GPS" className="whitespace-nowrap text-center">
         <span
           className={`inline-flex px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
             row.distanceWarning === 'WARNING'
@@ -180,7 +180,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 11. Foto & Aksi */}
-      <td className="py-3 px-3 text-center whitespace-nowrap mobile-full-width">
+      <td className="text-center whitespace-nowrap mobile-full-width">
         {row.photoIn || row.photoOut ? (
           <button
             type="button"

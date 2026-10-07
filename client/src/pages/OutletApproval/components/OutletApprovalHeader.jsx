@@ -104,7 +104,7 @@ export const OutletApprovalHeader = ({
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-variant/40 hover:text-on-surface'
               }`}
             >
-              <span className="truncate">{st.label}</span>
+              <span className="min-w-0 whitespace-normal break-words">{st.label}</span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
                   isActive

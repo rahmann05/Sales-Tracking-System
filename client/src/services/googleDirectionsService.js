@@ -1,3 +1,4 @@
+import { request } from './httpClient';
 /**
  * Google Directions & Roads API Helper Service
  * Single Responsibility: Pure Google Directions API & Roads API helper consuming system latitude & longitude coordinates.
@@ -57,7 +58,8 @@ export const googleDirectionsService = {
           stopover: true,
         }));
 
-        const result = await new Promise((resolve, reject) => {
+        let timeout;
+        const result = await Promise.race([new Promise((resolve, reject) => {
           directionsService.route(
             {
               origin: rawOrigin,
@@ -77,7 +79,7 @@ export const googleDirectionsService = {
               }
             }
           );
-        });
+        }),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('DirectionsService timeout')),8000);})]).finally(()=>clearTimeout(timeout));
 
         if (result && result.length > 0) return result;
       } catch (sdkErr) {
@@ -87,12 +89,7 @@ export const googleDirectionsService = {
 
     // Strategy 2: Backend routing service (/api/v1/routing/road-route)
     try {
-      const response = await fetch('/api/v1/routing/road-route', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ waypoints: directPath }),
-      });
-      const data = await response.json();
+      const data=await request('/routing/road-route',{method:'POST',body:JSON.stringify({waypoints:directPath})});
       if (data.success && data.data?.legs?.length > 0) {
         const fullPath = data.data.legs.flatMap((l) => l.path || []);
         if (fullPath.length > 0) return fullPath;

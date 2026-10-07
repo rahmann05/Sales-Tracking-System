@@ -1,0 +1,47 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {prisma} from '../src/config/prisma.js';
+import {createClusterFull} from '../src/modules/clusters/services/create-cluster-full.service.js';
+import {updateClusterOutlets} from '../src/modules/clusters/services/update-cluster-outlets.service.js';
+import {createOutlet} from '../src/modules/outlets/services/create-outlet.service.js';
+import {deleteCluster} from '../src/modules/clusters/services/delete-cluster.service.js';
+import {getClusterById} from '../src/modules/clusters/services/get-cluster-by-id.service.js';
+import {createFullClusterSchema,getNearestOutletsSchema} from '../src/modules/clusters/clusters.schema.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
+const clusterIds=[],outletIds=[];const tag='cluster-test-'+randomUUID();const admin={role:'ADMIN'};
+try{
+ const source=await prisma.cluster.create({data:{name:tag,region:'Test'}});clusterIds.push(source.id);
+ const outlet=await prisma.outlet.create({data:{name:tag,address:'Test',latitude:-6.9,longitude:107.6,clusterId:source.id}});outletIds.push(outlet.id);
+ const modern=await prisma.outlet.create({data:{name:tag+' MT',address:'Test',latitude:-6.91,longitude:107.61,clusterId:source.id,type:'MODERN_TRADE',channel:'MODERN_TRADE'}});outletIds.push(modern.id);
+ await assert.rejects(()=>createClusterFull({name:tag+' mixed',region:'Test',outletIds:[outlet.id,modern.id],routes:[]},admin),error=>error.statusCode===400);
+ const route={routeIndex:0,isActive:true,totalDistanceKm:0,startOutletId:outlet.id,outletOrder:[{id:outlet.id,sequence:1}]};
+ await prisma.clusterRoute.create({data:{clusterId:source.id,...route}});
+ await getClusterById(source.id);
+ await assert.rejects(()=>deleteCluster(source.id),error=>error.statusCode===409);
+ const target=await createClusterFull({name:tag+' target',region:'Test',outletIds:[outlet.id],routes:[route]},admin);clusterIds.push(target.id);
+ await assert.rejects(()=>createOutlet({name:tag+' wrong',address:'Test',latitude:-6.9,longitude:107.6,clusterId:target.id,type:'MODERN_TRADE'}),error=>error.statusCode===400);
+ assert.equal(await prisma.clusterRoute.count({where:{clusterId:source.id}}),0);
+ assert.equal((await getClusterById(source.id)).outlets.length,1);
+ assert.equal((await prisma.cluster.findUnique({where:{id:source.id}})).outletCount,1);
+ assert.equal((await prisma.cluster.findUnique({where:{id:target.id}})).outletCount,1);
+ const foreign={role:'SUPERVISOR',id:randomUUID()};
+ await assert.rejects(()=>updateClusterOutlets(source.id,[outlet.id],foreign),error=>error.statusCode===403);
+ await assert.rejects(()=>updateClusterOutlets(target.id,[outlet.id,modern.id],admin),error=>error.statusCode===400);
+ await prisma.outlet.delete({where:{id:modern.id}});
+ await updateClusterOutlets(source.id,[outlet.id],admin);
+ assert.equal((await getClusterById(target.id)).outlets.length,0);
+ assert.equal(await prisma.clusterRoute.count({where:{clusterId:target.id}}),0);
+ assert.equal((await prisma.cluster.findUnique({where:{id:source.id}})).outletCount,1);
+ await deleteCluster(target.id);
+ await assert.rejects(()=>updateClusterOutlets(target.id,[outlet.id],admin),error=>error.statusCode===404);
+ await assert.rejects(()=>getClusterById(target.id),error=>error.statusCode===404);
+ assert.equal(createFullClusterSchema.safeParse({body:{name:'  ',region:'ok',outletIds:[outlet.id]}}).success,false);
+ assert.equal(createFullClusterSchema.safeParse({body:{name:'Belum Ditugaskan',region:'ok',outletIds:[outlet.id]}}).success,false);
+ assert.equal(getNearestOutletsSchema.safeParse({body:{lat:91,lng:107,count:10}}).success,false);
+ console.log('Cluster integration passed: transfer, source/destination counts and route invalidation, cache refresh, team scope, deletion guards and input validation.');
+}finally{
+ await prisma.outlet.deleteMany({where:{id:{in:outletIds}}});
+ await prisma.cluster.deleteMany({where:{id:{in:clusterIds}}});
+ await prisma.$disconnect();
+}

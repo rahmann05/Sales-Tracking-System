@@ -1,3 +1,4 @@
+import { invalidateOutletCache } from './outlets.helpers.js';
 /** validateOutlet - single-responsibility service (extracted from outlet-validation.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
@@ -19,15 +20,8 @@ import { scoreNearbySearch } from './score-nearby-search.service.js';
  * @returns {Object} Validation result with status, confidence, and details
  */
 export const validateOutlet = async (outletId) => {
-  let apiKey = config.googleMapsApiKey;
-  if (!apiKey) {
-    try {
-      apiKey = await getDynamicConfig('MAPS_API_KEY', '');
-    } catch {}
-  }
-  if (!apiKey) {
-    throw new AppError('Google Maps API Key belum dikonfigurasi. Set GOOGLE_MAPS_API_KEY di .env atau Pengaturan Sistem', 400);
-  }
+  const apiKey = await getDynamicConfig('MAPS_API_KEY','') || config.googleMapsApiKey;
+
 
   const outlet = await prisma.outlet.findUnique({
     where: { id: outletId },
@@ -39,30 +33,37 @@ export const validateOutlet = async (outletId) => {
   }
 
   // Check data completeness
-  const hasLatLng = outlet.latitude != null && outlet.longitude != null;
+  const hasLatLng = Number.isFinite(outlet.latitude) && Math.abs(outlet.latitude)<=90 && Number.isFinite(outlet.longitude) && Math.abs(outlet.longitude)<=180;
   const hasName = outlet.name && outlet.name.trim().length > 0;
   const hasAddress = outlet.address && outlet.address.trim().length > 0;
 
   // If absolutely no data, mark as INCOMPLETE
-  if (!hasLatLng && !hasName && !hasAddress) {
+  if (!hasLatLng || !hasName || !hasAddress) {
     const incompleteResult = {
+      googleSuggestedLat:null,googleSuggestedLng:null,
       validationStatus: 'INCOMPLETE',
       validationConfidence: 0,
       validatedAt: new Date(),
       validationDetails: {
+        coordinateHistory:outlet.validationDetails?.coordinateHistory || [],
         signals: {},
         overallConfidence: 0,
-        warnings: ['Data outlet tidak lengkap — tidak ada nama, alamat, maupun koordinat'],
+        warnings: ['Lengkapi nama, alamat, dan koordinat sebelum validasi'],
         dataCompleteness: { hasLatLng, hasName, hasAddress },
       },
     };
 
     await prisma.outlet.update({
-      where: { id: outletId },
+      where: { id: outletId,updatedAt:outlet.updatedAt },
       data: incompleteResult,
     });
 
-    return { ...incompleteResult, outlet };
+    invalidateOutletCache();
+    return { ...incompleteResult, outlet:{...outlet,...incompleteResult} };
+  }
+
+  if (!apiKey) {
+    throw new AppError('Google Maps API Key belum dikonfigurasi. Set GOOGLE_MAPS_API_KEY di .env atau Pengaturan Sistem', 400);
   }
 
   const activeWeights = { ...DEFAULT_WEIGHTS };
@@ -151,19 +152,9 @@ export const validateOutlet = async (outletId) => {
     if (activeWeights.reverseGeocode) activeWeights.reverseGeocode *= 1.25;
   }
 
-  // Step 5: Adjust weighting if Find Place was discarded (out of area / no candidate)
-  const findPlaceCandidateFarOrMissing =
-    !signalScores.findPlace ||
-    signalScores.findPlace.isFarMismatch ||
-    !rawResults.findPlace?.success;
-
-  if (findPlaceCandidateFarOrMissing && hasLatLng && signalScores.reverseGeocode?.score >= 40) {
-    activeWeights.findPlace = 0.05;
-    if (activeWeights.reverseGeocode) activeWeights.reverseGeocode = 0.50;
-    if (activeWeights.forwardGeocode) activeWeights.forwardGeocode = 0.25;
-    if (activeWeights.nearbySearch) activeWeights.nearbySearch = 0.20;
-    warnings.push('Toko fisik terkonfirmasi di koordinat (profil Google Place mandiri/tidak terdaftar)');
-  }
+  const unavailable = Object.values(rawResults).filter(r=>!r.success && !['ZERO_RESULTS','NO_RESULTS','NO_CANDIDATES'].includes(r.error));
+  if (unavailable.length) throw new AppError('Layanan peta belum memberikan hasil lengkap. Status outlet tidak diubah; coba kembali atau periksa konfigurasi admin.',503);
+  if (!rawResults.findPlace?.success) warnings.push('Profil toko tidak ditemukan; pencarian peta tidak membuktikan keberadaan fisik toko.');
 
   // Step 6: Calculate weighted overall confidence
   const totalWeight = Object.values(activeWeights).reduce((sum, w) => sum + w, 0);
@@ -229,6 +220,7 @@ export const validateOutlet = async (outletId) => {
     // Suggest the store's true coordinates so Ops Manager can fix misplaced GPS points!
     if (
       signalScores.findPlace?.details?.googleLat != null &&
+      !signalScores.findPlace.isFarMismatch && (signalScores.findPlace.details.distanceMeters ?? Infinity) <= await getDynamicConfig('VALIDATION_DISTANCE_SUSPECT',500) &&
       (signalScores.findPlace.details.nameSimilarity || 0) >= 0.70
     ) {
       googleSuggestedLat = signalScores.findPlace.details.googleLat;
@@ -260,6 +252,8 @@ export const validateOutlet = async (outletId) => {
   }
 
   const validationDetails = {
+    coordinateHistory: outlet.validationDetails?.coordinateHistory || [],
+    method: 'MAP_COMPARISON',
     signals: signalDetailsForStorage,
     overallConfidence,
     distanceMeters: validDistanceMeters,
@@ -276,15 +270,11 @@ export const validateOutlet = async (outletId) => {
     validationDetails,
   };
 
-  if (googleSuggestedLat != null) {
-    updateData.googleSuggestedLat = googleSuggestedLat;
-    updateData.googleSuggestedLng = googleSuggestedLng;
-  }
+  updateData.googleSuggestedLat = googleSuggestedLat;
+  updateData.googleSuggestedLng = googleSuggestedLng;
+  const saved = await prisma.outlet.updateMany({where:{id:outletId,updatedAt:outlet.updatedAt},data:updateData});
+  if (!saved.count) throw new AppError('Data outlet berubah saat validasi. Muat ulang lalu validasi kembali.',409);
+  invalidateOutletCache();
 
-  await prisma.outlet.update({
-    where: { id: outletId },
-    data: updateData,
-  });
-
-  return { ...updateData, outlet };
+  return { ...updateData, outlet:{...outlet,...updateData} };
 };

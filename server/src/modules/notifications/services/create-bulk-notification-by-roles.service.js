@@ -5,8 +5,14 @@ import { SOCKET_EVENTS } from '../../../utils/constants.js';
 
 
 export const createBulkNotificationByRoles = async (roles, type, title, message, payload = null) => {
+  let salesId=payload?.salesId;
+  if(payload?.orderId)salesId=(await prisma.order.findUnique({where:{id:payload.orderId},select:{createdBy:true}}))?.createdBy;
+  if(payload?.offPjpAttendanceId)salesId=(await prisma.offPjpAttendance.findUnique({where:{id:payload.offPjpAttendanceId},select:{userId:true}}))?.userId;
+  if(payload?.routeChangeRequestId)salesId=(await prisma.routeChangeRequest.findUnique({where:{id:payload.routeChangeRequestId},select:{reportedBy:true}}))?.reportedBy;
+  const supervisor = salesId ? (await prisma.user.findUnique({where:{id:salesId},select:{supervisorId:true}}))?.supervisorId : undefined;
+  const ids = salesId ? (supervisor ? [supervisor] : []) : null;
   const users = await prisma.user.findMany({
-    where: { role: { in: roles }, deletedAt: null },
+    where: {role:{in:roles},deletedAt:null,...(ids?{OR:[{role:{not:'SUPERVISOR'}},{id:{in:ids}}]}:{})},
     select: { id: true },
   });
 

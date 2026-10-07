@@ -51,7 +51,7 @@ export const AdminUserModal = ({ user, clusters = [], onClose, onSuccess }) => {
             { code: 'ADMIN', name: 'Admin', description: 'Administrator dengan wewenang penuh mengurus seluruh fitur, operasional, logistik, dan pengaturan sistem.', badgeColor: 'blue', isSystem: true, defaultPermissions: BUILT_IN_ROLE_TEMPLATES.ADMIN },
             { code: 'SUPERVISOR', name: 'Supervisor', description: 'Supervisi tim sales, monitoring live GPS, persetujuan toko baru, validasi koordinat, dan laporan.', badgeColor: 'purple', isSystem: true, defaultPermissions: BUILT_IN_ROLE_TEMPLATES.SUPERVISOR },
             { code: 'SALES', name: 'Sales Field', description: 'Sales lapangan untuk eksekusi rute PJP, absensi toko, input pesanan PO, dan registrasi NOO.', badgeColor: 'emerald', isSystem: true, defaultPermissions: BUILT_IN_ROLE_TEMPLATES.SALES },
-            { code: 'KEPALA_GUDANG', name: 'Kepala Gudang', description: 'Manajemen logistik gudang, pembuatan packing list pesanan, alokasi rute supir, dan monitor pengiriman.', badgeColor: 'amber', isSystem: true, defaultPermissions: BUILT_IN_ROLE_TEMPLATES.KEPALA_GUDANG },
+            { code: 'KEPALA_GUDANG', name: 'Kepala Gudang', description: 'Manajemen logistik gudang, penerimaan packing list admin, alokasi rute supir, dan monitor pengiriman.', badgeColor: 'amber', isSystem: true, defaultPermissions: BUILT_IN_ROLE_TEMPLATES.KEPALA_GUDANG },
             { code: 'SUPIR', name: 'Supir Pengiriman', description: 'Armada pengiriman lapangan, navigasi rute pengantaran toko, dan input bukti serah terima barang.', badgeColor: 'orange', isSystem: true, defaultPermissions: BUILT_IN_ROLE_TEMPLATES.SUPIR },
           ]);
         }
@@ -70,7 +70,7 @@ export const AdminUserModal = ({ user, clusters = [], onClose, onSuccess }) => {
         name: user.name || '',
         email: user.email || '',
         password: '', // Blank when editing
-        role: user.role || 'SALES',
+        role: user.roleCode || user.role || 'SALES',
         clusterId: user.clusterId || '',
       });
       setPermissions(user.permissions || {});
@@ -105,7 +105,7 @@ export const AdminUserModal = ({ user, clusters = [], onClose, onSuccess }) => {
     const targetDef = availableRoles.find((r) => r.code === newRoleCode);
     const templatePerms = targetDef?.defaultPermissions || BUILT_IN_ROLE_TEMPLATES[newRoleCode] || getEmptyPermissions();
 
-    setFormData((prev) => ({ ...prev, role: newRoleCode }));
+    setFormData((prev) => ({ ...prev, role: newRoleCode, clusterId: newRoleCode !== prev.role ? '' : prev.clusterId }));
     setPermissions(templatePerms);
   };
 
@@ -279,8 +279,9 @@ export const AdminUserModal = ({ user, clusters = [], onClose, onSuccess }) => {
                 />
               )}
 
+              <p className="text-sm text-on-surface-variant">Penugasan tim dan wilayah sales dikelola pada menu Tim, wilayah, dan PJP setelah akun disimpan.</p>
               {/* Cluster Assignment (If applicable) */}
-              {formData.role !== 'ADMIN' && (
+              {formData.role !== 'ADMIN' && (currentRoleDef?.baseRole || formData.role) !== 'SALES' && (
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                     Penugasan Kluster Wilayah

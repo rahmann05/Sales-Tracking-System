@@ -12,6 +12,7 @@ export const deleteDeliveryRoute = async (id) => {
     throw new AppError('Hanya rute berstatus DRAFT yang bisa dihapus', 400);
   }
 
-  await prisma.deliveryRoute.delete({ where: { id } });
+  const deleted = await prisma.deliveryRoute.deleteMany({where:{id,status:'DRAFT'}});
+  if (!deleted.count) throw new AppError('Status rute berubah, muat ulang',409);
   return { message: 'Rute pengiriman berhasil dihapus' };
 };

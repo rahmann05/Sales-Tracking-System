@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { LuTarget, LuCircleCheck, LuClock, LuCompass, LuSparkles } from 'react-icons/lu';
+import { LuTarget, LuCircleCheck, LuClock, LuCompass } from "react-icons/lu";
 import { calculateSalesPerformance } from '../../../services/salesPerformanceService';
 
 /**
@@ -10,7 +10,7 @@ import { calculateSalesPerformance } from '../../../services/salesPerformanceSer
 export const SalesDailyPerformanceTracker = ({
   salesStops = [],
   offPjpAttendances = [],
-  targetDailyVisits = 5,
+  targetDailyVisits = 10,
 }) => {
   const metrics = useMemo(
     () =>

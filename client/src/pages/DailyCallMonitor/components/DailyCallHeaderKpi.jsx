@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  LuPhoneCall,
-  LuShoppingBag,
-  LuCircleCheck,
-  LuClock,
-  LuTrendingUp,
-} from 'react-icons/lu';
+import { LuPhoneCall, LuShoppingBag, LuCircleCheck } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
 
 /**
@@ -46,7 +40,7 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
             {actualRate}%
           </span>
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0 truncate">Realisasi Call Plan Hari Ini</p>
+        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Realisasi Call Plan Hari Ini</p>
       </div>
 
       {/* 2. Effective Calls (EC) */}
@@ -65,7 +59,7 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
             {effectiveCallRate}
           </span>
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0 truncate">Kunjungan transaksi berhasil</p>
+        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Kunjungan transaksi berhasil</p>
       </div>
 
       {/* 3. Omzet Order of The Day */}
@@ -84,7 +78,7 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
             {totalSkuSold} SKU
           </span>
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0 truncate">Rata-rata durasi: {avgDurationMinutes} Menit</p>
+        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">Rata-rata durasi: {avgDurationMinutes} Menit</p>
       </div>
 
       {/* 4. Monitoring Anomali */}
@@ -115,7 +109,7 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
             </span>
           )}
         </div>
-        <p className="text-[11px] text-on-surface-variant m-0 truncate">
+        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
           Durasi &lt; 5m: {totalDurationAnomalies} • Jarak &gt; 50m: {totalDistanceAnomalies}
         </p>
       </div>

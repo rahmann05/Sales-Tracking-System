@@ -1,7 +1,7 @@
 /** getOutletReport - single-responsibility service (extracted from reports.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { buildDateRange } from '../../../utils/pagination.js';
-import { PJP_STATUS, VISIT_STATUS } from '../../../utils/constants.js';
+import { VISIT_STATUS } from "../../../utils/constants.js";
 
 /**
  * Per-Outlet visit recap.
@@ -11,6 +11,8 @@ export const getOutletReport = async (query = {}) => {
   const dateRange = buildDateRange(startDate, endDate);
 
   const outletWhere = { deletedAt: null };
+  if (query.supervisorId) outletWhere.cluster = {supervisorId:query.supervisorId};
+  if (query.userId) outletWhere.cluster = {OR:[{assignedSalesId:query.userId},{users:{some:{id:query.userId}}}]};
   if (clusterId) outletWhere.clusterId = clusterId;
 
   const outlets = await prisma.outlet.findMany({

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { listManualSales, reviewManualSales } from './services/manual-sales-review.service.js';
 import { Router } from 'express';
 import * as absensiController from './absensi.controller.js';
 import {
@@ -39,4 +41,13 @@ router.patch(
   handleValidateOffPjpAttendance
 );
 
+router.get('/manual-sales', authorize('ADMIN','SUPERVISOR'), async (req,res,next) => {
+  try { res.json({ success: true, data: await listManualSales(req.user, req.query) }); } catch(error) { next(error); }
+});
+router.patch('/manual-sales/:kind/:id', authorize('ADMIN','SUPERVISOR'), async (req,res,next) => {
+  try {
+    const body = z.object({ decision: z.enum(['APPROVED','REJECTED']), note: z.string().max(2000).optional() }).parse(req.body);
+    res.json({ success: true, data: await reviewManualSales(req.user, req.params.kind, req.params.id, body.decision, body.note) });
+  } catch(error) { next(error); }
+});
 export default router;

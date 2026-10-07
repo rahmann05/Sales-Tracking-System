@@ -1,3 +1,6 @@
+import teamRoutes from '../modules/teams/teams.routes.js';
+import staffAttendanceRoutes from '../modules/staff-attendance/staff-attendance.routes.js';
+import { invalidateCache } from '../middlewares/cache.middleware.js';
 import { Router } from 'express';
 import healthRoutes from './health.routes.js';
 import authRoutes from '../modules/auth/auth.routes.js';
@@ -25,14 +28,20 @@ const router = Router();
 router.use('/health', healthRoutes);
 
 const v1Router = Router();
+v1Router.use((req, res, next) => {
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) res.on('finish', () => { if (res.statusCode < 400) invalidateCache(); });
+  next();
+});
 v1Router.use('/health', healthRoutes);
 v1Router.use('/auth', authRoutes);
 v1Router.use('/users', userRoutes);
+v1Router.use('/teams', teamRoutes);
 v1Router.use('/roles', rolesRoutes);
 v1Router.use('/clusters', clusterRoutes);
 v1Router.use('/outlets', outletRoutes);
 v1Router.use('/pjp', pjpRoutes);
 v1Router.use('/absensi', absensiRoutes);
+v1Router.use('/staff-attendance', staffAttendanceRoutes);
 v1Router.use('/route-changes', routeChangeRoutes);
 v1Router.use('/notifications', notificationRoutes);
 v1Router.use('/reports', reportRoutes);

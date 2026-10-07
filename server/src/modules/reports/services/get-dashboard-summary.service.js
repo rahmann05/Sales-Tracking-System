@@ -1,3 +1,4 @@
+import {teamSalesWhere} from '../../../utils/team-scope.js';
 /** getDashboardSummary - single-responsibility service (extracted from reports.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { buildDateRange } from '../../../utils/pagination.js';
@@ -10,7 +11,10 @@ import { PJP_STATUS, VISIT_STATUS } from '../../../utils/constants.js';
 export const getDashboardSummary = async (query = {}) => {
   const { startDate, endDate } = query;
   const dateRange = buildDateRange(startDate, endDate);
-  const pjpWhere = dateRange ? { date: dateRange } : {};
+  const pjpWhere = {type:'SALES',...(dateRange?{date:dateRange}:{})};
+  if(query.userId)pjpWhere.userId=query.userId;
+  if(query.supervisorId)pjpWhere.user=teamSalesWhere(query.supervisorId);
+  const regScope={...(query.userId?{salesmanId:query.userId}:{}),...(query.supervisorId?{salesman:teamSalesWhere(query.supervisorId)}:{}),...(dateRange?{createdAt:dateRange}:{})};
 
   const [
     totalPjp,
@@ -26,12 +30,12 @@ export const getDashboardSummary = async (query = {}) => {
     prisma.pjp.count({ where: pjpWhere }),
     prisma.pjp.count({ where: { ...pjpWhere, status: PJP_STATUS.COMPLETED } }),
     prisma.pjpStop.count({ where: { pjp: pjpWhere } }),
-    prisma.pjpStop.count({ where: { pjp: pjpWhere, status: VISIT_STATUS.VISITED } }),
+    prisma.pjpStop.count({ where: { pjp: pjpWhere, OR:[{attendances:{some:{type:{in:['IN','OUT']}}}},{status:VISIT_STATUS.VISITED}] } }),
     prisma.pjpStop.count({ where: { pjp: pjpWhere, status: VISIT_STATUS.SKIPPED } }),
-    prisma.customerRegistration.count({ where: { deletedAt: null } }),
-    prisma.customerRegistration.count({ where: { registrationStatus: 'REGISTERED_ACTIVE', deletedAt: null } }),
-    prisma.customerRegistration.count({ where: { registrationStatus: { in: ['SUBMITTED', 'SPV_APPROVED'] }, deletedAt: null } }),
-    prisma.routeChangeRequest.count(),
+    prisma.customerRegistration.count({ where: { deletedAt: null, ...regScope } }),
+    prisma.customerRegistration.count({ where: { registrationStatus: 'REGISTERED_ACTIVE', deletedAt: null, ...regScope } }),
+    prisma.customerRegistration.count({ where: { registrationStatus: { in: ['SUBMITTED', 'SPV_APPROVED'] }, deletedAt: null, ...regScope } }),
+    prisma.routeChangeRequest.count({where:{pjp:pjpWhere}}),
   ]);
 
   return {

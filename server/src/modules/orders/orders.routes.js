@@ -8,7 +8,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.post('/', authorize('SALES'), validate(createOrderSchema), orderController.create);
+router.post('/', authorizeWithPermission(['SALES'],'can_create_order'), validate(createOrderSchema), orderController.create);
 router.get('/', authorize('ADMIN', 'SUPERVISOR', 'SALES'), orderController.getAll);
 router.patch('/batch-approve', authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_approve_order'), orderController.batchApprove);
 router.get('/:id', orderController.getById);

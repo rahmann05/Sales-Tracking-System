@@ -1,3 +1,4 @@
+import {getPjpById} from '../pjp/services/get-pjp-by-id.service.js';
 import * as absensiService from './absensi.service.js';
 import { successResponse } from '../../utils/response.js';
 
@@ -31,7 +32,7 @@ export const checkOut = async (req, res, next) => {
       reason,
       orderAmount,
       skuSold,
-      isEffectiveCall,
+      productIds,
     } = req.body;
 
     const data = await absensiService.checkOut(
@@ -46,7 +47,7 @@ export const checkOut = async (req, res, next) => {
         reason,
         orderAmount,
         skuSold,
-        isEffectiveCall,
+        productIds,
       }
     );
     return successResponse(res, 201, data, 'Absen OUT berhasil');
@@ -66,6 +67,7 @@ export const history = async (req, res, next) => {
 
 export const getPjpRecap = async (req, res, next) => {
   try {
+    await getPjpById(req.params.pjpId,req.user);
     const data = await absensiService.getPjpAttendanceRecap(req.params.pjpId);
     return successResponse(res, 200, data);
   } catch (error) {

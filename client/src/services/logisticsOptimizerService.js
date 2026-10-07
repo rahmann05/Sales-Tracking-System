@@ -42,7 +42,8 @@ export const evaluateDropProfitability = ({
   const grossProfit = (totalGrossRevenue * grossMarginPercent) / 100;
   const netMargin = grossProfit - estimatedDropCost;
   const isProfitable = netMargin >= 0;
-  const minimumCartonsToBreakEven = Math.ceil(estimatedDropCost / ((pricePerCarton * grossMarginPercent) / 100));
+  const contribution = (pricePerCarton * grossMarginPercent) / 100;
+  const minimumCartonsToBreakEven = contribution > 0 ? Math.ceil(estimatedDropCost / contribution) : null;
 
   return {
     totalGrossRevenue,

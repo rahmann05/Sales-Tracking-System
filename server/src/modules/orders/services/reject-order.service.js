@@ -1,8 +1,9 @@
+import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** rejectOrder - single-responsibility service (extracted from orders.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { createNotification, createBulkNotificationByRoles } from '../../notifications/notifications.service.js';
-import { ORDER_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
+import { createNotification } from "../../notifications/notifications.service.js";
+import { ORDER_STATUS, NOTIFICATION_TYPES } from "../../../utils/constants.js";
 
 
 export const rejectOrder = async (orderId, adminId, reason = null) => {
@@ -16,9 +17,14 @@ export const rejectOrder = async (orderId, adminId, reason = null) => {
     throw new AppError(`Order sudah diproses sebelumnya (Status: ${order.status})`, 409);
   }
 
-  const updatedOrder = await prisma.order.update({
+  const reviewer=await prisma.user.findUnique({where:{id:adminId}});
+  if(!reviewer||!['ADMIN','SUPERVISOR'].includes(reviewer.role))throw new AppError('Tidak berwenang memproses order',403);
+  await assertSalesAccess(reviewer,order.createdBy);
+  if(!reason?.trim())throw new AppError('Alasan penolakan wajib',400);
+  const changed=await prisma.order.updateMany({where:{id:orderId,status:'PENDING_APPROVAL'},data:{status:'REJECTED',approvedBy:adminId,approvedAt:new Date(),rejectionReason:reason.trim()}});
+  if(!changed.count)throw new AppError('Order sudah diproses',409);
+  const updatedOrder = await prisma.order.findUnique({
     where: { id: orderId },
-    data: { status: ORDER_STATUS.REJECTED, approvedBy: adminId, approvedAt: new Date() },
     include: { 
       items: { include: { product: true } },
       pjpStop: { include: { outlet: { select: { id: true, name: true, address: true } } } },

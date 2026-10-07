@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 export const createOffPjpAttendanceSchema = z.object({
   body: z.object({
+    orderAmount: z.number().finite().min(0).max(1e12).optional(),
+    productIds: z.array(z.string().uuid()).max(500).optional(),
+    skuSold: z.number().int().min(0).max(100000).optional(),
     outletName: z.string().min(2, 'Nama outlet minimal 2 karakter'),
     customerName: z.string().optional(),
     phone: z.string().optional(),

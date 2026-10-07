@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { FiSearch } from 'react-icons/fi';
 
 /**
@@ -15,14 +15,19 @@ export const Input = ({
   className = '',
   containerClassName = '',
   required = false,
+  id,
   ...rest
 }) => {
+  const generatedId = useId();
+  const inputId = id || generatedId;
   return (
     <div className={`input-group ${containerClassName}`}>
-      {label && <label className="input-label">{label}</label>}
+      {label && <label htmlFor={inputId} className="input-label">{label}</label>}
       <div className={`input-container ${className}`}>
         {IconComponent && <IconComponent className="input-icon" />}
         <input
+          id={inputId}
+          aria-label={!label ? (rest['aria-label'] || placeholder) : undefined}
           type={type}
           value={value}
           onChange={onChange}

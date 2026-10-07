@@ -1,3 +1,5 @@
+import {teamSalesWhere} from '../../../utils/team-scope.js';
+import {parsePagination} from '../../../utils/pagination.js';
 /** getRouteChanges - single-responsibility service (extracted from route-change.service.js). */
 import { prisma } from '../../../config/prisma.js';
 
@@ -5,13 +7,13 @@ import { prisma } from '../../../config/prisma.js';
 export const getRouteChanges = async (query = {}, user = null) => {
   const { status, type, page = 1, limit = 20 } = query;
   const where = {};
+  if(user?.role==='SUPERVISOR')where.reportedByUser=teamSalesWhere(user.id);
   if (status) where.status = status;
   if (type) where.type = type;
   // Sales users may only see the incidents they reported themselves
   if (user?.role === 'SALES') where.reportedBy = user.id;
 
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const take = parseInt(limit);
+  const {skip,take}=parsePagination(query);
 
   const [data, total] = await Promise.all([
     prisma.routeChangeRequest.findMany({

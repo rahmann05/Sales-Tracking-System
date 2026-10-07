@@ -1,3 +1,4 @@
+import { getDynamicConfig } from '../../config/config.service.js';
 /** createProduct - single-responsibility service (extracted from products.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -8,5 +9,5 @@ export const createProduct = async (data) => {
   if (existing) {
     throw new AppError('SKU produk sudah digunakan', 400);
   }
-  return await prisma.product.create({ data });
+  return await prisma.product.create({ data: { ...data, stock: data.stock ?? await getDynamicConfig('DEFAULT_PRODUCT_STOCK', 100) } });
 };

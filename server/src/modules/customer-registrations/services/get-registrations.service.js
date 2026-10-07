@@ -1,3 +1,4 @@
+import {teamSalesWhere} from '../../../utils/team-scope.js';
 /** getRegistrations - single-responsibility service (extracted from customer-registrations.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { parsePagination, buildPaginatedResponse } from '../../../utils/pagination.js';
@@ -19,6 +20,7 @@ export const getRegistrations = async (query = {}, currentUser) => {
   const { skip, take, page, limit } = parsePagination(query);
 
   const where = { deletedAt: null };
+  if(currentUser?.role==='SUPERVISOR')where.salesman=teamSalesWhere(currentUser.id);
 
   // Sales only sees their own submissions unless privileged
   if (currentUser?.role === ROLES.SALES) {

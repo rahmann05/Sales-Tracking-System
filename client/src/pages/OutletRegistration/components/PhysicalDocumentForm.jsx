@@ -1,18 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import {
-  LuCheck,
-  LuLock,
-  LuCamera,
-  LuRefreshCw,
-  LuClock,
-  LuStar,
-  LuMapPin,
-  LuInfo,
-  LuShieldCheck,
-  LuNavigation,
-  LuSend,
-} from 'react-icons/lu';
+import { LuCheck, LuLock, LuCamera, LuRefreshCw, LuStar, LuMapPin, LuInfo, LuShieldCheck, LuSend } from "react-icons/lu";
 import { GooglePlaceDetailCard } from './GooglePlaceDetailCard';
 import { IdCardCameraModal } from './IdCardCameraModal';
 import { OutletCameraModal } from './OutletCameraModal';
@@ -241,7 +229,7 @@ export const PhysicalDocumentForm = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-on-surface-variant line-clamp-1">
+                    <div className="text-[10px] text-on-surface-variant ">
                       {place.address}
                     </div>
                     <div className="text-[9px] text-primary font-mono flex items-center gap-2">

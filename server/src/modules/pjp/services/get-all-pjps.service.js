@@ -1,3 +1,5 @@
+import { teamSalesWhere } from '../../../utils/team-scope.js';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 /** getAllPjps - single-responsibility service (extracted from pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../../utils/pagination.js';
@@ -10,11 +12,12 @@ export const getAllPjps = async (query = {}) => {
 
   // Auto-generate PJP hari ini untuk semua sales (idempotent) berdasarkan logika clustering,
   // agar Supervisor/Manager dapat melihat rute hari ini walau sales belum login.
-  if (!date) {
+  if (!date || date === wibDateKey()) {
     try { await generateTodayPjpsAllSales(); } catch (e) { console.warn('[PJP] Auto-generate notice:', e.message); }
   }
 
   const where = {};
+  if (query.supervisorId) where.user = teamSalesWhere(query.supervisorId);
   if (type) where.type = type;
   if (status) where.status = status;
   if (userId) where.userId = userId;

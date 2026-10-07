@@ -1,3 +1,4 @@
+import {wibDayRange,wibDateKey} from '../../../../../shared/visit-metrics.mjs';
 /** getDashboard - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
 
@@ -8,17 +9,11 @@ import { prisma } from '../../../config/prisma.js';
 /**
  * Get delivery dashboard data for today (or specified date)
  */
-export const getDashboard = async (query) => {
+export const getDashboard = async (query = {}) => {
   const { date } = query;
-  const targetDate = date ? new Date(date) : new Date();
-  const startOfDay = new Date(targetDate);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(targetDate);
-  endOfDay.setHours(23, 59, 59, 999);
-
   const routes = await prisma.deliveryRoute.findMany({
     where: {
-      date: { gte: startOfDay, lte: endOfDay },
+      date: wibDayRange(date || new Date()),
     },
     include: {
       vehicle: { select: { id: true, code: true, name: true } },
@@ -60,7 +55,7 @@ export const getDashboard = async (query) => {
   });
 
   return {
-    date: targetDate.toISOString().slice(0, 10),
+    date: wibDateKey(date || new Date()),
     summary: {
       totalRoutes,
       totalVehicles,

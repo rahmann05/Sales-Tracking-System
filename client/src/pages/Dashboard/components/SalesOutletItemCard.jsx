@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuStore, LuMapPin, LuNavigation } from 'react-icons/lu';
+import { LuMapPin, LuNavigation } from "react-icons/lu";
 
 /**
  * SalesOutletItemCard Component
@@ -24,7 +24,7 @@ export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => 
           <span className="w-6 h-6 rounded-lg bg-primary text-white font-extrabold text-xs flex items-center justify-center shrink-0">
             #{sequence}
           </span>
-          <h4 className="font-bold text-on-surface text-sm tracking-tight truncate">
+          <h4 className="font-bold text-on-surface text-sm tracking-tight min-w-0 whitespace-normal break-words">
             {stop.outletName || stop.customerName}
           </h4>
         </div>
@@ -44,7 +44,7 @@ export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => 
 
       <p className="text-xs text-on-surface-variant flex items-center gap-1">
         <LuMapPin className="text-primary text-xs shrink-0" />
-        <span className="truncate">{stop.address || 'Alamat outlet'}</span>
+        <span className="min-w-0 whitespace-normal break-words">{stop.address || 'Alamat outlet'}</span>
       </p>
 
       {stop.legDistanceKm != null && (

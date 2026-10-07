@@ -1,11 +1,15 @@
 /** Shared helpers for clusters services (internal). */
-import { cacheGetOrFetch, cacheInvalidate } from '../../../utils/cacheHelper.js';
+import { invalidateCache } from '../../../middlewares/cache.middleware.js';
+import { cacheInvalidate } from '../../../utils/cacheHelper.js';
 import { CACHE_KEYS } from '../../../config/cache.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { haversineKm } from '../cluster-generator.service.js';
 
 
 export const invalidateClusterCache = (id = null) => {
+  invalidateCache('clusters');
+  invalidateCache('outlets');
+  invalidateCache('users');
   cacheInvalidate(CACHE_KEYS.ALL_CLUSTERS);
   cacheInvalidate(CACHE_KEYS.ALL_OUTLETS);
   if (id) cacheInvalidate(CACHE_KEYS.CLUSTER_BY_ID(id));

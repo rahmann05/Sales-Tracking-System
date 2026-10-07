@@ -1,14 +1,9 @@
+import { DataTable } from '../../../shared/components/common/DataTable';
+import { StaffAttendanceReport } from '../../../shared/components/common/StaffAttendanceReport';
+import { summarizeVisits } from '../../../../../shared/visit-metrics.mjs';
 import React, { useMemo } from 'react';
-import { 
-  LuStore, 
-  LuShuffle, 
-  LuClock, 
-  LuPrinter, 
-  LuTrendingUp,
-  LuFileSpreadsheet,
-  LuExternalLink
-} from 'react-icons/lu';
-import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { LuStore, LuShuffle, LuPrinter, LuTrendingUp, LuExternalLink } from "react-icons/lu";
+import { FiCheckCircle } from "react-icons/fi";
 import { useApp } from '../../../context/AppContext';
 import { TAB_IDS } from '../../../constants/navigation';
 
@@ -35,7 +30,7 @@ export const SupervisorDailyRecapTab = ({
 
   // Calculate Consolidated Metrics
   const metrics = useMemo(() => {
-    const totalTarget = salesStops.length || 20;
+    const totalTarget = salesStops.length;
     const completedStops = salesStops.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime);
     const completed = completedStops.length;
     const skippedIncidents = incidents.filter((i) => i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED');
@@ -43,7 +38,7 @@ export const SupervisorDailyRecapTab = ({
     const reroutedIncidents = incidents.filter((i) => i.status === 'RESOLVED_DIRECT_REROUTE' || i.status === 'RESOLVED_REROUTE_APPROVED');
     const rerouted = reroutedIncidents.length;
     
-    const complianceRate = totalTarget > 0 ? Math.min(100, Math.round(((completed + skipped + rerouted) / totalTarget) * 100)) : 0;
+    const complianceRate = totalTarget > 0 ? Math.round(summarizeVisits(salesStops).resolved / totalTarget * 100) : 0;
 
     return {
       totalTarget,
@@ -59,22 +54,17 @@ export const SupervisorDailyRecapTab = ({
 
   // Breakdown per sales representative
   const salesSummary = useMemo(() => {
-    const team = salesList && salesList.length > 0
-      ? salesList
-      : [
-          { id: 'usr-sales-1', name: 'Budi Santoso', phone: '081234567890', cluster: { name: 'Klaster Cimahi' } },
-          { id: 'usr-sales-2', name: 'Siti Aminah', phone: '081298765432', cluster: { name: 'Klaster Bandung Barat' } },
-        ];
+    const team = salesList;
 
     return team.map((sales) => {
       const stopsForSales = salesStops.filter((s) => s.salesId === sales.id || s.salesName === sales.name);
-      const target = stopsForSales.length || 10;
+      const target = stopsForSales.length;
       const done = stopsForSales.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime).length;
       const skips = incidents.filter((i) => (i.salesId === sales.id || i.salesName === sales.name) && (i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED')).length;
       const reroutes = incidents.filter((i) => (i.salesId === sales.id || i.salesName === sales.name) && (i.status === 'RESOLVED_DIRECT_REROUTE' || i.status === 'RESOLVED_REROUTE_APPROVED')).length;
-      const offPjp = offPjpAttendances.filter((a) => a.userId === sales.id || a.userName === sales.name).length;
+      const offPjp = offPjpAttendances.filter((a) => a.salesId === sales.id || a.salesName === sales.name).length;
 
-      const rate = target > 0 ? Math.min(100, Math.round(((done + skips + reroutes) / target) * 100)) : 0;
+      const rate = target > 0 ? Math.min(100, Math.round((summarizeVisits(stopsForSales).resolved / target) * 100)) : 0;
 
       return {
         ...sales,
@@ -84,7 +74,7 @@ export const SupervisorDailyRecapTab = ({
         reroutes,
         offPjp,
         complianceRate: rate,
-        status: done === target ? 'Selesai' : done > 0 ? 'Sedang Kunjungan' : 'Belum Mulai',
+        status: target === 0 ? 'Belum ada PJP' : done === target ? 'Selesai' : done > 0 ? 'Sedang Kunjungan' : 'Belum Mulai',
       };
     });
   }, [salesList, salesStops, incidents, offPjpAttendances]);
@@ -95,6 +85,7 @@ export const SupervisorDailyRecapTab = ({
 
   return (
     <div className="space-y-6">
+      <StaffAttendanceReport />
       {/* 1. Symmetrical KPI Metric Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
         <div className="bg-surface border border-border-glass rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
@@ -188,23 +179,23 @@ export const SupervisorDailyRecapTab = ({
         </div>
 
         <div className="overflow-x-auto mobile-card-table-wrapper">
-          <table className="w-full text-left text-xs border-collapse mobile-card-table">
+          <DataTable className="w-full text-left text-xs border-collapse mobile-card-table">
             <thead>
               <tr className="border-b border-border-glass text-on-surface-variant font-bold">
-                <th className="pb-3 px-3">Nama Salesman</th>
-                <th className="pb-3 px-3">Kluster Wilayah</th>
-                <th className="pb-3 px-3 text-center">Target RJP</th>
-                <th className="pb-3 px-3 text-center">Selesai</th>
-                <th className="pb-3 px-3 text-center">Toko Tutup</th>
-                <th className="pb-3 px-3 text-center">Luar RJP</th>
-                <th className="pb-3 px-3">Kepatuhan</th>
-                <th className="pb-3 px-3 text-center">Status</th>
+                <th className="">Nama Salesman</th>
+                <th className="">Kluster Wilayah</th>
+                <th className="text-center">Target RJP</th>
+                <th className="text-center">Selesai</th>
+                <th className="text-center">Toko Tutup</th>
+                <th className="text-center">Luar RJP</th>
+                <th className="">Kepatuhan</th>
+                <th className="text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-glass">
               {salesSummary.map((s) => (
                 <tr key={s.id} className="hover:bg-surface-variant/20 transition-colors">
-                  <td data-label="Salesman" className="py-3 px-3 font-bold text-on-surface">
+                  <td data-label="Salesman" className="font-bold text-on-surface">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">
                         {s.name.charAt(0)}
@@ -215,18 +206,18 @@ export const SupervisorDailyRecapTab = ({
                       </div>
                     </div>
                   </td>
-                  <td data-label="Klaster" className="py-3 px-3 text-on-surface-variant">
+                  <td data-label="Klaster" className="text-on-surface-variant">
                     {s.cluster?.name || 'Klaster Bandung'}
                   </td>
-                  <td data-label="Target RJP" className="py-3 px-3 md:text-center text-left font-bold">{s.target}</td>
-                  <td data-label="Selesai" className="py-3 px-3 md:text-center text-left font-extrabold text-emerald-600">{s.done}</td>
-                  <td data-label="Toko Tutup" className="py-3 px-3 md:text-center text-left text-amber-600 font-semibold">
+                  <td data-label="Target RJP" className="md:text-center text-left font-bold">{s.target}</td>
+                  <td data-label="Selesai" className="md:text-center text-left font-extrabold text-emerald-600">{s.done}</td>
+                  <td data-label="Toko Tutup" className="md:text-center text-left text-amber-600 font-semibold">
                     {s.skips + s.reroutes > 0 ? `${s.skips + s.reroutes} toko` : '-'}
                   </td>
-                  <td data-label="Luar RJP" className="py-3 px-3 md:text-center text-left text-blue-600 font-semibold">
+                  <td data-label="Luar RJP" className="md:text-center text-left text-blue-600 font-semibold">
                     {s.offPjp > 0 ? `${s.offPjp} toko` : '-'}
                   </td>
-                  <td data-label="Kepatuhan" className="py-3 px-3 md:min-w-[120px]">
+                  <td data-label="Kepatuhan" className="md:min-w-[120px]">
                     <div className="flex items-center gap-2 w-full">
                       <div className="flex-1 bg-surface-container rounded-full h-1.5 overflow-hidden">
                         <div 
@@ -239,7 +230,7 @@ export const SupervisorDailyRecapTab = ({
                       <span className="font-extrabold text-[11px] w-8 text-right">{s.complianceRate}%</span>
                     </div>
                   </td>
-                  <td data-label="Status" className="py-3 px-3 md:text-center text-left">
+                  <td data-label="Status" className="md:text-center text-left">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                       s.status === 'Selesai'
                         ? 'bg-emerald-500/10 text-emerald-700'
@@ -253,7 +244,7 @@ export const SupervisorDailyRecapTab = ({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       </div>
     </div>

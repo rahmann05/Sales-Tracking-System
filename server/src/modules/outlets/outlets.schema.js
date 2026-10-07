@@ -6,7 +6,7 @@ export const createOutletSchema = z.object({
     address: z.string().min(5, 'Alamat minimal 5 karakter'),
     latitude: z.number({ required_error: 'Latitude wajib diisi' }).min(-90).max(90),
     longitude: z.number({ required_error: 'Longitude wajib diisi' }).min(-180).max(180),
-    clusterId: z.string().uuid('clusterId harus berformat UUID'),
+    clusterId: z.string().trim().min(1).max(128),
     outletCode: z.string().optional(),
     ownerName: z.string().optional(),
     phone: z.string().optional(),
@@ -20,26 +20,26 @@ export const updateOutletSchema = z.object({
     address: z.string().min(5).optional(),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
-    clusterId: z.string().uuid().optional(),
+    clusterId: z.string().trim().min(1).max(128).optional(),
     outletCode: z.string().optional(),
     ownerName: z.string().optional(),
     phone: z.string().optional(),
     radiusMeters: z.number().optional(),
   }),
   params: z.object({
-    id: z.string().uuid('ID tidak valid'),
+    id: z.string().trim().min(1).max(128),
   }),
 });
 
 export const lockOutletSchema = z.object({
   params: z.object({
-    id: z.string().uuid('ID outlet tidak valid'),
+    id: z.string().trim().min(1).max(128),
   }),
 });
 
 export const unlockRequestSchema = z.object({
   params: z.object({
-    id: z.string().uuid('ID outlet tidak valid'),
+    id: z.string().trim().min(1).max(128),
   }),
   body: z.object({
     reason: z.string().min(3, 'Alasan permohonan unlock minimal 3 karakter'),

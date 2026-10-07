@@ -1,3 +1,5 @@
+import { correctCoordinates } from './services/correct-coordinates.service.js';
+import {assertOutletAccess} from '../../utils/team-scope.js';
 import { Router } from 'express';
 import * as outletController from './outlets.controller.js';
 import {
@@ -15,6 +17,7 @@ import { createOutletSchema, updateOutletSchema, lockOutletSchema, unlockRequest
 const router = Router();
 
 router.use(authenticate);
+router.param('id',async(req,res,next,id)=>{try{if(['ADMIN','KEPALA_GUDANG','SUPIR'].includes(req.user.role))return next();await assertOutletAccess(req.user,id);next();}catch(e){next(e);}});
 
 // ─── 1. Static Sub-Resources (Must precede /:id) ─────────────────────────────
 router.get(
@@ -40,7 +43,9 @@ router.patch(
 
 // ─── 2. Root Collection CRUD ─────────────────────────────────────────────────
 router.get('/', outletController.getAll);
-router.post('/', authorize('ADMIN', 'SUPERVISOR'), validate(createOutletSchema), outletController.create);
+router.post('/', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'), validate(createOutletSchema), outletController.create);
+
+router.patch('/:id/coordinates',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),async(req,res,next)=>{try{res.json({data:await correctCoordinates(req.params.id,req.body,req.user)});}catch(e){next(e);}});
 
 // ─── 3. Member Sub-Actions (/:id/...) ────────────────────────────────────────
 router.post(
@@ -55,7 +60,7 @@ router.post(
 );
 router.post(
   '/:id/lock',
-  authorize('ADMIN', 'SUPERVISOR'),
+  authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_unlock_absensi'),
   validate(lockOutletSchema),
   handleLockOutlet
 );
@@ -74,7 +79,7 @@ router.post(
 
 // ─── 4. Member CRUD (/:id) ───────────────────────────────────────────────────
 router.get('/:id', outletController.getById);
-router.patch('/:id', authorize('ADMIN', 'SUPERVISOR'), validate(updateOutletSchema), outletController.update);
-router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), outletController.remove);
+router.patch('/:id', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'), validate(updateOutletSchema), outletController.update);
+router.delete('/:id', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'), outletController.remove);
 
 export default router;

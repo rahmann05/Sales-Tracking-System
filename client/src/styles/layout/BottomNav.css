@@ -1,4 +1,4 @@
-@import "../global.css";
+@reference "../global.css";
 
 /* ── Bottom Nav — Apple Editorial Symmetrical Grid ── */
 
@@ -38,3 +38,12 @@
 .bottom-nav-label {
   @apply text-[9px] font-semibold leading-tight tracking-tight block text-center;
 }
+
+.bottom-nav-btn {min-height:48px;}
+.mobile-menu-groups {display:grid;gap:18px;}
+.mobile-menu-groups h3 {font-size:12px;font-weight:650;color:var(--on-surface-variant);margin-bottom:6px;}
+.mobile-menu-link {display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:12px;text-align:left;font-size:14px;background:transparent;border:0;border-radius:8px;cursor:pointer;}
+.mobile-menu-link>svg {flex-shrink:0;font-size:20px;}
+.mobile-menu-link:hover {background:var(--surface-container);}
+.mobile-menu-link-active {background:var(--primary);color:var(--on-primary);font-weight:600;}
+.mobile-menu-link:focus-visible {outline:2px solid var(--primary);outline-offset:2px;}

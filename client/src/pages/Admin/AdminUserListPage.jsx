@@ -1,3 +1,4 @@
+import { DataTable } from '../../shared/components/common/DataTable';
 /**
  * AdminUserListPage.jsx
  * Single Responsibility: Orchestrate User Management and Master Role & Template Hub.
@@ -10,18 +11,7 @@ import { useApp } from '../../context/AppContext';
 import { TAB_IDS } from '../../constants/navigation';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import { usersApi, rolesApi } from '../../services/api';
-import {
-  LuUsers,
-  LuUserPlus,
-  LuArrowLeft,
-  LuShieldCheck,
-  LuShield,
-  LuTrash2,
-  LuSearch,
-  LuFilter,
-  LuKey,
-  LuCheck,
-} from 'react-icons/lu';
+import { LuUsers, LuUserPlus, LuArrowLeft, LuShieldCheck, LuShield, LuTrash2, LuSearch, LuCheck } from "react-icons/lu";
 import { FiEdit } from 'react-icons/fi';
 import { AdminUserModal } from './components/AdminUserModal';
 import { AdminPermissionsModal } from './components/AdminPermissionsModal';
@@ -238,26 +228,26 @@ export const AdminUserListPage = ({ onGoBack }) => {
           {/* Users Table */}
           <div className="bg-surface border border-border-glass rounded-2xl overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-on-surface">
+              <DataTable className="w-full text-left text-sm text-on-surface">
                 <thead className="bg-surface-container/50 text-xs text-on-surface-variant font-bold uppercase tracking-wider">
                   <tr>
-                    <th className="px-5 py-4 border-b border-border-glass">Nama / Email</th>
-                    <th className="px-5 py-4 border-b border-border-glass">Peran (Role)</th>
-                    <th className="px-5 py-4 border-b border-border-glass">Kluster Wilayah</th>
-                    <th className="px-5 py-4 border-b border-border-glass text-center">Hak Akses Fitur</th>
-                    <th className="px-5 py-4 border-b border-border-glass text-right">Aksi</th>
+                    <th className="border-b border-border-glass">Nama / Email</th>
+                    <th className="border-b border-border-glass">Peran (Role)</th>
+                    <th className="border-b border-border-glass">Kluster Wilayah</th>
+                    <th className="border-b border-border-glass text-center">Hak Akses Fitur</th>
+                    <th className="border-b border-border-glass text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-glass">
                   {loading ? (
                     <tr>
-                      <td colSpan="5" className="px-5 py-8 text-center text-on-surface-variant">
+                      <td colSpan="5" className="text-center text-on-surface-variant">
                         Memuat data pengguna...
                       </td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-5 py-8 text-center text-on-surface-variant">
+                      <td colSpan="5" className="text-center text-on-surface-variant">
                         Tidak ada data pengguna yang sesuai filter.
                       </td>
                     </tr>
@@ -267,16 +257,16 @@ export const AdminUserListPage = ({ onGoBack }) => {
 
                       return (
                         <tr key={u.id} className="hover:bg-surface-variant/30 transition-colors">
-                          <td className="px-5 py-4">
+                          <td className="">
                             <div className="font-bold text-on-surface">{u.name}</div>
                             <div className="text-xs text-on-surface-variant">{u.email}</div>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="">
                             <span className="px-2.5 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-[11px] font-bold text-neutral-800">
                               {u.roleLabel || u.role}
                             </span>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="">
                             {u.clusterName ? (
                               <div>
                                 <span className="font-bold text-xs text-on-surface">{u.clusterName}</span>
@@ -288,7 +278,7 @@ export const AdminUserListPage = ({ onGoBack }) => {
                               <span className="text-xs text-on-surface-variant/70 italic">Pusat / Seluruh Wilayah</span>
                             )}
                           </td>
-                          <td className="px-5 py-4 text-center">
+                          <td className="text-center">
                             {u.role === 'ADMIN' ? (
                               <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200 inline-flex items-center gap-1">
                                 <LuCheck className="text-xs" />
@@ -300,7 +290,7 @@ export const AdminUserListPage = ({ onGoBack }) => {
                               </span>
                             )}
                           </td>
-                          <td className="px-5 py-4 text-right">
+                          <td className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               {u.role !== 'ADMIN' && (
                                 <button
@@ -335,7 +325,7 @@ export const AdminUserListPage = ({ onGoBack }) => {
                     })
                   )}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           </div>
         </div>

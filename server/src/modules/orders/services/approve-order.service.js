@@ -1,8 +1,10 @@
+import {assertSalesAccess} from '../../../utils/team-scope.js';
+import { draftFromApprovedOrder } from '../../delivery/services/packing-workflow.service.js';
 /** approveOrder - single-responsibility service (extracted from orders.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { createNotification, createBulkNotificationByRoles } from '../../notifications/notifications.service.js';
-import { ORDER_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
+import { createNotification } from "../../notifications/notifications.service.js";
+import { ORDER_STATUS, NOTIFICATION_TYPES } from "../../../utils/constants.js";
 
 
 export const approveOrder = async (orderId, adminId) => {
@@ -16,9 +18,15 @@ export const approveOrder = async (orderId, adminId) => {
     throw new AppError(`Order sudah diproses sebelumnya (Status: ${order.status})`, 409);
   }
 
-  const updatedOrder = await prisma.order.update({
+  const reviewer=await prisma.user.findUnique({where:{id:adminId}});
+  if(!reviewer||!['ADMIN','SUPERVISOR'].includes(reviewer.role))throw new AppError('Tidak berwenang memproses order',403);
+  await assertSalesAccess(reviewer,order.createdBy);
+  const updatedOrder = await prisma.$transaction(async tx => {
+    const changed = await tx.order.updateMany({ where: { id: orderId, status: ORDER_STATUS.PENDING_APPROVAL }, data: { status: ORDER_STATUS.APPROVED, approvedBy: adminId, approvedAt: new Date() } });
+    if (!changed.count) throw new AppError('Order sudah diproses', 409);
+    await draftFromApprovedOrder(tx, orderId, adminId);
+    return tx.order.findUnique({
     where: { id: orderId },
-    data: { status: ORDER_STATUS.APPROVED, approvedBy: adminId, approvedAt: new Date() },
     include: { 
       items: { include: { product: true } },
       pjpStop: { include: { outlet: { select: { id: true, name: true, address: true } } } },
@@ -26,6 +34,8 @@ export const approveOrder = async (orderId, adminId) => {
       approvedByUser: { select: { id: true, name: true } },
     },
   });
+
+  }, { isolationLevel: 'Serializable' });
 
   await createNotification(
     order.createdBy,

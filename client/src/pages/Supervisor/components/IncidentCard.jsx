@@ -43,7 +43,7 @@ export const IncidentCard = ({ incident, onHandleIncident }) => {
           <h4 className="font-bold text-on-surface text-sm sm:text-base tracking-tight m-0">{incident.outletName}</h4>
           <p className="text-xs text-on-surface-variant flex items-center gap-1 m-0">
             <LuMapPin className="text-on-surface-variant text-xs shrink-0" />
-            <span className="truncate">{incident.address || 'Bandung Barat'}</span>
+            <span className="min-w-0 whitespace-normal break-words">{incident.address || 'Alamat belum tersedia'}</span>
           </p>
 
           <p className="text-xs text-on-surface flex items-center gap-1.5 m-0 pt-0.5">

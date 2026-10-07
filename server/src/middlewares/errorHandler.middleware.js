@@ -18,7 +18,10 @@ export const errorHandler = (err, req, res, next) => {
     return errorResponse(res, 400, 'Validasi input gagal', formattedErrors);
   }
 
+  if (['P1001','P1002','P1008','P1017','P2024'].includes(err.code))return errorResponse(res,503,'Database sementara belum dapat merespons. Coba kembali beberapa saat lagi.');
+
   // Handle Prisma / Database operational errors
+  if (err.code === 'P2034') return errorResponse(res, 409, 'Data berubah karena proses lain. Muat ulang lalu coba kembali.');
   if (err.code === 'P2002') {
     return errorResponse(res, 409, `Data dengan field ${err.meta?.target || ''} sudah terdaftar`);
   }

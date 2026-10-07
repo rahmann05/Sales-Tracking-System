@@ -1,16 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  LuX,
-  LuSearch,
-  LuIdCard,
-  LuSave,
-  LuDownload,
-  LuCheck,
-  LuStore,
-  LuUser,
-  LuMapPin,
-  LuFileSpreadsheet,
-} from 'react-icons/lu';
+import { LuX, LuSearch, LuIdCard, LuSave, LuDownload, LuCheck, LuStore, LuUser, LuMapPin } from "react-icons/lu";
 import { FiAlertCircle } from 'react-icons/fi';
 import { exportImportNikExcel } from '../../../utils/customerExport';
 import { customerRegistrationsApi, outletsApi } from '../../../services/api';
@@ -271,7 +260,7 @@ export const NikManagementModal = ({ isOpen, onClose, customerList = [], onDataU
                           <span className="font-mono text-[10px] font-black text-primary px-1.5 py-0.5 rounded bg-primary/10">
                             {code}
                           </span>
-                          <h4 className="text-xs font-black text-on-surface truncate m-0">
+                          <h4 className="text-xs font-black text-on-surface min-w-0 whitespace-normal break-words m-0">
                             {name}
                           </h4>
                         </div>

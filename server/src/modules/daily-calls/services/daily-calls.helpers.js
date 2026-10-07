@@ -1,21 +1,12 @@
 /** Shared helpers for daily-calls services (internal). */
 
-export function buildDayRange(dateString) {
-  const start = new Date(dateString);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(dateString);
-  end.setHours(23, 59, 59, 999);
-  return { gte: start, lte: end };
-}
-
+export { wibDayRange as buildDayRange } from '../../../../../shared/visit-metrics.mjs';
 
 export function formatTimeOnly(date) {
   if (!date) return '-';
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
+  return d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
 }
 
 

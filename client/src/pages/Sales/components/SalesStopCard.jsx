@@ -21,7 +21,8 @@ export const SalesStopCard = React.memo(({
   onClosedReport,
   onRequestUnlock,
 }) => {
-  const isInsideGeofence = stop.currentDistance <= stop.radiusMeters;
+  const hasDistance = Number.isFinite(stop.currentDistance);
+  const isInsideGeofence = hasDistance && stop.currentDistance <= stop.radiusMeters;
   const customerName = stop.customerName || stop.outletName;
   const customerId = stop.customerId || stop.outletCode;
 
@@ -107,7 +108,7 @@ export const SalesStopCard = React.memo(({
             }`}
           >
             <LuNavigation className="text-xs" />
-            {stop.currentDistance} meter ({isInsideGeofence ? 'Dalam Geofence ≤50m' : 'Luar Geofence >50m'})
+            {hasDistance ? `${stop.currentDistance} meter · ${isInsideGeofence ? 'Dalam radius' : 'Di luar radius'}` : 'GPS diperiksa saat absen'}
           </span>
         </div>
       </div>

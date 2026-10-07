@@ -1,86 +1,44 @@
-/**
- * Unified Backend API Service
- * Single Responsibility: Handle all HTTP network communication with Express & Prisma REST API.
- * Includes token storage, automatic Bearer headers, and error handling.
- */
+import { request, saveSession, clearSession } from './httpClient';
+export { getAuthToken, setAuthToken } from './httpClient';
 
-const API_BASE = '/api/v1';
+// â”€â”€â”€ 1. Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const queryString = params => new URLSearchParams(Object.entries(params || {}).filter(([,value])=>value!==undefined && value!==null && value!=='')).toString();
 
-// Token Management
-export const getAuthToken = () => localStorage.getItem('token') || '';
-export const setAuthToken = (token) => {
-  if (token) localStorage.setItem('token', token);
-  else localStorage.removeItem('token');
-};
-
-/**
- * Universal Fetch wrapper with automatic JSON and Bearer auth headers
- */
-const request = async (endpoint, options = {}) => {
-  const token = getAuthToken();
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      setAuthToken('');
-      localStorage.removeItem('authUser');
-      window.dispatchEvent(new CustomEvent('auth:expired'));
-    }
-    const errorMsg = data?.message || data?.errors?.[0]?.message || `Request failed (${response.status})`;
-    const error = new Error(errorMsg);
-    error.status = response.status;
-    error.data = data;
-    throw error;
-  }
-
-  return data;
-};
-
-// ─── 1. Auth API ─────────────────────────────────────────────────────────────
 export const authApi = {
+  me: () => request('/auth/me'),
   login: async (email, password = 'password123') => {
     const res = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    const token = res?.data?.accessToken || res?.data?.token;
-    if (token) setAuthToken(token);
-    if (res?.data?.user) localStorage.setItem('authUser', JSON.stringify(res.data.user));
+    saveSession(res.data);
     return res.data; // { user, accessToken, refreshToken }
   },
   logout: () => {
-    setAuthToken('');
-    localStorage.removeItem('authUser');
+    clearSession();
   },
   getStoredUser: () => {
     try { return JSON.parse(localStorage.getItem('authUser') || 'null'); } catch { return null; }
   },
 };
 
-// ─── 2. PJP & Stops API ───────────────────────────────────────────────────────
+// â”€â”€â”€ 2. PJP & Stops API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const pjpApi = {
+  getTemplates: () => request('/pjp/templates'),
+  saveTemplates: templates => request('/pjp/templates', {method:'PUT',body:JSON.stringify({templates})}),
   getTodayPjp: async () => {
     return await request('/pjp/today');
   },
   getAllPjps: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/pjp${query ? `?${query}` : ''}`);
   },
 };
 
-// ─── 3. Absensi & Presensi API ────────────────────────────────────────────────
+// â”€â”€â”€ 3. Absensi & Presensi API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const absensiApi = {
+  getManualSales: params => request(`/absensi/manual-sales?${queryString(params)}`),
+  reviewManualSales: (kind,id,decision,note) => request(`/absensi/manual-sales/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify({ decision,note }) }),
   checkIn: async (pjpStopId, { latitude, longitude, photoUrl, notes }) => {
     return await request(`/absensi/${pjpStopId}/in`, {
       method: 'POST',
@@ -100,7 +58,7 @@ export const absensiApi = {
     });
   },
   getOffPjpList: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/absensi/off-pjp${query ? `?${query}` : ''}`);
   },
   validateOffPjp: async (id, approved, rejectionNote) => {
@@ -111,7 +69,7 @@ export const absensiApi = {
   },
 };
 
-// ─── 4. Orders API ────────────────────────────────────────────────────────────
+// â”€â”€â”€ 4. Orders API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const ordersApi = {
   createOrder: async ({ pjpStopId, items, paymentType }) => {
     return await request('/orders', {
@@ -120,7 +78,7 @@ export const ordersApi = {
     });
   },
   getAllOrders: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/orders${query ? `?${query}` : ''}`);
   },
   approveOrder: async (id) => {
@@ -142,10 +100,10 @@ export const ordersApi = {
   },
 };
 
-// ─── 4b. Products API ─────────────────────────────────────────────────────────
+// â”€â”€â”€ 4b. Products API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const productsApi = {
   getAll: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/products${query ? `?${query}` : ''}`);
   },
   getById: async (id) => {
@@ -170,10 +128,10 @@ export const productsApi = {
   },
 };
 
-// ─── 5. Outlets & Lock/Unlock API ─────────────────────────────────────────────
+// â”€â”€â”€ 5. Outlets & Lock/Unlock API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const outletsApi = {
   getAll: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/outlets${query ? `?${query}` : ''}`);
   },
   create: async (outletData) => {
@@ -200,7 +158,7 @@ export const outletsApi = {
     });
   },
   getUnlockRequests: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/outlets/unlock-requests${query ? `?${query}` : ''}`);
   },
   handleUnlockRequest: async (requestId, approved) => {
@@ -211,8 +169,9 @@ export const outletsApi = {
   },
 };
 
-// ─── 5b. Outlet Validation API ────────────────────────────────────────────────
+// â”€â”€â”€ 5b. Outlet Validation API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const outletValidationApi = {
+  correctCoordinates: (id,body) => request(`/outlets/${id}/coordinates`,{method:'PATCH',body:JSON.stringify(body)}),
   validateSingle: async (outletId) => {
     return await request(`/outlets/${outletId}/validate`, { method: 'POST' });
   },
@@ -230,7 +189,7 @@ export const outletValidationApi = {
   },
 };
 
-// ─── 6. Route Changes / Incident API ──────────────────────────────────────────
+// â”€â”€â”€ 6. Route Changes / Incident API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const routeChangesApi = {
   reportClosed: async ({ pjpId, pjpStopId, reason, photoUrl }) => {
     return await request('/route-changes', {
@@ -255,15 +214,16 @@ export const routeChangesApi = {
     });
   },
   getAll: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/route-changes${query ? `?${query}` : ''}`);
   },
 };
 
-// ─── 7. Clusters API ─────────────────────────────────────────────────────────
+// â”€â”€â”€ 7. Clusters API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const clustersApi = {
+  importRjp: rows=>request('/clusters/import-rjp',{method:'POST',body:JSON.stringify({rows})}),
   getAll: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/clusters${query ? `?${query}` : ''}`);
   },
   getById: async (id) => {
@@ -327,10 +287,10 @@ export const clustersApi = {
   },
 };
 
-// ─── 8. Users & Live GPS Tracking API ─────────────────────────────────────────
+// â”€â”€â”€ 8. Users & Live GPS Tracking API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const usersApi = {
   getAll: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/users${query ? `?${query}` : ''}`);
   },
   getUsers: async (params = {}) => {
@@ -379,13 +339,13 @@ export const usersApi = {
   },
 };
 
-// ─── 9. Legacy apiService Compatibility ───────────────────────────────────────
+// â”€â”€â”€ 9. Legacy apiService Compatibility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const apiService = {
   getHealth: async () => request('/health'),
   getUsers: async () => request('/users'),
 };
 
-// ─── 10. Vehicles API ─────────────────────────────────────────────────────────
+// â”€â”€â”€ 10. Vehicles API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const vehiclesApi = {
   getAll: async () => request('/vehicles'),
   create: async (data) => request('/vehicles', { method: 'POST', body: JSON.stringify(data) }),
@@ -394,15 +354,16 @@ export const vehiclesApi = {
   recordMaintenance: async (id, data) => request(`/vehicles/${id}/maintenance`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
-// ─── 11. Config API ───────────────────────────────────────────────────────────
+// â”€â”€â”€ 11. Config API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const configApi = {
+  getRuntime: async () => request('/config/runtime'),
   getAll: async () => request('/config'),
   getByKey: async (key) => request(`/config/${key}`),
   updateByKey: async (key, value) => request(`/config/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
   bulkUpdate: async (configs) => request('/config', { method: 'PUT', body: JSON.stringify({ configs }) }),
 };
 
-// ─── 12. Customer Registrations API ───────────────────────────────────────────
+// â”€â”€â”€ 12. Customer Registrations API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const customerRegistrationsApi = {
   getAll: async (params = {}) => {
     const cleanParams = {};
@@ -452,7 +413,7 @@ export const customerRegistrationsApi = {
   },
 };
 
-// ─── 13. Daily Calls & Monitoring API ─────────────────────────────────────────
+// â”€â”€â”€ 13. Daily Calls & Monitoring API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const dailyCallsApi = {
   getReport: async (params = {}) => {
     const cleanParams = {};
@@ -466,7 +427,7 @@ export const dailyCallsApi = {
   },
 };
 
-// ─── 14. ND6 Reports Suite API ───────────────────────────────────────────────
+// â”€â”€â”€ 14. ND6 Reports Suite API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const reportsApi = {
   getWeekly: async (params = {}) => {
     const cleanParams = {};
@@ -489,11 +450,11 @@ export const reportsApi = {
     return await request(`/reports/mtd${query ? `?${query}` : ''}`);
   },
   getDashboard: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/reports/dashboard${query ? `?${query}` : ''}`);
   },
 };
-// ─── 15. Divisions API ──────────────────────────────────────────────────────
+// â”€â”€â”€ 15. Divisions API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const divisionsApi = {
   getAll: async ({ includeInactive = false } = {}) => {
     const query = includeInactive ? '?includeInactive=true' : '';
@@ -516,11 +477,14 @@ export const divisionsApi = {
   },
 };
 
-// ─── 16. Delivery Management API ─────────────────────────────────────────────
+// â”€â”€â”€ 16. Delivery Management API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const deliveryApi = {
+  receiveReturn: (id,note) => request(`/delivery/stops/${id}/return`,{method:'POST',body:JSON.stringify({note})}),
+    updatePackingList: (id, data) => request(`/delivery/packing-lists/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    changePackingStatus: (id, action) => request(`/delivery/packing-lists/${id}/status`, { method: 'PATCH', body: JSON.stringify({ action }) }),
   // Packing Lists
   getPackingLists: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/delivery/packing-lists${query ? `?${query}` : ''}`);
   },
   getPackingListById: async (id) => {
@@ -538,7 +502,7 @@ export const deliveryApi = {
 
   // Delivery Routes
   getDeliveryRoutes: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/delivery/routes${query ? `?${query}` : ''}`);
   },
   getDeliveryRouteById: async (id) => {
@@ -576,7 +540,7 @@ export const deliveryApi = {
 
   // Dashboard & Utility
   getDashboard: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const query = queryString(params);
     return await request(`/delivery/dashboard${query ? `?${query}` : ''}`);
   },
   getDrivers: async () => {
@@ -584,7 +548,7 @@ export const deliveryApi = {
   },
 };
 
-// ─── 17. Roles & Permissions API ───────────────────────────────────────────
+// â”€â”€â”€ 17. Roles & Permissions API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const rolesApi = {
   getAll: async () => {
     return await request('/roles');
@@ -614,3 +578,34 @@ export const rolesApi = {
   },
 };
 
+
+export const staffAttendanceApi = {
+  getFollowUps: () => request('/staff-attendance/follow-ups'),
+  completeFollowUp: (id,note) => request(`/staff-attendance/follow-ups/${id}`,{method:'PATCH',body:JSON.stringify({note})}),
+  getToday: () => request('/staff-attendance'),
+  record: data => request('/staff-attendance', { method: 'POST', body: JSON.stringify(data) }),
+  report: date => request(`/staff-attendance/report?date=${encodeURIComponent(date)}`),
+};
+
+export async function collectPages(fetchPage, params = {}) {
+  const list=[],seen=new Set();
+  const started=Date.now();
+  for(let page=1;page<=200;page++) {
+    if(Date.now()-started>60000)throw new Error('Pengambilan data melebihi batas waktu. Persempit filter lalu coba kembali.');
+    const response=await fetchPage({...params,page,limit:100});
+    const body=response.data ?? response;
+    const rows=Array.isArray(body)?body:body.data || body.items || [];
+    if(!Array.isArray(rows))throw new Error('Format daftar dari server tidak valid.');
+    const pagination=body.pagination || response.pagination;
+    const more=Boolean(pagination?.hasNextPage || pagination?.totalPages>page);
+    if(more&&(!rows.length || rows.every(row=>row.id && seen.has(row.id))))throw new Error('Pagination server tidak bergerak. Muat ulang atau persempit filter.');
+    list.push(...rows);rows.forEach(row=>{if(row.id)seen.add(row.id);});
+    if(!more)return {data:list};
+  }
+  throw new Error('Daftar terlalu besar. Persempit filter sebelum memuat kembali.');
+}
+
+export const teamsApi = {
+  getAll: () => request('/teams'),
+  assign: (id,body) => request(`/teams/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+};

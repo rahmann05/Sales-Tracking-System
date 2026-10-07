@@ -10,6 +10,8 @@ import '../../../../styles/components/SpreadsheetImportModal.css';
  * 1 File = 1 Component
  */
 export const SpreadsheetImportModal = ({ isOpen, onClose, onImportSuccess }) => {
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
   const [csvContent, setCsvContent] = useState('');
   const [previewRows, setPreviewRows] = useState([]);
   const [fileName, setFileName] = useState('');
@@ -26,11 +28,13 @@ export const SpreadsheetImportModal = ({ isOpen, onClose, onImportSuccess }) => 
     reader.onload = (event) => {
       const text = event.target?.result;
       if (typeof text === 'string') {
-        setCsvContent(text);
-        const parsed = parseSpreadsheetCsv(text);
-        setPreviewRows(parsed);
+        try {
+          const parsed = parseSpreadsheetCsv(text);
+          setCsvContent(text); setPreviewRows(parsed); setError('');
+        } catch(err) { setCsvContent(''); setPreviewRows([]); setError(err.message); }
       }
     };
+    reader.onerror = () => { setPreviewRows([]); setCsvContent(''); setError('File tidak dapat dibaca'); };
     reader.readAsText(file);
   };
 
@@ -44,20 +48,22 @@ export const SpreadsheetImportModal = ({ isOpen, onClose, onImportSuccess }) => 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const handleProcessImport = () => {
+  const handleProcessImport = async () => {
     if (!csvContent) {
       alert('Pilih file spreadsheet / CSV terlebih dahulu.');
       return;
     }
 
     try {
-      const result = onImportSuccess(csvContent);
+      setBusy(true);setError('');
+      const result = await onImportSuccess(csvContent);
       alert(`Berhasil mengimpor ${result?.importedOutletsCount || previewRows.length} outlet ke dalam Master RJP!`);
     } catch (err) {
-      alert(err.message || 'Gagal memproses file spreadsheet.');
-    }
+      setError(err.message || 'Gagal memproses file CSV.');
+    } finally {setBusy(false);}
   };
 
   return (
@@ -73,7 +79,7 @@ export const SpreadsheetImportModal = ({ isOpen, onClose, onImportSuccess }) => 
           </button>
         </div>
 
-        <div className="import-modal-body">
+        <div className="import-modal-body">{error&&<p role="alert" className="text-red-600">{error}</p>}
           {/* Template Download Prompt */}
           <div className="import-template-row">
             <span className="text-on-surface-variant font-medium">
@@ -89,7 +95,7 @@ export const SpreadsheetImportModal = ({ isOpen, onClose, onImportSuccess }) => 
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
-            accept=".csv,.xlsx,.xls"
+            accept=".csv"
             className="hidden"
           />
 
@@ -103,7 +109,7 @@ export const SpreadsheetImportModal = ({ isOpen, onClose, onImportSuccess }) => 
                 {fileName ? `File Terpilih: ${fileName}` : 'Klik untuk memilih file CSV atau Spreadsheet'}
               </p>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                Mendukung format .CSV, .XLSX dengan kolom Cluster, Kode Toko, Nama, Alamat, Lat, Lng
+                Mendukung format .CSV (ekspor spreadsheet) dengan kolom Cluster, Kode Toko, Nama, Alamat, Lat, Lng
               </p>
             </div>
           </div>
@@ -130,8 +136,8 @@ export const SpreadsheetImportModal = ({ isOpen, onClose, onImportSuccess }) => 
           </button>
           <button
             type="button"
-            onClick={handleProcessImport}
-            disabled={previewRows.length === 0}
+            onClick={handleProcessImport} aria-busy={busy}
+            disabled={busy || previewRows.length === 0}
             className="create-cluster-btn-submit disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Proses & Generate Master RJP ({previewRows.length} Toko)

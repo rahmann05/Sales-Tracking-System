@@ -1,16 +1,7 @@
+import { useApp } from '../../../context/AppContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGeofence } from '../../../shared/hooks/useGeofence';
 import { getDetailedAddressFromGps } from '../../../services/reverseGeocodeService';
-
-const FALLBACK_GPS = {
-    lat: -6.8723,
-    lng: 107.5432,
-    accuracy: 12,
-    timestamp: new Date().toLocaleTimeString(),
-};
-
-const FALLBACK_ADDRESS =
-    'Jl. Jend. H. Amir Machmud No. 42, RT 03 / RW 08, Kel. Cigugur Tengah, Kec. Cimahi Tengah, Kota Cimahi 40522';
 
 /**
  * useOffPjpCheckIn Hook
@@ -18,6 +9,8 @@ const FALLBACK_ADDRESS =
  * (identitas outlet, kamera capture, GPS geofence, reverse-geocode auto-fill).
  */
 export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
+    const { settings } = useApp();
+    const [salesResult, setSalesResult] = useState({ orderAmount: '', productIds: [] });
     const [outletName, setOutletName] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [phone, setPhone] = useState('');
@@ -95,24 +88,32 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
         setIsAddressAutoFetched(false);
     };
 
-    const handleConfirm = () => {
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const handleConfirm = async () => {
+        if (saving) return;
+        const gps = capturedGps || userLocation;
+        if (!gps || !Number.isFinite(gps.lat) || !Number.isFinite(gps.lng)) { setError('GPS belum tersedia. Ambil ulang foto.'); return; }
         if (!outletName.trim()) return alert('Harap isi Nama Toko / Outlet terlebih dahulu.');
         if (!customerName.trim()) return alert('Harap isi Nama Customer / Pemilik Toko terlebih dahulu.');
+        if (address.trim().length < 5) { setError('Isi alamat toko minimal 5 karakter.'); return; }
         if (!capturedPhoto) return alert('Harap jepret foto presensi terlebih dahulu menggunakan kamera aktif.');
 
-        onSubmit({
+        setSaving(true); setError('');
+        try { await onSubmit({
+            ...(settings.ATTENDANCE_ALLOW_MANUAL_SALES ? { orderAmount: Number(salesResult.orderAmount || 0), productIds: salesResult.productIds } : {}),
             outletName: outletName.trim(),
             customerName: customerName.trim(),
             phone: phone.trim() || '-',
-            address: address.trim() || FALLBACK_ADDRESS,
+            address: address.trim(),
             reason: notes || 'Kunjungan Luar RJP',
             photoUrl: capturedPhoto,
-            gpsLocation: capturedGps || userLocation || FALLBACK_GPS,
-        });
+            gpsLocation: gps,
+        }); } catch (err) { setError(err.message); } finally { setSaving(false); }
     };
 
     return {
-        outletName, setOutletName,
+        saving, error, salesResult, setSalesResult,        outletName, setOutletName,
         customerName, setCustomerName,
         phone, setPhone,
         address, handleAddressChange,

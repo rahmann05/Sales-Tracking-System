@@ -1,9 +1,10 @@
+import { resolveIdentity } from '../modules/roles/role-assignment.service.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/errors.js';
 
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next(new AppError('Akses ditolak. Token autentikasi tidak ditemukan', 401));
@@ -12,10 +13,14 @@ export const authenticate = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    req.user = decoded; // { id, role, clusterId }
+    if(typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())throw new AppError('Token tidak valid',401);
+    const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, name: true, email: true, role: true, roleCode: true, clusterId: true, permissions: true, deletedAt: true } });
+    if (!user || user.deletedAt) return next(new AppError('Akun tidak aktif', 401));
+    req.user = await resolveIdentity(user);
     next();
   } catch (error) {
-    return next(new AppError('Token tidak valid atau telah kadaluwarsa', 401));
+    if(['JsonWebTokenError','TokenExpiredError','NotBeforeError'].includes(error.name))return next(new AppError('Token tidak valid atau telah kadaluwarsa', 401));
+    return next(error);
   }
 };
 
@@ -38,7 +43,7 @@ export const authorizeWithPermission = (roles, permissionKey) => {
     }
     
     // If user has the required role, allow
-    if (roles.includes(req.user.role)) {
+    if (roles.includes(req.user.role) && req.user.permissions?.[permissionKey] !== false) {
       return next();
     }
     
@@ -61,7 +66,7 @@ export const requirePermission = (permissionKey) => {
       
       const userRecord = await prisma.user.findUnique({
         where: { id: req.user.id },
-        select: { permissions: true, role: true }
+        select: { permissions: true, role: true, roleCode: true }
       });
       
       if (!userRecord) {
@@ -73,7 +78,8 @@ export const requirePermission = (permissionKey) => {
         return next();
       }
 
-      const permissions = userRecord.permissions || {};
+      const identity = await resolveIdentity(userRecord);
+      const permissions = identity.permissions;
       if (!permissions[permissionKey]) {
         return next(new AppError(`Akses ditolak. Fitur ini memerlukan izin: ${permissionKey}`, 403));
       }

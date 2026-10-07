@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuPhoneCall, LuCalendarRange, LuTrendingUp, LuShieldAlert } from 'react-icons/lu';
+import { LuPhoneCall, LuCalendarRange, LuTrendingUp } from "react-icons/lu";
 
 /**
  * ReportTabBar Component
@@ -51,10 +51,10 @@ export const ReportTabBar = ({ activeTab, onSelectTab }) => {
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2">
                 <Icon className={`text-base shrink-0 ${isActive ? 'text-on-primary' : 'text-primary'}`} />
-                <span className="font-black text-xs sm:text-sm tracking-tight truncate">{tab.label}</span>
+                <span className="font-black text-xs sm:text-sm tracking-tight min-w-0 whitespace-normal break-words">{tab.label}</span>
               </div>
               <p
-                className={`text-[11px] m-0 leading-tight truncate ${
+                className={`text-[11px] m-0 leading-tight min-w-0 whitespace-normal break-words ${
                   isActive ? 'text-on-primary/80' : 'text-on-surface-variant'
                 }`}
               >

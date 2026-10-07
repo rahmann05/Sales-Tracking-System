@@ -99,7 +99,7 @@ export const NotificationCenterDropdown = () => {
                   )}
                 </h4>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">
-                  Aktivitas real-time untuk {user?.roleLabel || user?.name}
+                  Aktivitas terbaru untuk {user?.name}
                 </p>
               </div>
               <button

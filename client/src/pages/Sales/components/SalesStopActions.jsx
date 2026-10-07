@@ -1,6 +1,7 @@
+import { useApp } from '../../../context/AppContext';
 import React from 'react';
 import { LuCamera, LuShoppingCart, LuLogOut } from 'react-icons/lu';
-import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiCheckCircle } from 'react-icons/fi';
 import { OutletLockBadge } from './OutletLockBadge';
 import { VisitDurationTimer } from './VisitDurationTimer';
 
@@ -18,6 +19,7 @@ export const SalesStopActions = ({
   onInputOrder,
   onClosedReport,
 }) => {
+  const { settings } = useApp();
   if (!stop) return null;
 
   // Case 1: Locked Stop
@@ -33,7 +35,9 @@ export const SalesStopActions = ({
 
   return (
     <div className="space-y-2 pt-1">
+      {['PENDING','ARRIVED','ORDERED'].includes(stop.status)&&<button type="button" className="btn btn-secondary w-full" onClick={()=>onRequestUnlock(stop)}>Ajukan pengecualian GPS</button>}
       {/* PENDING State: Absen In Button */}
+      {['PENDING', 'ARRIVED'].includes(stop.status) && <button type="button" className="btn btn-secondary w-full min-h-11" onClick={() => onClosedReport(stop)}>Laporkan toko tutup</button>}
       {stop.status === 'PENDING' && (
         <button
           type="button"
@@ -49,7 +53,7 @@ export const SalesStopActions = ({
       {stop.status === 'ARRIVED' && (
         <div className="space-y-2.5">
           {/* Active Visit Duration Tracker */}
-          <VisitDurationTimer startTime={stop.checkInTime || stop.inTimestamp} minMinutes={5} />
+          <VisitDurationTimer startTime={stop.inTimestamp} minMinutes={settings.MINIMUM_VISIT_DURATION_MINUTES} />
 
           <div className="flex items-center gap-2">
             <button
@@ -61,14 +65,7 @@ export const SalesStopActions = ({
               <span>Input Order</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => onClosedReport(stop)}
-              className="px-3 py-2.5 bg-rose-500/10 text-rose-600 border border-rose-500/30 font-semibold text-xs rounded-xl hover:bg-rose-500/20 transition-all flex items-center justify-center gap-1"
-            >
-              <FiAlertCircle className="text-base" />
-              <span>Toko Tutup</span>
-            </button>
+
           </div>
 
           <button
@@ -102,11 +99,11 @@ export const SalesStopActions = ({
       )}
 
       {/* Completed States: VISITED / COMPLETED / CLOSED / SKIPPED */}
-      {(stop.status === 'VISITED' || stop.status === 'COMPLETED' || stop.status === 'CLOSED' || stop.status === 'SKIPPED') && (
+      {(stop.status === 'VISITED' || stop.status === 'COMPLETED' || stop.status === 'CLOSED' || stop.status === 'CLOSED_REPORTED' || stop.status === 'SKIPPED') && (
         <div className="w-full p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center text-xs text-emerald-700 font-bold flex items-center justify-center gap-1.5">
           <FiCheckCircle className="text-sm" />
           <span>
-            Kunjungan Selesai (In: {stop.checkInTime || '-'} • Out: {stop.checkOutTime || stop.checkInTime || '-'})
+            {['CLOSED', 'CLOSED_REPORTED', 'SKIPPED'].includes(stop.status) ? 'Toko tutup / dilewati' : 'Kunjungan selesai'} (In: {stop.checkInTime || '-'} · Out: {stop.checkOutTime || '-'})
           </span>
         </div>
       )}

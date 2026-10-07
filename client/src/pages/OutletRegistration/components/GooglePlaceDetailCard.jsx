@@ -1,21 +1,5 @@
 import React, { useState } from 'react';
-import {
-  LuMapPin,
-  LuExternalLink,
-  LuPhone,
-  LuClock,
-  LuStar,
-  LuCheck,
-  LuNavigation,
-  LuBookmark,
-  LuCompass,
-  LuSmartphone,
-  LuShare2,
-  LuImage,
-  LuSparkles,
-  LuStore,
-  LuInfo,
-} from 'react-icons/lu';
+import { LuMapPin, LuExternalLink, LuPhone, LuClock, LuStar, LuCheck, LuNavigation, LuBookmark, LuCompass, LuSmartphone, LuShare2, LuImage, LuStore, LuInfo } from "react-icons/lu";
 
 /**
  * GooglePlaceDetailCard Component

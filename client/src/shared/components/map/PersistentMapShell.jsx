@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useMap } from '../../../context/MapContext';
-import { configApi } from '../../../services/api';
+import { useApp } from '../../../context/AppContext';
 import { LeafletFallbackRouteMap } from '../../../pages/Dashboard/components/LeafletFallbackRouteMap';
 import '../../../styles/components/PersistentMapShell.css';
 
 const DEFAULT_CENTER = { lat: -6.88498411526505, lng: 107.48995363176957 };
 
-const DEFAULT_API_KEY = 'AIzaSyAI-dw2SlLfX135yj4sNVNt9LIgORJB4dA';
 const SCRIPT_TIMEOUT_MS = 6000;
 
 /**
@@ -67,7 +66,7 @@ const loadGoogleMapsScript = (apiKey) =>
 
     const script = document.createElement('script');
     script.id = 'google-maps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async&callback=__initGoogleMapsCallback`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry,marker&loading=async&callback=__initGoogleMapsCallback`;
     script.async = true;
     script.defer = true;
     script.onerror = (e) => {
@@ -86,6 +85,7 @@ const loadGoogleMapsScript = (apiKey) =>
  * without any UI interruptions or white screens.
  */
 export const PersistentMapShell = () => {
+  const {settings} = useApp();
   const containerRef = useRef(null);
   const initRef = useRef(false);
 
@@ -100,11 +100,7 @@ export const PersistentMapShell = () => {
     isMapReady,
   } = useMap();
 
-  const [apiKey, setApiKey] = useState(() => {
-    const envKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (envKey && envKey.startsWith('AIzaSyAI')) return envKey;
-    return DEFAULT_API_KEY;
-  });
+  const apiKey = settings.MAPS_BROWSER_API_KEY || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const [loadFailed, setLoadFailed] = useState(false);
 
   // Global gm_authFailure handler: Google Maps Platform callback when API auth fails
@@ -119,33 +115,23 @@ export const PersistentMapShell = () => {
     };
   }, [setFallback]);
 
-  // Fetch API key dynamically from system config, updating if configured
   useEffect(() => {
-    let mounted = true;
-    configApi
-      .getByKey('MAPS_API_KEY')
-      .then((res) => {
-        const val = typeof res?.data === 'string' ? res.data : (res?.data?.value || res?.data);
-        if (mounted && val && typeof val === 'string' && val.startsWith('AIza') && val !== apiKey) {
-          setApiKey(val);
-        }
-      })
-      .catch(() => {
-        // Silently keep default apiKey
-      });
-    return () => { mounted = false; };
-  }, [apiKey]);
+    if (!apiKey) setFallback(true);
+    else if (!initRef.current && !loadFailed) setFallback(false);
+  },[apiKey,loadFailed,setFallback]);
 
   // Initialize map once
   useEffect(() => {
-    if (!apiKey || initRef.current || !containerRef.current) return;
+    if (mapMode==='hidden' || !apiKey || initRef.current || !containerRef.current) return;
     initRef.current = true;
 
     const initMapAsync = async () => {
       try {
         await loadGoogleMapsScript(apiKey);
+        if(!window.google.maps.marker?.AdvancedMarkerElement)await window.google.maps.importLibrary('marker');
         if (!containerRef.current) return;
         const map = new window.google.maps.Map(containerRef.current, {
+          mapId: settings.MAPS_MAP_ID || 'DEMO_MAP_ID',
           center: mapState?.center || DEFAULT_CENTER,
           zoom: mapState?.zoom || 11,
           disableDefaultUI: true,
@@ -161,7 +147,7 @@ export const PersistentMapShell = () => {
     };
     initMapAsync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey]);
+  }, [apiKey,mapMode]);
 
   // Handle container resizing
   useEffect(() => {

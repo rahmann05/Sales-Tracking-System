@@ -7,6 +7,12 @@ import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
 import { BUILT_IN_ROLES, ALL_PERMISSIONS, getEmptyPermissions } from './roles.constants.js';
 
+function validatedPermissions(value = {}) {
+  const keys=new Set(ALL_PERMISSIONS.map(p=>p.key));
+  if(!value || typeof value!=='object' || Array.isArray(value) || Object.entries(value).some(([k,v])=>!keys.has(k)||typeof v!=='boolean')) throw new AppError('Template hak akses tidak valid',400);
+  return {...getEmptyPermissions(),...value};
+}
+
 const CONFIG_KEY = 'ROLE_DEFINITIONS';
 
 /**
@@ -48,18 +54,20 @@ export const getAllRoles = async () => {
 
   // Get active user count per role
   const userCounts = await prisma.user.groupBy({
-    by: ['role'],
+    by: ['role','roleCode'],
     where: { deletedAt: null },
     _count: { id: true },
   });
 
   const countMap = userCounts.reduce((acc, curr) => {
-    acc[curr.role] = curr._count.id;
+    const code = curr.roleCode || curr.role;
+    acc[code] = (acc[code] || 0) + curr._count.id;
     return acc;
   }, {});
 
   return rolesList.map((r) => ({
     ...r,
+    baseRole: r.isSystem ? r.code : r.baseRole || 'SALES',
     userCount: countMap[r.code] || 0,
   }));
 };
@@ -93,17 +101,17 @@ export const createRole = async (data) => {
     throw new AppError(`Role dengan kode '${cleanCode}' sudah ada`, 400);
   }
 
+  const baseRole = data.baseRole || 'SALES';
+  if (!BUILT_IN_ROLES.some(r=>r.code===baseRole)) throw new AppError('Pilih role dasar bawaan',400);
   const newRole = {
+    baseRole,
     code: cleanCode,
     name: String(data.name || cleanCode).trim(),
     description: String(data.description || '').trim(),
     badgeColor: data.badgeColor || 'indigo',
     isSystem: false,
     workspaceTab: data.workspaceTab || 'role-workspace',
-    defaultPermissions: {
-      ...getEmptyPermissions(),
-      ...(data.defaultPermissions || {}),
-    },
+    defaultPermissions: validatedPermissions(data.defaultPermissions),
   };
 
   const updatedList = [...existingRoles.map(({ userCount, ...rest }) => rest), newRole];
@@ -138,7 +146,7 @@ export const updateRole = async (code, data) => {
     badgeColor: data.badgeColor || current.badgeColor,
     workspaceTab: data.workspaceTab || current.workspaceTab,
     defaultPermissions: data.defaultPermissions
-      ? { ...getEmptyPermissions(), ...data.defaultPermissions }
+      ? validatedPermissions(data.defaultPermissions)
       : current.defaultPermissions,
   };
 
@@ -177,7 +185,7 @@ export const deleteRole = async (code) => {
 
   // Check if any user still has this role
   const userCount = await prisma.user.count({
-    where: { role: normalized, deletedAt: null },
+    where: { roleCode: normalized, deletedAt: null },
   });
 
   if (userCount > 0) {
