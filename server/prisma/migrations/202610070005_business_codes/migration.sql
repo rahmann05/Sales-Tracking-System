@@ -1,0 +1,11 @@
+ALTER TABLE "CustomerRegistration" ADD COLUMN IF NOT EXISTS "registrationCode" TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerRegistration_registrationCode_key" ON "CustomerRegistration" ("registrationCode");
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "code" TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS "Order_code_key" ON "Order" ("code");
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "staffCode" TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS "User_staffCode_key" ON "User" ("staffCode");
+ALTER TABLE "Cluster" ADD COLUMN IF NOT EXISTS "code" TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS "Cluster_code_key" ON "Cluster" ("code");
+ALTER TABLE "Pjp" ADD COLUMN IF NOT EXISTS "code" TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS "Pjp_code_key" ON "Pjp" ("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "Product_code_key" ON "Product" ("code");

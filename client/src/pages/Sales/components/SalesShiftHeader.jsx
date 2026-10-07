@@ -12,7 +12,7 @@ export const SalesShiftHeader = () => {
   const territory = typeof user.cluster === 'string' ? user.cluster : user.cluster?.name;
 
   return (
-    <div className="bg-surface border border-border-glass rounded-2xl p-4 md:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="role-page-header flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         <div className="relative">
           <Avatar src={user.avatar} name={user.name} size="lg" className="rounded-2xl ring-2 ring-primary/20" />

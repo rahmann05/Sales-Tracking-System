@@ -18,7 +18,7 @@ export const SupervisorTabBar = ({
 }) => {
   return (
     <div className="w-full bg-surface-container/60 p-1.5 rounded-2xl border border-border-glass shadow-xs">
-      <div className="workspace-tabs">
+      <div className="workspace-tabs supervisor-workspace-tabs">
         {SUPERVISOR_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

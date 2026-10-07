@@ -22,14 +22,14 @@ export const PageHeader = ({
   className = '',
 }) => {
   return (
-    <div
-      className={`bg-surface border border-border-glass rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all page-header-mobile ${className}`}
+    <header
+      className={`editorial-page-header ${className}`}
     >
-      <div className="space-y-1.5 min-w-0">
+      <div className="editorial-page-heading">
         {badge && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="editorial-page-eyebrow">
             {typeof badge === 'string' ? (
-              <span className="px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold rounded-full uppercase tracking-wider inline-flex items-center gap-1.5">
+              <span>
                 {badge}
               </span>
             ) : (
@@ -38,18 +38,18 @@ export const PageHeader = ({
           </div>
         )}
 
-        <h1 className="text-lg sm:text-xl md:text-2xl font-black text-on-surface tracking-tight m-0">
+        <h1>
           {title}
         </h1>
 
         {subtitle && (
-          <p className="text-xs sm:text-sm text-on-surface-variant m-0 max-w-3xl leading-relaxed">
+          <p className="editorial-page-subtitle">
             {subtitle}
           </p>
         )}
 
         {stats && stats.length > 0 && (
-          <div className="flex items-center gap-2 pt-2 flex-wrap page-header-stats-mobile">
+          <div className="editorial-page-stats">
             {stats.map((st, idx) => (
               <div
                 key={idx}
@@ -72,10 +72,10 @@ export const PageHeader = ({
       </div>
 
       {actions && (
-        <div className="flex items-center gap-2 flex-wrap self-start lg:self-center shrink-0 w-full lg:w-auto page-header-actions-mobile">
+        <div className="editorial-page-actions">
           {actions}
         </div>
       )}
-    </div>
+    </header>
   );
 };

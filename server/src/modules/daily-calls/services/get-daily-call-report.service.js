@@ -143,7 +143,7 @@ export const getDailyCallReport = async (query = {}) => {
         rawTimeOut: checkOut?.timestamp ? new Date(checkOut.timestamp).toISOString() : null,
         durationMinutes: durationMins,
         durationFormatted: formatDurationHhMm(durationMins),
-        customerId: outlet.outletCode || `PVP${String(stop.sequence).padStart(4, '0')}`,
+        customerId: outlet.outletCode || 'Belum memiliki kode',
         customerName: outlet.name || 'Outlet',
         customerAddress: outlet.address || '-',
         subChannel: outlet.subChannel || (outlet.type === 'MODERN_TRADE' ? 'MT' : 'RETAIL'),

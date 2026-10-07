@@ -1,52 +1,29 @@
+import { FilterPill } from "./MatrixFilterPill";
 import React from 'react';
 import { LuUser, LuCalendar } from 'react-icons/lu';
-
-const FilterPill = ({ isActive, activeClass, onClick, children }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center w-full min-w-0 whitespace-normal break-words ${isActive ? activeClass : 'bg-surface-container-high text-on-surface-variant'
-            }`}
-    >
-        {children}
-    </button>
-);
-
 /**
  * MobileMatrixFilters Component
  * Single Responsibility: Filter pills (salesman & hari) untuk tampilan mobile rolling matrix.
  */
 export const MobileMatrixFilters = ({
-    matrixRows,
-    days,
-    selectedSales,
-    onSelectSales,
-    selectedDay,
-    onSelectDay,
-}) => (
-    <div className="space-y-3 mb-4 bg-surface-container-low p-3 rounded-2xl border border-border-glass">
+  matrixRows,
+  days,
+  selectedSales,
+  onSelectSales,
+  selectedDay,
+  onSelectDay
+}) => <div className="space-y-3 mb-4 bg-surface-container-low p-3 rounded-2xl border border-border-glass">
         <div>
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                 <LuUser className="text-xs text-primary" /> Filter Salesman:
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 w-full">
-                <FilterPill
-                    isActive={selectedSales === 'ALL'}
-                    activeClass="bg-primary text-on-primary shadow-sm"
-                    onClick={() => onSelectSales('ALL')}
-                >
+                <FilterPill isActive={selectedSales === 'ALL'} activeClass="bg-primary text-on-primary shadow-sm" onClick={() => onSelectSales('ALL')}>
                     Semua ({matrixRows.length})
                 </FilterPill>
-                {matrixRows.map((row) => (
-                    <FilterPill
-                        key={row.salesId}
-                        isActive={selectedSales === row.salesId}
-                        activeClass="bg-primary text-on-primary shadow-sm"
-                        onClick={() => onSelectSales(row.salesId)}
-                    >
+                {matrixRows.map(row => <FilterPill key={row.salesId} isActive={selectedSales === row.salesId} activeClass="bg-primary text-on-primary shadow-sm" onClick={() => onSelectSales(row.salesId)}>
                         {row.salesName}
-                    </FilterPill>
-                ))}
+                    </FilterPill>)}
             </div>
         </div>
 
@@ -55,24 +32,12 @@ export const MobileMatrixFilters = ({
                 <LuCalendar className="text-xs text-emerald-600" /> Filter Hari:
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 w-full">
-                <FilterPill
-                    isActive={selectedDay === 'ALL'}
-                    activeClass="bg-emerald-600 text-white shadow-sm"
-                    onClick={() => onSelectDay('ALL')}
-                >
+                <FilterPill isActive={selectedDay === 'ALL'} activeClass="bg-emerald-600 text-white shadow-sm" onClick={() => onSelectDay('ALL')}>
                     Semua Hari
                 </FilterPill>
-                {days.map((day) => (
-                    <FilterPill
-                        key={day}
-                        isActive={selectedDay === day}
-                        activeClass="bg-emerald-600 text-white shadow-sm"
-                        onClick={() => onSelectDay(day)}
-                    >
+                {days.map(day => <FilterPill key={day} isActive={selectedDay === day} activeClass="bg-emerald-600 text-white shadow-sm" onClick={() => onSelectDay(day)}>
                         {day}
-                    </FilterPill>
-                ))}
+                    </FilterPill>)}
             </div>
         </div>
-    </div>
-);
+    </div>;

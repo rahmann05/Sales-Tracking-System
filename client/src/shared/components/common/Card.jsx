@@ -1,14 +1,11 @@
 import React from 'react';
 
 /**
- * Modular Glassmorphism Card Component
- * Separated CSS into Card.css
+ * Shared neutral surface card.
  */
-export const Card = ({ children, variant = 'card', className = '', onClick }) => {
-  const baseClass = variant === 'panel' ? 'glass-panel' : 'glass-card';
-
+export const Card = ({ children, className = '', onClick }) => {
   return (
-    <div className={`${baseClass} ${className}`} onClick={onClick}>
+    <div className={`app-card ${className}`} onClick={onClick}>
       {children}
     </div>
   );

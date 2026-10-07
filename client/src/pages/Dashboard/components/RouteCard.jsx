@@ -20,6 +20,7 @@ export const RouteCard = ({ route, isSelected, onClick }) => {
       }`}
     >
       <div>
+        {route.code&&<p className="text-xs font-mono mb-1">{route.code}</p>}
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
             <span className="text-xs font-extrabold text-on-surface">

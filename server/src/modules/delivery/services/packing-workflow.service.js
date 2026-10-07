@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { getDynamicConfig } from '../../config/config.service.js';
+import { resolveBusinessCode, getCodePolicy } from '../../config/services/business-code.service.js';
 
 export const packingInclude = { outlet: true, invoices: true, deliveryStops: true, createdBy: { select: { id: true, name: true } } };
 const event = (action, userId, snapshot = {}) => ({ action, userId, at: new Date().toISOString(), ...snapshot });
@@ -27,13 +28,17 @@ export async function savePacking(data, userId, id) {
     }
     const items = data.items.map(i => ({ ...i, lineId: i.lineId || randomUUID() }));
     if (new Set(items.map(i => i.lineId)).size !== items.length) throw new AppError('Identitas baris barang duplikat', 400);
-    const ready = packingReady({ ...data, items });
+    const invoiceRows = [];
+    for (const invoice of data.invoices) invoiceRows.push({...invoice,invoiceNumber: old?.invoices.some(i=>i.invoiceNumber===invoice.invoiceNumber) ? invoice.invoiceNumber : await resolveBusinessCode('INVOICE',invoice.invoiceNumber,{db:tx})});
+    if (new Set(invoiceRows.map(i=>i.invoiceNumber)).size !== invoiceRows.length) throw new AppError('Nomor faktur duplikat dalam dokumen',409);
+    const ready = packingReady({ ...data, items, invoices:invoiceRows });
     const status = autoRelease && ready ? 'RELEASED' : 'DRAFT';
-    const history = [...(old?.history || []), event(old ? 'EDIT' : 'CREATE', userId, { before: old ? { items: old.items, totalCartons: old.totalCartons, notes: old.notes, invoices: old.invoices, sourceOrderId: old.sourceOrderId } : null, after: { ...data, items }, status })];
+    const packingCode=old?.code || await resolveBusinessCode('PACKING_LIST',data.code,{db:tx});
+    const history = [...(old?.history || []), event(old ? 'EDIT' : 'CREATE', userId, { before: old ? { items: old.items, totalCartons: old.totalCartons, notes: old.notes, invoices: old.invoices, sourceOrderId: old.sourceOrderId } : null, after: { ...data, items, code:packingCode, invoices:invoiceRows }, status })];
     const payload = { outletId: data.outletId, sourceOrderId: data.sourceOrderId || null, source: order ? (mode === 'MANUAL' ? 'MANUAL_REFERENCE' : 'ORDER') : 'MANUAL', items, totalCartons: data.totalCartons, totalWeight: data.totalWeight || 0, notes: data.notes, overrideReason: data.overrideReason || null, status, releasedAt: status === 'RELEASED' ? new Date() : null, history, revision: (old?.revision || 0) + 1 };
     if (old) await tx.invoice.deleteMany({ where: { packingListId: id } });
-    const invoices = { create: data.invoices.map(i => ({ ...i, outletId: data.outletId })) };
-    return old ? tx.packingList.update({ where: { id }, data: { ...payload, invoices }, include: packingInclude }) : tx.packingList.create({ data: { ...payload, code: `PL-${randomUUID().slice(0, 12).toUpperCase()}`, createdById: userId, invoices }, include: packingInclude });
+    const invoices = { create: invoiceRows.map(i => ({ ...i, outletId: data.outletId })) };
+    return old ? tx.packingList.update({ where: { id }, data: { ...payload, invoices }, include: packingInclude }) : tx.packingList.create({ data: { ...payload, code: packingCode, createdById: userId, invoices }, include: packingInclude });
   }, { isolationLevel: 'Serializable' });
 }
 
@@ -61,6 +66,8 @@ export async function draftFromApprovedOrder(tx, orderId, userId) {
   if (mode === 'MANUAL' || !await getDynamicConfig('PACKING_AUTO_FROM_APPROVED_ORDER', false)) return;
   const order = await tx.order.findUnique({ where: { id: orderId }, include: { pjpStop: true, items: { include: { product: true } } } });
   if (order.status !== 'APPROVED') return;
+  if ((await getCodePolicy('PACKING_LIST')).mode === 'MANUAL') return; // Admin supplies the code through the manual draft form.
+  if (await tx.packingList.findUnique({where:{sourceOrderId:orderId}})) return;
   const items = order.items.map(i => ({ lineId: i.id, name: i.product.name, sku: i.product.sku, quantity: i.quantity, unit: 'unit' }));
-  await tx.packingList.upsert({ where: { sourceOrderId: orderId }, update: {}, create: { sourceOrderId: orderId, source: 'ORDER', status: 'DRAFT', outletId: order.pjpStop.outletId, code: `PL-${randomUUID().slice(0, 12).toUpperCase()}`, createdById: userId, items, totalCartons: 0, history: [event('AUTO_DRAFT', userId, { orderId })] } });
+  await tx.packingList.upsert({ where: { sourceOrderId: orderId }, update: {}, create: { sourceOrderId: orderId, source: 'ORDER', status: 'DRAFT', outletId: order.pjpStop.outletId, code: await resolveBusinessCode('PACKING_LIST',null,{db:tx}), createdById: userId, items, totalCartons: 0, history: [event('AUTO_DRAFT', userId, { orderId })] } });
 }

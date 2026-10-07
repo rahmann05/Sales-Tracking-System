@@ -23,7 +23,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
   const outletName = stop.outlet?.name || 'Toko';
 
   return (
-    <div className={`bg-surface border border-b-[3.5px] rounded-2xl shadow-xs overflow-hidden transition-all ${isCompleted
+    <div className={`operational-card bg-surface border border-b-[3.5px] rounded-2xl shadow-xs overflow-hidden transition-all ${isCompleted
         ? 'border-border-glass border-b-neutral-300 dark:border-b-neutral-700 opacity-80'
         : 'border-primary/30 border-b-primary/60 hover:shadow-sm'
       }`}>

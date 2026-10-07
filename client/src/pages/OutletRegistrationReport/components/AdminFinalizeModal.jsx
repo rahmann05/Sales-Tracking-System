@@ -1,6 +1,8 @@
 import {useApp} from '../../../context/AppContext';
 import React, { useState } from 'react';
 import { LuCheckCheck, LuX, LuStore } from 'react-icons/lu';
+import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
+import { manualCodeRequired } from '../../../../../shared/coding.mjs';
 
 /**
  * AdminFinalizeModal Component
@@ -12,7 +14,7 @@ export const AdminFinalizeModal = ({
   onClose,
   onConfirmFinalize,
 }) => {
-  const {clusters}=useApp();
+  const {clusters,settings}=useApp();
   const [clusterId,setClusterId]=useState(item?.clusterId||'');
   const [customerCode, setCustomerCode] = useState(
     item?.customerCode || ''
@@ -21,7 +23,7 @@ export const AdminFinalizeModal = ({
   if(!item)return null;
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!customerCode.trim()) {
+    if (manualCodeRequired('OUTLET',settings) && !customerCode.trim()) {
       alert('Kode Outlet wajib diisi!');
       return;
     }
@@ -49,22 +51,7 @@ export const AdminFinalizeModal = ({
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="outlet-reg-label">
-              TETAPKAN KODE OUTLET (CUSTOMER ID) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={customerCode}
-              onChange={(e) => setCustomerCode(e.target.value.toUpperCase())}
-              className="outlet-reg-input font-mono font-bold text-sm text-primary uppercase"
-              placeholder="Contoh: PVC0015"
-            />
-            <p className="text-[10px] text-on-surface-variant mt-1 m-0">
-              Gunakan kode pelanggan resmi yang belum dipakai outlet lain.
-            </p>
-          </div>
+          <BusinessCodeInput entity="OUTLET" value={customerCode} onChange={setCustomerCode} disabled={isProcessing} />
 
           <label className="block">Klaster wilayah <select required value={clusterId} onChange={e=>setClusterId(e.target.value)} className="block w-full p-3 border rounded-xl"><option value="">Pilih klaster</option>{clusters.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           <div className="p-3 bg-surface-container-low rounded-xl border border-border-glass space-y-1">

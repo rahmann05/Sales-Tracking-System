@@ -1,31 +1,16 @@
+import { ValidationSearchPanel } from './ValidationSearchPanel';
+import { OutletCoordinateForm } from './OutletCoordinateForm';
 import React, { useEffect, useState } from 'react';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { outletValidationApi } from '../../../services/api';
 import { OutletMiniMapPreview } from './OutletMiniMapPreview';
-import {
-  LuStore,
-  LuMapPin,
-  LuPhone,
-  LuUser,
-  LuCompass,
-  LuCreditCard,
-  LuRoute,
-  LuBuilding,
-  LuExternalLink,
-  LuCrosshair,
-  LuHistory,
-  LuTriangleAlert,
-  LuRefreshCw,
-  LuInfo,
-} from 'react-icons/lu';
-
+import { LuExternalLink, LuHistory, LuTriangleAlert, LuInfo } from 'react-icons/lu';
 const SIGNALS = {
   reverseGeocode: 'Alamat di Titik GPS',
   forwardGeocode: 'Titik Berdasarkan Alamat',
   findPlace: 'Profil & Identitas Toko',
-  nearbySearch: 'Tempat di Sekitar Titik GPS',
+  nearbySearch: 'Tempat di Sekitar Titik GPS'
 };
-
 const SUBCHANNEL_LABELS = {
   TOKO_RETAIL: 'Toko / Retail',
   GROSIR: 'Grosir',
@@ -40,30 +25,34 @@ const SUBCHANNEL_LABELS = {
   LOKAL_SUPERMARKET: 'Lokal Supermarket',
   HYPERMARKET: 'Hypermarket',
   DRUGSTORE: 'Drugstore',
-  PERKULAKAN: 'Perkulakan',
+  PERKULAKAN: 'Perkulakan'
 };
-
-export function OutletValidationDetail({ outlet, onClose, onSaved }) {
-  const [form, setForm] = useState({ latitude: '', longitude: '', reason: '' });
+export function OutletValidationDetail({
+  outlet,
+  onClose,
+  onSaved
+}) {
+  const [form, setForm] = useState({
+    latitude: '',
+    longitude: '',
+    reason: ''
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
-
   useEffect(() => {
     if (outlet) {
       setForm({
         latitude: String(outlet.latitude ?? ''),
         longitude: String(outlet.longitude ?? ''),
-        reason: '',
+        reason: ''
       });
       setError('');
     }
   }, [outlet]);
-
-  const save = async (e) => {
+  const save = async e => {
     e.preventDefault();
     if (!outlet) return;
-
     setBusy(true);
     setError('');
     try {
@@ -71,7 +60,7 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         reason: form.reason.trim(),
-        updatedAt: outlet.updatedAt,
+        updatedAt: outlet.updatedAt
       });
       await onSaved();
       onClose();
@@ -81,7 +70,6 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
       setBusy(false);
     }
   };
-
   const locate = () => {
     if (!navigator.geolocation) {
       setError('GPS tidak didukung oleh browser pada perangkat ini.');
@@ -89,25 +77,23 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
     }
     setLocating(true);
     setError('');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setForm((f) => ({
-          ...f,
-          latitude: String(pos.coords.latitude.toFixed(6)),
-          longitude: String(pos.coords.longitude.toFixed(6)),
-        }));
-        setLocating(false);
-      },
-      (err) => {
-        setError(err.message || 'Gagal membaca koordinat GPS perangkat.');
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+    navigator.geolocation.getCurrentPosition(pos => {
+      setForm(f => ({
+        ...f,
+        latitude: String(pos.coords.latitude.toFixed(6)),
+        longitude: String(pos.coords.longitude.toFixed(6))
+      }));
+      setLocating(false);
+    }, err => {
+      setError(err.message || 'Gagal membaca koordinat GPS perangkat.');
+      setLocating(false);
+    }, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    });
   };
-
   if (!outlet) return null;
-
   const ch = outlet.channel || outlet.type || 'GENERAL_TRADE';
   const isGt = ch === 'GENERAL_TRADE';
   const subChannelLabel = SUBCHANNEL_LABELS[outlet.subChannel] || outlet.subChannel || 'Retail';
@@ -117,34 +103,16 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
   const history = outlet.validationDetails?.coordinateHistory || [];
   const signals = outlet.validationDetails?.signals || {};
   const warnings = outlet.validationDetails?.warnings || [];
-
-  return (
-    <NativeDialog
-      open={Boolean(outlet)}
-      title={`Detail & Validasi: ${outlet.name}`}
-      busy={busy}
-      onClose={onClose}
-    >
+  return <NativeDialog open={Boolean(outlet)} title={`Detail & Validasi: ${outlet.name}`} busy={busy} onClose={onClose}>
       <div className="space-y-5 text-on-surface text-xs">
         {/* ── 1. Map Preview Section ── */}
         <div className="space-y-1.5">
-          <OutletMiniMapPreview
-            latitude={outlet.latitude}
-            longitude={outlet.longitude}
-            name={outlet.name}
-            radiusMeters={outlet.radiusMeters || 50}
-            channel={ch}
-          />
+          <OutletMiniMapPreview latitude={outlet.latitude} longitude={outlet.longitude} name={outlet.name} radiusMeters={outlet.radiusMeters || 50} channel={ch} />
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] text-on-surface-variant font-medium">
               Geofence Radius Presensi: <strong>{outlet.radiusMeters || 50} meter</strong>
             </span>
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1"
-            >
+            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
               <span>Buka di Google Maps</span>
               <LuExternalLink className="text-[10px]" />
             </a>
@@ -152,288 +120,56 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
         </div>
 
         {/* ── 2. Comprehensive Store Information Grid ── */}
-        <div className="p-3.5 rounded-2xl bg-surface-container/40 border border-border-glass space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-border-glass">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-surface text-[10px] font-bold border border-border-glass text-on-surface flex items-center gap-1">
-                <span className={`w-1.5 h-1.5 rounded-full ${isGt ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
-                <span>{isGt ? 'GT (General Trade)' : 'MT (Modern Trade)'}</span>
-              </span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface text-on-surface border border-border-glass">
-                {subChannelLabel}
-              </span>
-            </div>
-            <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-surface text-on-surface border border-border-glass">
-              {outlet.outletCode || 'TANPA KODE'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant flex items-center gap-1">
-                  <LuUser className="text-xs text-primary" /> Pemilik:
-                </span>
-                <span className="font-bold text-on-surface">{outlet.ownerName || 'Belum diisi'}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant flex items-center gap-1">
-                  <LuPhone className="text-xs text-primary" /> Kontak / Telp:
-                </span>
-                <span className="font-mono font-bold text-on-surface">{outlet.phone || 'Belum diisi'}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant flex items-center gap-1">
-                  <LuBuilding className="text-xs text-primary" /> Klaster:
-                </span>
-                <span className="font-bold text-on-surface">{outlet.cluster?.name || 'Tanpa klaster'}</span>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant flex items-center gap-1">
-                  <LuCreditCard className="text-xs text-primary" /> Pembayaran:
-                </span>
-                <span className="font-bold text-on-surface">
-                  {outlet.paymentType === 'TOP' ? `TOP ${outlet.termOfPaymentDays || 0} Hari` : (outlet.paymentType || 'CASH')}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant flex items-center gap-1">
-                  <LuRoute className="text-xs text-primary" /> Rute / Itinerary:
-                </span>
-                <span className="font-bold text-on-surface">{outlet.itineraryCode || '-'}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant flex items-center gap-1">
-                  <LuCompass className="text-xs text-primary" /> Titik GPS:
-                </span>
-                <span className="font-mono font-bold text-on-surface">
-                  {latNum.toFixed(5)}, {lngNum.toFixed(5)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-border-glass space-y-1">
-            <span className="text-on-surface-variant font-medium flex items-center gap-1">
-              <LuMapPin className="text-xs text-primary shrink-0" /> Alamat Fisik Toko:
-            </span>
-            <p className="font-bold text-on-surface leading-relaxed">
-              {outlet.address || 'Alamat fisik belum diisi'}
-            </p>
-          </div>
-        </div>
+        <ValidationSearchPanel isGt={isGt} latNum={latNum} lngNum={lngNum} outlet={outlet} subChannelLabel={subChannelLabel} />
 
         {/* ── 3. Geocoding Validation Signals & Analysis ── */}
-        {outlet.validationDetails?.note && (
-          <div className="p-3 rounded-xl bg-surface-container/60 border border-border-glass flex items-start gap-2.5">
+        {outlet.validationDetails?.note && <div className="p-3 rounded-xl bg-surface-container/60 border border-border-glass flex items-start gap-2.5">
             <LuInfo className="text-primary text-sm shrink-0 mt-0.5" />
             <p className="text-on-surface font-medium">
               {outlet.validationDetails.note}
             </p>
-          </div>
-        )}
+          </div>}
 
-        {Object.keys(signals).length > 0 && (
-          <div className="space-y-2">
+        {Object.keys(signals).length > 0 && <div className="space-y-2">
             <h4 className="font-black text-on-surface text-xs uppercase tracking-wider">
               Sinyal Verifikasi Geocoding
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {Object.entries(signals).map(([key, s]) => (
-                <div
-                  key={key}
-                  className="p-3 rounded-xl bg-surface border border-border-glass shadow-xs space-y-1"
-                >
+              {Object.entries(signals).map(([key, s]) => <div key={key} className="p-3 rounded-xl bg-surface border border-border-glass shadow-xs space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-on-surface">{SIGNALS[key] || key}</span>
-                    <span
-                      className={`font-mono font-bold text-[11px] px-2 py-0.5 rounded-md border ${
-                        s.skipped
-                          ? 'bg-surface-container text-on-surface-variant border-border-glass'
-                          : s.score >= 70
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                          : s.score >= 40
-                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                      }`}
-                    >
+                    <span className={`font-mono font-bold text-[11px] px-2 py-0.5 rounded-md border ${s.skipped ? 'bg-surface-container text-on-surface-variant border-border-glass' : s.score >= 70 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : s.score >= 40 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'}`}>
                       {s.skipped ? 'Dilewati' : `Skor: ${s.score ?? 0}%`}
                     </span>
                   </div>
-                  {s.formattedAddress && (
-                    <p className="text-[11px] text-on-surface-variant truncate">
+                  {s.formattedAddress && <p className="text-[11px] text-on-surface-variant truncate">
                       {s.formattedAddress}
-                    </p>
-                  )}
-                  {s.distanceMeters != null && (
-                    <p className="text-[11px] text-on-surface-variant font-medium">
+                    </p>}
+                  {s.distanceMeters != null && <p className="text-[11px] text-on-surface-variant font-medium">
                       Selisih titik: <strong>{Math.round(s.distanceMeters)} m</strong>
-                    </p>
-                  )}
-                </div>
-              ))}
+                    </p>}
+                </div>)}
             </div>
-          </div>
-        )}
+          </div>}
 
-        {warnings.length > 0 && (
-          <div className="space-y-1.5">
-            {warnings.map((w, idx) => (
-              <div
-                key={idx}
-                className="p-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex items-start gap-2 text-[11px]"
-              >
+        {warnings.length > 0 && <div className="space-y-1.5">
+            {warnings.map((w, idx) => <div key={idx} className="p-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex items-start gap-2 text-[11px]">
                 <LuTriangleAlert className="text-amber-500 shrink-0 text-sm mt-0.5" />
                 <span>{w}</span>
-              </div>
-            ))}
-          </div>
-        )}
+              </div>)}
+          </div>}
 
         {/* ── 4. GPS Coordinate Correction Form ── */}
-        <form onSubmit={save} className="p-4 rounded-2xl bg-surface-container/60 border border-border-glass space-y-3.5">
-          <div className="space-y-1">
-            <h4 className="font-black text-on-surface text-sm flex items-center gap-1.5">
-              <LuCrosshair className="text-primary text-base" />
-              <span>Koreksi Titik Koordinat GPS</span>
-            </h4>
-            <p className="text-[11px] text-on-surface-variant">
-              Pastikan Anda sedang berada di lokasi outlet fisik atau memiliki data titik koordinat yang telah diverifikasi langsung.
-            </p>
-          </div>
-
-          {error && (
-            <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold flex items-center gap-2">
-              <LuTriangleAlert className="text-sm shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Quick Action Helpers */}
-          <div className="flex flex-wrap items-center gap-2">
-            {outlet.googleSuggestedLat != null && outlet.googleSuggestedLng != null && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() =>
-                  setForm((f) => ({
-                    ...f,
-                    latitude: String(outlet.googleSuggestedLat),
-                    longitude: String(outlet.googleSuggestedLng),
-                  }))
-                }
-                className="px-3 py-1.5 rounded-xl bg-surface border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-xs"
-              >
-                <LuCompass className="text-xs text-primary" />
-                <span>Pakai Rekomendasi Titik Google</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              disabled={busy || locating}
-              onClick={locate}
-              className="px-3 py-1.5 rounded-xl bg-surface border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
-            >
-              <LuCrosshair className={`text-xs text-primary ${locating ? 'animate-spin' : ''}`} />
-              <span>{locating ? 'Mendeteksi GPS…' : 'Ambil Lokasi Perangkat Saya'}</span>
-            </button>
-          </div>
-
-          {/* Lat / Lng inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                Garis Lintang (Latitude)
-              </label>
-              <input
-                type="number"
-                step="any"
-                min={-90}
-                max={90}
-                required
-                value={form.latitude}
-                onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))}
-                placeholder="-6.837000"
-                className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass font-mono text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                Garis Bujur (Longitude)
-              </label>
-              <input
-                type="number"
-                step="any"
-                min={-180}
-                max={180}
-                required
-                value={form.longitude}
-                onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))}
-                placeholder="107.563000"
-                className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass font-mono text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Reason / Proof Notes */}
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Alasan Koreksi & Bukti Verifikasi Lapangan (min. 10 karakter)
-            </label>
-            <textarea
-              required
-              minLength={10}
-              maxLength={1000}
-              rows={3}
-              value={form.reason}
-              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
-              placeholder="Contoh: Titik lama bergeser 80m dari toko fisik. Telah diverifikasi langsung di depan toko oleh SPV."
-              className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-border-glass text-xs font-bold text-on-surface hover:bg-surface-container transition-all"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={busy || !form.latitude || !form.longitude || form.reason.trim().length < 10}
-              className="px-5 py-2 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
-            >
-              <LuRefreshCw className={`text-xs ${busy ? 'animate-spin' : ''}`} />
-              <span>{busy ? 'Menyimpan…' : 'Simpan Koreksi Koordinat'}</span>
-            </button>
-          </div>
-        </form>
+        <OutletCoordinateForm busy={busy} error={error} form={form} locate={locate} locating={locating} onClose={onClose} outlet={outlet} save={save} setForm={setForm} />
 
         {/* ── 5. Coordinate Correction Audit History ── */}
-        {history.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-border-glass">
+        {history.length > 0 && <div className="space-y-2 pt-2 border-t border-border-glass">
             <h4 className="font-black text-on-surface text-xs uppercase tracking-wider flex items-center gap-1.5">
               <LuHistory className="text-primary text-sm" />
               <span>Riwayat Perubahan Koordinat GPS ({history.length})</span>
             </h4>
             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-              {history.map((h, i) => (
-                <div
-                  key={i}
-                  className="p-2.5 rounded-xl bg-surface border border-border-glass shadow-xs text-[11px] flex items-start justify-between gap-3"
-                >
+              {history.map((h, i) => <div key={i} className="p-2.5 rounded-xl bg-surface border border-border-glass shadow-xs text-[11px] flex items-start justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="font-bold text-on-surface block">{h.reason}</span>
                     <span className="text-[10px] text-on-surface-variant font-mono">
@@ -441,14 +177,17 @@ export function OutletValidationDetail({ outlet, onClose, onSaved }) {
                     </span>
                   </div>
                   <span className="text-[10px] text-on-surface-variant whitespace-nowrap">
-                    {h.at ? new Date(h.at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    {h.at ? new Date(h.at).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) : '-'}
                   </span>
-                </div>
-              ))}
+                </div>)}
             </div>
-          </div>
-        )}
+          </div>}
       </div>
-    </NativeDialog>
-  );
+    </NativeDialog>;
 }

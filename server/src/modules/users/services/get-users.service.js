@@ -15,6 +15,7 @@ export const getUsers = async (query = {},currentUser=null) => {
     where.AND = [{OR: [
       { name: { contains: search, mode: 'insensitive' } },
       { email: { contains: search, mode: 'insensitive' } },
+      { staffCode: { contains: search, mode: 'insensitive' } },
     ]}];
   }
 

@@ -6,11 +6,15 @@ import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { saveOutletPhoto } from '../customer-photo.service.js';
 import { sanitizeRegistrationPayload } from './sanitize-registration-payload.service.js';
 import { validateGooglePlace } from './validate-google-place.service.js';
+import { getDynamicConfig } from '../../config/config.service.js';
+import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 
 /**
  * 1. Create Outlet Registration (Salesman)
  */
 export const createRegistration = async (data, currentUser) => {
+  if (await getDynamicConfig('CUSTOMER_REG_REQUIRE_PHOTO', true) && !data.photoUrl?.trim()) throw new AppError('Foto fisik outlet wajib dilampirkan', 422);
+  if (await getDynamicConfig('CUSTOMER_REG_REQUIRE_TAX_DOCUMENT', true) && !data.taxDocumentUrl?.trim()) throw new AppError(`Foto dokumen ${data.taxType === 'PKP' ? 'NPWP' : 'KTP'} wajib dilampirkan`, 422);
   if(data.clusterId && !await prisma.cluster.findFirst({where:{id:data.clusterId,deletedAt:null,...(currentUser.role==='SUPERVISOR'?{supervisorId:currentUser.id}:currentUser.role==='SALES'?{OR:[{assignedSalesId:currentUser.id},{users:{some:{id:currentUser.id}}}]}:{})},select:{id:true}}))throw new AppError('Klaster berada di luar penugasan',403);
   const { latitude = 0, longitude = 0, name, address, photoUrl: incomingPhotoUrl } = data;
 
@@ -31,7 +35,7 @@ export const createRegistration = async (data, currentUser) => {
     ...data,
     photoId,
     photoUrl,
-    placeId: data.placeId || (placeValidation?.isPlaceFound ? 'PLACE-VERIFIED' : null),
+    placeId: data.placeId || placeValidation?.placeId || null,
     placeDetails: data.placeDetails || placeValidation || null,
     latitude: Number(latitude) || 0,
     longitude: Number(longitude) || 0,
@@ -39,6 +43,7 @@ export const createRegistration = async (data, currentUser) => {
     salesmanName: currentUser?.name || 'Salesman',
     registrationStatus: 'SUBMITTED',
   });
+  cleanData.registrationCode = await resolveBusinessCode('NOO', data.registrationCode);
 
   for(const key of ['id','createdAt','updatedAt','deletedAt','spvId','spvName','spvApprovedAt','adminId','adminName','adminRegisteredAt','rejectionNote']) delete cleanData[key];
   const registration = await prisma.customerRegistration.create({

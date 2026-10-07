@@ -19,7 +19,7 @@ export const useDeviceCamera = (facingModeDefault = 'user', autoStart = true) =>
       streamRef.current.getTracks().forEach((track) => {
         try {
           track.stop();
-        } catch (e) {
+        } catch  {
           // ignore
         }
       });

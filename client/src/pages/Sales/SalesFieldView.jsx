@@ -38,7 +38,7 @@ export const SalesFieldView = () => {
   const [selectedDay, setSelectedDay] = useState(() => {
     try {
       return localStorage.getItem('sales_pjp_active_day') || todayDayName;
-    } catch (e) {
+    } catch  {
       return todayDayName;
     }
   });
@@ -47,7 +47,7 @@ export const SalesFieldView = () => {
     setSelectedDay(day);
     try {
       localStorage.setItem('sales_pjp_active_day', day);
-    } catch (e) {}
+    } catch  {}
   };
 
   // Extract unique days dynamically from the stops assigned to the sales rep

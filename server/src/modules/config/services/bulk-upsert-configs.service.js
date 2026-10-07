@@ -23,6 +23,7 @@ export const bulkUpsertConfigs = async (configMap) => {
   // Re-fetch all to return updated state
   const allConfigs = await prisma.systemConfig.findMany({ orderBy: { key: 'asc' } });
   for (const cfg of allConfigs) {
+    if (cfg.key.startsWith('_CODE_COUNTER:')) continue;
     results[cfg.key] = cfg.value;
   }
 

@@ -1,6 +1,9 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
+import { MapEffect } from "./RouteMapEffect";
+import { MapEventsHandler } from "./RouteMapEvents";
+import { createSalesLivePinIcon, createCustomPinIcon } from "./leafletRouteIcons";
+import React from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+
 import { getClusterColorHex, getClusterInfo } from '../../../services/clusterColorService';
 import { googleDirectionsService } from '../../../services/googleDirectionsService';
 import { googlePlacesService } from '../../../services/googlePlacesService';
@@ -10,80 +13,10 @@ import { RouteProviderBadge } from './RouteProviderBadge';
 import { LuStore, LuMapPin, LuNavigation, LuExternalLink } from 'react-icons/lu';
 
 // Helper custom Leaflet live sales GPS icon generator
-const createSalesLivePinIcon = () => {
-  const svg = `
-    <div style="position:relative; width:42px; height:42px; display:flex; align-items:center; justify-content:center;">
-      <div style="position:absolute; width:40px; height:40px; border-radius:50%; background:#2563eb; opacity:0.35; animation:pulse 2s infinite;"></div>
-      <div style="width:32px; height:32px; border-radius:50%; background:#1d4ed8; border:3px solid #ffffff; box-shadow:0 4px 8px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; color:#ffffff;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-      </div>
-    </div>
-  `;
-  return L.divIcon({
-    className: 'custom-sales-live-marker',
-    html: svg,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-    popupAnchor: [0, -22],
-  });
-};
-
-// Helper custom Leaflet pin icon generator
-const createCustomPinIcon = (color = '#2563eb', isSelected = false) => {
-  const size = isSelected ? 34 : 26;
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}">
-      <path fill="${color}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-  `;
-  return L.divIcon({
-    className: 'custom-leaflet-marker',
-    html: svg,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size],
-  });
-};
 
 // Sub-component to handle map click events
-const MapEventsHandler = ({ onMapClick }) => {
-  useMapEvents({
-    click(e) {
-      if (onMapClick) {
-        onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng });
-      }
-    },
-  });
-  return null;
-};
 
 // Sub-component to pan & zoom map when selected outlet changes
-const MapEffect = ({ selectedOutlet, selectedSales, salesLocation, center, zoom }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    // Ensure map tiles load fully if container resizes shortly after mount
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [map]);
-
-  useEffect(() => {
-    if (selectedOutlet?.latitude != null && selectedOutlet?.longitude != null) {
-      map.flyTo([Number(selectedOutlet.latitude), Number(selectedOutlet.longitude)], 15, { duration: 1 });
-    }
-  }, [selectedOutlet, map]);
-
-  useEffect(() => {
-    if (selectedSales?.stops?.[0]?.latitude != null) {
-      const first = selectedSales.stops[0];
-      map.flyTo([Number(first.latitude), Number(first.longitude)], 13, { duration: 1 });
-    }
-  }, [selectedSales, map]);
-
-  return null;
-};
 
 export const LeafletFallbackRouteMap = ({
   center,
@@ -97,10 +30,13 @@ export const LeafletFallbackRouteMap = ({
   onSelectOutlet = () => {},
   onClearSelection = () => {},
   userRole = 'SALES',
-  salesLocation = { lat: -6.8722, lng: 107.5423 },
+  salesLocation = {
+    lat: -6.8722,
+    lng: 107.5423
+  },
   routeLegs = [],
   routeProvider = 'osrm',
-  clusterBaseColor = '#2563eb',
+  clusterBaseColor = '#2563eb'
 }) => {
   const centerLat = Number(center?.lat || salesLocation?.lat || -6.8849);
   const centerLng = Number(center?.lng || salesLocation?.lng || 107.4899);
@@ -108,130 +44,88 @@ export const LeafletFallbackRouteMap = ({
   // Flatten polyline points
   const polylineCoords = [];
   if (routeLegs && routeLegs.length > 0) {
-    routeLegs.forEach((leg) => {
+    routeLegs.forEach(leg => {
       if (leg.path) {
-        leg.path.forEach((pt) => {
+        leg.path.forEach(pt => {
           polylineCoords.push([Number(pt.lat), Number(pt.lng)]);
         });
       }
     });
   } else if (systemStops.length > 0) {
     polylineCoords.push([centerLat, centerLng]);
-    systemStops.forEach((s) => {
+    systemStops.forEach(s => {
       if (s.latitude != null && s.longitude != null) {
         polylineCoords.push([Number(s.latitude), Number(s.longitude)]);
       }
     });
   }
-
-  return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '400px' }}>
+  return <div style={{
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    minHeight: '400px'
+  }}>
       <ClusterMapLegend selectedClusterColor={clusterBaseColor} />
 
-      {selectedSales && (
-        <SelectedSalesMapHeader
-          selectedSales={selectedSales}
-          onBack={onClearSelection}
-          userRole={userRole}
-        />
-      )}
+      {selectedSales && <SelectedSalesMapHeader selectedSales={selectedSales} onBack={onClearSelection} userRole={userRole} />}
 
-      <MapContainer
-        center={[centerLat, centerLng]}
-        zoom={13}
-        style={{ width: '100%', height: '100%' }}
-        scrollWheelZoom={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+      <MapContainer center={[centerLat, centerLng]} zoom={13} style={{
+      width: '100%',
+      height: '100%'
+    }} scrollWheelZoom={true}>
+        <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
         <MapEventsHandler onMapClick={onMapClick} />
 
-        <MapEffect
-          selectedOutlet={selectedOutlet}
-          selectedSales={selectedSales}
-          salesLocation={salesLocation}
-          center={center}
-          zoom={zoom}
-        />
+        <MapEffect selectedOutlet={selectedOutlet} selectedSales={selectedSales} salesLocation={salesLocation} center={center} zoom={zoom} />
 
         {/* Generic markers passed from PersistentMapShell / mapState */}
         {markers.map((m, idx) => {
-          const lat = Number(m.lat ?? m.latitude);
-          const lng = Number(m.lng ?? m.longitude);
-          if (isNaN(lat) || isNaN(lng)) return null;
-          const markerColor = m.color || '#2563eb';
-          return (
-            <Marker
-              key={m.id || `m-${idx}`}
-              position={[lat, lng]}
-              icon={createCustomPinIcon(markerColor, false)}
-              eventHandlers={{
-                click: () => {
-                  if (typeof m.onClick === 'function') m.onClick(m);
-                },
-              }}
-            >
-              {m.title && (
-                <Popup>
+        const lat = Number(m.lat ?? m.latitude);
+        const lng = Number(m.lng ?? m.longitude);
+        if (isNaN(lat) || isNaN(lng)) return null;
+        const markerColor = m.color || '#2563eb';
+        return <Marker key={m.id || `m-${idx}`} position={[lat, lng]} icon={createCustomPinIcon(markerColor, false)} eventHandlers={{
+          click: () => {
+            if (typeof m.onClick === 'function') m.onClick(m);
+          }
+        }}>
+              {m.title && <Popup>
                   <div className="p-1 space-y-1 text-xs">
                     <span className="font-bold text-gray-900">{m.title}</span>
                     {m.snippet && <p className="text-gray-600 text-[11px]">{m.snippet}</p>}
                   </div>
-                </Popup>
-              )}
-            </Marker>
-          );
-        })}
+                </Popup>}
+            </Marker>;
+      })}
 
         {/* Generic routes passed from PersistentMapShell / mapState */}
         {routes.map((r, idx) => {
-          const positions = (r.path || []).map((pt) => [Number(pt.lat ?? pt.latitude), Number(pt.lng ?? pt.longitude)]);
-          if (positions.length < 2) return null;
-          return (
-            <Polyline
-              key={r.id || `r-${idx}`}
-              positions={positions}
-              pathOptions={{
-                color: r.color || '#2563eb',
-                weight: r.strokeWeight || 4,
-                opacity: r.strokeOpacity || 0.85,
-              }}
-            />
-          );
-        })}
+        const positions = (r.path || []).map(pt => [Number(pt.lat ?? pt.latitude), Number(pt.lng ?? pt.longitude)]);
+        if (positions.length < 2) return null;
+        return <Polyline key={r.id || `r-${idx}`} positions={positions} pathOptions={{
+          color: r.color || '#2563eb',
+          weight: r.strokeWeight || 4,
+          opacity: r.strokeOpacity || 0.85
+        }} />;
+      })}
 
         {/* Starting / Current Location Pin */}
-        {salesLocation && !isNaN(centerLat) && !isNaN(centerLng) && (
-          <Marker
-            position={[centerLat, centerLng]}
-            icon={createCustomPinIcon(salesLocation?.accuracy ? '#dc2626' : '#10b981', true)}
-          >
+        {salesLocation && !isNaN(centerLat) && !isNaN(centerLng) && <Marker position={[centerLat, centerLng]} icon={createCustomPinIcon(salesLocation?.accuracy ? '#dc2626' : '#10b981', true)}>
             <Popup>
               <div className="text-xs p-1">
                 <span className={`font-bold flex items-center gap-1 ${salesLocation?.accuracy ? 'text-red-700' : 'text-emerald-700'}`}>
-                  {salesLocation?.accuracy ? (
-                    <><LuMapPin /> Lokasi Anda Saat Ini</>
-                  ) : (
-                    <><LuStore /> Depo Pusat Sinar Anugrah</>
-                  )}
+                  {salesLocation?.accuracy ? <><LuMapPin /> Lokasi Anda Saat Ini</> : <><LuStore /> Depo Pusat Sinar Anugrah</>}
                 </span>
                 <p className="text-gray-600 text-[10px]">
                   {salesLocation?.accuracy ? 'Titik GPS Real-Time' : 'Titik Awal Keberangkatan Sales'}
                 </p>
               </div>
             </Popup>
-          </Marker>
-        )}
+          </Marker>}
 
         {/* Live Sales Field Rep GPS Position Pin */}
-        {selectedSales && salesLocation && (
-          <Marker
-            position={[Number(salesLocation.lat), Number(salesLocation.lng)]}
-            icon={createSalesLivePinIcon()}
-          >
+        {selectedSales && salesLocation && <Marker position={[Number(salesLocation.lat), Number(salesLocation.lng)]} icon={createSalesLivePinIcon()}>
             <Popup>
               <div className="text-xs p-1.5 space-y-1 min-w-[160px]">
                 <div className="flex items-center gap-1.5 font-bold text-blue-700">
@@ -247,24 +141,16 @@ export const LeafletFallbackRouteMap = ({
                 </div>
               </div>
             </Popup>
-          </Marker>
-        )}
+          </Marker>}
 
         {/* Belfoods Store Outlet Markers */}
         {systemStops.map((stop, idx) => {
-          if (stop.latitude == null || stop.longitude == null) return null;
-          const isSelected = selectedOutlet?.id === stop.id;
-          const color = getClusterColorHex(stop.clusterName, stop.callplanName);
-
-          return (
-            <Marker
-              key={stop.id || `stop-${idx}`}
-              position={[Number(stop.latitude), Number(stop.longitude)]}
-              icon={createCustomPinIcon(color, isSelected)}
-              eventHandlers={{
-                click: () => onSelectOutlet(stop),
-              }}
-            >
+        if (stop.latitude == null || stop.longitude == null) return null;
+        const isSelected = selectedOutlet?.id === stop.id;
+        const color = getClusterColorHex(stop.clusterName, stop.callplanName);
+        return <Marker key={stop.id || `stop-${idx}`} position={[Number(stop.latitude), Number(stop.longitude)]} icon={createCustomPinIcon(color, isSelected)} eventHandlers={{
+          click: () => onSelectOutlet(stop)
+        }}>
               <Popup>
                 <div className="p-1 space-y-1.5 text-xs min-w-[200px]">
                   <div className="flex items-center justify-between border-b border-gray-200 pb-1">
@@ -281,44 +167,26 @@ export const LeafletFallbackRouteMap = ({
                     <span>{stop.address}</span>
                   </p>
                   <div className="pt-1 flex items-center justify-between">
-                    <a
-                      href={googleDirectionsService.getDirectionsUrl(salesLocation, stop)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] font-bold flex items-center gap-1 text-decoration-none"
-                    >
+                    <a href={googleDirectionsService.getDirectionsUrl(salesLocation, stop)} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] font-bold flex items-center gap-1 text-decoration-none">
                       <LuNavigation /> Navigasi Maps
                     </a>
-                    <a
-                      href={googlePlacesService.getGoogleMapsUrl(stop.latitude, stop.longitude, stop.outletName)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-1.5 py-1 bg-gray-100 text-gray-700 rounded text-[10px] border border-gray-300"
-                      title="Lihat di Google Maps"
-                    >
+                    <a href={googlePlacesService.getGoogleMapsUrl(stop.latitude, stop.longitude, stop.outletName)} target="_blank" rel="noopener noreferrer" className="px-1.5 py-1 bg-gray-100 text-gray-700 rounded text-[10px] border border-gray-300" title="Lihat di Google Maps">
                       <LuExternalLink />
                     </a>
                   </div>
                 </div>
               </Popup>
-            </Marker>
-          );
-        })}
+            </Marker>;
+      })}
 
         {/* Route Polyline from systemStops */}
-        {polylineCoords.length > 1 && (
-          <Polyline
-            positions={polylineCoords}
-            pathOptions={{
-              color: clusterBaseColor,
-              weight: 5,
-              opacity: 0.85,
-            }}
-          />
-        )}
+        {polylineCoords.length > 1 && <Polyline positions={polylineCoords} pathOptions={{
+        color: clusterBaseColor,
+        weight: 5,
+        opacity: 0.85
+      }} />}
       </MapContainer>
 
       <RouteProviderBadge provider={routeProvider} />
-    </div>
-  );
+    </div>;
 };

@@ -5,13 +5,14 @@ import { z } from 'zod';
 // ═══════════════════════════════════════════════════════════════
 
 const invoiceItemSchema = z.object({
-  invoiceNumber: z.string().min(1, 'Nomor faktur wajib diisi'),
+  invoiceNumber: z.string().trim().max(128).optional(),
   totalAmount: z.number().nonnegative().optional(),
   totalCartons: z.number().int().min(1).default(1),
   notes: z.string().optional(),
 });
 
 const packingBody = z.object({
+  code: z.string().trim().max(128).optional(),
   outletId: z.string().trim().min(1).max(128),
   sourceOrderId: z.string().trim().min(1).max(128).nullable().optional(),
   totalCartons: z.number().int().nonnegative(),
@@ -38,6 +39,7 @@ const deliveryStopItemSchema = z.object({
 
 export const createDeliveryRouteSchema = z.object({
   body: z.object({
+    code: z.string().trim().max(128).optional(),
     date: z.string().refine((d) => !isNaN(Date.parse(d)), 'Format tanggal tidak valid'),
     vehicleId: z.string().trim().min(1).max(128),
     driverId: z.string().trim().min(1).max(128),

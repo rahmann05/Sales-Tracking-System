@@ -1,0 +1,68 @@
+/* Shared visual language taken from the admin home. Status colors and map/print
+   surfaces keep their own meaning and layout. */
+:root {
+  --ui-card-radius:12px;
+  --ui-control-radius:8px;
+  --ui-card-border:1px solid rgba(24,24,27,.08);
+  --ui-title-size:32px;
+  --ui-section-size:18px;
+  --ui-body-size:14px;
+  --ui-caption-size:12px;
+  --ui-card-padding:18px;
+}
+.editorial-page-header {display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:0;margin-bottom:8px;background:transparent;border:0;box-shadow:none;min-width:0;}
+.editorial-page-heading {min-width:0;flex:1;}
+.editorial-page-header h1 {font-size:var(--ui-title-size);line-height:1.25;font-weight:700;letter-spacing:-.025em;margin:4px 0 8px;}
+.editorial-page-subtitle {font-size:var(--ui-body-size);font-weight:400;line-height:1.6;color:var(--on-surface-variant);max-width:760px;}
+.editorial-page-eyebrow {display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:var(--ui-caption-size);color:var(--on-surface-variant);font-weight:600;}
+.editorial-page-eyebrow > span {display:inline-flex;align-items:center;gap:6px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:var(--ui-caption-size);font-weight:600;letter-spacing:0;text-transform:none;color:var(--on-surface-variant);}
+.editorial-page-stats {display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.editorial-page-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:50%;padding-top:4px;}
+.app-card,.workspace-card,.surface-card,.glass-card,.glass-panel {
+  background:var(--surface);border:var(--ui-card-border);border-radius:var(--ui-card-radius);box-shadow:none;min-width:0;
+}
+.app-card {padding:var(--ui-card-padding);}
+.app-shell #main-content .operational-card {border-radius:var(--ui-card-radius);border-bottom-width:1px;box-shadow:none;}
+.app-card-interactive {border:var(--ui-card-border);border-radius:var(--ui-card-radius);box-shadow:none;}
+.app-card-interactive:hover {transform:none;border-color:#a1a1aa;}
+.app-shell #main-content :is(div,section,article,aside,form).bg-surface.border-border-glass:is(.rounded-2xl,.rounded-3xl):not(.fixed *):not(.leaflet-container *) {
+  border-radius:var(--ui-card-radius);border-color:rgba(24,24,27,.08);box-shadow:none;
+}
+.app-shell #main-content :is(.outlet-reg-section-card,.outlet-reg-header-card,.workspace-card,.config-parameter-group,.admin-feature-card):not(.fixed *) {border-radius:var(--ui-card-radius);background:var(--surface);border:var(--ui-card-border);box-shadow:none;}
+.app-shell #main-content :is(h1,h2,h3,h4):not(.fixed *):not(.leaflet-container *) {letter-spacing:-.015em;text-wrap:pretty;line-height:1.35;}
+.app-shell #main-content h1:not(.fixed *):not(.leaflet-container *) {font-size:var(--ui-title-size);font-weight:700;letter-spacing:-.025em;}
+.app-shell #main-content h2:not(.fixed *):not(.leaflet-container *) {font-size:var(--ui-section-size);font-weight:650;}
+.app-shell #main-content :is(h3,h4):not(.fixed *):not(.leaflet-container *) {font-weight:600;}
+.app-shell #main-content :is(.font-black,.font-extrabold):not(.fixed *) {font-weight:700;}
+.app-shell #main-content .font-bold:not(.fixed *) {font-weight:600;}
+.app-shell #main-content .text-xs:not(.fixed *):not(.leaflet-container *) {font-size:13px;line-height:1.6;}
+.app-shell #main-content :is(.workspace-heading,.role-page-header) p {font-size:var(--ui-body-size);line-height:1.6;}
+.app-shell #main-content .role-page-header {background:transparent;border:0;box-shadow:none;border-radius:0;padding:0;}
+.app-shell #main-content :is(.page-container,.workspace-page) {max-width:1280px;}
+.app-shell #main-content :is(.form-input,.form-select,.app-button):not(.fixed *):not(.leaflet-container *) {border-radius:var(--ui-control-radius);box-shadow:none;}
+.app-shell #main-content :is(.surface-card,.app-card,.workspace-card,.outlet-reg-section-card) :is(h3,h4) {font-size:16px;}
+.warehouse-workspace {background:var(--surface-container);}
+.app-dialog,.modal-card {border-radius:var(--ui-card-radius);}
+@media (max-width:1023px) {
+  .editorial-page-header {flex-wrap:wrap;}
+  .editorial-page-actions {max-width:100%;width:100%;justify-content:flex-start;padding-top:0;}
+}
+@media (max-width:767px) {
+  :root {--ui-title-size:24px;--ui-card-padding:16px;}
+  .editorial-page-header {gap:12px;margin-bottom:4px;}
+  .editorial-page-actions {gap:8px;}
+  .editorial-page-actions > button {flex:1 1 auto;min-height:44px;}
+  .editorial-page-eyebrow > span {line-height:1.5;}
+  .editorial-page-subtitle {font-size:14px;}
+  .app-shell .mobile-header-container {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;height:auto;padding:8px 16px;background:var(--surface);box-shadow:none;}
+  .app-shell .mobile-header-container .mobile-header-brand {max-width:none;min-width:0;gap:8px;}
+  .app-shell .mobile-brand-icon {display:none;}
+  .app-shell .mobile-brand-title {font-size:16px;font-weight:650;line-height:1.4;}
+  .app-shell .mobile-brand-subtitle {display:none;}
+  .app-shell .mobile-header-actions {display:contents;}
+  .app-shell .mobile-profile {grid-column:1/-1;max-width:none;width:100%;padding:4px 0;min-height:40px;border:0;background:transparent;}
+  .app-shell .mobile-profile .profile-copy {flex:1;}
+  .app-shell .supervisor-workspace-tabs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;}
+  .app-shell .supervisor-workspace-tabs > button {min-width:0;flex-direction:column;padding:10px 4px;gap:4px;}
+  .app-shell .warehouse-tabs > button {min-width:0;flex-direction:column;padding:10px 4px;gap:4px;overflow-wrap:normal;word-break:normal;font-size:13px;}
+}

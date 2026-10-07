@@ -53,7 +53,7 @@ export const SalesStopActions = ({
       {stop.status === 'ARRIVED' && (
         <div className="space-y-2.5">
           {/* Active Visit Duration Tracker */}
-          <VisitDurationTimer startTime={stop.inTimestamp} minMinutes={settings.MINIMUM_VISIT_DURATION_MINUTES} />
+          <VisitDurationTimer startTime={stop.inTimestamp} minMinutes={settings.ATTENDANCE_ENFORCE_MIN_DURATION ? settings.MINIMUM_VISIT_DURATION_MINUTES : 0} />
 
           <div className="flex items-center gap-2">
             <button

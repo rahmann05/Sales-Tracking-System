@@ -103,10 +103,11 @@ export const useSalesActions = ({
   }, [setSalesStops, addNotification]);
 
   // Submit Order (Sales)
-  const handleSubmitOrder = useCallback(async ({ stopId, items, paymentType }) => {
+  const handleSubmitOrder = useCallback(async ({ stopId, items, paymentType, code }) => {
     try {
       // Call Backend API
       const res = await ordersApi.createOrder({
+        code,
         pjpStopId: stopId,
         items: items?.map((i) => ({
           productId: i.productId || i.id,

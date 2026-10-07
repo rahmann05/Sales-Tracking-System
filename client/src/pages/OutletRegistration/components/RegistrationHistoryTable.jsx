@@ -135,6 +135,7 @@ export const RegistrationHistoryTable = ({
                       </span>
                     </td>
                     <td data-label="Status" className="">
+                      {item.registrationCode&&<div className="font-mono text-xs mb-1">{item.registrationCode}</div>}
                       <span
                         className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${badge.cls}`}
                       >

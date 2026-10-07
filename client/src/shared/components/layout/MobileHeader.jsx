@@ -19,7 +19,7 @@ export const MobileHeader = ({ onLogout }) => {
   return (
     <header className={`mobile-header-container pointer-events-auto z-30 ${isAdmin?'mobile-header-admin':''}`}>
       {/* Brand Title & Logo or Admin Back Button */}
-      <div className="flex items-center gap-2.5">
+      <div className="mobile-header-brand flex items-center gap-2.5">
         {isAdmin && !isLanding ? (
           <button
             type="button"
@@ -44,7 +44,7 @@ export const MobileHeader = ({ onLogout }) => {
       </div>
 
       {/* Right Controls: Real-time Notifications & User Profile Badge */}
-      <div className="flex items-center gap-2">
+      <div className="mobile-header-actions flex items-center gap-2">
         <NotificationCenterDropdown />
 
         <button

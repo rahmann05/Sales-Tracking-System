@@ -42,11 +42,12 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   // Read dynamic radius from SystemConfig cache
   const globalRadius = await getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50);
 
-  const maxRadius = stop.outlet.radiusMeters || globalRadius;
+  const useOutletRadius = await getDynamicConfig('ATTENDANCE_USE_OUTLET_RADIUS', true);
+  const maxRadius = useOutletRadius ? (stop.outlet.radiusMeters || globalRadius) : globalRadius;
   const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
 
   // Enforce Geofence: Block attendance if outside radius, except for an explicitly configured exception
-  if (!isBypassUser && !hasException && distance > maxRadius) {
+  if (await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE', true) && !isBypassUser && !hasException && distance > maxRadius) {
     throw new AppError(
       `Presensi ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius toko (${maxRadius}m). Harap dekati lokasi fisik outlet.`,
       422
@@ -56,10 +57,15 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   // Duplicate IN check
   const existingIn = stop.attendances.find((a) => a.userId === userId && a.type === ATTENDANCE_TYPE.IN);
   if (existingIn) throw new AppError('Anda sudah melakukan Absen IN pada outlet ini', 409);
+  if (await getDynamicConfig('ATTENDANCE_REQUIRE_PHOTO', true) && !photoUrl?.trim()) throw new AppError('Foto absen masuk wajib dilampirkan', 422);
+
+  // Free ordering must still preserve a single active visit per salesman.
+  const activeVisit = await db.attendance.findFirst({where:{userId,type:ATTENDANCE_TYPE.IN,pjpStop:{attendances:{none:{userId,type:ATTENDANCE_TYPE.OUT}},status:{notIn:['VISITED','SKIPPED','CLOSED_REPORTED']}}},select:{id:true}});
+  if (activeVisit) throw new AppError('Selesaikan Absen OUT pada kunjungan aktif terlebih dahulu', 409);
 
   // Sequential stop validation
   const currentSeq = stop.sequence;
-  if (currentSeq > 1) {
+  if (await getDynamicConfig('ATTENDANCE_ENFORCE_SEQUENCE', true) && currentSeq > 1) {
     const prevStops = stop.pjp.stops.filter((s) => s.sequence < currentSeq);
     for (const prevStop of prevStops) {
       const allowPending = await getDynamicConfig('ALLOW_CONTINUE_PENDING_CLOSED', true);

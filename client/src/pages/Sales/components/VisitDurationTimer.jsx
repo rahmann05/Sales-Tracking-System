@@ -32,7 +32,7 @@ export const VisitDurationTimer = ({ startTime, minMinutes = 5 }) => {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const progressPercent = Math.min(100, Math.round((elapsedSecs / targetSecs) * 100));
+  const progressPercent = targetSecs > 0 ? Math.min(100, Math.round((elapsedSecs / targetSecs) * 100)) : 100;
 
   return (
     <div className="p-3 bg-surface-container rounded-2xl border border-border-glass space-y-2">
@@ -53,7 +53,7 @@ export const VisitDurationTimer = ({ startTime, minMinutes = 5 }) => {
         >
           {isMinDurationMet ? (
             <>
-              <LuCircleCheck /> Standar Kunjungan Terpenuhi
+              <LuCircleCheck /> {minMinutes > 0 ? 'Standar Kunjungan Terpenuhi' : 'Durasi minimum nonaktif'}
             </>
           ) : (
             <>

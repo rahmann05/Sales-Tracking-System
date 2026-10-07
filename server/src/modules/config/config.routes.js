@@ -24,6 +24,9 @@ router.get('/runtime', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 router.get('/:key', (req, res, next) => {
+  if (req.params.key.startsWith('_')) return res.status(403).json({message:'Parameter internal sistem'});
+  if (req.params.key.startsWith('_')) return res.status(403).json({message:'Parameter internal sistem'});
+  if (req.params.key.startsWith('_')) return res.status(403).json({message:'Parameter internal sistem'});
   if (['MAPS_API_KEY', 'BYPASS_GEOFENCE_EMAILS', 'JWT_EXPIRES_IN', 'JWT_REFRESH_EXPIRES_IN'].includes(req.params.key) && req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Khusus admin' });
   next();
 }, configController.getConfig);

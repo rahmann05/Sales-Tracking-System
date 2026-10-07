@@ -47,7 +47,7 @@ export const PendingOrderCard = ({ order, onDecision }) => {
       <div className="poc-header">
         <div>
           <span className="poc-order-id">
-            Order #{order.id}
+            Order {order.code || 'nomor lama belum tersedia'}
           </span>
           <h4 className="poc-outlet-name">{order.outletName}</h4>
           <p className="poc-sales-info">

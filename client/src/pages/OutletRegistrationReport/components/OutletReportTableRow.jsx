@@ -19,6 +19,7 @@ export const OutletReportTableRow = ({
     <tr className="hover:bg-surface-variant/20 transition-colors">
       {/* Kode Outlet */}
       <td data-label="Kode Outlet" className="py-3.5 px-4 font-mono font-bold text-xs whitespace-nowrap">
+        {item.registrationCode&&<div className="text-xs mb-1">NOO: {item.registrationCode}</div>}
         {item.customerCode ? (
           <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
             {item.customerCode}

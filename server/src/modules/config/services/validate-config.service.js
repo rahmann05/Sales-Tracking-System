@@ -1,5 +1,6 @@
 import { CONFIG_PARAMS, parseConfigValue } from '../../../../../shared/config.mjs';
 import { AppError } from '../../../utils/errors.js';
+import { CODE_ENTITIES, codePolicy, validateCodePolicy } from '../../../../../shared/coding.mjs';
 
 export function validateConfigMap(values) {
   if (!values || typeof values !== 'object' || Array.isArray(values)) throw new AppError('Konfigurasi harus berupa objek', 400);
@@ -16,6 +17,10 @@ export function validateConfigMap(values) {
 }
 
 export function validateConfigRelations(values) {
+  for (const entity of CODE_ENTITIES) {
+    try { validateCodePolicy(codePolicy(entity.key,values)); }
+    catch(error) { throw new AppError(`${entity.label}: ${error.message}`,400); }
+  }
   for (const [lower, upper] of [
     ['VALIDATION_DISTANCE_WARNING', 'VALIDATION_DISTANCE_SUSPECT'],
     ['VALIDATION_CONFIDENCE_THRESHOLD_WARNING', 'VALIDATION_CONFIDENCE_THRESHOLD_LIKELY'],

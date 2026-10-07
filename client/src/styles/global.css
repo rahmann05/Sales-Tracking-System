@@ -11,6 +11,7 @@
 @import "./common/MobileResponsive.css";
 @import "./common/Workspace.css";
 @import "./common/DataTable.css";
+@import "./common/Editorial.css";
 
 :root {
   --surface: #ffffff;

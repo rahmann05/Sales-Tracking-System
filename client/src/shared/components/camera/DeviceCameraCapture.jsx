@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useGeofence } from '../../hooks/useGeofence';
 import { useDeviceCamera } from '../../hooks/useDeviceCamera';
 import { useLiveClock } from '../../hooks/useLiveClock';
@@ -21,10 +21,12 @@ import { CameraNativeFileTrigger } from './CameraNativeFileTrigger';
 export const DeviceCameraCapture = ({
   outletId = null,
   onCapture,
+  onLocationChange,
   capturedPhoto,
   onRetake,
   facingModeDefault = 'user',
   requireGps = true,
+  enforceGeofence = true,
   targetLat = null,
   targetLng = null,
   maxRadiusMeters = 50,
@@ -61,9 +63,13 @@ export const DeviceCameraCapture = ({
     isWithinGeofence,
   } = useGeofence(targetLat, targetLng, maxRadiusMeters);
 
+  useEffect(() => {
+    if (onLocationChange) onLocationChange(isGpsLocked ? userLocation : null);
+  }, [userLocation, isGpsLocked, onLocationChange]);
+
   const geofenceResult = isWithinGeofence();
   const isOutsideRadius = Boolean(requireGps && targetLat != null && targetLng != null && geofenceResult && !geofenceResult.isInside);
-  const isBlockedByGeofence = isOutsideRadius && !isBypassUser;
+  const isBlockedByGeofence = enforceGeofence && isOutsideRadius && !isBypassUser;
 
   // Capture snapshot handler using cameraSnapshotService
   const handleCaptureSnapshot = () => {

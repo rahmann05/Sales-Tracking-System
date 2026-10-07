@@ -20,6 +20,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       {/* Nama & Alamat */}
       <td data-label="Nama Toko" className="">
         <div className="font-bold text-on-surface text-sm">{item.name}</div>
+        {item.registrationCode&&<div className="text-xs font-mono">{item.registrationCode}</div>}
         <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
           <LuMapPin className="text-primary text-xs shrink-0" />
           <span>{item.address}</span>

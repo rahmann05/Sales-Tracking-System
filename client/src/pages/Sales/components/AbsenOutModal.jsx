@@ -26,7 +26,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   const [capturedPhoto, setCapturedPhoto] = useState(() => {
     try {
       return (cacheKey && sessionStorage.getItem(cacheKey)) || null;
-    } catch (e) {
+    } catch  {
       return null;
     }
   });
@@ -55,7 +55,8 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
 
   const minMinutes = settings.MINIMUM_VISIT_DURATION_MINUTES;
   const minDurationSecs = minMinutes * 60;
-  const isEarlyCheckout = elapsedSecs < minDurationSecs;
+  const isEarlyCheckout = settings.ATTENDANCE_ENFORCE_MIN_DURATION && elapsedSecs < minDurationSecs;
+  const earlyBlocked = isEarlyCheckout && (!settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT || !earlyReason);
   const remainingSecs = Math.max(0, minDurationSecs - elapsedSecs);
 
   const formatTime = (secs) => {
@@ -70,7 +71,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     if (cacheKey && photoUrl) {
       try {
         sessionStorage.setItem(cacheKey, photoUrl);
-      } catch (e) {}
+      } catch  {}
     }
   };
 
@@ -79,20 +80,20 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     if (cacheKey) {
       try {
         sessionStorage.removeItem(cacheKey);
-      } catch (e) {}
+      } catch  {}
     }
   };
 
   const handleConfirm = async () => {
     if (saving) return;
     if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
-    if (!capturedPhoto) {
+    if (settings.ATTENDANCE_REQUIRE_PHOTO && !capturedPhoto) {
       alert('Harap ambil foto selfie presensi keluar terlebih dahulu menggunakan kamera.');
       return;
     }
 
-    if (isEarlyCheckout && !earlyReason) {
-      setError(`Durasi belum mencapai ${minMinutes} menit. Pilih alasan checkout lebih awal.`);
+    if (earlyBlocked) {
+      setError(`Durasi belum mencapai ${minMinutes} menit. ${settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT ? 'Pilih alasan checkout lebih awal.' : 'Tunggu sampai durasi minimum terpenuhi.'}`);
       return;
     }
 
@@ -147,7 +148,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           >
             {!isEarlyCheckout ? (
               <>
-                <FiCheckCircle className="text-xs" /> Standar Terpenuhi (≥ {minMinutes}m)
+                <FiCheckCircle className="text-xs" /> {settings.ATTENDANCE_ENFORCE_MIN_DURATION ? `Standar Terpenuhi (≥ ${minMinutes}m)` : 'Durasi minimum nonaktif'}
               </>
             ) : (
               <>
@@ -165,12 +166,12 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
               <div>
                 <strong className="text-amber-700 block font-bold">Peringatan: Checkout Dini (&lt; {minMinutes} Menit)</strong>
                 <span className="text-[11px] text-amber-800">
-                  Standar minimal kunjungan toko adalah {minMinutes} menit. Karena Anda checkout lebih awal, mohon pilih alasan wajib:
+                  Standar minimal kunjungan toko adalah {minMinutes} menit. {settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT ? 'Pilih alasan wajib untuk checkout dini.' : 'Tunggu sampai durasi minimum terpenuhi.'}
                 </span>
               </div>
             </div>
 
-            <select
+            {settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT && <select
               value={earlyReason}
               onChange={(e) => setEarlyReason(e.target.value)}
               className="w-full p-2.5 bg-surface border border-amber-500/40 rounded-xl text-xs font-semibold text-on-surface focus:ring-2 focus:ring-amber-500 outline-none"
@@ -181,7 +182,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
                   {opt}
                 </option>
               ))}
-            </select>
+            </select>}
           </div>
         )}
 
@@ -189,11 +190,13 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
         <DeviceCameraCapture outletId={stop.outletId}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
+          onLocationChange={settings.ATTENDANCE_REQUIRE_PHOTO ? undefined : setGpsData}
           onRetake={handleRetake}
           requireGps={true}
+          enforceGeofence={settings.ATTENDANCE_ENFORCE_GEOFENCE}
           targetLat={stop.latitude}
           targetLng={stop.longitude}
-          maxRadiusMeters={stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS}
+          maxRadiusMeters={settings.ATTENDANCE_USE_OUTLET_RADIUS ? (stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS) : settings.ATTENDANCE_RADIUS_METERS}
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen Out"
@@ -210,13 +213,14 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {/* 3. Confirmation Button */}
-        {capturedPhoto && (
+        {!settings.ATTENDANCE_REQUIRE_PHOTO && <p className="text-xs text-on-surface-variant">Foto opsional. Tunggu GPS aktif sebelum mengirim absensi.</p>}
+        {(capturedPhoto || !settings.ATTENDANCE_REQUIRE_PHOTO) && (
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={saving || (isEarlyCheckout && !earlyReason)}
+            disabled={saving || earlyBlocked}
             className={`w-full py-3 font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 ${
-              isEarlyCheckout && !earlyReason
+              earlyBlocked
                 ? 'bg-slate-400 text-slate-200 cursor-not-allowed opacity-60'
                 : 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
             }`}

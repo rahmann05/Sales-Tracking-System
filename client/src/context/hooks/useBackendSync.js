@@ -1,24 +1,9 @@
+import { mapSalesPjpStops, formatTimeWib, resolveStopStatus } from './mapSalesPjpStops';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import { useEffect } from 'react';
 import { collectPages, getAuthToken, pjpApi, ordersApi, productsApi, absensiApi, outletsApi, usersApi, routeChangesApi } from '../../services/api';
 import { mapServerOrder } from '../../utils/orderMapper';
 import { mapServerRouteChange, mapServerUnlockRequest } from '../../utils/incidentMapper';
-
-const formatTimeWib = (ts) => {
-  if (!ts) return null;
-  const d = new Date(ts);
-  return isNaN(d.getTime())
-    ? null
-    : d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) + ' WIB';
-};
-
-const resolveStopStatus = (s, inAtt, outAtt) => {
-  if (outAtt || s.status === 'VISITED' || s.status === 'COMPLETED') return 'VISITED';
-  if (s.status === 'SKIPPED') return 'SKIPPED';
-  if (s.status === 'CLOSED_REPORTED' || s.status === 'CLOSED') return 'CLOSED';
-  if (inAtt || s.status === 'ARRIVED' || s.status === 'IN_VISIT') return 'ARRIVED';
-  return 'PENDING';
-};
 
 const isDateToday = value => value && wibDateKey(value) === wibDateKey();
 
@@ -140,58 +125,9 @@ export const useBackendSync = ({
         // 2. Process Sales Today PJP
         if (isSales && todayPjpRes?.data?.stops) {
           const pjpData = todayPjpRes.data;
-          const cluster = pjpData.user?.cluster;
 
-          const mappedStops = pjpData.stops.map((s, idx) => {
-            const stopCluster = s.outlet?.cluster || cluster;
-            const spv = stopCluster?.users?.find((u) => u.role === 'SUPERVISOR');
-            const area = stopCluster?.region || stopCluster?.name || (s.outlet?.address ? s.outlet.address.split(',').pop().trim() : '-');
 
-            const inAtt = s.attendances?.find((a) => a.type === 'IN');
-            const outAtt = s.attendances?.find((a) => a.type === 'OUT');
-            const stopStatus = resolveStopStatus(s, inAtt, outAtt);
-
-            return {
-              id: s.id,
-              outletId: s.outletId || s.outlet?.id || null,
-              pjpId: pjpData.id,
-              sequence: s.sequence || idx + 1,
-              customerName: s.outlet?.name || '',
-              outletName: s.outlet?.name || '',
-              owner: s.outlet?.ownerName || s.outlet?.owner || '',
-              phone: s.outlet?.phone || '',
-              address: s.outlet?.address || '',
-              type: s.outlet?.type || 'MODERN_TRADE',
-              latitude: s.outlet?.latitude != null ? Number(s.outlet.latitude) : (s.latitude != null ? Number(s.latitude) : null),
-              longitude: s.outlet?.longitude != null ? Number(s.outlet.longitude) : (s.longitude != null ? Number(s.longitude) : null),
-              outletId: s.outletId || s.outlet?.id,
-              outlet: s.outlet,
-              radiusMeters: s.outlet?.radiusMeters || 50,
-              outstanding: s.outlet?.outstanding || 0,
-              callplanName: pjpData.name || '',
-              callFrequency: s.callFrequency || (pjpData.weekType === 'ALL' ? 'F4' : 'F2'),
-              clusterName: stopCluster?.name || pjpData.clusterName || '',
-              regionName: stopCluster?.region || pjpData.regionName || area,
-              subDistrict: area,
-              supervisorName: spv?.name || '',
-              dayOfWeek: pjpData.dayOfWeek || '',
-              assignedSalesName: user?.name || '',
-              customerId: s.outlet?.outletCode || '',
-              outletCode: s.outlet?.outletCode || '',
-              lockStatus: s.outlet?.lockStatus || 'NORMAL',
-              status: stopStatus,
-              inTimestamp: inAtt?.timestamp ? new Date(inAtt.timestamp).toISOString() : null,
-              outTimestamp: outAtt?.timestamp ? new Date(outAtt.timestamp).toISOString() : null,
-              checkInTime: formatTimeWib(inAtt?.timestamp),
-              checkOutTime: formatTimeWib(outAtt?.timestamp),
-              checkInPhoto: inAtt?.photoUrl || null,
-              checkOutPhoto: outAtt?.photoUrl || null,
-              checkInNotes: inAtt?.notes || null,
-              checkOutNotes: outAtt?.notes || null,
-              durationMinutes: outAtt?.durationMinutes || null,
-              deviationMeters: inAtt?.deviationMeters ?? null,
-            };
-          });
+          const mappedStops = mapSalesPjpStops(pjpData, user);
           setSalesStops(mappedStops);
         }
 
@@ -225,7 +161,7 @@ export const useBackendSync = ({
                   longitude: s.outlet?.longitude != null ? Number(s.outlet.longitude) : (s.longitude != null ? Number(s.longitude) : null),
                   outletId: s.outletId || s.outlet?.id,
                   outlet: s.outlet,
-                  radiusMeters: s.outlet?.radiusMeters || 50,
+                  radiusMeters: s.outlet?.radiusMeters ?? null,
                   callplanName: p.name || '',
                   clusterName: cluster?.name || s.outlet?.cluster?.name || '',
                   regionName: cluster?.region || s.outlet?.cluster?.region || '',
@@ -250,6 +186,7 @@ export const useBackendSync = ({
               const done = stops.filter((s) => s.status === 'VISITED').length;
               return {
                 id: p.id,
+                code: p.code || null,
                 salesId: p.userId,
                 name: p.user?.name || '',
                 repName: p.user?.name || '',

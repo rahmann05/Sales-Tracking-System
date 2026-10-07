@@ -1,4 +1,20 @@
+import { CODE_CONFIG_GROUPS } from './coding.mjs';
 export const CONFIG_DEFINITIONS = [
+  ...CODE_CONFIG_GROUPS,
+  {groupKey:'NOO',groupLabel:'Registrasi Outlet (NOO)',groupDescription:'Pencarian nama outlet dan kelengkapan pengajuan. Pengajuan tetap melalui supervisor dan admin.',groupIcon:'LuBuilding',groupColor:'emerald',params:[
+    {key:'CUSTOMER_REG_ENFORCE_PLACES_RADIUS',label:'Batasi pencarian nama outlet dengan radius',description:'Aktif: hasil Google dan OpenStreetMap dibatasi radius pencarian (default 100 meter). Nonaktif: nama outlet dapat dicari di luar radius; GPS fisik pengajuan tetap disimpan.',type:'boolean',defaultValue:true},
+    {key:'CUSTOMER_REG_PLACES_RADIUS_METERS',label:'Radius pencarian nama outlet NOO',description:'Batas hasil pencarian dan verifikasi nama outlet saat pembatas radius aktif. Digunakan Google dan OpenStreetMap.',type:'number',unit:'meter',defaultValue:100,min:20,max:1000},
+    {key:'CUSTOMER_REG_REQUIRE_PHOTO',label:'Wajib foto outlet NOO',description:'Foto fisik outlet wajib dilampirkan sebelum pengajuan dikirim.',type:'boolean',defaultValue:true},
+    {key:'CUSTOMER_REG_REQUIRE_TAX_DOCUMENT',label:'Wajib dokumen KTP / NPWP',description:'NON_PKP memerlukan foto KTP dan PKP memerlukan foto NPWP.',type:'boolean',defaultValue:true},
+  ]},
+  {groupKey:'SALES_ATTENDANCE',groupLabel:'Aturan Absen Kunjungan Sales',groupDescription:'Aturan absen masuk dan keluar PJP. GPS tetap wajib dan jarak serta durasi tetap dicatat.',groupIcon:'LuMapPin',groupColor:'blue',params:[
+    {key:'ATTENDANCE_REQUIRE_PHOTO',label:'Wajib foto absen masuk / keluar PJP',description:'Nonaktif: foto opsional, GPS tetap wajib untuk setiap absen sales pada PJP.',type:'boolean',defaultValue:true},
+    {key:'ATTENDANCE_ENFORCE_GEOFENCE',label:'Batasi absen dengan radius outlet',description:'Nonaktif: absen masuk/keluar di luar radius diizinkan, penyimpangan GPS tetap ditandai WARNING.',type:'boolean',defaultValue:true},
+    {key:'ATTENDANCE_USE_OUTLET_RADIUS',label:'Gunakan radius khusus master outlet',description:'Aktif: radius master outlet didahulukan. Nonaktif: semua absen sales menggunakan Radius Presensi Default.',type:'boolean',defaultValue:true},
+    {key:'ATTENDANCE_ENFORCE_SEQUENCE',label:'Wajib mengikuti urutan PJP',description:'Nonaktif: sales bebas memilih urutan toko. Kunjungan aktif tetap harus diselesaikan sebelum membuka toko lain.',type:'boolean',defaultValue:true},
+    {key:'ATTENDANCE_ENFORCE_MIN_DURATION',label:'Terapkan durasi minimum kunjungan',description:'Nonaktif: checkout tanpa durasi minimum; durasi aktual tetap dicatat.',type:'boolean',defaultValue:true},
+    {key:'ATTENDANCE_ALLOW_EARLY_CHECKOUT',label:'Izinkan checkout dini dengan alasan',description:'Saat durasi minimum aktif: aktif mengizinkan checkout dini dengan alasan; nonaktif mewajibkan menunggu durasi minimum.',type:'boolean',defaultValue:true},
+  ]},
   {groupKey:'TEAM_ASSIGNMENT',groupLabel:'Penugasan Tim',groupDescription:'Keanggotaan sales terpisah dari wilayah dan jadwal.',groupIcon:'LuUsers',groupColor:'blue',params:[
     {key:'TEAM_SPV_CAN_CLAIM_UNASSIGNED',label:'Supervisor boleh mengambil sales tanpa tim',description:'Supervisor hanya dapat menambahkan sales yang belum mempunyai supervisor. Transfer antar tim dilakukan admin.',type:'boolean',defaultValue:true},
   ]},
@@ -323,16 +339,6 @@ export const CONFIG_DEFINITIONS = [
         type: 'text',
         defaultValue: 'PT. SINAR ANUGRAH',
       },
-      {
-        key: 'CUSTOMER_REG_PLACES_RADIUS_METERS',
-        label: 'Radius Pencarian Tempat Baru',
-        description: 'Jarak pencarian maksimal (meter) ke Google Places API saat registrasi customer baru dari lokasi fisik sales.',
-        type: 'number',
-        unit: 'meter',
-        defaultValue: 100,
-        min: 20,
-        max: 1000,
-      },
     ],
   },
   {
@@ -462,7 +468,7 @@ export function parseConfigValue(param, raw) {
   }
   if (param.type === 'number') {
     const value = Number(raw);
-    if (raw === '' || raw === null || !Number.isFinite(value) || value < param.min || value > param.max) throw new Error(`${param.label}: masukkan angka ${param.min}â€“${param.max}`);
+    if (raw === '' || raw === null || !Number.isFinite(value) || value < param.min || value > param.max) throw new Error(`${param.label}: masukkan angka ${param.min} sampai ${param.max}`);
     if (!['DEFAULT_OFFICE_LATITUDE', 'DEFAULT_OFFICE_LONGITUDE', 'TAX_RATE_PERCENT', 'TRAVEL_GAP_SHORT_KM', 'TRAVEL_GAP_MED_KM'].includes(param.key) && !Number.isInteger(value)) throw new Error(`${param.label}: gunakan bilangan bulat`);
     return value;
   }

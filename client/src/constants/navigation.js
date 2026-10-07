@@ -4,9 +4,15 @@
  * their access-control rules, and display metadata.
  */
 
-import { LuLayoutDashboard, LuNavigation, LuUsers, LuShieldCheck, LuFileCheck, LuStore, LuUserPlus, LuClipboardList, LuPhoneCall, LuTruck, LuPackage, LuMap, LuLayoutGrid, LuSettings } from "react-icons/lu";
+/**
+ * Navigation configuration.
+ * Single Responsibility: Central registry of all app navigation tabs,
+ * their access-control rules, and display metadata.
+ */
+
+import { LuLayoutDashboard, LuNavigation, LuUsers, LuShieldCheck, LuFileCheck, LuStore, LuUserPlus, LuClipboardList, LuPhoneCall, LuTruck, LuPackage, LuMap, LuLayoutGrid, LuSettings, LuMapPin } from "react-icons/lu";
 import { FiBarChart2 } from 'react-icons/fi';
-import { LuMapPin } from 'react-icons/lu';
+
 import { ROLES, ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES, OUTLET_VALIDATION_ROLES, OUTLET_APPROVAL_ROLES, OUTLET_REGISTRATION_REPORT_ROLES, DAILY_CALL_ROLES, DELIVERY_MANAGEMENT_ROLES, DELIVERY_FIELD_ROLES } from "./roles";
 
 /** Tab IDs used across the app */

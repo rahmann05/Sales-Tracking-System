@@ -17,10 +17,10 @@ export const WarehousePage = () => {
   const [activeTab, setActiveTab] = useState('pengiriman');
 
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div className="warehouse-workspace flex flex-col min-h-full bg-background">
       <div className="p-4"><ShiftAttendanceWidget /></div>
       {/* Tabs Header */}
-      <div className="grid grid-cols-3 gap-2 px-4 pt-4 border-b border-border-glass w-full">
+      <div className="warehouse-tabs grid grid-cols-3 gap-2 px-4 pt-4 border-b border-border-glass w-full">
         <button
           onClick={() => setActiveTab('pengiriman')}
           className={`flex items-center justify-center gap-2 px-4 py-2.5 border-b-2 font-medium text-sm transition-colors text-center w-full ${
@@ -45,7 +45,7 @@ export const WarehousePage = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-w-0">
         {activeTab === 'pengiriman' && <WarehouseDashboard />}
         {activeTab === 'absensi' && <StaffAttendanceReport />}
         {activeTab === 'kendaraan' && (

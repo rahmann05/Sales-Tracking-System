@@ -5,6 +5,7 @@ import { cacheInvalidate } from '../../../utils/cacheHelper.js';
 import { CACHE_KEYS } from '../../../config/cache.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { invalidateClusterCache } from './clusters.helpers.js';
+import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 
 
 export const createClusterFull = async (data, actor) => {
@@ -24,6 +25,7 @@ export const createClusterFull = async (data, actor) => {
     const cluster = await tx.cluster.create({
       data: {
         ...rest,
+        code: await resolveBusinessCode('CLUSTER',data.code,{db:tx}),
         colorHex: clusterColorHex,
         assignedSalesId: validSalesId,
         supervisorId: finalSpvId,

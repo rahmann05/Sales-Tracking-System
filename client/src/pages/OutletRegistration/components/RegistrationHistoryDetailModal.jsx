@@ -18,6 +18,7 @@ export const RegistrationHistoryDetailModal = ({ item, onClose }) => {
             <h4 className="text-base font-extrabold text-on-surface m-0">
               {item.name}
             </h4>
+            <p className="text-xs font-mono">NOO: {item.registrationCode || 'Pengajuan lama'}</p>
             <p className="text-xs text-on-surface-variant m-0">
               Kode Outlet: {item.customerCode || 'Belum ditetapkan (Menunggu Admin)'}
             </p>

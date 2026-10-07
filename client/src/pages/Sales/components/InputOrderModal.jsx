@@ -4,6 +4,7 @@ import { LuSend } from 'react-icons/lu';
 import { FiXCircle } from 'react-icons/fi';
 import { ProductOrderItem } from './ProductOrderItem';
 import { useApp } from '../../../context/AppContext';
+import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 
 /**
  * InputOrderModal Component (Single Responsibility: Order Taking Form Modal for Sales)
@@ -12,6 +13,7 @@ import { useApp } from '../../../context/AppContext';
 export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
   const { products = [], setProducts, settings } = useApp(); // Produk dari PostgreSQL via context
   const [addingProduct, setAddingProduct] = useState(false);
+  const [code,setCode]=useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [orderItems, setOrderItems] = useState([]);
@@ -60,6 +62,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
     setSaving(true); setError('');
     try { await onSubmitOrder({
       stopId: stop.id,
+      code,
       items: itemsPayload,
       paymentType,
       totalAmount: calculateTotal(),
@@ -79,6 +82,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
           </button>
         </div>
 
+        <BusinessCodeInput entity="ORDER" value={code} onChange={setCode} disabled={saving} />
         <div className="text-xs bg-surface-variant/40 p-3 rounded-2xl border border-border-glass flex items-center justify-between">
           <span className="text-on-surface-variant">Piutang Berjalan Outlet:</span>
           <p className="font-bold text-amber-600">Rp {(stop.outstanding || 0).toLocaleString('id-ID')}</p>

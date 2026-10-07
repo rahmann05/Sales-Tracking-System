@@ -1,4 +1,5 @@
 import { getDynamicConfig } from '../../config/config.service.js';
+import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 /** createOrder - single-responsibility service (extracted from orders.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -6,7 +7,7 @@ import { createBulkNotificationByRoles } from "../../notifications/notifications
 import { ORDER_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
 
 
-export const createOrder = async (salesId, pjpStopId, items, paymentType) => {
+export const createOrder = async (salesId, pjpStopId, items, paymentType, manualCode) => {
   const stop = await prisma.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: { pjp: true, attendances: true, outlet: true },
@@ -51,6 +52,7 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType) => {
   if(!taxIncluded)totalValue+=taxAmount;
   const order = await prisma.order.create({
     data: {
+      code: await resolveBusinessCode('ORDER',manualCode),
       pjpStopId,
       createdBy: salesId,
       totalValue,

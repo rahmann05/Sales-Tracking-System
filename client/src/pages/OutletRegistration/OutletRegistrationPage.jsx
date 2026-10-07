@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { LuCheck, LuInfo, LuFileText, LuClock } from "react-icons/lu";
-import { useApp } from '../../context/AppContext';
 import { useOutletRegistrationForm } from './hooks/useOutletRegistrationForm';
 import { useOutletRegistrationHistory } from './hooks/useOutletRegistrationHistory';
 import { PhysicalDocumentForm } from './components/PhysicalDocumentForm';
@@ -13,7 +12,6 @@ import '../../styles/pages/OutletRegistration.css';
  * Single Responsibility: Compose physical document form and history tab for Sales Outlet Registration.
  */
 export const OutletRegistrationPage = () => {
-  const { user } = useApp();
   const [activeTab, setActiveTab] = useState('FORM'); // 'FORM' | 'HISTORY'
 
   const {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { OutletListPanel } from './OutletListPanel';
 import { RouteReferenceCard } from './RouteReferenceCard';
+import { BusinessCodeInput } from '../../../../shared/components/common/BusinessCodeInput';
 const steps=['Wilayah','Outlet dan rute','Penanggung jawab','Ringkasan'];
 
 export function ClusterControlPanel({builder:b,user,allOutlets,dataLoading,dataError,onRetry,onCancel}) {
@@ -16,6 +17,7 @@ export function ClusterControlPanel({builder:b,user,allOutlets,dataLoading,dataE
       {dataError&&<div role="alert" className="app-error">{dataError}<button type="button" className="app-button" onClick={onRetry}>Muat ulang outlet</button></div>}
       {b.step===1&&<>
         <p>Isi wilayah operasional. Nama kluster dapat disesuaikan sebelum disimpan.</p>
+        <BusinessCodeInput entity="CLUSTER" value={b.draft.code || ''} onChange={value=>b.field('code',value)} disabled={disabled} />
         <label className="app-field">Jenis kluster<select value={b.draft.tradeType} onChange={e=>b.field('tradeType',e.target.value)}><option value="GENERAL_TRADE">General Trade</option><option value="MODERN_TRADE">Modern Trade</option></select></label>
         <label className="app-field">Region / wilayah<input required minLength={2} maxLength={100} value={b.draft.region} onChange={e=>b.field('region',e.target.value)} placeholder="Contoh: Bandung Barat"/></label>
         <label className="app-field">Warna penanda peta<input type="color" value={b.draft.colorHex} onChange={e=>b.field('colorHex',e.target.value)}/></label>

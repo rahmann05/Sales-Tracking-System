@@ -32,6 +32,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
 
   const existingOut = stop.attendances.find((a) => a.userId === userId && a.type === ATTENDANCE_TYPE.OUT);
   if (existingOut) throw new AppError('Anda sudah melakukan Absen OUT pada outlet ini', 409);
+  if (await getDynamicConfig('ATTENDANCE_REQUIRE_PHOTO', true) && !photoUrl?.trim()) throw new AppError('Foto absen keluar wajib dilampirkan', 422);
 
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
   const bypassEmailsRaw = await getDynamicConfig('BYPASS_GEOFENCE_EMAILS', '');
@@ -45,12 +46,13 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   // Read dynamic radius from SystemConfig cache
   const globalRadius = await getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50);
 
-  const maxRadius = stop.outlet.radiusMeters || globalRadius;
+  const useOutletRadius = await getDynamicConfig('ATTENDANCE_USE_OUTLET_RADIUS', true);
+  const maxRadius = useOutletRadius ? (stop.outlet.radiusMeters || globalRadius) : globalRadius;
   const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
 
   // Enforce Geofence: Block checkout if outside radius, except for an explicitly configured exception
   const hasException = await attendanceException(stop.outlet.id,userId,db);
-  if (!isBypassUser && !hasException && distance > maxRadius) {
+  if (await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE', true) && !isBypassUser && !hasException && distance > maxRadius) {
     throw new AppError(
       `Absen OUT ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius toko (${maxRadius}m). Harap dekati lokasi fisik outlet.`,
       422
@@ -65,8 +67,12 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
 
   // Minimum duration check — read from SystemConfig cache
   const MINIMUM_DURATION_MINS = await getDynamicConfig('MINIMUM_VISIT_DURATION_MINUTES', 5);
+  const isEarlyCheckout = await getDynamicConfig('ATTENDANCE_ENFORCE_MIN_DURATION', true) && durationMs < MINIMUM_DURATION_MINS * 60000;
+  const allowEarly = await getDynamicConfig('ATTENDANCE_ALLOW_EARLY_CHECKOUT', true);
+  const cleanEarlyReason = typeof earlyReason === 'string' ? earlyReason.trim() : '';
+  if (isEarlyCheckout && !allowEarly) throw new AppError(`Checkout harus menunggu durasi minimum ${MINIMUM_DURATION_MINS} menit.`, 422);
 
-  if (durationMinutes < MINIMUM_DURATION_MINS && !earlyReason) {
+  if (isEarlyCheckout && !cleanEarlyReason) {
     throw new AppError(
       `Durasi kunjungan baru ${Math.floor(durationMinutes)} menit. Waktu minimal kunjungan toko adalah ${MINIMUM_DURATION_MINS} menit. Harap sertakan alasan jika checkout lebih awal.`,
       422
@@ -89,7 +95,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
         deviationMeters,
         distanceWarning,
         reason: reason || earlyReason || (effective ? null : 'Tidak Ada Order'),
-        earlyReason: durationMinutes < MINIMUM_DURATION_MINS ? (earlyReason || 'Checkout Lebih Awal') : null,
+        earlyReason: isEarlyCheckout ? cleanEarlyReason : null,
         ...result,
       },
     });

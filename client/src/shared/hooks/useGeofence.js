@@ -84,7 +84,7 @@ export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters 
         timeout: 15000,
         maximumAge: 5000,
       });
-    } catch (e) {
+    } catch  {
       // ignore watch errors
     }
   }, []);

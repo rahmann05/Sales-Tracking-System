@@ -1,6 +1,6 @@
 import { validateAllocation } from '../../../../../shared/packing.mjs';
 import { getDynamicConfig } from '../../config/config.service.js';
-import { randomUUID } from 'node:crypto';
+import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 /** createDeliveryRoute - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -58,7 +58,7 @@ export const createDeliveryRoute = async (data, userId) => {
 
   if (vehicle.maxWeightKg && totalWeight > vehicle.maxWeightKg) throw new AppError('Berat muatan melebihi kapasitas kendaraan', 400);
 
-  const code = `RT-${randomUUID().slice(0, 12).toUpperCase()}`;
+  const code = await resolveBusinessCode('DELIVERY_ROUTE',data.code,{db:tx,date:new Date(date)});
 
   const route = await tx.deliveryRoute.create({
     data: {

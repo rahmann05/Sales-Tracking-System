@@ -2,6 +2,7 @@
 import { validateAssignments } from './cluster-assignment-policy.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { invalidateClusterCache } from './clusters.helpers.js';
+import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 
 
 export const createCluster = async (data, actor) => {
@@ -17,6 +18,7 @@ export const createCluster = async (data, actor) => {
 
   const result = await prisma.$transaction(async tx => {
     await validateAssignments(tx,data,actor);
+    createPayload.code = await resolveBusinessCode('CLUSTER',data.code,{db:tx});
     const result = await tx.cluster.create({
     data: createPayload,
     include: {

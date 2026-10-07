@@ -8,6 +8,7 @@ const orderItemSchema = z.object({
 
 export const createOrderSchema = z.object({
   body: z.object({
+    code: z.string().trim().max(128).optional(),
     pjpStopId: z.string().uuid('pjpStopId harus berformat UUID'),
     paymentType: z.enum(['CASH', 'TOP', 'TRANSFER']).optional(),
     items: z

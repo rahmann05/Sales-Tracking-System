@@ -11,18 +11,20 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
   const defaultLat = await getDynamicConfig('DEFAULT_OFFICE_LATITUDE', -6.8722);
   const defaultLng = await getDynamicConfig('DEFAULT_OFFICE_LONGITUDE', 107.5422);
   const searchRadius = await getDynamicConfig('CUSTOMER_REG_PLACES_RADIUS_METERS', 100);
+  const enforceRadius = await getDynamicConfig('CUSTOMER_REG_ENFORCE_PLACES_RADIUS', true);
+  const apiKey = await getDynamicConfig('MAPS_API_KEY', '') || GOOGLE_API_KEY;
 
   const results = [];
   const cleanKeyword = keyword.trim();
-  const userLat = Number(lat) || defaultLat;
-  const userLng = Number(lng) || defaultLng;
+  const userLat = lat != null && Number.isFinite(Number(lat)) ? Number(lat) : defaultLat;
+  const userLng = lng != null && Number.isFinite(Number(lng)) ? Number(lng) : defaultLng;
 
   // 1. Google Places Text Search within strictly searchRadius meters
-  if (GOOGLE_API_KEY) {
+  if (apiKey) {
     try {
       const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
         cleanKeyword
-      )}&location=${userLat},${userLng}&radius=${searchRadius}&key=${GOOGLE_API_KEY}`;
+      )}&location=${userLat},${userLng}&radius=${searchRadius}&key=${apiKey}`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -33,11 +35,12 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
           const itemLng = item.geometry?.location?.lng;
 
           // Strictly enforce radius check
-          const dist = (itemLat && itemLng)
+          if (!Number.isFinite(itemLat) || !Number.isFinite(itemLng)) continue;
+          const dist = (itemLat != null && itemLng != null)
             ? getDistanceInMeters(userLat, userLng, itemLat, itemLng)
             : 0;
 
-          if (dist > searchRadius) {
+          if (enforceRadius && dist > searchRadius) {
             continue; // Outside radius, skip
           }
 
@@ -69,7 +72,9 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
           let photoUrl = null;
           if (item.photos && item.photos.length > 0) {
             const photoRef = item.photos[0].photo_reference;
-            photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photo_reference=${photoRef}&key=${GOOGLE_API_KEY}`;
+            // Photo URLs sent to the client use only the browser Maps key.
+            const browserKey = await getDynamicConfig('MAPS_BROWSER_API_KEY', '');
+            if (browserKey) photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photo_reference=${photoRef}&key=${browserKey}`;
           }
 
           const placeObj = {
@@ -104,7 +109,7 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
     }
   }
 
-  // 2. OpenStreetMap / Nominatim Fallback if Google returned nothing within 100m
+  // 2. OpenStreetMap uses the same radius policy as Google.
   if (results.length === 0) {
     try {
       const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
@@ -120,10 +125,11 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
         for (const item of data) {
           const itemLat = parseFloat(item.lat);
           const itemLng = parseFloat(item.lon);
+          if (!Number.isFinite(itemLat) || !Number.isFinite(itemLng)) continue;
 
           const dist = getDistanceInMeters(userLat, userLng, itemLat, itemLng);
-          if (dist > 100) {
-            continue; // Outside 100m, skip
+          if (enforceRadius && dist > searchRadius) {
+            continue;
           }
 
           const addrObj = item.address || {};

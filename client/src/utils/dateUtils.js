@@ -3,8 +3,6 @@
  * Single Responsibility: Helper tanggal & hari berbahasa Indonesia untuk filter jadwal.
  */
 
-const DAY_NAMES_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
 /** Nama hari ini dalam Bahasa Indonesia, mis. "Senin" */
 export const getTodayNameId = () => new Date().toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',weekday:'long'});
 

@@ -29,13 +29,13 @@ export const useRjpManagement = () => {
 
       if(current!==revision.current)return;
       const clusters = Array.isArray(clustersRes?.data) ? clustersRes.data : [];
-      setMasterClusters(clusters.map((c, idx) => {
+      setMasterClusters(clusters.map((c) => {
         const assignedSales = c.assignedSales;
         const supervisor = c.supervisor;
         const spvName = supervisor?.name || (c.assignedSpvName && c.assignedSpvName !== '-' ? c.assignedSpvName : 'Belum Ditugaskan');
         return {
           id: c.id,
-          code: c.code || `CLS-${idx + 1}`,
+          code: c.code || 'Belum memiliki kode',
           name: c.name,
           tradeType:new Set((c.outlets || []).map(outlet=>outlet.type)).size>1?'MIXED':c.outlets?.[0]?.type || null,
           region: c.region || '—',

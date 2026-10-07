@@ -2,6 +2,7 @@
 /** Reusable select object for clean user queries */
 export const USER_SELECT = {
   id: true,
+  staffCode: true,
   name: true,
   email: true,
   role: true,

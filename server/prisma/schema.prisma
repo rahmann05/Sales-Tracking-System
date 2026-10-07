@@ -203,6 +203,7 @@ enum OrderStatus {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model User {
+  staffCode String? @unique
   supervisorId String?
   supervisor User? @relation("SalesTeam", fields: [supervisorId], references: [id], onDelete: SetNull)
   teamMembers User[] @relation("SalesTeam")
@@ -259,6 +260,7 @@ model User {
 }
 
 model Cluster {
+  code String? @unique
   id              String  @id @default(uuid())
   name            String
   region          String
@@ -378,6 +380,7 @@ model Outlet {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model Pjp {
+  code String? @unique
   id          String    @id @default(uuid())
   userId      String
   user        User      @relation(fields: [userId], references: [id])
@@ -661,6 +664,7 @@ model Division {
 }
 
 model CustomerRegistration {
+  registrationCode String? @unique
   id           String  @id @default(uuid())
   customerCode String? @unique
 
@@ -774,7 +778,7 @@ model Product {
   name       String
   price      Float
   stock      Int         @default(100)
-  code       String?
+  code       String? @unique
   orderItems OrderItem[]
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -782,6 +786,7 @@ model Product {
 }
 
 model Order {
+  code String? @unique
   rejectionReason String?
   termOfPaymentDays Int @default(0)
   taxRatePercent Float @default(0)

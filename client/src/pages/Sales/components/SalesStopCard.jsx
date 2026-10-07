@@ -5,6 +5,7 @@ import { OutletExcelMetadata } from './OutletExcelMetadata';
 import { OutletGooglePlaceInfo } from './OutletGooglePlaceInfo';
 import { SalesStopActions } from './SalesStopActions';
 import { useOutletLockStatus } from '../hooks/useOutletLockStatus';
+import { useApp } from '../../../context/AppContext';
 
 /**
  * SalesStopCard Component
@@ -21,8 +22,10 @@ export const SalesStopCard = React.memo(({
   onClosedReport,
   onRequestUnlock,
 }) => {
+  const { settings } = useApp();
+  const radius = settings.ATTENDANCE_USE_OUTLET_RADIUS ? (stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS) : settings.ATTENDANCE_RADIUS_METERS;
   const hasDistance = Number.isFinite(stop.currentDistance);
-  const isInsideGeofence = hasDistance && stop.currentDistance <= stop.radiusMeters;
+  const isInsideGeofence = hasDistance && stop.currentDistance <= radius;
   const customerName = stop.customerName || stop.outletName;
   const customerId = stop.customerId || stop.outletCode;
 
@@ -31,7 +34,7 @@ export const SalesStopCard = React.memo(({
 
   return (
     <div
-      className={`bg-surface border rounded-2xl p-5 shadow-sm space-y-4 transition-all relative h-full flex flex-col justify-between ${
+      className={`operational-card bg-surface border rounded-2xl p-5 shadow-sm space-y-4 transition-all relative h-full flex flex-col justify-between ${
         stop.status === 'ORDERED'
           ? 'border-blue-500/40 bg-blue-500/5'
           : stop.status === 'VISITED' || stop.status === 'COMPLETED'
@@ -101,7 +104,7 @@ export const SalesStopCard = React.memo(({
 
         {/* 5. Geofence Distance Indicator */}
         <div className="flex items-center justify-between text-xs bg-surface-variant/30 px-3 py-2 rounded-xl">
-          <span className="text-on-surface-variant">Jarak Geofence GPS:</span>
+          <span className="text-on-surface-variant">Jarak GPS{settings.ATTENDANCE_ENFORCE_GEOFENCE ? '' : ' (batas nonaktif)'}:</span>
           <span
             className={`font-bold flex items-center gap-1 ${
               isInsideGeofence ? 'text-emerald-600' : 'text-amber-600'

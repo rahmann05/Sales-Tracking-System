@@ -9,7 +9,7 @@ import { LuSearch } from 'react-icons/lu';
  */
 export const MasterClusterTable = ({ clusters = [], onEdit, onDelete, onManageOutlets, loading=false, deletingId=null }) => {
   const [query, setQuery] = useState('');
-  const filtered = clusters.filter(cluster => [cluster.name, cluster.region, cluster.assignedSalesName, cluster.assignedSpvName].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const filtered = clusters.filter(cluster => [cluster.code, cluster.name, cluster.region, cluster.assignedSalesName, cluster.assignedSpvName].join(' ').toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div className="bg-surface border border-border-glass rounded-2xl shadow-xs overflow-hidden flex flex-col">

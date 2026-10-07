@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const createUserSchema = z.object({
   body: z.object({
+    staffCode: z.string().trim().max(128).optional(),
     name: z.string().min(2, 'Nama minimal 2 karakter'),
     email: z.string().email('Format email tidak valid'),
     password: z.string().min(6, 'Password minimal 6 karakter'),

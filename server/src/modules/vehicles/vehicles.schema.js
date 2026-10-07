@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createVehicleSchema = z.object({
   body: z.object({
-    code: z.string().min(2, 'Kode kendaraan minimal 2 karakter'),
+    code: z.string().trim().max(128).optional(),
     name: z.string().min(2, 'Nama kendaraan minimal 2 karakter'),
     maxCartons: z.number().int().min(1).optional(),
     maxWeightKg: z.number().min(1),

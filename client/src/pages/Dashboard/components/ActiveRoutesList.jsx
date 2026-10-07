@@ -26,7 +26,6 @@ export const ActiveRoutesList = ({
 
   return (
     <Card
-      variant="panel"
       className="!p-0 rounded-[28px] flex flex-col shadow-xl overflow-hidden border border-border-glass max-h-[520px] w-full bg-white/95 backdrop-blur-xl transition-all"
     >
       {/* Header Section */}

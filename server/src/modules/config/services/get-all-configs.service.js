@@ -10,6 +10,7 @@ export const getAllConfigs = async () => {
   // Return as key-value map
   const result = Object.fromEntries(await Promise.all(CONFIG_PARAMS.map(async p => [p.key, await getDynamicConfig(p.key, p.defaultValue)])));
   for (const cfg of configs) {
+    if (cfg.key.startsWith('_CODE_COUNTER:')) continue;
     result[cfg.key] = cfg.value;
   }
   return result;

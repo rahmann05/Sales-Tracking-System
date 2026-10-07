@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const createRegistrationSchema = z.object({
   body: z.object({
+    registrationCode: z.string().trim().max(128).optional(),
     division: z.enum(['UNICHARM', 'BELFOODS', 'GENERAL']).default('UNICHARM'),
     branch: z.string().default('PADALARANG'),
     name: z.string().min(2, 'Nama outlet minimal 2 karakter'),
@@ -81,7 +82,7 @@ export const rejectRegistrationSchema = z.object({
 
 export const finalizeRegistrationSchema = z.object({
   body: z.object({
-    customerCode: z.string().min(2, 'Kode outlet harus diisi'),
+    customerCode: z.string().trim().max(128).optional(),
     clusterId: z.string().optional().nullable(),
     note: z.string().optional().nullable(),
   }),

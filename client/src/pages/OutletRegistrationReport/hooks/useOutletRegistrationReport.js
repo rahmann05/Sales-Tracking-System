@@ -72,10 +72,10 @@ export const useOutletRegistrationReport = () => {
   const handleFinalize = async (id, customerCode, clusterId) => {
     setIsProcessing(true);
     try {
-      await customerRegistrationsApi.finalize(id, { customerCode, clusterId });
+      const result=await customerRegistrationsApi.finalize(id, { customerCode, clusterId });
       setFeedbackMsg({
         type: 'success',
-        text: `Outlet berhasil diinput ke sistem aktif dengan Kode Outlet "${customerCode}"!`,
+        text: `Outlet berhasil diinput ke sistem aktif dengan Kode Outlet "${result.data?.outlet?.outletCode || customerCode}"!`,
       });
       setFinalizeTarget(null);
       await loadReportData();

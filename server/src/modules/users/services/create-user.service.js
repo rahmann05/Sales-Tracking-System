@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { USER_SELECT, enrichUserResponse } from './users.helpers.js';
+import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 
 
 export const createUser = async (raw) => {
@@ -15,7 +16,7 @@ export const createUser = async (raw) => {
 
   const hashedPassword = await bcrypt.hash(data.password, 10);
   const created = await prisma.user.create({
-    data: { ...data, password: hashedPassword },
+    data: { ...data, staffCode: await resolveBusinessCode('USER',raw.staffCode), password: hashedPassword },
     select: USER_SELECT,
   });
   return enrichUserResponse(created);

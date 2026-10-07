@@ -43,6 +43,7 @@ export const getRegistrations = async (query = {}, currentUser) => {
       { name: { contains: cleanSearch, mode: 'insensitive' } },
       { address: { contains: cleanSearch, mode: 'insensitive' } },
       { customerCode: { contains: cleanSearch, mode: 'insensitive' } },
+      { registrationCode: { contains: cleanSearch, mode: 'insensitive' } },
       { salesmanName: { contains: cleanSearch, mode: 'insensitive' } },
     ];
   }

@@ -25,7 +25,6 @@ import {DataTable} from './src/shared/components/common/DataTable.jsx';
 import {MasterClusterTable} from './src/pages/RoutePlanning/components/master/MasterClusterTable.jsx';
 import {ClusterControlPanel} from './src/pages/RoutePlanning/components/master/ClusterControlPanel.jsx';
 import {getNavigationTabs,TAB_IDS} from './src/constants/navigation.js';
-import {SpvModeSelector} from './src/pages/Supervisor/components/SpvModeSelector.jsx';
 for(const role of ['ADMIN','SUPERVISOR'])assert.ok(!getNavigationTabs(role).some(tab=>tab.id===TAB_IDS.MASTER_CLUSTERS),'Kluster berada di dalam Master RJP, bukan menu duplikat');
 const commonTable=renderToStaticMarkup(<DataTable className="mobile-card-table" aria-label="Contoh"><thead><tr><th>Nama</th></tr></thead><tbody><tr><td data-label="Nama">Outlet</td></tr></tbody></DataTable>);assert.match(commonTable,/app-data-table mobile-card-table/);assert.match(commonTable,/aria-label="Contoh"/);
 const emptyClusters=renderToStaticMarkup(<MasterClusterTable/>);assert.match(emptyClusters,/Belum ada kluster/);assert.match(emptyClusters,/app-data-table/);assert.match(emptyClusters,/type="search"/);
@@ -44,8 +43,6 @@ const inputs=renderToStaticMarkup(<><Input label="Nama outlet" value="" onChange
 const labels=[...inputs.matchAll(/for="([^"]+)"/g)].map(m=>m[1]);
 assert.equal(labels.length,2);assert.equal(new Set(labels).size,2);
 for(const id of labels) assert.ok(inputs.includes('id="'+id+'"'));
-const modes=renderToStaticMarkup(<SpvModeSelector spvMode="JOINT_VISIT" onSelectMode={()=>{}} selectedSales="sales-2" onSelectSales={()=>{}} salesOptions={[{value:'sales-1',label:'Nama sama'},{value:'sales-2',label:'Nama sama'}]}/>);
-assert.match(modes,/value="sales-2" selected=""/);
 for(const role of ['ADMIN','SALES','SUPERVISOR','KEPALA_GUDANG','SUPIR']) {
   globalThis.workspaceFixture={user:{name:'Nama pengguna lengkap yang sangat panjang',role,roleLabel:'Peran '+role,cluster:{name:'Wilayah pengujian'},region:'Bandung'},activeTab:'role-workspace',setActiveTab:()=>{},notifications:[],shiftAttendance:{},settings:{SHIFT_START_TIME:'08:00'}};
   const header=renderToStaticMarkup(<Header onLogout={()=>{}}/>);

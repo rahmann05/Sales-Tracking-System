@@ -6,6 +6,7 @@ import { AppError } from '../../../utils/errors.js';
 import { ROLES } from '../../../utils/constants.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { getDynamicConfig } from '../../config/config.service.js';
+import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 
 /**
  * 6. Finalize and Register Active Outlet (Supervisor or Admin)
@@ -27,18 +28,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
     throw new AppError(`Pengajuan outlet belum disetujui supervisor (Status saat ini: ${registration.registrationStatus})`, 400);
   }
 
-  const finalCode = payload.outletCode || payload.customerCode || registration.customerCode;
-  if (!finalCode) {
-    throw new AppError('Kode outlet / customer code wajib diisi', 400);
-  }
-
-  // Cek apakah kode outlet sudah ada di tabel Outlet
-  const existingOutlet = await prisma.outlet.findFirst({
-    where: { outletCode: finalCode, deletedAt: null },
-  });
-  if (existingOutlet) {
-    throw new AppError(`Kode outlet "${finalCode}" sudah digunakan oleh toko "${existingOutlet.name}"`, 400);
-  }
+  let finalCode;
 
   // Koordinat GPS wajib nyata dan valid, tidak boleh memakai titik koordinat palsu diam-diam
   const lat = payload.latitude ?? registration.latitude;
@@ -63,6 +53,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   const [updatedRegistration, newOutlet] = await prisma.$transaction(async (tx) => {
     const changed=await tx.customerRegistration.updateMany({where:{id,registrationStatus:'SPV_APPROVED'},data:{registrationStatus:'REGISTERED_ACTIVE'}});
     if(!changed.count)throw new AppError('Pengajuan sudah diproses, muat ulang',409);
+    finalCode = await resolveBusinessCode('OUTLET', payload.outletCode || payload.customerCode || registration.customerCode, {db:tx,excludeId:id});
     const reg = await tx.customerRegistration.update({
       where: { id },
       data: {

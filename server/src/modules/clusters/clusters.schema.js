@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const createClusterSchema = z.object({
   body: z.object({
+    code: z.string().trim().max(128).optional(),
     name: z.string().trim().min(2, 'Nama kluster minimal 2 karakter').max(150).refine(value=>value.toLowerCase()!=='belum ditugaskan','Nama ini digunakan oleh wilayah penampung outlet'),
     region: z.string().trim().min(2, 'Region minimal 2 karakter').max(100),
     colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Warna tidak valid').optional(),
@@ -43,6 +44,7 @@ export const generateRoutesSchema = z.object({
 
 export const createFullClusterSchema = z.object({
   body: z.object({
+    code: z.string().trim().max(128).optional(),
     name: z.string().trim().min(2, 'Nama kluster minimal 2 karakter').max(150).refine(value=>value.toLowerCase()!=='belum ditugaskan','Nama ini digunakan oleh wilayah penampung outlet'),
     region: z.string().trim().min(2, 'Region minimal 2 karakter').max(100),
     color: z.string().optional(),

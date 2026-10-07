@@ -1,6 +1,6 @@
 import React from 'react';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
-import { LuPrinter, LuX, LuPackage, LuStore, LuFileText } from 'react-icons/lu';
+import { LuPrinter } from 'react-icons/lu';
 
 export function PackingListPrintModal({ document: doc, onClose }) {
   if (!doc) return null;

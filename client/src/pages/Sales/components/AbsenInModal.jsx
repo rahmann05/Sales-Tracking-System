@@ -16,7 +16,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
   const [capturedPhoto, setCapturedPhoto] = useState(() => {
     try {
       return (cacheKey && sessionStorage.getItem(cacheKey)) || null;
-    } catch (e) {
+    } catch  {
       return null;
     }
   });
@@ -31,7 +31,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
     if (cacheKey && photoUrl) {
       try {
         sessionStorage.setItem(cacheKey, photoUrl);
-      } catch (e) {}
+      } catch  {}
     }
   };
 
@@ -40,14 +40,14 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
     if (cacheKey) {
       try {
         sessionStorage.removeItem(cacheKey);
-      } catch (e) {}
+      } catch  {}
     }
   };
 
   const handleConfirm = async () => {
     if (saving) return;
     if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
-    if (!capturedPhoto) {
+    if (settings.ATTENDANCE_REQUIRE_PHOTO && !capturedPhoto) {
       alert('Harap ambil foto selfie presensi terlebih dahulu menggunakan kamera.');
       return;
     }
@@ -85,11 +85,13 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
         <DeviceCameraCapture outletId={stop.outletId}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
+          onLocationChange={settings.ATTENDANCE_REQUIRE_PHOTO ? undefined : setGpsData}
           onRetake={handleRetake}
           requireGps={true}
+          enforceGeofence={settings.ATTENDANCE_ENFORCE_GEOFENCE}
           targetLat={stop.latitude}
           targetLng={stop.longitude}
-          maxRadiusMeters={stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS}
+          maxRadiusMeters={settings.ATTENDANCE_USE_OUTLET_RADIUS ? (stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS) : settings.ATTENDANCE_RADIUS_METERS}
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen In"
@@ -105,7 +107,8 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {/* 3. Confirmation Button */}
-        {capturedPhoto && (
+        {!settings.ATTENDANCE_REQUIRE_PHOTO && <p className="text-xs text-on-surface-variant">Foto opsional. Tunggu GPS aktif sebelum mengirim absensi.</p>}
+        {(capturedPhoto || !settings.ATTENDANCE_REQUIRE_PHOTO) && (
           <button
             type="button"
             onClick={handleConfirm}

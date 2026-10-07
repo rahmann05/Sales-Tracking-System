@@ -16,7 +16,6 @@ import '../../styles/pages/OutletRegistration.css';
 export const OutletRegistrationReportPage = () => {
   const {
     data,
-    statusCounts,
     isLoading,
     filters,
     updateFilter,

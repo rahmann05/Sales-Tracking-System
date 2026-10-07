@@ -1,3 +1,5 @@
+import { useMapMarkers } from './hooks/useMapMarkers';
+import { useMapShapes } from './hooks/useMapShapes';
 import { createMapMarker } from '../services/mapMarkerService';
 import React, { createContext, useContext, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 
@@ -7,7 +9,7 @@ const getInitialCenter = () => {
     try {
         const cached = localStorage.getItem('user_gps_location');
         if (cached) return JSON.parse(cached);
-    } catch (e) {}
+    } catch  {}
     return DEFAULT_CENTER;
 };
 
@@ -77,7 +79,7 @@ export const MapProvider = ({ children }) => {
                     const loc = JSON.parse(cached);
                     updateGpsMarker(loc);
                 }
-            } catch (e) {}
+            } catch  {}
         }
 
         const handleGpsUpdate = (e) => {
@@ -93,40 +95,7 @@ export const MapProvider = ({ children }) => {
         return () => window.removeEventListener('gps_location_updated', handleGpsUpdate);
     }, [isMapReady]);
 
-    // Viewport-based marker culling for zero-lag rendering when marker count is large
-    const cullMarkersToViewport = useCallback(() => {
-        const map = mapInstanceRef.current;
-        if (!map || !window.google || markersRef.current.size <= 40) return;
-        const bounds = map.getBounds();
-        if (!bounds) return;
-
-        // Buffer bounds by ~15% for smooth panning without visual pop-in
-        const ne = bounds.getNorthEast();
-        const sw = bounds.getSouthWest();
-        const latSpan = Math.abs(ne.lat() - sw.lat()) * 0.15;
-        const lngSpan = Math.abs(ne.lng() - sw.lng()) * 0.15;
-
-        const expandedBounds = new window.google.maps.LatLngBounds(
-            new window.google.maps.LatLng(sw.lat() - latSpan, sw.lng() - lngSpan),
-            new window.google.maps.LatLng(ne.lat() + latSpan, ne.lng() + lngSpan)
-        );
-
-        markersRef.current.forEach((marker) => {
-            const pos = marker.getPosition();
-            if (!pos) return;
-            // Always keep highlighted or active markers visible
-            if (marker._isHighlighted) {
-                if (marker.getMap() !== map) marker.setMap(map);
-                return;
-            }
-            const inView = expandedBounds.contains(pos);
-            if (inView && marker.getMap() !== map) {
-                marker.setMap(map);
-            } else if (!inView && marker.getMap() !== null) {
-                marker.setMap(null);
-            }
-        });
-    }, []);
+    const { cullMarkersToViewport, setMarkers, addMarker, removeMarker, clearMarkers } = useMapMarkers({ mapInstanceRef, markersRef, setMapState });
 
     /** Called by PersistentMapShell when the underlying google map is created */
     const setMapInstance = useCallback((map) => {
@@ -146,179 +115,7 @@ export const MapProvider = ({ children }) => {
 
     const setFallback = useCallback((val) => setUseFallback(!!val), []);
 
-    /** Replace all markers. markersData: [{id, lat, lng, title, icon, label, zIndex, onClick}] */
-    const setMarkers = useCallback((markersData = []) => {
-        setMapState((prev) => ({ ...prev, markers: markersData }));
-
-        const map = mapInstanceRef.current;
-        if (!map || !window.google) return;
-
-        // Remove markers that are no longer present
-        const nextIds = new Set(markersData.map((m) => String(m.id)));
-        for (const [id, marker] of markersRef.current.entries()) {
-            if (!nextIds.has(String(id))) {
-                marker.setMap(null);
-                markersRef.current.delete(id);
-            }
-        }
-
-        // Upsert markers
-        markersData.forEach((m) => {
-            const key = String(m.id);
-            const position = { lat: Number(m.lat), lng: Number(m.lng) };
-            const isHigh = Boolean(m._highlighted || m.highlighted || (m.zIndex && m.zIndex > 10));
-            const existing = markersRef.current.get(key);
-            if (existing) {
-                existing._isHighlighted = isHigh;
-                existing.setPosition(position);
-                if (m.icon !== undefined) existing.setIcon(m.icon);
-                if (m.title !== undefined) existing.setTitle(m.title);
-                if (m.label !== undefined) existing.setLabel(m.label);
-                if (m.zIndex !== undefined) existing.setZIndex(m.zIndex);
-                // Always re-register onClick so stale step/handler closures are never stuck
-                existing.clearClickListeners();
-                if (typeof m.onClick === 'function') {
-                    existing.addListener('click', () => m.onClick(m));
-                }
-            } else {
-                const marker = createMapMarker({
-                    position,
-                    map,
-                    title: m.title,
-                    icon: m.icon,
-                    label: m.label,
-                    zIndex: m.zIndex,
-                });
-                marker._isHighlighted = isHigh;
-                if (typeof m.onClick === 'function') {
-                    marker.addListener('click', () => m.onClick(m));
-                }
-                markersRef.current.set(key, marker);
-            }
-        });
-
-        // Cull markers outside viewport if count is large
-        cullMarkersToViewport();
-    }, [cullMarkersToViewport]);
-
-    const addMarker = useCallback((markerData) => {
-        if (!markerData) return;
-        setMapState((prev) => ({ ...prev, markers: [...prev.markers.filter(x => String(x.id) !== String(markerData.id)), markerData] }));
-        const map = mapInstanceRef.current;
-        if (!map || !window.google) return;
-        const key = String(markerData.id);
-        if (markersRef.current.has(key)) return;
-        const marker = createMapMarker({
-            position: { lat: Number(markerData.lat), lng: Number(markerData.lng) },
-            map,
-            title: markerData.title,
-            icon: markerData.icon,
-            label: markerData.label,
-            zIndex: markerData.zIndex,
-        });
-        if (typeof markerData.onClick === 'function') {
-            marker.addListener('click', () => markerData.onClick(markerData));
-        }
-        markersRef.current.set(key, marker);
-    }, []);
-
-    const removeMarker = useCallback((id) => {
-        setMapState((prev) => ({ ...prev, markers: prev.markers.filter((m) => String(m.id) !== String(id)) }));
-        const key = String(id);
-        const marker = markersRef.current.get(key);
-        if (marker) {
-            marker.setMap(null);
-            markersRef.current.delete(key);
-        }
-    }, []);
-
-    const clearMarkers = useCallback(() => {
-        setMapState((prev) => ({ ...prev, markers: [] }));
-        for (const marker of markersRef.current.values()) marker.setMap(null);
-        markersRef.current.clear();
-    }, []);
-
-    /** Replace all polylines. routesData: [{id, path:[{lat,lng}], color, isActive, strokeWeight, strokeOpacity}] */
-    const setPolylines = useCallback((routesData = []) => {
-        setMapState((prev) => ({ ...prev, routes: routesData }));
-
-        const map = mapInstanceRef.current;
-        if (!map || !window.google) return;
-
-        const nextIds = new Set(routesData.map((r, i) => String(r.id ?? i)));
-        for (const [id, poly] of polylinesRef.current.entries()) {
-            if (!nextIds.has(String(id))) {
-                poly.setMap(null);
-                polylinesRef.current.delete(id);
-            }
-        }
-
-        routesData.forEach((r, i) => {
-            const key = String(r.id ?? i);
-            const path = (r.path || []).map((p) => ({ lat: Number(p.lat), lng: Number(p.lng) }));
-            const opts = {
-                path,
-                map,
-                strokeColor: r.color || '#4ade80',
-                strokeOpacity: r.strokeOpacity ?? (r.isActive ? 1.0 : 0.4),
-                strokeWeight: r.strokeWeight ?? (r.isActive ? 4 : 2),
-                zIndex: r.isActive ? 10 : 1,
-            };
-            const existing = polylinesRef.current.get(key);
-            if (existing) {
-                existing.setOptions(opts);
-                existing.setPath(path);
-            } else {
-                polylinesRef.current.set(key, new window.google.maps.Polyline(opts));
-            }
-        });
-    }, []);
-
-    const clearPolylines = useCallback(() => {
-        setMapState((prev) => ({ ...prev, routes: [] }));
-        for (const poly of polylinesRef.current.values()) poly.setMap(null);
-        polylinesRef.current.clear();
-    }, []);
-
-    /** Render cluster territory polygons. polygonsData: [{id, path:[{lat,lng}], color, fillOpacity}] */
-    const setPolygons = useCallback((polygonsData = []) => {
-        const map = mapInstanceRef.current;
-        if (!map || !window.google) return;
-
-        const nextIds = new Set(polygonsData.map((p) => String(p.id)));
-        for (const [id, poly] of polygonsRef.current.entries()) {
-            if (!nextIds.has(String(id))) {
-                poly.setMap(null);
-                polygonsRef.current.delete(id);
-            }
-        }
-        polygonsData.forEach((p) => {
-            const key = String(p.id);
-            const path = (p.path || []).map((pt) => ({ lat: Number(pt.lat), lng: Number(pt.lng) }));
-            const opts = {
-                paths: path,
-                map,
-                strokeColor: p.color || '#3b82f6',
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: p.color || '#3b82f6',
-                fillOpacity: p.fillOpacity ?? 0.12,
-                zIndex: 1,
-            };
-            const existing = polygonsRef.current.get(key);
-            if (existing) {
-                existing.setOptions(opts);
-                existing.setPaths(path);
-            } else {
-                polygonsRef.current.set(key, new window.google.maps.Polygon(opts));
-            }
-        });
-    }, []);
-
-    const clearPolygons = useCallback(() => {
-        for (const poly of polygonsRef.current.values()) poly.setMap(null);
-        polygonsRef.current.clear();
-    }, []);
+    const { setPolylines, clearPolylines, setPolygons, clearPolygons } = useMapShapes({ mapInstanceRef, polylinesRef, polygonsRef, setMapState });
 
     // When Google Map instance becomes ready, sync any pending markers/routes stored in mapState
     useEffect(() => {
