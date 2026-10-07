@@ -14,35 +14,35 @@ export const OutletReportFilterBar = ({
 }) => {
   const { clusters } = useApp();
   return (
-    <div className={embedded ? 'space-y-3' : 'outlet-reg-section-card mb-4 p-4'}>
+    <div className={embedded ? 'space-y-3' : 'bg-surface border border-border-glass rounded-2xl mb-4 p-4 shadow-xs'}>
       <div className="flex items-center gap-2 mb-2">
         <LuListFilter className="text-primary text-sm" />
-        <span className="text-xs font-extrabold text-on-surface">Filter Laporan Registrasi</span>
+        <span className="text-xs font-bold text-on-surface">Filter Laporan Registrasi</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {/* Search */}
         <div className="lg:col-span-2">
-          <label className="outlet-reg-label">Cari Nama / Kode / Sales</label>
+          <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Cari Nama / Kode / Sales</label>
           <div className="relative">
-            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs" />
+            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs pointer-events-none" />
             <input
               type="text"
               placeholder="Cari toko, kode, alamat..."
               value={filters.search}
               onChange={(e) => onUpdateFilter('search', e.target.value)}
-              className="outlet-reg-input pl-8 text-xs py-1.5"
+              className="w-full pl-8 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             />
           </div>
         </div>
 
         {/* Status */}
         <div>
-          <label className="outlet-reg-label">Status</label>
+          <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Status</label>
           <select
             value={filters.status}
             onChange={(e) => onUpdateFilter('status', e.target.value)}
-            className="outlet-reg-input text-xs py-1.5 font-bold"
+            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-bold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Status</option>
             <option value="SUBMITTED">SUBMITTED</option>
@@ -54,11 +54,11 @@ export const OutletReportFilterBar = ({
 
         {/* Area / Klaster */}
         <div>
-          <label className="outlet-reg-label">Klaster Wilayah</label>
+          <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Klaster Wilayah</label>
           <select
             value={filters.area}
             onChange={(e) => onUpdateFilter('area', e.target.value)}
-            className="outlet-reg-input text-xs py-1.5"
+            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Klaster</option>
             {clusters && clusters.length > 0 && (
@@ -71,11 +71,11 @@ export const OutletReportFilterBar = ({
 
         {/* Channel */}
         <div>
-          <label className="outlet-reg-label">Channel</label>
+          <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Channel</label>
           <select
             value={filters.channel}
             onChange={(e) => onUpdateFilter('channel', e.target.value)}
-            className="outlet-reg-input text-xs py-1.5"
+            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Channel</option>
             <option value="GENERAL_TRADE">General Trade (GT)</option>
@@ -85,11 +85,11 @@ export const OutletReportFilterBar = ({
 
         {/* Divisi */}
         <div>
-          <label className="outlet-reg-label">Divisi</label>
+          <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Divisi</label>
           <select
             value={filters.division}
             onChange={(e) => onUpdateFilter('division', e.target.value)}
-            className="outlet-reg-input text-xs py-1.5"
+            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Divisi</option>
             <option value="UNICHARM">UNICHARM</option>

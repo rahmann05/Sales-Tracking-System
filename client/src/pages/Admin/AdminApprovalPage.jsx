@@ -1,27 +1,34 @@
 import { ManualSalesReview } from '../../shared/components/common/ManualSalesReview';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PendingOrderCard } from './components/PendingOrderCard';
 import { UnlockRequestCard } from './components/UnlockRequestCard';
 import { TAB_IDS } from '../../constants/navigation';
 import { PageHeader } from '../../shared/components/common/PageHeader';
-import { LuArrowLeft, LuFileCheck, LuClock } from "react-icons/lu";
+import { LuArrowLeft, LuFileCheck, LuClock, LuRotateCw } from "react-icons/lu";
+import { ordersApi, outletsApi, absensiApi, collectPages } from '../../services/api';
+import { mapServerOrder } from '../../utils/orderMapper';
+import { mapServerUnlockRequest } from '../../utils/incidentMapper';
 
 /**
  * AdminApprovalPage Component (Container Page for Admin Order & Unlock Approvals)
  * Single Responsibility: Admin workspace for order approval and unlock requests.
  */
-export const AdminApprovalPage = ({ onGoBack, embedded=false }) => {
+export const AdminApprovalPage = ({ onGoBack, embedded = false }) => {
   const {
     orders = [],
+    setOrders,
     handleAdminOrderDecision,
     incidents = [],
+    setIncidents,
     handleApproveUnlockRequest,
     handleRejectUnlockRequest,
     setActiveTab,
   } = useApp();
 
   const [orderFilter, setOrderFilter] = useState('PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [loading, setLoading] = useState(false);
+  const [manualPendingCount, setManualPendingCount] = useState(0);
 
   const unlockRequests = (incidents || []).filter((i) => i.type === 'UNLOCK_REQUEST');
   const pendingUnlockCount = unlockRequests.filter((r) => r.status === 'PENDING').length;
@@ -35,23 +42,79 @@ export const AdminApprovalPage = ({ onGoBack, embedded=false }) => {
     [orders]
   );
 
+  const loadApprovalData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [ordersRes, unlockRes, manualPjpRes, manualOffRes] = await Promise.all([
+        collectPages(ordersApi.getAllOrders).catch(() => null),
+        outletsApi.getUnlockRequests().catch(() => null),
+        absensiApi.getManualSales({ kind: 'PJP', status: 'PENDING', limit: 1 }).catch(() => null),
+        absensiApi.getManualSales({ kind: 'OFF_PJP', status: 'PENDING', limit: 1 }).catch(() => null),
+      ]);
+
+      if (ordersRes?.data && setOrders) {
+        const raw = Array.isArray(ordersRes.data)
+          ? ordersRes.data
+          : Array.isArray(ordersRes.data?.data)
+          ? ordersRes.data.data
+          : ordersRes.data.items || [];
+        setOrders(raw.map(mapServerOrder));
+      }
+
+      if (unlockRes && setIncidents) {
+        const rawUnlocks = Array.isArray(unlockRes.data)
+          ? unlockRes.data
+          : Array.isArray(unlockRes.data?.data)
+          ? unlockRes.data.data
+          : [];
+        const mapped = rawUnlocks.map(mapServerUnlockRequest);
+        setIncidents((prev) => {
+          const nonUnlocks = prev.filter((i) => i.type !== 'UNLOCK_REQUEST');
+          return [...nonUnlocks, ...mapped];
+        });
+      }
+
+      const pjpTotal = Number(manualPjpRes?.data?.total || manualPjpRes?.total || 0);
+      const offTotal = Number(manualOffRes?.data?.total || manualOffRes?.total || 0);
+      setManualPendingCount(pjpTotal + offTotal);
+    } catch (err) {
+      console.warn('Failed to load approval data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [setOrders, setIncidents]);
+
+  useEffect(() => {
+    loadApprovalData();
+    window.addEventListener('operational-data-changed', loadApprovalData);
+    return () => {
+      window.removeEventListener('operational-data-changed', loadApprovalData);
+    };
+  }, [loadApprovalData]);
+
   const handleDecision = async (payload) => {
-    if (await handleAdminOrderDecision(payload) === false) return;
+    const success = await handleAdminOrderDecision(payload);
+    if (success === false) return;
     if (payload.approved) {
       alert('Order berhasil disetujui.');
     } else {
       alert('Order REJECTED.');
     }
+    loadApprovalData();
   };
 
   const handleApproveUnlock = async (requestId, stopId) => {
-    if (await handleApproveUnlockRequest(requestId, stopId) === false) return;
+    const success = await handleApproveUnlockRequest(requestId, stopId);
+    if (success === false) return;
     alert('Permintaan Unlock disetujui! Pengecualian presensi diberikan kepada pemohon sesuai masa berlaku.');
+    loadApprovalData();
   };
 
   const handleRejectUnlock = async (requestId) => {
-    if (await handleRejectUnlockRequest(requestId) === false) return;
+    const success = await handleRejectUnlockRequest(requestId);
+    if (success === false) return;
     alert('Permintaan Unlock ditolak.');
+    loadApprovalData();
   };
 
   const handleBackToHub = () => {
@@ -99,6 +162,11 @@ export const AdminApprovalPage = ({ onGoBack, embedded=false }) => {
             color: pendingUnlockCount > 0 ? 'amber' : 'emerald',
           },
           {
+            label: 'Hasil Manual',
+            value: `${manualPendingCount} Menunggu`,
+            color: manualPendingCount > 0 ? 'amber' : 'emerald',
+          },
+          {
             label: 'Order Disetujui',
             value: `${approvedOrders.length} Selesai`,
             color: 'neutral',
@@ -110,14 +178,26 @@ export const AdminApprovalPage = ({ onGoBack, embedded=false }) => {
           },
         ]}
         actions={
-          <button
-            type="button"
-            onClick={handleBackToHub}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-white hover:bg-neutral-800 font-bold text-xs shadow-xs transition-all cursor-pointer group shrink-0"
-          >
-            <LuArrowLeft className="text-sm group-hover:-translate-x-1 transition-transform" />
-            <span>Kembali ke Menu Utama</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={loadApprovalData}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border-glass bg-surface hover:bg-surface-container font-bold text-xs shadow-2xs transition-all cursor-pointer text-on-surface"
+              title="Segarkan data persetujuan"
+            >
+              <LuRotateCw className={`text-sm ${loading ? 'animate-spin text-primary' : ''}`} />
+              <span className="hidden sm:inline">Muat Ulang</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleBackToHub}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-white hover:bg-neutral-800 font-bold text-xs shadow-xs transition-all cursor-pointer group shrink-0"
+            >
+              <LuArrowLeft className="text-sm group-hover:-translate-x-1 transition-transform" />
+              <span>Kembali ke Menu Utama</span>
+            </button>
+          </div>
         }
       />}
 
@@ -213,7 +293,12 @@ export const AdminApprovalPage = ({ onGoBack, embedded=false }) => {
           </div>
         </div>
 
-        {filteredOrders.length === 0 ? (
+        {loading && orders.length === 0 ? (
+          <div className="p-10 text-center bg-surface rounded-2xl border border-border-glass">
+            <LuRotateCw className="text-2xl text-primary animate-spin mx-auto mb-2" />
+            <p className="text-xs text-on-surface-variant m-0">Memuat data order penjualan...</p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <div className="p-10 text-center bg-surface rounded-2xl border border-border-glass">
             <p className="text-xs text-on-surface-variant m-0">
               {orderFilter === 'PENDING'

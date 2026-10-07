@@ -26,32 +26,32 @@ export const OutletReportTable = ({
       ) : (
         <div className="overflow-x-auto w-full mobile-card-table-wrapper">
           <DataTable className="w-full text-left text-xs border-collapse mobile-card-table">
-            <thead className="bg-surface-variant/30">
+            <thead className="bg-surface-container/70 border-b border-border-glass">
               <tr>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 w-32 whitespace-nowrap">
                   Kode Outlet
                 </th>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 min-w-[200px]">
                   Nama Outlet & Alamat
                 </th>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">
                   Area / Divisi
                 </th>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">
                   Channel
                 </th>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">
                   Salesman & SPV
                 </th>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass">
+                <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">
                   Status
                 </th>
-                <th className="font-semibold text-on-surface-variant border-b border-border-glass text-center">
+                <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 text-center w-44 whitespace-nowrap">
                   Aksi Admin
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-glass">
+            <tbody className="divide-y divide-border-glass/40">
               {data.map((item) => (
                 <OutletReportTableRow
                   key={item.id}

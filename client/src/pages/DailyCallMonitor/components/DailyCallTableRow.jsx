@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuMapPin, LuClock, LuCamera, LuPlus, LuHourglass, LuCar, LuShieldAlert, LuTriangleAlert } from "react-icons/lu";
+import { LuMapPin, LuClock, LuCamera, LuEye, LuPlus, LuHourglass, LuCar, LuShieldAlert, LuTriangleAlert } from "react-icons/lu";
 
 /**
  * DailyCallTableRow Component
@@ -17,67 +17,75 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       }`}
     >
       {/* 1. No */}
-      <td data-label="No" className="text-center font-mono font-bold text-on-surface-variant">
+      <td data-label="No" className="text-center font-mono font-bold text-on-surface-variant w-12 py-3 px-3">
         {row.no}
       </td>
 
       {/* 2. Salesman */}
-      <td data-label="Salesman" className="whitespace-nowrap">
-        <div className="font-bold text-on-surface">{row.salesmanName}</div>
-        <div className="text-[10px] text-on-surface-variant">{row.clusterName}</div>
-      </td>
-
-      {/* 3. Jam In / Out */}
-      <td data-label="Jam In/Out" className="whitespace-nowrap font-mono text-[11px]">
-        <div className="font-bold text-on-surface">{row.timeIn} - {row.timeOut}</div>
-        <div className="text-[10px] text-on-surface-variant flex items-center gap-1">
-          <LuClock className="text-[10px]" />
-          <span>{row.durationFormatted} ({row.durationMinutes}m)</span>
+      <td data-label="Salesman" className="whitespace-nowrap py-3 px-3">
+        <div className="font-bold text-on-surface text-xs">{row.salesmanName}</div>
+        <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+          <LuMapPin className="text-primary text-[10px] shrink-0" />
+          <span>{row.clusterName}</span>
         </div>
       </td>
 
+      {/* 3. Jam In / Out */}
+      <td data-label="Jam In/Out" className="whitespace-nowrap py-3 px-3">
+        {isActual && row.timeIn && row.timeIn !== '-' ? (
+          <div>
+            <div className="font-bold text-on-surface font-mono text-xs">{row.timeIn} – {row.timeOut || '-'}</div>
+            <div className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+              <LuClock className="text-[10px] text-primary shrink-0" />
+              <span>{row.durationFormatted || `${row.durationMinutes || 0}m`}</span>
+            </div>
+          </div>
+        ) : (
+          <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
+        )}
+      </td>
+
       {/* 4. Durasi */}
-      <td data-label="Durasi" className="whitespace-nowrap text-center">
+      <td data-label="Durasi" className="whitespace-nowrap text-center py-3 px-3">
         {row.isDurationAnomaly ? (
           <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 text-[10px] font-bold border border-rose-500/20 inline-flex items-center gap-1">
-            <LuTriangleAlert className="text-xs" /> &lt; 5 Menit
+            <LuTriangleAlert className="text-xs" /> &lt; 5m
           </span>
         ) : isActual ? (
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold">
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold">
             Normal
           </span>
         ) : (
-          <span className="text-on-surface-variant font-mono">-</span>
+          <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
         )}
       </td>
 
       {/* 5. Customer Code & Name */}
-      <td data-label="Customer" className="md:min-w-[180px]">
+      <td data-label="Customer" className="min-w-[200px] py-3 px-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-mono font-bold text-primary text-[11px] px-1.5 py-0.2 bg-primary/10 rounded">
+          <span className="font-mono font-bold text-primary text-[10px] px-1.5 py-0.5 bg-primary/10 rounded-md tracking-tight whitespace-nowrap">
             {row.customerId}
           </span>
-          <span className="font-bold text-on-surface">{row.customerName}</span>
-
           {row.isExtraCall && (
-            <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 text-[9.5px] font-black inline-flex items-center gap-0.5">
+            <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 text-[9.5px] font-bold inline-flex items-center gap-0.5 whitespace-nowrap">
               <LuPlus className="text-[9px]" /> Extra
             </span>
           )}
           {row.isSkipped && (
-            <span className="px-1.5 py-0.2 rounded bg-gray-500/10 text-gray-600 text-[9.5px] font-black inline-flex items-center gap-0.5">
+            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 text-[9.5px] font-bold inline-flex items-center gap-0.5 whitespace-nowrap">
               <LuHourglass className="text-[9px]" /> Terlewat
             </span>
           )}
         </div>
-        <div className="text-[10px] text-on-surface-variant md:min-w-0 whitespace-normal break-words md:max-w-[220px] mt-0.5 flex items-center gap-1">
+        <div className="font-bold text-on-surface text-xs mt-1">{row.customerName}</div>
+        <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5" title={row.customerAddress}>
           <LuMapPin className="text-primary text-[10px] shrink-0" />
-          <span>{row.customerAddress}</span>
+          <span className="line-clamp-1">{row.customerAddress}</span>
         </div>
         {row.prevStopName && (
           <div
-            className={`text-[9.5px] font-mono mt-0.5 flex items-center gap-1 ${
-              row.isTravelAnomaly ? 'text-rose-600 font-black' : 'text-on-surface-variant'
+            className={`text-[9.5px] font-mono mt-1 flex items-center gap-1 ${
+              row.isTravelAnomaly ? 'text-rose-600 font-bold' : 'text-on-surface-variant'
             }`}
           >
             <LuCar className="text-[10px] shrink-0" />
@@ -88,17 +96,17 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 6. Sub Channel & Itinerary */}
-      <td data-label="Sub Channel" className="whitespace-nowrap">
-        <div className="font-bold text-on-surface">{row.subChannel}</div>
-        <div className="text-[10px] text-on-surface-variant font-mono">{row.itny}</div>
+      <td data-label="Sub Channel" className="whitespace-nowrap py-3 px-3">
+        <div className="font-bold text-on-surface text-xs">{row.subChannel}</div>
+        <div className="text-[10px] text-on-surface-variant font-mono mt-0.5">{row.itny}</div>
       </td>
 
       {/* 7. Call Indicators (Plan / Actual / EC) */}
-      <td data-label="Call Status" className="whitespace-nowrap text-center">
-        <div className="flex items-center justify-start md:justify-center gap-1 flex-wrap">
+      <td data-label="Call Status" className="whitespace-nowrap text-center py-3 px-3">
+        <div className="inline-flex items-center justify-center gap-1 bg-surface-container/60 p-1 rounded-lg border border-border-glass">
           <span
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-              row.planCall === 'Y' ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-500/10 text-slate-500'
+              row.planCall === 'Y' ? 'bg-blue-500/15 text-blue-600' : 'bg-slate-200/50 text-slate-500 dark:bg-slate-800'
             }`}
             title="Plan Call"
           >
@@ -106,7 +114,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           </span>
           <span
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-              isActual ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
+              isActual ? 'bg-emerald-500/15 text-emerald-600' : 'bg-rose-500/15 text-rose-600'
             }`}
             title="Actual Call"
           >
@@ -115,10 +123,10 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           <span
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
               isEc
-                ? 'bg-purple-500/10 text-purple-600 font-black'
+                ? 'bg-purple-500/15 text-purple-600 font-black'
                 : isActual
-                ? 'bg-amber-500/10 text-amber-600'
-                : 'bg-slate-500/10 text-slate-400'
+                ? 'bg-amber-500/15 text-amber-600'
+                : 'bg-slate-200/50 text-slate-400 dark:bg-slate-800'
             }`}
             title="Effective Call"
           >
@@ -128,38 +136,40 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 8. Order (Rp) & SKU */}
-      <td data-label="Order (Rp)" className="whitespace-nowrap md:text-right text-left">
+      <td data-label="Order (Rp)" className="whitespace-nowrap md:text-right text-left py-3 px-3">
         {row.orderAmount > 0 ? (
           <div>
-            <div className="font-bold text-emerald-600">
+            <div className="font-bold text-emerald-600 font-mono text-xs">
               Rp {row.orderAmount.toLocaleString('id-ID')}
             </div>
             <div className="text-[10px] text-purple-600 font-semibold">{row.skuSold} SKU Terjual</div>
           </div>
         ) : (
-          <span className="text-on-surface-variant font-mono">-</span>
+          <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
         )}
       </td>
 
       {/* 9. Reason & Remark */}
-      <td data-label="Catatan" className="md:max-w-[170px]">
+      <td data-label="Catatan" className="min-w-[180px] max-w-[280px] py-3 px-3">
         {row.isTravelAnomaly && (
-          <div className="text-[10px] font-bold text-rose-700 leading-tight mb-0.5 flex items-center gap-1">
+          <div className="text-[10px] font-bold text-rose-700 leading-tight mb-1 flex items-center gap-1">
             <LuShieldAlert className="text-[10px] shrink-0" />
             <span>{row.travelAnomalyReason}</span>
           </div>
         )}
         {row.reason ? (
-          <div className="text-[11px] font-semibold text-rose-600 md:min-w-0 whitespace-normal break-words" title={row.reason}>
+          <div className="text-xs font-semibold text-rose-600 leading-snug break-words" title={row.reason}>
             {row.reason}
           </div>
-        ) : (
-          <div className="text-[11px] text-on-surface-variant md:min-w-0 whitespace-normal break-words" title={row.remark}>
-            {row.remark || '-'}
+        ) : row.remark ? (
+          <div className="text-xs text-on-surface-variant leading-snug break-words" title={row.remark}>
+            {row.remark}
           </div>
+        ) : (
+          <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
         )}
         {row.earlyReason && (
-          <div className="text-[10px] text-amber-700 font-semibold md:min-w-0 whitespace-normal break-words flex items-center gap-1" title={row.earlyReason}>
+          <div className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1" title={row.earlyReason}>
             <LuTriangleAlert className="text-[10px] shrink-0" />
             <span>{row.earlyReason}</span>
           </div>
@@ -167,44 +177,44 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 10. GPS Deviation */}
-      <td data-label="Deviasi GPS" className="whitespace-nowrap text-center">
-        <span
-          className={`inline-flex px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
-            row.distanceWarning === 'WARNING'
-              ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-              : 'bg-emerald-500/10 text-emerald-600'
-          }`}
-        >
-          {row.deviationMeters}m ({row.distanceWarning})
-        </span>
+      <td data-label="Deviasi GPS" className="whitespace-nowrap text-center py-3 px-3">
+        {isActual ? (
+          <span
+            className={`inline-flex px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${
+              row.distanceWarning === 'WARNING'
+                ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                : 'bg-emerald-500/10 text-emerald-600'
+            }`}
+          >
+            {row.deviationMeters}m ({row.distanceWarning})
+          </span>
+        ) : (
+          <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
+        )}
       </td>
 
-      {/* 11. Foto & Aksi */}
-      <td className="text-center whitespace-nowrap mobile-full-width">
-        {row.photoIn || row.photoOut ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectRow(row);
-            }}
-            className="w-full md:w-auto p-2 md:p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all text-xs font-bold flex items-center justify-center gap-1 mx-auto cursor-pointer"
-            title="Lihat Foto & Detail"
-          >
-            <LuCamera /> Lihat Foto & Detail Kunjungan
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectRow(row);
-            }}
-            className="w-full md:w-auto p-2 md:p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all text-xs font-bold flex items-center justify-center gap-1 mx-auto cursor-pointer border border-border-glass"
-          >
-            Lihat Detail Kunjungan
-          </button>
-        )}
+      {/* 11. Detail & Foto */}
+      <td className="text-center whitespace-nowrap py-3 px-3 w-28 min-w-[100px]">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectRow(row);
+          }}
+          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs min-w-[84px] h-8 shrink-0 ${
+            row.photoIn || row.photoOut
+              ? 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
+              : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass'
+          }`}
+          title="Lihat Detail Kunjungan & Foto"
+        >
+          {row.photoIn || row.photoOut ? (
+            <LuCamera className="text-xs shrink-0" />
+          ) : (
+            <LuEye className="text-xs shrink-0" />
+          )}
+          <span className="whitespace-nowrap font-bold">Detail</span>
+        </button>
       </td>
     </tr>
   );

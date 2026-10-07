@@ -19,11 +19,14 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
     const [spvMode, setSpvMode] = useState(SPV_MODES.JOINT_VISIT);
     const [selectedSales, setSelectedSales] = useState('');
     
+    const [selectedTargetStopId, setSelectedTargetStopId] = useState('');
+    
     // Auto-select first sales when options load
     useEffect(() => {
       if (salesOptions.length > 0 && !selectedSales) {
           setSelectedSales(salesOptions[0].value);
       }
+      setSelectedTargetStopId('');
     }, [salesOptions, selectedSales]);
 
     const [activeModal, setActiveModal] = useState(null); // 'ABSEN_IN' | 'AUDIT' | 'ABSEN_OUT' | 'OFF_PJP'
@@ -34,8 +37,8 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
 
     const [spvVisitRecords, setSpvVisitRecords] = useState({});
 
-    const spvStops=useMemo(()=>todayPjps.filter(p=>spvMode!=='JOINT_VISIT'||p.user?.id===selectedSales).flatMap(p=>(p.stops||[]).map((s,i)=>mapStop(s,p,i,spvMode))),[todayPjps,spvMode,selectedSales]);
-    const [followUp,setFollowUp]=useState({ownerId:'',dueDate:'',note:''});
+    const spvStops=useMemo(()=>todayPjps.filter(p=>p.user?.id===selectedSales).flatMap(p=>(p.stops||[]).map((s,i)=>mapStop(s,p,i,spvMode))),[todayPjps,spvMode,selectedSales]);
+
     useEffect(() => {
       let active = true;
       staffAttendanceApi.getToday().then(res => {
@@ -68,12 +71,12 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
         setSelectedStop(stop);
         const existing = spvVisitRecords[stop.id];
         setInputNotes(existing?.notes || '');
-        setFollowUp(existing?.followUp||{ownerId:stop.salesId||'',dueDate:'',note:''});
+
         setChecklist(existing?.checklist || DEFAULT_SPV_CHECKLIST);
         setActiveModal('AUDIT');
     };
 
-    const saveAudit = () => selectedStop && submit({ action: 'AUDIT', stopId: selectedStop.id, notes: inputNotes, checklist, ...(followUp.note.trim()?{followUp:{ownerId:followUp.ownerId,dueDate:followUp.dueDate,note:followUp.note}}:{}) });
+    const saveAudit = () => selectedStop && submit({ action: 'AUDIT', stopId: selectedStop.id, notes: inputNotes, checklist });
 
     const openAbsenOut = (stop) => {
         setSelectedStop(stop);
@@ -87,7 +90,7 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
         setActiveModal('OFF_PJP');
     };
 
-    const confirmOffPjp = () => submit({ action: 'OFF_PJP', outletName: offPjpForm.outletName, notes: [offPjpForm.reason, offPjpForm.address, offPjpForm.owner].filter(Boolean).join(' · ') });
+    const confirmOffPjp = () => submit({ action: 'OFF_PJP', outletName: offPjpForm.outletName, notes: [offPjpForm.reason, offPjpForm.address, offPjpForm.owner].filter(Boolean).join(' · '), visitMode: spvMode, accompaniedSalesId: spvMode === 'JOINT_VISIT' ? selectedSales : undefined });
 
     const closeModal = () => { if (!submitting.current) setActiveModal(null); };
 
@@ -95,9 +98,10 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
     const inVisitCount = spvStops.filter((s) => spvVisitRecords[s.id]?.status === 'IN_VISIT').length;
 
     return {
-        saving, error, followUp,setFollowUp,
+        saving, error,
         spvMode, setSpvMode,
         selectedSales, setSelectedSales,
+        selectedTargetStopId, setSelectedTargetStopId,
         spvStops, spvVisitRecords,
         activeModal, selectedStop, closeModal,
         inputNotes, setInputNotes,

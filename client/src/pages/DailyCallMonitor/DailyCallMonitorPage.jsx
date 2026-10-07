@@ -87,20 +87,20 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
         {/* Workspace Card Header: View Switcher (Left) & Actions (Right) */}
         <div className="p-4 sm:p-5 border-b border-border-glass flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface-container-low/40">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
             {/* Tab 1: Master Table */}
             <button
               type="button"
               onClick={() => setActiveTableView('ALL_VISITS')}
-              className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 w-full border ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
                 activeTableView === 'ALL_VISITS'
                   ? 'bg-primary text-on-primary border-primary shadow-xs'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0 whitespace-normal break-words">
+              <div className="flex items-center gap-2 min-w-0">
                 <LuListOrdered className="text-sm shrink-0" />
-                <span className="min-w-0 whitespace-normal break-words">Tabel Master Call</span>
+                <span className="truncate">Tabel Master Call</span>
               </div>
               <span
                 className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
@@ -115,15 +115,15 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setActiveTableView('SALESMAN_TIMELINE')}
-              className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 w-full border ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
                 activeTableView === 'SALESMAN_TIMELINE'
                   ? 'bg-primary text-on-primary border-primary shadow-xs'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0 whitespace-normal break-words">
+              <div className="flex items-center gap-2 min-w-0">
                 <LuUserCheck className="text-sm shrink-0" />
-                <span className="min-w-0 whitespace-normal break-words">Timeline & Rute</span>
+                <span className="truncate">Timeline & Rute</span>
               </div>
               <span
                 className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
@@ -138,15 +138,15 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setActiveTableView('ANOMALIES_ONLY')}
-              className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-between gap-2 w-full border ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
                 activeTableView === 'ANOMALIES_ONLY'
                   ? 'bg-primary text-on-primary border-primary shadow-xs'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0 whitespace-normal break-words">
+              <div className="flex items-center gap-2 min-w-0">
                 <LuShieldAlert className="text-sm shrink-0" />
-                <span className="min-w-0 whitespace-normal break-words">Absensi Janggal</span>
+                <span className="truncate">Absensi Janggal</span>
               </div>
               {totalAnomalies > 0 ? (
                 <span
@@ -176,7 +176,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               type="button"
               onClick={refreshData}
               disabled={isLoading}
-              className="p-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
+              className="h-10 w-10 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
               title="Refresh Data"
             >
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
@@ -185,7 +185,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={exportToCsv}
-              className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              className="h-10 px-3.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Ekspor Laporan Format Excel ND6"
             >
               <LuDownload /> <span>Excel</span>
@@ -194,7 +194,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
-              className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              className="h-10 px-3.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / PDF Resmi"
             >
               <LuPrinter /> <span>Cetak PDF</span>

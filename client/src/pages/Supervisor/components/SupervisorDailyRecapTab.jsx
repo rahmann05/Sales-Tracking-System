@@ -17,21 +17,44 @@ export const SupervisorDailyRecapTab = ({
   salesList = [],
   incidents = [],
   offPjpAttendances = [],
+  dailyReport = null,
+  selectedDate,
   user,
 }) => {
   const { setActiveTab } = useApp();
 
-  const todayStr = new Date().toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const todayStr = selectedDate
+    ? new Date(selectedDate).toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : new Date().toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
 
   // Calculate Consolidated Metrics
   const metrics = useMemo(() => {
+    if (dailyReport?.summary) {
+      const summary = dailyReport.summary;
+      return {
+        totalTarget: summary.totalPlanCalls || 0,
+        completed: summary.totalActualCalls || 0,
+        skipped: summary.totalSkippedCalls || 0,
+        rerouted: summary.totalExtraCalls || 0,
+        complianceRate: parseInt(summary.callComplianceRate) || 0,
+        offPjpCount: summary.totalExtraCalls || 0,
+        skippedList: incidents.filter((i) => i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED'),
+        reroutedList: incidents.filter((i) => i.status === 'RESOLVED_DIRECT_REROUTE' || i.status === 'RESOLVED_REROUTE_APPROVED'),
+      };
+    }
+
     const totalTarget = salesStops.length;
-    const completedStops = salesStops.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime);
+    const completedStops = salesStops.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime || s.actualCall === 'Y');
     const completed = completedStops.length;
     const skippedIncidents = incidents.filter((i) => i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED');
     const skipped = skippedIncidents.length;
@@ -50,16 +73,31 @@ export const SupervisorDailyRecapTab = ({
       skippedList: skippedIncidents,
       reroutedList: reroutedIncidents,
     };
-  }, [salesStops, incidents, offPjpAttendances]);
+  }, [dailyReport, salesStops, incidents, offPjpAttendances]);
 
   // Breakdown per sales representative
   const salesSummary = useMemo(() => {
+    if (dailyReport?.salesmanSummaries && dailyReport.salesmanSummaries.length > 0) {
+      return dailyReport.salesmanSummaries.map((s) => ({
+        id: s.salesmanId,
+        name: s.salesmanName,
+        region: s.clusterName || 'Klaster Terjadwal',
+        target: s.planCalls,
+        done: s.actualCalls,
+        skips: s.skippedCalls,
+        reroutes: s.extraCalls,
+        offPjp: s.extraCalls,
+        complianceRate: parseInt(s.complianceRate) || 0,
+        status: s.planCalls === 0 ? 'Belum ada PJP' : s.actualCalls >= s.planCalls ? 'Selesai' : s.actualCalls > 0 ? 'Sedang Kunjungan' : 'Belum Mulai',
+      }));
+    }
+
     const team = salesList;
 
     return team.map((sales) => {
-      const stopsForSales = salesStops.filter((s) => s.salesId === sales.id || s.salesName === sales.name);
+      const stopsForSales = salesStops.filter((s) => s.salesId === sales.id || s.salesName === sales.name || s.salesmanName === sales.name);
       const target = stopsForSales.length;
-      const done = stopsForSales.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime).length;
+      const done = stopsForSales.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime || s.actualCall === 'Y').length;
       const skips = incidents.filter((i) => (i.salesId === sales.id || i.salesName === sales.name) && (i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED')).length;
       const reroutes = incidents.filter((i) => (i.salesId === sales.id || i.salesName === sales.name) && (i.status === 'RESOLVED_DIRECT_REROUTE' || i.status === 'RESOLVED_REROUTE_APPROVED')).length;
       const offPjp = offPjpAttendances.filter((a) => a.salesId === sales.id || a.salesName === sales.name).length;
@@ -77,7 +115,7 @@ export const SupervisorDailyRecapTab = ({
         status: target === 0 ? 'Belum ada PJP' : done === target ? 'Selesai' : done > 0 ? 'Sedang Kunjungan' : 'Belum Mulai',
       };
     });
-  }, [salesList, salesStops, incidents, offPjpAttendances]);
+  }, [dailyReport, salesList, salesStops, incidents, offPjpAttendances]);
 
   const handlePrint = () => {
     window.print();

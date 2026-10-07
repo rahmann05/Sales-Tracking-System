@@ -7,7 +7,7 @@ import { LuX } from 'react-icons/lu';
  */
 export const SpvModalShell = ({ title, subtitle, onClose, maxWidth = 'max-w-md', children, footer, error, saving }) => (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={title}>
-        <div className={`modal-content ${maxWidth}`}>
+        <div className={`bg-surface border border-border-glass rounded-3xl p-6 w-full shadow-2xl overflow-y-auto max-h-[90vh] ${maxWidth}`}>
             <div className="flex items-center justify-between border-b border-border-glass pb-4">
                 <div>
                     <h3 className="text-lg font-black text-on-surface">{title}</h3>

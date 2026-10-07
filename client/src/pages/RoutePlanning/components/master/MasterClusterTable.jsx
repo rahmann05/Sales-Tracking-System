@@ -1,16 +1,18 @@
 import { DataTable } from '../../../../shared/components/common/DataTable';
 import React, { useState } from 'react';
 import { MasterClusterRow } from './MasterClusterRow';
+import { LuSearch } from 'react-icons/lu';
 
 /**
  * MasterClusterTable Component
  * Single Responsibility: Table view container rendering all Master RJP Clusters.
  */
 export const MasterClusterTable = ({ clusters = [], onEdit, onDelete, onManageOutlets, loading=false, deletingId=null }) => {
-  const [query,setQuery]=useState('');
-  const filtered=clusters.filter(cluster=>[cluster.name,cluster.region,cluster.assignedSalesName,cluster.assignedSpvName].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const [query, setQuery] = useState('');
+  const filtered = clusters.filter(cluster => [cluster.name, cluster.region, cluster.assignedSalesName, cluster.assignedSpvName].join(' ').toLowerCase().includes(query.toLowerCase()));
+
   return (
-    <div className="bg-surface border border-border-glass rounded-2xl shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-surface border border-border-glass rounded-2xl shadow-xs overflow-hidden flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 border-b border-border-glass bg-surface">
         <div>
           <h3 className="text-base font-extrabold text-on-surface m-0">Daftar kluster dan penanggung jawab</h3>
@@ -23,21 +25,38 @@ export const MasterClusterTable = ({ clusters = [], onEdit, onDelete, onManageOu
         </span>
       </div>
 
-      <label className="app-field p-4">Cari kluster<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nama, region, sales, atau supervisor"/></label>
-      {loading&&<p role="status" className="p-4">Memuat kluster…</p>}
-      {!loading&&!filtered.length&&<p className="p-6 text-on-surface-variant">{query?'Tidak ada kluster yang cocok.':'Belum ada kluster. Buat kluster untuk mulai membagi wilayah.'}</p>}
+      <div className="p-4 border-b border-border-glass bg-surface-container-low/40">
+        <div className="relative max-w-md">
+          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm pointer-events-none" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari nama kluster, region, sales, atau supervisor..."
+            className="w-full pl-9 pr-3 h-10 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+          />
+        </div>
+      </div>
+
+      {loading && <p role="status" className="p-6 text-xs text-on-surface-variant font-semibold">Memuat kluster…</p>}
+      {!loading && !filtered.length && (
+        <p className="p-8 text-center text-xs text-on-surface-variant">
+          {query ? 'Tidak ada kluster yang cocok dengan pencarian.' : 'Belum ada kluster. Buat kluster untuk mulai membagi wilayah.'}
+        </p>
+      )}
+
       <div className="overflow-x-auto w-full mobile-card-table-wrapper">
-        <DataTable className="w-full text-left text-sm border-collapse mobile-card-table">
-          <thead className="bg-surface-variant/30">
-            <tr>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Kode</th>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Nama Cluster & Wilayah</th>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Region</th>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Outlet Aktif</th>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Sales Bertugas</th>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Supervisor Wilayah</th>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass">Status</th>
-              <th className="font-semibold text-on-surface-variant text-xs uppercase tracking-wider border-b border-border-glass text-center">Aksi</th>
+        <DataTable className="w-full min-w-[980px] text-left text-xs border-collapse mobile-card-table">
+          <thead className="bg-surface-container/70">
+            <tr className="border-b border-border-glass">
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 w-20 whitespace-nowrap">Kode</th>
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 min-w-[180px]">Nama Cluster & Wilayah</th>
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">Region</th>
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">Outlet Aktif</th>
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">Sales Bertugas</th>
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">Supervisor Wilayah</th>
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 whitespace-nowrap">Status</th>
+              <th className="font-bold text-on-surface-variant text-[11px] uppercase tracking-wider py-3.5 px-4 text-center w-28 whitespace-nowrap">Aksi</th>
             </tr>
           </thead>
           <tbody>

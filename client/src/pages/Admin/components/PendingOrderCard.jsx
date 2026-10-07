@@ -10,6 +10,33 @@ import '../../../styles/components/PendingOrderCard.css';
 export const PendingOrderCard = ({ order, onDecision }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isPending = order.status === 'PENDING_APPROVAL' || order.status === 'PENDING';
+
+  const handleApprove = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onDecision({ orderId: order.id, approved: true });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onDecision({
+        orderId: order.id,
+        approved: false,
+        rejectionReason: rejectReason || 'Ditolak oleh Admin',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div
@@ -44,22 +71,24 @@ export const PendingOrderCard = ({ order, onDecision }) => {
       <OrderItemsTable items={order.items} totalAmount={order.totalAmount} />
 
       {/* Approval Buttons */}
-      {order.status === 'PENDING_APPROVAL' && (
+      {isPending && (
         <div className="poc-actions-container">
           {!showRejectForm ? (
             <div className="poc-action-grid">
               <button
                 type="button"
-                onClick={() => onDecision({ orderId: order.id, approved: true })}
+                onClick={handleApprove}
+                disabled={isSubmitting}
                 className="poc-btn-approve"
               >
                 <LuCheck className="text-base" />
-                <span>Approve Order</span>
+                <span>{isSubmitting ? 'Memproses…' : 'Approve Order'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowRejectForm(true)}
+                disabled={isSubmitting}
                 className="poc-btn-reject"
               >
                 <LuX className="text-base" />
@@ -79,20 +108,16 @@ export const PendingOrderCard = ({ order, onDecision }) => {
               <div className="poc-reject-actions">
                 <button
                   type="button"
-                  onClick={() =>
-                    onDecision({
-                      orderId: order.id,
-                      approved: false,
-                      rejectionReason: rejectReason || 'Ditolak oleh Admin',
-                    })
-                  }
+                  onClick={handleReject}
+                  disabled={isSubmitting}
                   className="poc-btn-confirm"
                 >
-                  Konfirmasi Reject
+                  {isSubmitting ? 'Menolak…' : 'Konfirmasi Reject'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowRejectForm(false)}
+                  disabled={isSubmitting}
                   className="poc-btn-cancel"
                 >
                   Batal

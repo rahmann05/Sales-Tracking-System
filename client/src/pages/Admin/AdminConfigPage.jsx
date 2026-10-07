@@ -20,11 +20,12 @@ import {
   LuGlobe,
   LuPhoneCall,
   LuCreditCard,
+  LuUsers,
 } from 'react-icons/lu';
 
 import { CONFIG_DEFINITIONS, parseConfigValue } from '../../../../shared/config.mjs';
 import { ProductCatalogManager } from './components/ProductCatalogManager';
-const groupIcons = { LuMapPin, LuTarget, LuPhoneCall, LuCreditCard, LuBuilding, LuTruck, LuKey, LuGlobe, LuShieldCheck };
+const groupIcons = { LuUsers, LuMapPin, LuTarget, LuPhoneCall, LuCreditCard, LuBuilding, LuTruck, LuKey, LuGlobe, LuShieldCheck };
 
 const groupColorMap = {
   blue: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'bg-blue-100 text-blue-600' },
@@ -241,7 +242,7 @@ export const AdminConfigPage = () => {
         <div className="space-y-6">
           {CONFIG_DEFINITIONS.map(group => ({ ...group, params: group.params.filter(param => `${param.label} ${param.description}`.toLowerCase().includes(search.toLowerCase())) })).filter(group => group.params.length).map((group) => {
             const colorSet = groupColorMap[group.groupColor] || groupColorMap.blue;
-            const GroupIcon = groupIcons[group.groupIcon];
+            const GroupIcon = groupIcons[group.groupIcon] || LuSettings;
 
             return (
               <div

@@ -49,23 +49,23 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
   return (
     <div className="overflow-hidden">
       <div className="overflow-x-auto mobile-card-table-wrapper">
-        <DataTable className="w-full text-left border-collapse mobile-card-table">
+        <DataTable className="w-full min-w-[1240px] text-left border-collapse mobile-card-table">
           <thead>
-            <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
-              <th className="text-center">No</th>
-              <th className="">Salesman</th>
-              <th className="">Jam In / Out</th>
-              <th className="">Durasi</th>
-              <th className="">Customer ID & Nama Toko</th>
-              <th className="">Sub Channel</th>
-              <th className="text-center">Call Status</th>
-              <th className="text-right">Order (Rp) / SKU</th>
-              <th className="">Alasan / Catatan</th>
-              <th className="text-center">Deviasi GPS</th>
-              <th className="text-center">Foto</th>
+            <tr className="bg-surface-container/70 border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
+              <th className="text-center w-12 py-3.5 px-3 whitespace-nowrap">No</th>
+              <th className="py-3.5 px-3 min-w-[130px] whitespace-nowrap">Salesman</th>
+              <th className="py-3.5 px-3 min-w-[110px] whitespace-nowrap">Jam In / Out</th>
+              <th className="text-center py-3.5 px-3 min-w-[80px] whitespace-nowrap">Durasi</th>
+              <th className="py-3.5 px-3 min-w-[220px]">Customer ID & Nama Toko</th>
+              <th className="py-3.5 px-3 min-w-[110px] whitespace-nowrap">Sub Channel</th>
+              <th className="text-center py-3.5 px-3 min-w-[100px] whitespace-nowrap">Call Status</th>
+              <th className="text-right py-3.5 px-3 min-w-[120px] whitespace-nowrap">Order (Rp) / SKU</th>
+              <th className="py-3.5 px-3 min-w-[180px]">Alasan / Catatan</th>
+              <th className="text-center py-3.5 px-3 min-w-[110px] whitespace-nowrap">Deviasi GPS</th>
+              <th className="text-center py-3.5 px-3 w-28 min-w-[100px] whitespace-nowrap">Detail</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border-glass/40">
             {paginatedRows.map((row) => (
               <DailyCallTableRow key={row.id} row={row} onSelectRow={onSelectRow} />
             ))}

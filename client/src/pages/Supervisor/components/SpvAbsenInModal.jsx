@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SPV_MODE_OPTIONS } from '../../../constants/supervisor';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { LuCheck } from 'react-icons/lu';
 import { SpvModalShell } from './SpvModalShell';
@@ -7,7 +8,7 @@ import { SpvModalShell } from './SpvModalShell';
  * SpvAbsenInModal Component
  * Single Responsibility: Modal absen masuk (clock-in) kunjungan supervisi.
  */
-export const SpvAbsenInModal = ({ stop, inputNotes, onChangeNotes, onClose, onConfirm, error, saving }) => {
+export const SpvAbsenInModal = ({ stop, spvMode, onChangeSpvMode, inputNotes, onChangeNotes, onClose, onConfirm, error, saving }) => {
   const [capture, setCapture] = useState(null);
   return (
     <SpvModalShell error={error} saving={saving}
@@ -37,7 +38,16 @@ export const SpvAbsenInModal = ({ stop, inputNotes, onChangeNotes, onClose, onCo
     >
         <div className="space-y-4 py-3">
             <DeviceCameraCapture capturedPhoto={capture?.photoUrl} onCapture={(photoUrl, gps) => setCapture({ photoUrl, gps })} onRetake={() => setCapture(null)} requireGps targetLat={stop.latitude} targetLng={stop.longitude} maxRadiusMeters={stop.radiusMeters} outletName={stop.outletName} />
-
+            <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface block">Jenis Kunjungan Supervisi:</label>
+                <select 
+                    value={spvMode}
+                    onChange={e => onChangeSpvMode(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                    {SPV_MODE_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+            </div>
             <div className="space-y-1.5">
                 <label className="text-xs font-bold text-on-surface block">Catatan Awal Kunjungan (Opsional):</label>
                 <input

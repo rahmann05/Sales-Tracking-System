@@ -74,12 +74,12 @@ const FlyToSalesLocation = ({ selectedSales }) => {
  * LiveSalesGpsTrackingTab Component
  * Single Responsibility: Real-time interactive GPS map tracking and live location list of sales personnel.
  */
-export const LiveSalesGpsTrackingTab = () => {
+export const LiveSalesGpsTrackingTab = ({ onSelectSalesId, spvStops = [] }) => {
   const [salesLocations, setSalesLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [selectedSales, setSelectedSales] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL' | 'IN_VISIT' | 'TRAVELING' | 'ONLINE'
+  const [filterStatus, setFilterStatus] = useState('ONLINE'); // 'ONLINE' | 'IN_VISIT' | 'ALL'
   const [search, setSearch] = useState('');
 
   const fetchLocations = async () => {
@@ -173,14 +173,14 @@ export const LiveSalesGpsTrackingTab = () => {
           <div className="grid grid-cols-3 gap-1.5 w-full">
             <button
               type="button"
-              onClick={() => setFilterStatus('ALL')}
+              onClick={() => setFilterStatus('ONLINE')}
               className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full min-w-0 whitespace-normal break-words ${
-                filterStatus === 'ALL'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant'
+                filterStatus === 'ONLINE'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-surface-container text-blue-700 hover:bg-blue-500/10'
               }`}
             >
-              Semua ({salesLocations.length})
+              Aktif ({onlineCount})
             </button>
             <button
               type="button"
@@ -195,14 +195,14 @@ export const LiveSalesGpsTrackingTab = () => {
             </button>
             <button
               type="button"
-              onClick={() => setFilterStatus('ONLINE')}
+              onClick={() => setFilterStatus('ALL')}
               className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center w-full min-w-0 whitespace-normal break-words ${
-                filterStatus === 'ONLINE'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-surface-container text-blue-700 hover:bg-blue-500/10'
+                filterStatus === 'ALL'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant'
               }`}
             >
-              Aktif ({onlineCount})
+              Semua ({salesLocations.length})
             </button>
           </div>
 
@@ -228,7 +228,10 @@ export const LiveSalesGpsTrackingTab = () => {
               return (
                 <div
                   key={s.salesId}
-                  onClick={() => setSelectedSales(s)}
+                  onClick={() => {
+                     setSelectedSales(s);
+                     if (onSelectSalesId) onSelectSalesId(s.salesId);
+                  }}
                   className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
                     isSelected
                       ? 'bg-primary/10 border-primary shadow-xs'
@@ -335,6 +338,27 @@ export const LiveSalesGpsTrackingTab = () => {
                   pathOptions={{ color: '#2563eb', weight: 4, dashArray: '6, 8', opacity: 0.7 }}
                 />
               )}
+
+              {/* Markers for Sales Stores / Outlets (from PJP) */}
+              {spvStops.map((stop) => (
+                <Marker
+                  key={stop.id}
+                  position={[stop.latitude, stop.longitude]}
+                  icon={L.divIcon({
+                    className: 'spv-target-marker',
+                    html: `<div style="background:#ef4444;border:2px solid #fff;border-radius:50%;width:16px;height:16px;box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                  })}
+                >
+                  <Popup>
+                     <div style={{fontSize: '11px', lineHeight: '1.4'}}>
+                       <strong style={{color: '#1f2937'}}>{stop.outletName}</strong><br/>
+                       <span style={{color: '#6b7280'}}>{stop.address}</span>
+                     </div>
+                  </Popup>
+                </Marker>
+              ))}
 
               {/* Markers for All Sales */}
               {salesLocations.map((s) => (

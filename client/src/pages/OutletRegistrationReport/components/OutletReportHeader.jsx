@@ -49,17 +49,17 @@ export const OutletReportHeader = ({
   };
 
   return (
-    <div className="outlet-reg-header-card">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="outlet-reg-header-card bg-surface border border-border-glass rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
         <div>
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-extrabold flex items-center gap-1.5">
               <LuClipboardList /> MASTER REGISTRASI OUTLET
             </span>
             <span className="px-3 py-1 bg-surface-container rounded-full text-xs font-bold text-on-surface">
               Total: {totalCount} Outlet
             </span>
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-surface-container-high rounded-full text-xs border border-border-glass">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-high rounded-full text-xs border border-border-glass">
               <LuSettings className="text-primary text-xs" />
               <span className="text-[11px] font-bold text-on-surface-variant">Divisi Aktif Sistem:</span>
               <select
@@ -84,50 +84,50 @@ export const OutletReportHeader = ({
         </div>
 
         {/* Export & NIK Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap lg:justify-end shrink-0">
           {onOpenNikModal && (
             <button
               type="button"
               onClick={onOpenNikModal}
-              className="px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="h-9 px-3.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
               title="Kelola dan Input NIK 16-Digit Pemilik Toko"
             >
-              <LuIdCard className="text-sm" /> Kelola / Input NIK
+              <LuIdCard className="text-sm" /> <span>Kelola / Input NIK</span>
             </button>
           )}
           {onExportNikExcel && (
             <button
               type="button"
               onClick={onExportNikExcel}
-              className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
+              className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
               title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom: Code, Name, NIK, Owner, Alamat, PKP, NPWP)"
             >
-              <LuFileSpreadsheet /> Ekspor IMPORT NIK
+              <LuFileSpreadsheet /> <span>Ekspor IMPORT NIK</span>
             </button>
           )}
           <button
             type="button"
             onClick={onExportCSV}
-            className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
+            className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
             title="Ekspor Laporan Master Tabel ke Excel (.xls)"
           >
-            <LuFileSpreadsheet /> Ekspor Excel
+            <LuFileSpreadsheet /> <span>Ekspor Excel</span>
           </button>
           <button
             type="button"
             onClick={onExportNd6TXT}
-            className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
+            className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
             title="Ekspor Format Data Stream (TXT/Pipe)"
           >
-            <LuFileText /> Ekspor TXT
+            <LuFileText /> <span>Ekspor TXT</span>
           </button>
           <button
             type="button"
             onClick={onExportTXT}
-            className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer"
+            className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
             title="Ekspor Ringkasan Teks Terbaca"
           >
-            <LuFileText /> Ringkasan TXT
+            <LuFileText /> <span>Ringkasan TXT</span>
           </button>
         </div>
       </div>

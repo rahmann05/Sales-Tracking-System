@@ -18,54 +18,54 @@ export const OutletReportTableRow = ({
   return (
     <tr className="hover:bg-surface-variant/20 transition-colors">
       {/* Kode Outlet */}
-      <td data-label="Kode Outlet" className="font-mono font-bold text-xs">
+      <td data-label="Kode Outlet" className="py-3.5 px-4 font-mono font-bold text-xs whitespace-nowrap">
         {item.customerCode ? (
           <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
             {item.customerCode}
           </span>
         ) : (
-          <span className="text-on-surface-variant italic">Belum Ada</span>
+          <span className="text-on-surface-variant/60 font-sans italic text-xs">Belum Ada</span>
         )}
       </td>
 
       {/* Nama & Alamat */}
-      <td data-label="Nama Toko" className="">
+      <td data-label="Nama Toko" className="py-3.5 px-4 min-w-[200px]">
         <div className="font-bold text-on-surface text-xs">{item.name}</div>
-        <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+        <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5" title={item.address}>
           <LuMapPin className="text-primary text-xs shrink-0" />
-          <span>{item.address}</span>
+          <span className="line-clamp-1">{item.address}</span>
         </div>
       </td>
 
       {/* Area & Divisi */}
-      <td data-label="Area" className="">
+      <td data-label="Area" className="py-3.5 px-4 whitespace-nowrap">
         <div className="font-bold text-on-surface text-xs">{item.area}</div>
-        <div className="text-[10px] text-on-surface-variant">{item.division}</div>
+        <div className="text-[10px] text-on-surface-variant mt-0.5">{item.division}</div>
       </td>
 
       {/* Channel */}
-      <td data-label="Channel" className="">
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container border border-border-glass">
+      <td data-label="Channel" className="py-3.5 px-4 whitespace-nowrap">
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-surface-container border border-border-glass">
           {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
         </span>
       </td>
 
       {/* Sales & SPV */}
-      <td data-label="Sales & SPV" className="text-[11px]">
+      <td data-label="Sales & SPV" className="py-3.5 px-4 text-xs whitespace-nowrap">
         <div className="font-bold text-on-surface">{item.salesmanName || '-'}</div>
-        <div className="text-[10px] text-on-surface-variant">SPV: {item.spvName || '-'}</div>
+        <div className="text-[10px] text-on-surface-variant mt-0.5">SPV: {item.spvName || '-'}</div>
       </td>
 
       {/* Status */}
-      <td data-label="Status" className="">
+      <td data-label="Status" className="py-3.5 px-4 whitespace-nowrap">
         <span
-          className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
             isAlreadyActive
               ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
               : item.registrationStatus === 'SPV_APPROVED'
               ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
               : item.registrationStatus === 'REJECTED'
-              ? 'bg-red-500/10 text-red-600 border-red-500/20'
+              ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
               : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
           }`}
         >
@@ -74,16 +74,17 @@ export const OutletReportTableRow = ({
       </td>
 
       {/* Aksi */}
-      <td className="text-center mobile-full-width">
-        <div className="flex items-center justify-center gap-1.5 flex-wrap w-full">
+      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+        <div className="flex items-center justify-center gap-1.5">
           {/* Print PDF Button */}
           <button
             type="button"
             onClick={() => onOpenPdf(item)}
-            className="flex-1 md:flex-initial px-2.5 py-2 md:py-1 bg-surface-container hover:bg-surface-container-high rounded-lg text-xs font-bold text-on-surface transition-all border border-border-glass flex items-center justify-center gap-1"
+            className="px-2.5 py-1.5 bg-surface hover:bg-surface-container rounded-lg text-xs font-bold text-on-surface transition-all border border-border-glass flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
             title="Cetak Formulir Resmi"
           >
-            <LuPrinter /> Cetak PDF
+            <LuPrinter className="text-xs shrink-0" />
+            <span>Cetak PDF</span>
           </button>
 
           {/* Admin Activation Button */}
@@ -91,9 +92,11 @@ export const OutletReportTableRow = ({
             <button
               type="button"
               onClick={() => onOpenFinalize(item)}
-              className="flex-1 md:flex-initial px-2.5 py-2 md:py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1"
+              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Input ke Sistem & Aktivasi"
             >
-              <LuCheckCheck /> Input ke Sistem
+              <LuCheckCheck className="text-xs shrink-0" />
+              <span>Input ke Sistem</span>
             </button>
           )}
         </div>

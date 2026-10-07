@@ -117,7 +117,9 @@ export const useBackendSync = ({
               clusters: clustersList.filter(c=>c.supervisorId===spv.id).map(c=>c.name),
               members: mappedSales.filter(s=>s.supervisorId===spv.id).map(s=>s.name),
             }));
-            setSupervisorTeams(mappedSpvTeams);
+            if (typeof setSupervisorTeams === 'function') {
+              setSupervisorTeams(mappedSpvTeams);
+            }
 
             const mappedRjpTeams = clustersList.map((c) => ({
               id: c.id,
@@ -129,7 +131,9 @@ export const useBackendSync = ({
               outletCount: c._count?.outlets || c.allocatedOutletsCount || c.outlets?.length || 0,
               status: 'ACTIVE',
             }));
-            setRjpTeams(mappedRjpTeams);
+            if (typeof setRjpTeams === 'function') {
+              setRjpTeams(mappedRjpTeams);
+            }
           }
         }
 
@@ -286,7 +290,11 @@ export const useBackendSync = ({
 
         // 5. Process Orders
         if (ordersRes?.data) {
-          const rawOrders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.items || [];
+          const rawOrders = Array.isArray(ordersRes.data)
+            ? ordersRes.data
+            : Array.isArray(ordersRes.data?.data)
+            ? ordersRes.data.data
+            : ordersRes.data.items || [];
           setOrders(rawOrders.map(mapServerOrder));
         }
 
@@ -302,11 +310,15 @@ export const useBackendSync = ({
           ...rawRouteChanges.map(mapServerRouteChange),
           ...rawUnlocks.map(mapServerUnlockRequest),
         ];
-        if (routeChangesRes && unlockRes) setIncidents(mappedIncidents);
+        if (routeChangesRes || unlockRes) setIncidents(mappedIncidents);
 
         // 7. Process Products
         if (productsRes?.data) {
-          const rawProducts = Array.isArray(productsRes.data) ? productsRes.data : productsRes.data.items || [];
+          const rawProducts = Array.isArray(productsRes.data)
+            ? productsRes.data
+            : Array.isArray(productsRes.data?.data)
+            ? productsRes.data.data
+            : productsRes.data.items || [];
           setProducts(rawProducts);
         }
       } catch (err) {

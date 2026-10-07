@@ -31,7 +31,6 @@ export const SPV_AUDIT_CHECKLIST_ITEMS = [
 
 // Main workspace tabs for SupervisorPage (Action Center & Daily Recap)
 export const SUPERVISOR_TABS = [
-    {id:'planning',label:'Tim & PJP',shortLabel:'Perencanaan',icon:LuUser},
     { id: 'field', label: 'Kunjungan Lapangan', shortLabel: 'Kunjungan', icon: LuCompass, description: 'Absen dan audit supervisi toko' },
     { 
         id: 'action_center', 

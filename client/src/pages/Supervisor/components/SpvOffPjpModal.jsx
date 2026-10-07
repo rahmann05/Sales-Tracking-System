@@ -1,4 +1,5 @@
 import React from 'react';
+import { SPV_MODE_OPTIONS } from '../../../constants/supervisor';
 import { LuCheck } from 'react-icons/lu';
 import { SpvModalShell } from './SpvModalShell';
 
@@ -6,7 +7,7 @@ import { SpvModalShell } from './SpvModalShell';
  * SpvOffPjpModal Component
  * Single Responsibility: Modal absen kunjungan supervisi luar jadwal / toko dadakan.
  */
-export const SpvOffPjpModal = ({ form, onChangeForm, onClose, onConfirm, error, saving }) => (
+export const SpvOffPjpModal = ({ form, onChangeForm, spvMode, onChangeSpvMode, onClose, onConfirm, error, saving }) => (
     <SpvModalShell error={error} saving={saving}
         title="Kunjungan Supervisi Luar RJP"
         subtitle="Catat kunjungan toko di luar agenda harian"
@@ -32,6 +33,16 @@ export const SpvOffPjpModal = ({ form, onChangeForm, onClose, onConfirm, error, 
         }
     >
         <div className="space-y-3.5 py-2">
+            <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface block">Jenis Kunjungan Supervisi:</label>
+                <select 
+                    value={spvMode}
+                    onChange={e => onChangeSpvMode(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                    {SPV_MODE_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+            </div>
             <div className="space-y-1">
                 <label className="text-xs font-bold text-on-surface block">Nama Outlet / Toko:</label>
                 <input

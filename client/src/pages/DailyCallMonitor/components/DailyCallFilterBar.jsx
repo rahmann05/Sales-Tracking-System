@@ -49,12 +49,12 @@ export const DailyCallFilterBar = ({
             Tanggal Kunjungan
           </label>
           <div className="relative flex items-center">
-            <LuCalendar className="absolute left-3 text-on-surface-variant text-sm" />
+            <LuCalendar className="absolute left-3 text-on-surface-variant text-sm pointer-events-none" />
             <input
               type="date"
               value={date}
               onChange={(e) => onChangeDate(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-9 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             />
           </div>
         </div>
@@ -65,11 +65,11 @@ export const DailyCallFilterBar = ({
             Pilih Salesman
           </label>
           <div className="relative flex items-center">
-            <LuUser className="absolute left-3 text-on-surface-variant text-sm" />
+            <LuUser className="absolute left-3 text-on-surface-variant text-sm pointer-events-none" />
             <select
               value={salesmanId}
               onChange={(e) => onChangeSalesman(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-9 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             >
               <option value="">Semua Salesman (Tim)</option>
               {salesTeam.map((sales) => (
@@ -87,13 +87,13 @@ export const DailyCallFilterBar = ({
             Cari Customer / Toko
           </label>
           <div className="relative flex items-center">
-            <LuSearch className="absolute left-3 text-on-surface-variant text-sm" />
+            <LuSearch className="absolute left-3 text-on-surface-variant text-sm pointer-events-none" />
             <input
               type="text"
               placeholder="Ketik nama toko / kode customer..."
               value={search}
               onChange={(e) => onChangeSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-9 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             />
           </div>
         </div>
@@ -105,7 +105,7 @@ export const DailyCallFilterBar = ({
               type="button"
               onClick={onRefresh}
               disabled={isLoading}
-              className="p-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
+              className="h-10 w-10 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
               title="Refresh Data"
             >
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
@@ -114,7 +114,7 @@ export const DailyCallFilterBar = ({
             <button
               type="button"
               onClick={onExport}
-              className="flex-1 py-2 px-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              className="flex-1 h-10 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Ekspor Laporan Format Excel ND6"
             >
               <LuDownload /> Excel
@@ -123,7 +123,7 @@ export const DailyCallFilterBar = ({
             <button
               type="button"
               onClick={onOpenPdf}
-              className="flex-1 py-2 px-2.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              className="flex-1 h-10 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / PDF Resmi"
             >
               <LuPrinter /> Cetak PDF
@@ -132,9 +132,9 @@ export const DailyCallFilterBar = ({
         )}
       </div>
 
-      {/* Bottom Filter Pills (Optional) */}
+      {/* Bottom Filter Pills */}
       {showStatusPills && (
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 pt-1 w-full">
+        <div className="flex items-center gap-1.5 pt-1 w-full overflow-x-auto pb-1 no-scrollbar">
           {filterOptions.map((opt) => {
             const Icon = opt.icon;
             return (
@@ -142,14 +142,14 @@ export const DailyCallFilterBar = ({
                 key={opt.key}
                 type="button"
                 onClick={() => onSelectFilter(opt.key)}
-                className={`px-3 py-2 sm:py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 w-full sm:w-auto text-center ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap ${
                   filterType === opt.key
-                    ? 'bg-primary text-on-primary shadow-sm'
+                    ? 'bg-primary text-on-primary shadow-xs'
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant border border-border-glass'
                 }`}
               >
                 {Icon && <Icon className="text-xs shrink-0" />}
-                <span className="min-w-0 whitespace-normal break-words">{opt.label}</span>
+                <span>{opt.label}</span>
               </button>
             );
           })}
