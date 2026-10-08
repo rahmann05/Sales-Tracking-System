@@ -13,6 +13,7 @@ export const getDashboard = async (query = {}) => {
   const { date } = query;
   const routes = await prisma.deliveryRoute.findMany({
     where: {
+      cancelledAt: null,
       date: wibDayRange(date || new Date()),
     },
     include: {

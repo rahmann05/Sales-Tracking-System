@@ -1,6 +1,15 @@
 import { CODE_CONFIG_GROUPS } from './coding.mjs';
 export const CONFIG_DEFINITIONS = [
   ...CODE_CONFIG_GROUPS,
+  {groupKey:'ATTENTION_SLA',groupLabel:'SLA & Eskalasi Pekerjaan',groupDescription:'Batas waktu memakai jam kalender sejak pekerjaan masuk tahap, termasuk malam/libur. Nol berarti belum aktif. Tenggat eksplisit didahulukan. Perubahan berlaku pada pekerjaan terbuka yang belum mempunyai tenggat eksplisit; riwayat perubahan parameter dicatat.',groupIcon:'LuClock',groupColor:'blue',params:[
+    {key:'SLA_ORDER_APPROVAL_HOURS',label:'SLA pemeriksaan order',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
+    {key:'SLA_PACKING_DRAFT_HOURS',label:'SLA kelengkapan draft packing',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
+    {key:'SLA_PACKING_ALLOCATION_HOURS',label:'SLA alokasi packing siap kirim',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
+    {key:'SLA_TRIP_CLOSE_HOURS',label:'SLA penutupan trip setelah kembali',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
+    {key:'SLA_VISIT_VALIDATION_HOURS',label:'SLA keputusan pengecualian kunjungan',description:'Validasi luar PJP, hasil manual, pengecualian absensi dan toko tutup/reroute. Tahap admin reroute dimulai saat usulan SPV terakhir disimpan.',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
+    {key:'SLA_FOLLOW_UP_REVIEW_HOURS',label:'SLA pemeriksaan hasil tindak lanjut',description:'Dihitung sejak PIC mengirim hasil terbaru, terpisah dari tenggat pengerjaan sales.',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
+    {key:'SLA_ESCALATION_DELAY_HOURS',label:'Eskalasi setelah lewat tenggat',description:'Nol menonaktifkan eskalasi. Nilai positif mengirim notifikasi dalam aplikasi ke Admin aktif setelah lewat tenggat ditambah jeda ini. Pemeriksaan setiap 5 menit, satu pemberitahuan per pekerjaan/tahap/tenggat.',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
+  ]},
   {groupKey:'NOO',groupLabel:'Registrasi Outlet (NOO)',groupDescription:'Pencarian nama outlet dan kelengkapan pengajuan. Pengajuan tetap melalui supervisor dan admin.',groupIcon:'LuBuilding',groupColor:'emerald',params:[
     {key:'CUSTOMER_REG_ENFORCE_PLACES_RADIUS',label:'Batasi pencarian nama outlet dengan radius',description:'Aktif: hasil Google dan OpenStreetMap dibatasi radius pencarian (default 100 meter). Nonaktif: nama outlet dapat dicari di luar radius; GPS fisik pengajuan tetap disimpan.',type:'boolean',defaultValue:true},
     {key:'CUSTOMER_REG_PLACES_RADIUS_METERS',label:'Radius pencarian nama outlet NOO',description:'Batas hasil pencarian dan verifikasi nama outlet saat pembatas radius aktif. Digunakan Google dan OpenStreetMap.',type:'number',unit:'meter',defaultValue:100,min:20,max:1000},
@@ -267,7 +276,7 @@ export const CONFIG_DEFINITIONS = [
     groupIcon: 'LuCreditCard',
     groupColor: 'purple',
     params: [
-      { key: 'SALES_WEEKLY_TARGET_AMOUNT', label: 'Target omzet mingguan', description: 'Target laporan kinerja mingguan per sales.', type: 'number', defaultValue: 25000000, min: 0, max: 10000000000, unit: 'Rp' },
+      { key: 'SALES_WEEKLY_TARGET_AMOUNT', label: 'Acuan target mingguan', description: 'Acuan umum; tidak menetapkan target laporan otomatis. Tetapkan target sales/periode pada laporan mingguan.', type: 'number', defaultValue: 25000000, min: 0, max: 10000000000, unit: 'Rp' },
       {
         key: 'TAX_RATE_PERCENT',
         label: 'Persentase PPN',
@@ -290,8 +299,8 @@ export const CONFIG_DEFINITIONS = [
       },
       {
         key: 'SALES_MONTHLY_TARGET_AMOUNT',
-        label: 'Target Omzet Bulanan per Sales',
-        description: 'Target pencapaian penjualan bulanan standar (Rp) untuk evaluasi performa di laporan MTD.',
+        label: 'Acuan Target Bulanan',
+        description: 'Acuan umum; tidak menetapkan target laporan otomatis. Tetapkan target sales/periode pada laporan MTD.',
         type: 'number',
         unit: 'Rp',
         defaultValue: 100000000,
@@ -301,7 +310,7 @@ export const CONFIG_DEFINITIONS = [
       {
         key: 'SALES_BASELINE_LMA_AMOUNT',
         label: 'Baseline LMA Sales',
-        description: 'Nilai perbandingan Last Month Actual default (Rp) jika riwayat bulan sebelumnya belum ada.',
+        description: 'Parameter lama untuk kompatibilitas. Laporan MTD memakai transaksi bulan lalu yang sebenarnya, tanpa pengganti nominal rekaan.',
         type: 'number',
         unit: 'Rp',
         defaultValue: 0,

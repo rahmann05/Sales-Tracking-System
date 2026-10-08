@@ -1,4 +1,5 @@
 import {assertSalesAccess} from '../../../utils/team-scope.js';
+import {createCollectionFollowUp} from './collection-follow-up.service.js';
 /** validateOffPjpAttendance - single-responsibility service (extracted from off-pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -21,12 +22,13 @@ export const validateOffPjpAttendance = async (id, supervisorId, approved, rejec
   if(!approved&&!rejectionNote?.trim())throw new AppError('Alasan penolakan wajib',400);
   const newStatus = approved ? OFF_PJP_STATUS.APPROVED : OFF_PJP_STATUS.REJECTED;
 
-  const changed=await prisma.offPjpAttendance.updateMany({where:{id,status:OFF_PJP_STATUS.PENDING},data:{status:newStatus,validatedBy:supervisorId,validatedAt:new Date(),rejectionNote:rejectionNote||null}});
+  const updated=await prisma.$transaction(async tx=>{
+  const changed=await tx.offPjpAttendance.updateMany({where:{id,status:OFF_PJP_STATUS.PENDING},data:{status:newStatus,validatedBy:supervisorId,validatedAt:new Date(),rejectionNote:rejectionNote||null}});
   if(!changed.count)throw new AppError('Kunjungan sudah diproses',409);
-  const updated = await prisma.offPjpAttendance.findUnique({
+  const result = await tx.offPjpAttendance.findUnique({
     where: { id },
   });
-
+  if(approved)await createCollectionFollowUp(tx,result,'OFF_PJP');
   const notifTitle = approved ? 'Absen Luar RJP Divalidasi' : 'Absen Luar RJP Ditolak';
   const notifMsg = approved
     ? `Absen Anda di toko "${record.outletName}" telah divalidasi oleh Supervisor.`
@@ -37,8 +39,10 @@ export const validateOffPjpAttendance = async (id, supervisorId, approved, rejec
     approved ? NOTIFICATION_TYPES.OFF_PJP_VALIDATED : NOTIFICATION_TYPES.OFF_PJP_REJECTED,
     notifTitle,
     notifMsg,
-    { offPjpAttendanceId: id }
+    { offPjpAttendanceId: id }, tx
   );
 
+  return result;
+  });
   return updated;
 };

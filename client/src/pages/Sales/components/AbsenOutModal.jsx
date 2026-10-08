@@ -1,4 +1,6 @@
 import { AttendanceSalesInput } from './AttendanceSalesInput';
+import {VisitOutcomeInput} from './VisitOutcomeInput';
+import {visitOutcomeError} from '../../../../../shared/visit-outcome.mjs';
 import { useApp } from '../../../context/AppContext';
 import React, { useState, useEffect } from 'react';
 import { FiXCircle, FiCheckCircle, FiAlertTriangle, FiClock } from 'react-icons/fi';
@@ -32,6 +34,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   });
   const [gpsData, setGpsData] = useState(null);
   const [notes, setNotes] = useState('');
+  const [visitOutcome,setVisitOutcome]=useState({purpose:''});
   const [salesResult, setSalesResult] = useState({ orderAmount: '', productIds: [] });
   const [earlyReason, setEarlyReason] = useState('');
   const [elapsedSecs, setElapsedSecs] = useState(0);
@@ -86,6 +89,8 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
 
   const handleConfirm = async () => {
     if (saving) return;
+    const outcomeError=visitOutcome.purpose&&visitOutcomeError(visitOutcome);
+    if(outcomeError){setError(outcomeError);return;}
     if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
     if (settings.ATTENDANCE_REQUIRE_PHOTO && !capturedPhoto) {
       alert('Harap ambil foto selfie presensi keluar terlebih dahulu menggunakan kamera.');
@@ -104,6 +109,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
       photoUrl: capturedPhoto,
       gpsLocation: gpsData,
       notes: notes || 'Kunjungan Selesai',
+      ...(visitOutcome.purpose?{visitOutcome}:{}),
       earlyReason: isEarlyCheckout ? earlyReason : null,
       ...(settings.ATTENDANCE_ALLOW_MANUAL_SALES ? { orderAmount: Number(salesResult.orderAmount || 0), productIds: salesResult.productIds } : {}),
       durationMinutes: Math.round((elapsedSecs / 60) * 10) / 10,
@@ -203,6 +209,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
         />
 
         <AttendanceSalesInput value={salesResult} onChange={setSalesResult} />
+        <VisitOutcomeInput value={visitOutcome} onChange={setVisitOutcome}/>
         {/* 2. Keterangan Hasil Kunjungan */}
         <AbsenNotesInput
           notes={notes}

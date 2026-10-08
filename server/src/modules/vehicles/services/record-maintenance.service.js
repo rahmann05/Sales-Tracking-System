@@ -11,7 +11,7 @@ export const recordMaintenance = async (id, data) => {
   
   // Determine which field to update based on serviceType
   if(!Number.isFinite(odometerAtService)||odometerAtService<0)throw new AppError('Odometer tidak valid',400);
-  if(!['GANTI_OLI','GANTI_FILTER_OLI','GANTI_KANVAS_REM'].includes(serviceType))throw new AppError('Jenis servis tidak valid',400);
+  if(!['GANTI_OLI','GANTI_FILTER_OLI','GANTI_KANVAS_REM','LAINNYA'].includes(serviceType))throw new AppError('Jenis servis tidak valid',400);
   const updateField={totalKm:Math.max(vehicle.totalKm,odometerAtService)};
   if (serviceType === 'GANTI_OLI') updateField.lastOilChangeKm = Math.max(vehicle.lastOilChangeKm,odometerAtService);
   if (serviceType === 'GANTI_FILTER_OLI') updateField.lastOilFilterChangeKm = Math.max(vehicle.lastOilFilterChangeKm,odometerAtService);
@@ -26,6 +26,7 @@ export const recordMaintenance = async (id, data) => {
         cost: cost || 0,
         serviceDate: serviceDate ? new Date(serviceDate) : new Date(),
         workshopName: data.workshopName?.trim() || 'Internal',
+        notes: data.notes?.trim() || null,
       },
     }),
     prisma.vehicle.update({

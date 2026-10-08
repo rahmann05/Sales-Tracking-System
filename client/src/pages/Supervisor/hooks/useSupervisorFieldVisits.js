@@ -33,6 +33,7 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
     const [selectedStop, setSelectedStop] = useState(null);
     const [inputNotes, setInputNotes] = useState('');
     const [checklist, setChecklist] = useState(DEFAULT_SPV_CHECKLIST);
+    const [followUp, setFollowUp] = useState({ enabled:false, ownerId:'', dueDate:'', note:'' });
     const [offPjpForm, setOffPjpForm] = useState({ outletName: '', address: '', owner: '', reason: '' });
 
     const [spvVisitRecords, setSpvVisitRecords] = useState({});
@@ -73,10 +74,18 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
         setInputNotes(existing?.notes || '');
 
         setChecklist(existing?.checklist || DEFAULT_SPV_CHECKLIST);
+        setFollowUp({enabled:existing?.followUp?.status==='OPEN',ownerId:existing?.followUp?.ownerId||stop.salesId||'',dueDate:existing?.followUp?.dueDate||'',note:existing?.followUp?.note||'',completed:existing?.followUp?.status==='DONE'});
         setActiveModal('AUDIT');
     };
 
-    const saveAudit = () => selectedStop && submit({ action: 'AUDIT', stopId: selectedStop.id, notes: inputNotes, checklist });
+    const saveAudit = () => {
+        if (!selectedStop) return;
+        if (followUp.enabled && (!followUp.ownerId || !followUp.dueDate || !followUp.note.trim())) {
+            setError('Sales penanggung jawab, tenggat dan instruksi tindak lanjut wajib diisi.'); return;
+        }
+        return submit({ action:'AUDIT', stopId:selectedStop.id, notes:inputNotes, checklist,
+            ...(followUp.enabled?{followUp:{ownerId:followUp.ownerId,dueDate:followUp.dueDate,note:followUp.note.trim()}}:{}) });
+    };
 
     const openAbsenOut = (stop) => {
         setSelectedStop(stop);
@@ -109,7 +118,6 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
         longitude: data.longitude,
         photoUrl: data.photoUrl,
         visitMode: data.visitMode || spvMode,
-        accompaniedSalesId: (data.visitMode || spvMode) === 'JOINT_VISIT' ? selectedSales : undefined
       });
     };
 
@@ -127,6 +135,7 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
         activeModal, selectedStop, closeModal,
         inputNotes, setInputNotes,
         checklist, setChecklist,
+        followUp, setFollowUp,
         offPjpForm, setOffPjpForm,
         completedCount, inVisitCount,
         openAbsenIn, confirmAbsenIn,

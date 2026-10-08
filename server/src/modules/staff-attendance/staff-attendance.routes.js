@@ -1,4 +1,4 @@
-import {listFollowUps,completeFollowUp} from './follow-up.service.js';
+import {listFollowUps,completeFollowUp,reviewFollowUp} from './follow-up.service.js';
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { prisma } from '../../config/prisma.js';
@@ -8,8 +8,9 @@ import { recordShift } from './shift.service.js';
 import { recordSupervisorVisit } from './supervisor-visit.service.js';
 const router = Router();
 router.use(authenticate);
-router.get('/follow-ups',async(req,res,next)=>{try{res.json({data:await listFollowUps(req.user)});}catch(e){next(e);}});
-router.patch('/follow-ups/:id',async(req,res,next)=>{try{res.json({data:await completeFollowUp(req.params.id,req.user,req.body.note)});}catch(e){next(e);}});
+router.get('/follow-ups',async(req,res,next)=>{try{res.json({data:await listFollowUps(req.user,req.query)});}catch(e){next(e);}});
+router.patch('/follow-ups/:id',async(req,res,next)=>{try{res.json({data:await completeFollowUp(req.params.id,req.user,req.body.note,req.body.evidence)});}catch(e){next(e);}});
+router.post('/follow-ups/:id/review',authorize('ADMIN','SUPERVISOR'),async(req,res,next)=>{try{res.json({data:await reviewFollowUp(req.params.id,req.user,req.body)});}catch(e){next(e);}});
 router.get('/', async (req, res, next) => {
   try { res.json({ data: await prisma.staffActivity.findMany({ where: { userId:req.user.id, OR:[{dateKey:wibDateKey()},{kind:'SHIFT',checkOutAt:null}] }, orderBy: { checkInAt: 'asc' } }) }); }
   catch (error) { next(error); }

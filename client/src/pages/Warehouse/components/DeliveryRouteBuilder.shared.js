@@ -4,14 +4,14 @@ export const STATUS_CONFIG = {
     label: 'Draft',
     color: '#6b7280',
     bg: '#f3f4f6',
-    action: 'Siap Kirim',
+    action: null,
     nextStatus: 'READY'
   },
   READY: {
     label: 'Siap Kirim',
     color: '#2563eb',
     bg: '#dbeafe',
-    action: 'Mulai Kirim',
+    action: null,
     nextStatus: 'IN_TRANSIT'
   },
   IN_TRANSIT: {

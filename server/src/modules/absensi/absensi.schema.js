@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {visitOutcomeSchema} from './visit-outcome.schema.js';
 
 export const checkInSchema = z.object({
   params: z.object({
@@ -22,6 +23,7 @@ export const checkOutSchema = z.object({
     photoUrl: z.string().url('Format URL foto tidak valid').nullable().optional(),
     notes: z.string().max(4000).optional(),
     earlyReason: z.string().max(1000).nullable().optional(),
+    visitOutcome:visitOutcomeSchema.optional(),
     reason: z.string().max(1000).nullable().optional(),
     orderAmount: z.number().finite().min(0).max(1e12).optional(),
     skuSold: z.number().int().min(0).max(100000).optional(),

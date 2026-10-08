@@ -5,6 +5,8 @@ import { CONFIG_PARAMS } from '../../../../shared/config.mjs';
 import { getDynamicConfig } from './config.service.js';
 import * as configController from './config.controller.js';
 import * as configSchema from './config.schema.js';
+import {prisma} from '../../config/prisma.js';
+import {parsePagination,buildPaginatedResponse} from '../../utils/pagination.js';
 
 const router = express.Router();
 
@@ -12,6 +14,9 @@ router.use(authenticate);
 
 // Get ALL configs (Admin only)
 router.get('/', authorize('ADMIN'), configController.getAllConfigs);
+router.get('/history',authorize('ADMIN'),async(req,res,next)=>{
+  try{const {page,limit,skip,take}=parsePagination(req.query);const where={entityType:'SYSTEM_CONFIG',...(req.query.key?{entityId:String(req.query.key)}:{})};const [data,total]=await Promise.all([prisma.auditEvent.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],skip,take}),prisma.auditEvent.count({where})]);res.json({data:buildPaginatedResponse(data,total,page,limit)});}catch(e){next(e);}
+});
 
 // Get config by key
 router.get('/runtime', async (req, res, next) => {
@@ -24,8 +29,6 @@ router.get('/runtime', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 router.get('/:key', (req, res, next) => {
-  if (req.params.key.startsWith('_')) return res.status(403).json({message:'Parameter internal sistem'});
-  if (req.params.key.startsWith('_')) return res.status(403).json({message:'Parameter internal sistem'});
   if (req.params.key.startsWith('_')) return res.status(403).json({message:'Parameter internal sistem'});
   if (['MAPS_API_KEY', 'BYPASS_GEOFENCE_EMAILS', 'JWT_EXPIRES_IN', 'JWT_REFRESH_EXPIRES_IN'].includes(req.params.key) && req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Khusus admin' });
   next();

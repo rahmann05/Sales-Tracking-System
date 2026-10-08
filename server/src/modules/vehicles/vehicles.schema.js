@@ -30,6 +30,8 @@ export const updateVehicleSchema = z.object({
 
 export const recordMaintenanceSchema = z.object({
   body: z.object({
+    workshopName:z.string().trim().max(200).optional(),
+    notes:z.string().trim().max(2000).optional(),
     serviceType: z.enum(['GANTI_OLI', 'GANTI_FILTER_OLI', 'GANTI_KANVAS_REM', 'LAINNYA']),
     odometerAtService: z.number().min(0),
     cost: z.number().min(0).optional(),

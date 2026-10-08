@@ -11,7 +11,8 @@ export const RecordMaintenanceModal = ({
   const [formData, setFormData] = useState({
     serviceType: 'GANTI_OLI',
     cost: 0,
-    serviceDate: new Date().toISOString().slice(0, 16)
+    serviceDate: new Date(Date.now()+7*3600000).toISOString().slice(0,16),
+    odometerAtService:vehicle.totalKm,workshopName:'',notes:''
   });
   const [loading, setLoading] = useState(false);
   const handleSubmit = async e => {
@@ -20,13 +21,14 @@ export const RecordMaintenanceModal = ({
     try {
       const payload = {
         serviceType: formData.serviceType,
-        odometerAtService: vehicle.totalKm,
+        odometerAtService: Number(formData.odometerAtService),
+        workshopName:formData.workshopName,notes:formData.notes,
         // Record at current total km
         cost: Number(formData.cost),
-        serviceDate: new Date(formData.serviceDate).toISOString()
+        serviceDate: new Date(`${formData.serviceDate}:00+07:00`).toISOString()
       };
       const res = await vehiclesApi.recordMaintenance(vehicle.id, payload);
-      if (res.success) onSuccess();
+      if (res.status==='success' || res.success) onSuccess();
     } catch  {
       alert('Gagal mencatat servis');
     } finally {
@@ -41,6 +43,9 @@ export const RecordMaintenanceModal = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <label className="block">Odometer aktual saat servis (km)<input required type="number" min="0" step="0.1" className="form-input block w-full" value={formData.odometerAtService} onChange={e=>setFormData({...formData,odometerAtService:e.target.value})}/></label>
+          <label className="block">Bengkel<input maxLength={200} className="form-input block w-full" value={formData.workshopName} onChange={e=>setFormData({...formData,workshopName:e.target.value})}/></label>
+          <label className="block">Catatan servis<textarea maxLength={2000} className="form-input block w-full" value={formData.notes} onChange={e=>setFormData({...formData,notes:e.target.value})}/></label>
           <div>
             <label className="block text-xs font-semibold text-on-surface-variant mb-1">Jenis Servis</label>
             <select value={formData.serviceType} onChange={e => setFormData({

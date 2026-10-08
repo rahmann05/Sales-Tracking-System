@@ -1,4 +1,5 @@
 import {FollowUpPanel} from '../../shared/components/common/FollowUpPanel';
+import {OrderFulfillmentPanel} from '../Warehouse/components/OrderFulfillmentPanel';
 import React, { useState, useMemo, useEffect } from 'react';
 import { getTodayNameId } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
@@ -118,9 +119,10 @@ export const SalesFieldView = () => {
       notifySuccess(`Permintaan Unlock untuk ${payload.outletName} telah dikirimkan ke Admin & Supervisor!`);
     },
     handleSalesAbsenOffPJP: async (payload) => {
-      await handleSalesAbsenOffPJP(payload);
+      const attendance = await handleSalesAbsenOffPJP(payload);
       closeModal();
-      notifySuccess('Absen Toko Luar RJP berhasil dicatat!\n\nStatus: MENUNGGU VALIDASI\n(Data telah tersimpan di sistem dan menunggu validasi Supervisor)');
+      const status = { PENDING: 'MENUNGGU VALIDASI', APPROVED: 'TERVALIDASI', REJECTED: 'DITOLAK' }[attendance.status] || attendance.status;
+      notifySuccess(`Pengajuan kunjungan tersimpan. Status terbaru: ${status}.`);
     },
   };
 
@@ -188,6 +190,7 @@ export const SalesFieldView = () => {
 
       {/* Dynamic Off-PJP Attendance Result Cards (Returns null if empty) */}
       <SalesOffPjpSection offPjpAttendances={offPjpAttendances} />
+      <details className="border rounded-2xl bg-surface p-4"><summary className="cursor-pointer min-h-11 font-bold">Pantau order dan janji pengiriman saya</summary><OrderFulfillmentPanel/></details>
 
       <SalesModals
         modalType={modalType}

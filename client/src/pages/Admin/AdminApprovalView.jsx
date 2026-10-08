@@ -36,7 +36,7 @@ export function AdminApprovalView({
       {/* ── Standard PageHeader (Unified with Design System) ── */}
       {!embedded && <PageHeader badge={<span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
             <LuFileCheck className="text-sm" /> MODUL PERSETUJUAN & VALIDASI ORDER
-          </span>} title="Persetujuan Order Penjualan & Buka Kunci Presensi" subtitle="Verifikasi PO penjualan sales, periksa kredit limit & stok toko, serta persetujuan pembukaan kunci (unlock) presensi outlet." stats={[{
+          </span>} title="Persetujuan Order Penjualan & Buka Kunci Presensi" subtitle="Verifikasi rincian dan syarat order sales serta permintaan pengecualian presensi outlet." stats={[{
       label: 'Order Pending',
       value: `${pendingOrders.length} Order`,
       color: pendingOrders.length > 0 ? 'rose' : 'emerald'
@@ -107,7 +107,7 @@ export function AdminApprovalView({
                 Daftar Order Penjualan Sales
               </h3>
               <p className="text-[11px] text-on-surface-variant m-0">
-                Konfirmasi stok penjualan, cek plafon kredit, dan proses pesanan ke pengiriman
+                Verifikasi pelanggan, barang, harga dan syarat pembayaran sebelum pesanan diproses ke pengiriman
               </p>
             </div>
           </div>

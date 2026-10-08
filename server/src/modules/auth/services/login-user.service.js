@@ -28,6 +28,7 @@ export const loginUser = async (rawEmail, password) => {
   const identity = await resolveIdentity(user);
   const payload = {
     id: user.id,
+    tokenVersion:user.tokenVersion||0,
     name: user.name,
     email: user.email,
     role: identity.role,
@@ -44,7 +45,7 @@ export const loginUser = async (rawEmail, password) => {
     expiresIn: jwtExpiresIn,
   });
 
-  const refreshToken = jwt.sign({ id: user.id }, config.jwtRefreshSecret, {
+  const refreshToken = jwt.sign({ id: user.id,tokenVersion:user.tokenVersion||0 }, config.jwtRefreshSecret, {
     expiresIn: jwtRefreshExpiresIn,
   });
 

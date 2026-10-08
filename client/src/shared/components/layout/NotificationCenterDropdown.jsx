@@ -23,7 +23,7 @@ export const NotificationCenterDropdown = () => {
     user, 
     notifications = [], 
     markNotificationAsRead, 
-    clearNotifications 
+    clearNotifications, markAllNotificationsAsRead, notificationStatus, notificationUnreadCount, refreshNotifications, notificationHasMore, loadMoreNotifications
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -34,7 +34,7 @@ export const NotificationCenterDropdown = () => {
     (n) => !n.roleTarget || n.roleTarget.includes(user?.role)
   );
 
-  const unreadCount = userNotifications.filter((n) => !n.read).length;
+  const unreadCount = notificationUnreadCount ?? userNotifications.filter((n) => !n.read).length;
 
   const filteredList = userNotifications.filter((n) => {
     if (activeFilter === 'UNREAD') return !n.read;
@@ -53,11 +53,7 @@ export const NotificationCenterDropdown = () => {
   };
 
   const handleMarkAllRead = () => {
-    userNotifications.forEach((n) => {
-      if (!n.read && markNotificationAsRead) {
-        markNotificationAsRead(n.id);
-      }
-    });
+    markAllNotificationsAsRead?.();
   };
 
   return (
@@ -175,12 +171,16 @@ export const NotificationCenterDropdown = () => {
                   onClick={() => clearNotifications && clearNotifications()}
                   className="hover:text-rose-600 transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  <LuTrash2 className="text-sm" /> Bersihkan
+                  <LuTrash2 className="text-sm" /> Hapus pesan lokal
                 </button>
               )}
             </div>
 
             {/* List Feed (Scrollable) */}
+            <p className="text-xs">Notifikasi server terbaru. Jumlah belum dibaca mencakup seluruh riwayat. Membaca pesan tidak menyelesaikan tugas.</p>
+            {notificationStatus?.error && <p role="alert" className="text-xs text-red-600">{notificationStatus.error} Pesan yang tampil mungkin sudah lama.</p>}
+            <button type="button" className="text-xs underline min-h-11" onClick={refreshNotifications}>Perbarui notifikasi</button>
+            {notificationHasMore && <button type="button" className="text-xs underline min-h-11" onClick={loadMoreNotifications}>Muat notifikasi lebih lama</button>}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0 max-h-72">
               {filteredList.length === 0 ? (
                 <div className="text-center py-8 space-y-1">
@@ -191,6 +191,8 @@ export const NotificationCenterDropdown = () => {
                 filteredList.map((notif) => (
                   <div
                     key={notif.id}
+                    role="button" tabIndex={0}
+                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); markNotificationAsRead?.(notif.id); } }}
                     onClick={() => markNotificationAsRead && markNotificationAsRead(notif.id)}
                     className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1 text-xs ${
                       notif.read

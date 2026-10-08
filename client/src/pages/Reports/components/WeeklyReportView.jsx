@@ -1,4 +1,8 @@
+import {weeklyCsv,reportSalesOptions} from '../../../../../shared/report-semantics.mjs';
 import { WeeklyMetrics } from './WeeklyMetrics';
+import { ReportBasisNote } from './ReportBasisNote';
+import { ReportCalendarEditor } from './ReportCalendarEditor';
+import { ReportArchivePanel } from './ReportArchivePanel';
 import { WeeklySalesTable } from './WeeklySalesTable';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -86,7 +90,8 @@ export const WeeklyReportView = () => {
       loadRevision.current++;
     };
   }, [loadData]);
-  const selectedSalesman = salesTeam.find(s => s.id === salesmanId);
+  const salesOptions = reportSalesOptions(salesTeam,reportData.salesmen,salesmanId);
+  const selectedSalesman = salesOptions.find(s => s.id === salesmanId);
   const salesmanName = selectedSalesman?.name || '';
 
   // Export to CSV/Excel
@@ -95,25 +100,7 @@ export const WeeklyReportView = () => {
       alert('Tidak ada data mingguan untuk diekspor.');
       return;
     }
-    const headers = ['Salesman', 'Klaster', 'Senin Plan', 'Senin Act', 'Senin EC', 'Senin Omzet', 'Selasa Plan', 'Selasa Act', 'Selasa EC', 'Selasa Omzet', 'Rabu Plan', 'Rabu Act', 'Rabu EC', 'Rabu Omzet', 'Kamis Plan', 'Kamis Act', 'Kamis EC', 'Kamis Omzet', 'Jumat Plan', 'Jumat Act', 'Jumat EC', 'Jumat Omzet', 'Sabtu Plan', 'Sabtu Act', 'Sabtu EC', 'Sabtu Omzet', 'Total Plan', 'Total Actual', 'Call Compliance Rate', 'Total EC', 'EC Rate', 'Total Omzet (Rp)', 'Target Mingguan', 'Target Achievement'];
-    const csvRows = [headers.join(',')];
-    reportData.salesmen.forEach(s => {
-      const getD = k => s.days?.[k] || {
-        plan: 0,
-        actual: 0,
-        ec: 0,
-        omzet: 0
-      };
-      const sen = getD('senin');
-      const sel = getD('selasa');
-      const rab = getD('rabu');
-      const kam = getD('kamis');
-      const jum = getD('jumat');
-      const sab = getD('sabtu');
-      const row = [`"${(s.salesmanName || '').replace(/"/g, '""')}"`, `"${(s.clusterName || '').replace(/"/g, '""')}"`, sen.plan, sen.actual, sen.ec, sen.omzet, sel.plan, sel.actual, sel.ec, sel.omzet, rab.plan, rab.actual, rab.ec, rab.omzet, kam.plan, kam.actual, kam.ec, kam.omzet, jum.plan, jum.actual, jum.ec, jum.omzet, sab.plan, sab.actual, sab.ec, sab.omzet, s.weeklyTotal?.plan, s.weeklyTotal?.actual, `"${s.weeklyTotal?.callRate}"`, s.weeklyTotal?.ec, `"${s.weeklyTotal?.ecRate}"`, s.weeklyTotal?.omzet, s.weeklyTotal?.target, `"${s.weeklyTotal?.targetAchievement}"`];
-      csvRows.push(row.join(','));
-    });
-    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], {
+    const blob = new Blob(['\uFEFF' + weeklyCsv(reportData)], {
       type: 'text/csv;charset=utf-8;'
     });
     const url = URL.createObjectURL(blob);
@@ -134,9 +121,12 @@ export const WeeklyReportView = () => {
       {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
       <WeeklyMetrics summary={summary} />
+      <ReportBasisNote basis={reportData.basis} />
+      <ReportArchivePanel kind="WEEK" period={startDate}/>
+      <div className="flex flex-wrap gap-2">{reportData.basis?.calendarMonths?.map(row=><ReportCalendarEditor key={row.month} month={row.month} onSaved={loadData}/>)}</div>
 
       {/* 2. Unified Workspace Card: Header + Filters + Matrix Table */}
-      <WeeklySalesTable daysSummary={daysSummary} exportToCsv={exportToCsv} filteredSalesmen={filteredSalesmen} isLoading={isLoading} loadData={loadData} salesTeam={salesTeam} salesmanId={salesmanId} search={search} setIsPdfModalOpen={setIsPdfModalOpen} setSalesmanId={setSalesmanId} setSearch={setSearch} setStartDate={setStartDate} startDate={startDate} summary={summary} />
+      <WeeklySalesTable daysSummary={daysSummary} exportToCsv={exportToCsv} filteredSalesmen={filteredSalesmen} isLoading={isLoading} loadData={loadData} salesTeam={salesOptions} salesmanId={salesmanId} search={search} setIsPdfModalOpen={setIsPdfModalOpen} setSalesmanId={setSalesmanId} setSearch={setSearch} setStartDate={setStartDate} startDate={startDate} targetPeriod={reportData.period?.targetPeriod} summary={summary} />
 
       {/* PDF Modal */}
       {isPdfModalOpen && <WeeklyReportPdfView reportData={reportData} salesmanName={salesmanName} onClose={() => setIsPdfModalOpen(false)} />}

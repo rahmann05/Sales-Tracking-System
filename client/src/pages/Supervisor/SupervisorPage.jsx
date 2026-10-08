@@ -1,7 +1,7 @@
 import { AdminApprovalPage } from '../Admin/AdminApprovalPage';
 import { ManualSalesReview } from '../../shared/components/common/ManualSalesReview';
 import { SupervisorFieldView } from './components/SupervisorFieldView';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useModal } from '../../shared/hooks/useModal';
 import { notifySuccess } from '../../services/notificationService';
@@ -13,6 +13,7 @@ import { IncidentHandleModal } from './components/IncidentHandleModal';
 import { LuShieldCheck, LuCalendar, LuRefreshCw } from "react-icons/lu";
 import { dailyCallsApi, absensiApi } from '../../services/api';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
+import {AttentionPanel} from '../../shared/components/common/AttentionPanel';
 
 /**
  * SupervisorPage Component (Orchestrator)
@@ -44,6 +45,8 @@ export const SupervisorPage = () => {
   const [selectedDate, setSelectedDate] = useState(() => wibDateKey());
   const [dailyReport, setDailyReport] = useState(null);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [reportError,setReportError]=useState('');
+  const reportRequest=useRef(0);
   const [manualPendingCount, setManualPendingCount] = useState(0);
 
   // 1. Fetch real pending manual sales queue (PJP + OFF_PJP)
@@ -62,16 +65,18 @@ export const SupervisorPage = () => {
 
   // 2. Fetch real Daily Call Report for selectedDate
   const loadDailyReport = useCallback(async (date) => {
+    const request=++reportRequest.current;
     setLoadingReport(true);
+    setDailyReport(null);setReportError('');
     try {
       const res = await dailyCallsApi.getReport({ date });
-      if (res?.data) {
+      if (request===reportRequest.current&&res?.data) {
         setDailyReport(res.data);
       }
     } catch (err) {
-      console.warn('[SupervisorPage] Error loading daily calls report:', err);
+      if(request===reportRequest.current)setReportError(err.message);
     } finally {
-      setLoadingReport(false);
+      if(request===reportRequest.current)setLoadingReport(false);
     }
   }, []);
 
@@ -110,9 +115,7 @@ export const SupervisorPage = () => {
     offPjpRequests.filter((r) => ['PENDING', 'PENDING_SPV'].includes(r.status)).length;
 
   // Real visits count from database report for selectedDate
-  const completedStopsCount = dailyReport?.summary?.totalActualCalls ?? salesStops.filter(
-    (s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime
-  ).length;
+  const completedStopsCount = dailyReport?.summary?.totalActualCalls ?? '—';
   const totalPlanCalls = dailyReport?.summary?.totalPlanCalls ?? 0;
 
   const handleSkipConfirm = async (incidentId) => {
@@ -151,13 +154,15 @@ export const SupervisorPage = () => {
         subtitle="Siapkan tim dan PJP, tangani permintaan, dampingi kunjungan, lalu evaluasi hasil harian."
         stats={[
           { label: 'Salesman', value: `${salesList.length} Personel`, color: 'neutral' },
+          { label:'Kunjungan penagihan',value:dailyReport?.summary?.totalCollectionCalls??'—',color:'neutral' },
+          { label:'Janji pembayaran (laporan sales)',value:dailyReport?.summary?.totalPaymentPromises??'—',color:'neutral' },
           {
             label: 'Kendala Butuh Aksi',
             value: `${totalPendingActions} Antrean`,
             color: totalPendingActions > 0 ? 'rose' : 'emerald',
           },
           {
-            label: 'Kunjungan Selesai',
+            label: 'Kunjungan Aktual (IN/OUT)',
             value: totalPlanCalls > 0 ? `${completedStopsCount} / ${totalPlanCalls} Toko` : `${completedStopsCount} Toko`,
             color: completedStopsCount > 0 ? 'emerald' : 'neutral',
           },
@@ -207,6 +212,7 @@ export const SupervisorPage = () => {
         onSelectTab={setActiveTab}
         pendingActions={totalPendingActions}
       />
+      {reportError&&<p role="alert" className="text-red-600">Laporan tanggal {selectedDate} gagal dimuat: {reportError}</p>}
 
       {/* 3. Tab Contents */}
       {activeTab === 'field' && <SupervisorFieldView selectedDate={selectedDate} />}
@@ -215,6 +221,7 @@ export const SupervisorPage = () => {
         <>
           <AdminApprovalPage embedded />
           <ManualSalesReview />
+          <AttentionPanel/>
           <SupervisorActionCenterTab
             closedShopIncidents={closedShopIncidents}
             unlockRequests={unlockRequests}
@@ -230,7 +237,7 @@ export const SupervisorPage = () => {
 
       {activeTab === 'daily_recap' && (
         <SupervisorDailyRecapTab
-          salesStops={dailyReport?.rows?.length ? dailyReport.rows : salesStops}
+          salesStops={dailyReport?.rows || []}
           salesList={salesList}
           incidents={incidents}
           offPjpAttendances={offPjpAttendances}

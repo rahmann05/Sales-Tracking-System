@@ -1,4 +1,6 @@
 import React from 'react';
+import { formatTarget } from '../../../../../shared/sales-targets.mjs';
+import { ReportBasisNote } from './ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
 /**
@@ -47,10 +49,10 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
               CV. SINAR ANUGRAH
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
-              FMCG DISTRIBUTOR • CABANG PADALARANG
+              FMCG DISTRIBUTOR
             </p>
             <p className="text-[9px] text-gray-500 m-0 mt-0.5">
-              Distribution Management System • ReportId: 6230122-MTD
+              Distribution Management System
             </p>
           </div>
 
@@ -59,14 +61,15 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
               MONTH-TO-DATE (MTD) REPORT
             </h2>
             <p className="text-[10px] font-semibold text-gray-700 m-0 mt-0.5">
-              Pencapaian Target & Analisis Pertumbuhan LMA
+              Pencapaian Target Periode & Rasio terhadap Bulan Lalu
             </p>
             <p className="text-[9px] font-mono text-gray-500 m-0">
-              Bulan: {period.monthName} {period.year} (Hari Kerja: {period.workingDaysElapsed}/{period.totalWorkingDays} - {period.workingDaysRate})
+              Bulan: {period.monthName} {period.year} (Kalender: {period.calendarKnown?`${period.workingDaysElapsed}/${period.totalWorkingDays} hari kerja - ${period.workingDaysRate}`:'belum ditetapkan'})
             </p>
           </div>
         </div>
 
+        <ReportBasisNote basis={reportData.basis} />
         {/* Summary KPI Box */}
         <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
           <div>
@@ -76,7 +79,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
           <div>
             <span className="text-gray-500 font-semibold block">Realisasi vs Target MTD:</span>
             <strong className="text-gray-900 text-[11px]">
-              Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')} / Rp {(summary.monthlyTargetAmount || 0).toLocaleString('id-ID')}
+              Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')} / {formatTarget(summary.monthlyTargetAmount)}
             </strong>
             <span className="text-blue-700 font-bold block">Pencapaian: {summary.overallAchievementRate}</span>
           </div>
@@ -107,7 +110,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
                 <div key={c.channelKey} className="border border-gray-200 p-1.5 rounded-xs bg-white">
                   <div className="font-bold text-gray-800">{c.channelName}</div>
                   <div className="flex items-center justify-between text-gray-600 mt-0.5 font-mono">
-                    <span>Omzet: Rp {(c.mtdOmzet || 0).toLocaleString('id-ID')}</span>
+                    <span>Nilai order disetujui: Rp {(c.mtdOmzet || 0).toLocaleString('id-ID')}</span>
                     <strong className="text-purple-700">{c.contributionRate}</strong>
                   </div>
                 </div>
@@ -153,7 +156,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
                     {s.clusterName}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-right font-mono whitespace-nowrap">
-                    Rp {(s.monthlyTarget || 0).toLocaleString('id-ID')}
+                    {formatTarget(s.monthlyTarget,s.target?.status)}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
                     Rp {(s.mtdActualAmount || 0).toLocaleString('id-ID')}
@@ -188,7 +191,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
                   TOTAL TIM DISTRIBUSI
                 </td>
                 <td className="p-1.5 border-r border-black text-right font-mono whitespace-nowrap">
-                  Rp {(summary.monthlyTargetAmount || 0).toLocaleString('id-ID')}
+                  {formatTarget(summary.monthlyTargetAmount)}
                 </td>
                 <td className="p-1.5 border-r border-black text-right font-mono whitespace-nowrap">
                   Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')}

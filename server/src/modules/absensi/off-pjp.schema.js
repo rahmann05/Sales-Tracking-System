@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import {visitOutcomeSchema} from './visit-outcome.schema.js';
 
 export const createOffPjpAttendanceSchema = z.object({
   body: z.object({
+    requestId: z.string().uuid().optional(),
+    visitOutcome:visitOutcomeSchema.optional(),
     orderAmount: z.number().finite().min(0).max(1e12).optional(),
     productIds: z.array(z.string().uuid()).max(500).optional(),
     skuSold: z.number().int().min(0).max(100000).optional(),

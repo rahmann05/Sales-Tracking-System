@@ -13,9 +13,11 @@ export const handleUnlockRequest = async (requestId,handlerId,approved) => {
   if (handler.id === request.requestedBy) throw new AppError('Tidak boleh menyetujui pengajuan sendiri',403);
   const minutes = await getDynamicConfig('UNLOCK_VALIDITY_MINUTES',120);
   const expiresAt = approved ? new Date(Date.now()+minutes*60000) : null;
-  const changed = await prisma.outletUnlockRequest.updateMany({where:{id:requestId,status:'PENDING_APPROVAL'},data:{status:approved?'APPROVED':'REJECTED',handledBy:handlerId,handledAt:new Date(),expiresAt}});
+  return prisma.$transaction(async tx => {
+  const changed = await tx.outletUnlockRequest.updateMany({where:{id:requestId,status:'PENDING_APPROVAL'},data:{status:approved?'APPROVED':'REJECTED',handledBy:handlerId,handledAt:new Date(),expiresAt}});
   if (!changed.count) throw new AppError('Pengajuan sudah diproses',409);
   const message = approved ? `Pengecualian untuk ${request.outlet.name} disetujui selama ${minutes} menit, khusus akun Anda.` : `Pengajuan pengecualian untuk ${request.outlet.name} ditolak.`;
-  await createNotification(request.requestedBy,approved?'UNLOCK_APPROVED':'UNLOCK_REJECTED','Keputusan pengecualian absensi',message,{outletId:request.outletId,expiresAt});
+  await createNotification(request.requestedBy,approved?'UNLOCK_APPROVED':'UNLOCK_REJECTED','Keputusan pengecualian absensi',message,{outletId:request.outletId,expiresAt,salesId:request.requestedBy},tx);
   return {message,approved,expiresAt};
+  });
 };

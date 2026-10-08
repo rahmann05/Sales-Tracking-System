@@ -1,3 +1,4 @@
+import {unitDescription} from '../../../../../shared/product-units.mjs';
 import React from 'react';
 import { LuMapPin, LuPackage, LuFileText, LuCamera, LuCircleCheck, LuCircleX, LuClock, LuNavigation } from 'react-icons/lu';
 import { FiAlertTriangle } from 'react-icons/fi';
@@ -13,13 +14,13 @@ const STATUS_MAP = {
  * DriverStopCard — Card for each delivery stop in the driver's route.
  * Similar to SalesStopCard but for delivery context.
  */
-export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDelivered, onMarkRejected }) => {
+export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDelivered, onMarkRejected, disabled=false }) => {
   const statusCfg = STATUS_MAP[stop.status] || STATUS_MAP.PENDING;
   const StatusIcon = statusCfg.Icon;
   const isCompleted = stop.status !== 'PENDING';
   const hasArrived = !!stop.arrivedAt;
 
-  const invoices = stop.packingList?.invoices || [];
+  const invoices = (stop.packingList?.invoices || []).filter(i=>!(stop.allocatedInvoices||[]).length||stop.allocatedInvoices.some(a=>a.invoiceId===i.id));
   const outletName = stop.outlet?.name || 'Toko';
 
   return (
@@ -65,7 +66,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
           <span className="text-on-surface-variant">— {stop.allocatedCartons ?? stop.packingList?.totalCartons ?? 0} Karton</span>
         </div>
 
-        {(stop.allocatedItems || []).map(i => { const item = stop.packingList?.items?.find(p => p.lineId === i.lineId); return <p key={i.lineId} className="text-sm">{item?.name || i.lineId}: {i.quantity} {item?.unit || 'unit'}</p>; })}
+        {(stop.allocatedItems || []).map(i => { const item = stop.packingList?.items?.find(p => p.lineId === i.lineId); return <p key={i.lineId} className="text-sm">{item?.name || i.lineId}: {i.quantity} {unitDescription(item)}</p>; })}
         {/* Invoice List */}
         {invoices.length > 0 && (
           <div className="pl-4 space-y-1">
@@ -73,7 +74,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
               <div key={inv.id || idx} className="flex items-center gap-2 text-xs text-on-surface-variant">
                 <LuFileText className="shrink-0" />
                 <span className="font-semibold text-on-surface">{inv.invoiceNumber}</span>
-                <span>{inv.totalCartons} krt total faktur</span>
+                <span>{stop.allocatedInvoices?.find(i=>i.invoiceId===inv.id)?.cartons ?? inv.totalCartons} krt pada muatan ini</span>
                 {inv.isDelivered && <LuCircleCheck className="text-emerald-500 shrink-0" />}
               </div>
             ))}
@@ -108,6 +109,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
             /* Absen In button (min 48px) */
             <button
               onClick={onAbsenIn}
+              disabled={disabled}
               className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-primary text-on-primary text-sm font-black shadow-md hover:bg-primary/90 transition-all cursor-pointer"
             >
               <LuCamera className="text-base" /> Absen Sampai di Toko
@@ -117,12 +119,14 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 onClick={onMarkDelivered}
+                disabled={disabled}
                 className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-black shadow-md hover:bg-emerald-700 transition-all cursor-pointer"
               >
                 <LuCircleCheck className="text-base" /> Terkirim
               </button>
               <button
                 onClick={onMarkRejected}
+                disabled={disabled}
                 className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-600 text-white text-sm font-black shadow-md hover:bg-rose-700 transition-all cursor-pointer"
               >
                 <LuCircleX className="text-base" /> Ditolak

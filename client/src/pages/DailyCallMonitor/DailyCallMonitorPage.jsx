@@ -7,6 +7,7 @@ import { SuspiciousAttendanceTable } from './components/SuspiciousAttendanceTabl
 import { SalesmanDailyTimelineView } from './components/SalesmanDailyTimelineView';
 import { DailyCallDetailModal } from './components/DailyCallDetailModal';
 import { DailyCallPdfView } from './components/DailyCallPdfView';
+import { ReportBasisNote } from '../Reports/components/ReportBasisNote';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import { LuPhoneCall, LuCalendar, LuListOrdered, LuShieldAlert, LuUserCheck, LuRefreshCw, LuDownload, LuPrinter } from 'react-icons/lu';
 
@@ -82,6 +83,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
         summary={reportData?.summary}
         onSelectAnomalies={() => setActiveTableView('ANOMALIES_ONLY')}
       />
+      <ReportBasisNote basis={reportData?.basis} />
 
       {/* 3. Unified Data & Audit Workspace Card */}
       <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">

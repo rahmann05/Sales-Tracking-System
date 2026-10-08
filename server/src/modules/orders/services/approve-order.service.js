@@ -1,13 +1,13 @@
 import {assertSalesAccess} from '../../../utils/team-scope.js';
+import {assertOrderReviewDecision,orderReviewConflict} from './order-review-assignment.service.js';
 import { draftFromApprovedOrder } from '../../delivery/services/packing-workflow.service.js';
 /** approveOrder - single-responsibility service (extracted from orders.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { createNotification } from "../../notifications/notifications.service.js";
 import { ORDER_STATUS, NOTIFICATION_TYPES } from "../../../utils/constants.js";
 
 
-export const approveOrder = async (orderId, adminId) => {
+export const approveOrder = async (orderId, adminId, options={}) => {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { pjpStop: { include: { outlet: true } } },
@@ -22,9 +22,14 @@ export const approveOrder = async (orderId, adminId) => {
   if(!reviewer||!['ADMIN','SUPERVISOR'].includes(reviewer.role))throw new AppError('Tidak berwenang memproses order',403);
   await assertSalesAccess(reviewer,order.createdBy);
   const updatedOrder = await prisma.$transaction(async tx => {
-    const changed = await tx.order.updateMany({ where: { id: orderId, status: ORDER_STATUS.PENDING_APPROVAL }, data: { status: ORDER_STATUS.APPROVED, approvedBy: adminId, approvedAt: new Date() } });
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
+    const current=await tx.order.findUnique({where:{id:orderId}});
+    if(!current||current.deletedAt||current.status!==ORDER_STATUS.PENDING_APPROVAL)throw new AppError('Order sudah diproses atau tidak aktif',409);
+    const decision=await assertOrderReviewDecision(tx,current,await tx.user.findUnique({where:{id:adminId}}),options);
+    const changed = await tx.order.updateMany({ where: { id: orderId, status: ORDER_STATUS.PENDING_APPROVAL }, data: { status: ORDER_STATUS.APPROVED, approvedBy: adminId, approvedAt: new Date(),history:[...(current.history||[]),{action:'APPROVE',actorId:adminId,at:new Date().toISOString(),...decision}] } });
     if (!changed.count) throw new AppError('Order sudah diproses', 409);
     await draftFromApprovedOrder(tx, orderId, adminId);
+    await tx.notification.create({data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_APPROVED,title:'Order Disetujui',message:`Order Anda di outlet "${order.pjpStop.outlet.name}" telah disetujui`,payload:{orderId:order.id}}});
     return tx.order.findUnique({
     where: { id: orderId },
     include: { 
@@ -35,15 +40,7 @@ export const approveOrder = async (orderId, adminId) => {
     },
   });
 
-  }, { isolationLevel: 'Serializable' });
-
-  await createNotification(
-    order.createdBy,
-    NOTIFICATION_TYPES.ORDER_APPROVED,
-    'Order Disetujui',
-    `Order Anda di outlet "${order.pjpStop.outlet.name}" telah disetujui`,
-    { orderId: order.id }
-  );
+  }, { isolationLevel: 'Serializable' }).catch(orderReviewConflict);
 
   return updatedOrder;
 };

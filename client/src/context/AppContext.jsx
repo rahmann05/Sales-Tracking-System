@@ -8,6 +8,7 @@ import { useAdminActions } from '../pages/Admin/hooks/useAdminActions';
 import { useDomainState } from './hooks/useDomainState';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useLiveGeolocation } from './hooks/useLiveGeolocation';
+import { useDriverTracking } from './hooks/useDriverTracking';
 import { useMasterData } from './hooks/useMasterData';
 import { useShiftAttendance } from './hooks/useShiftAttendance';
 import { useNotifications } from './hooks/useNotifications';
@@ -32,6 +33,7 @@ export const AppProvider = ({ children }) => {
 
   // 3. Live GPS tracking while logged in
   const currentLocation = useLiveGeolocation(user);
+  const driverTracking = useDriverTracking(user);
 
   // 4. Global Tab Navigation State
   const [activeTab, setActiveTab] = useBrowserNavigation(user);
@@ -43,10 +45,11 @@ export const AppProvider = ({ children }) => {
   const { shiftAttendance, handleShiftClockIn, handleShiftClockOut, shiftBusy, shiftError } = useShiftAttendance(user);
 
   // 7. Notification center slice
-  const { notifications, addNotification, markNotificationAsRead, clearNotifications } = useNotifications();
+  const notificationState = useNotifications(user);
+  const { notifications, addNotification, markNotificationAsRead, clearNotifications } = notificationState;
 
   // 8. Backend hydration effect (runs once per user session)
-  useBackendSync({
+  const syncStatus = useBackendSync({
     user,
     fetchClusters,
     fetchDivisions,
@@ -91,6 +94,7 @@ export const AppProvider = ({ children }) => {
   });
 
   const value = useMemo(() => ({
+    driverTracking, syncStatus, ...notificationState,
     settings, refreshSettings, sessionLoading, sessionError,
     // Current User Session
     user,
@@ -149,7 +153,7 @@ export const AppProvider = ({ children }) => {
     ...supervisorActions,
     ...adminActions,
   }), [
-    settings, refreshSettings, sessionLoading, sessionError,
+    syncStatus, notificationState, settings, refreshSettings, sessionLoading, sessionError,
     user,
     setUser,
     setUserFromAuth,
@@ -190,7 +194,7 @@ export const AppProvider = ({ children }) => {
     salesActions,
     supervisorActions,
     adminActions,
-    sessionLoading, sessionError,
+    sessionLoading, sessionError, driverTracking,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

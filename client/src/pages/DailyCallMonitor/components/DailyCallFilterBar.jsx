@@ -74,7 +74,7 @@ export const DailyCallFilterBar = ({
               <option value="">Semua Salesman (Tim)</option>
               {salesTeam.map((sales) => (
                 <option key={sales.id} value={sales.id}>
-                  {sales.name} ({sales.cluster?.name || 'Klaster Terjadwal'})
+                  {sales.name} ({sales.cluster?.name || 'Belum ditugaskan'}){sales.historicalOnly ? ' · Riwayat periode' : ''}
                 </option>
               ))}
             </select>

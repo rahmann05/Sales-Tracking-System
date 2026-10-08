@@ -18,7 +18,7 @@ export const getDynamicConfig = async (key, defaultValue) => {
   if (Date.now()-lastFetch>CACHE_TTL) {
     const revision=generation;
     if(!pending) {
-      const flight=prisma.systemConfig.findMany().then(rows=>{
+      const flight=prisma.systemConfig.findMany({where:{key:{in:[...Object.keys(CONFIG_DEFAULTS),'LOGISTICS_METRICS']}}}).then(rows=>{
         if(revision===generation){cache=Object.fromEntries(rows.map(row=>[row.key,row.value]));lastFetch=Date.now();}
       });
       const holder={flight};pending=holder;

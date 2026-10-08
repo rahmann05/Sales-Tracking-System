@@ -3,8 +3,10 @@ import { AppError } from '../../../utils/errors.js';
 import { routeDistance, routeDistanceFields } from './route-distance.service.js';
 import { finalizeRoute } from './route-lifecycle.service.js';
 export const updateRouteStatus = async (id,status,totalDistanceKm) => {
+  if (['READY','IN_TRANSIT'].includes(status)) throw new AppError('Gunakan tahapan pemeriksaan/loading dan aksi berangkat di pusat kendali',409);
   const route=await prisma.deliveryRoute.findUnique({where:{id},include:{vehicle:true,stops:{include:{outlet:true},orderBy:{sequence:'asc'}}}});
   if(!route)throw new AppError('Rute tidak ditemukan',404);
+  if(route.cancelledAt||route.closedAt||route.onHold)throw new AppError('Trip tidak aktif',409);
   const transitions={DRAFT:['READY'],READY:['IN_TRANSIT'],IN_TRANSIT:['COMPLETED','PARTIAL']};
   if(status!==route.status && !transitions[route.status]?.includes(status))throw new AppError('Transisi status rute tidak diizinkan',409);
   if(totalDistanceKm!==undefined && (!Number.isFinite(totalDistanceKm)||totalDistanceKm<0))throw new AppError('Jarak tidak valid',400);

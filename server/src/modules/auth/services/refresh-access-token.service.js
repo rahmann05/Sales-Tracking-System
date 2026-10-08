@@ -17,7 +17,9 @@ export const refreshAccessToken = async (refreshToken) => {
       throw new AppError('User tidak ditemukan', 401);
     }
 
+    if((decoded.tokenVersion||0)!==(user.tokenVersion||0))throw new AppError('Sesi telah dicabut. Masuk kembali.',401);
     const payload = {
+      tokenVersion:user.tokenVersion||0,
       id: user.id,
       name: user.name,
       email: user.email,

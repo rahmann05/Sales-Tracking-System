@@ -1,5 +1,7 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
+import { SalesTargetEditor } from './SalesTargetEditor';
+import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { LuDownload, LuPrinter, LuRefreshCw, LuUser, LuSearch } from "react-icons/lu";
 export function MtdSalesTable({
   MONTH_OPTIONS,
@@ -85,7 +87,7 @@ export function MtdSalesTable({
                 <select value={salesmanId} onChange={e => setSalesmanId(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none">
                   <option value="">Semua Salesman (Tim)</option>
                   {salesTeam.map(sales => <option key={sales.id} value={sales.id}>
-                      {sales.name} ({sales.cluster?.name || 'Klaster Terjadwal'})
+                      {sales.name} ({sales.cluster?.name || 'Belum ditugaskan'}){sales.historicalOnly ? ' · Riwayat periode' : ''}
                     </option>)}
                 </select>
               </div>
@@ -130,7 +132,8 @@ export function MtdSalesTable({
                     {s.clusterName}
                   </td>
                   <td data-label="Target" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
-                    Rp {(s.monthlyTarget || 0).toLocaleString('id-ID')}
+                    <div>{formatTarget(s.monthlyTarget,s.target?.status)}</div>
+                    {s.target?.status!=='COMPARISON_ONLY'&&<SalesTargetEditor sales={s} kind="MONTH" period={`${reportData.period?.year}-${String(reportData.period?.month).padStart(2,'0')}`} onSaved={loadData}/>}
                   </td>
                   <td data-label="MTD Actual" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.mtdActualAmount || 0).toLocaleString('id-ID')}
@@ -173,10 +176,10 @@ export function MtdSalesTable({
             {filteredSalesmen.length > 0 && <tfoot>
                 <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
                   <td className="" colSpan="2">
-                    TOTAL TIM DISTRIBUSI ({filteredSalesmen.length} Sales)
+                    TOTAL HASIL LAPORAN (sebelum pencarian nama)
                   </td>
                   <td className="text-right font-mono whitespace-nowrap">
-                    Rp {(summary.monthlyTargetAmount || 0).toLocaleString('id-ID')}
+                    {formatTarget(summary.monthlyTargetAmount)}
                   </td>
                   <td className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')}

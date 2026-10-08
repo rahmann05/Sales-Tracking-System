@@ -13,7 +13,7 @@ export const useMasterData = () => {
   // Master Divisi Dinamis (Single Source of Truth dari Admin)
   const [divisions, setDivisions] = useState([]);
 
-  const fetchClusters = async () => {
+  const fetchClusters = async ({ strict = false } = {}) => {
     try {
       if (!getAuthToken()) return [];
       const res = await clustersApi.getAll();
@@ -21,12 +21,13 @@ export const useMasterData = () => {
       setClusters(list);
       return list;
     } catch (err) {
+      if (strict) throw err;
       console.warn('[useMasterData] Failed to fetch clusters:', err.message);
       return [];
     }
   };
 
-  const fetchDivisions = async () => {
+  const fetchDivisions = async ({ strict = false } = {}) => {
     try {
       if (!getAuthToken()) return [];
       const res = await divisionsApi.getAll();
@@ -34,6 +35,7 @@ export const useMasterData = () => {
       setDivisions(list);
       return list;
     } catch (err) {
+      if (strict) throw err;
       console.warn('[useMasterData] Failed to fetch divisions:', err.message);
       return [];
     }

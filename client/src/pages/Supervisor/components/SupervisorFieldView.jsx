@@ -129,6 +129,9 @@ export const SupervisorFieldView = ({ selectedDate }) => {
         onChangeNotes={field.setInputNotes}
         checklist={field.checklist}
         onChangeChecklist={field.setChecklist}
+        followUp={field.followUp}
+        onChangeFollowUp={field.setFollowUp}
+        salesOptions={salesOptions}
         offPjpForm={field.offPjpForm}
         onChangeOffPjpForm={field.setOffPjpForm}
         onClose={field.closeModal}

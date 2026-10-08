@@ -1,5 +1,6 @@
 import { request } from "../httpClient";
 export const configApi = {
+  getHistory: (page=1) => request(`/config/history?page=${page}&limit=20`),
   getRuntime: async () => request('/config/runtime'),
   getAll: async () => request('/config'),
   getByKey: async key => request(`/config/${key}`),

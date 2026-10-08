@@ -1,7 +1,9 @@
 import React from 'react';
+import {InvoiceReconciliationPanel} from './InvoiceReconciliationPanel';
 import { LuSend, LuRotateCcw, LuTrash2, LuPencil, LuPrinter, LuTriangleAlert, LuCircleCheck, LuStore, LuFileText, LuTruck, LuClock, LuChevronDown, LuChevronUp } from 'react-icons/lu';
 export function PackingListCard({
   admin,
+  onChanged,
   busyAction,
   handleDeleteDraft,
   handleTransitionAction,
@@ -92,6 +94,7 @@ export function PackingListCard({
 
                   {/* Expanded Accordion Content */}
                   {isExpanded && <div className="mt-3 p-4 rounded-xl bg-surface-container/20 border border-border-glass space-y-4 animate-fade-in text-xs">
+                      <InvoiceReconciliationPanel packing={pl} admin={admin} onChanged={onChanged}/>
                       {/* Items Table */}
                       <div className="space-y-1.5">
                         <span className="font-black uppercase tracking-wider text-[10px] text-on-surface-variant block">

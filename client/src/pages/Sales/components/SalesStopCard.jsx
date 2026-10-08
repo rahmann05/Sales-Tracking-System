@@ -1,4 +1,5 @@
 import React from 'react';
+import {visitOutcomeText} from '../../../../../shared/visit-outcome.mjs';
 import { LuMapPin, LuNavigation } from 'react-icons/lu';
 import { OutletPhoto } from './OutletPhoto';
 import { OutletExcelMetadata } from './OutletExcelMetadata';
@@ -98,6 +99,7 @@ export const SalesStopCard = React.memo(({
 
         {/* 3. Excel Columns Metadata Grid */}
         <OutletExcelMetadata stop={stop} />
+        {stop.visitOutcome&&<p className="text-sm border rounded-xl p-3">{visitOutcomeText(stop.visitOutcome)}</p>}
 
         {/* 4. Google Places API Details Section */}
         <OutletGooglePlaceInfo googlePlaceDetails={stop.googlePlaceDetails} />

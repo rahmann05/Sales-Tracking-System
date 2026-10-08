@@ -1,0 +1,4 @@
+BEGIN;
+ALTER TABLE "Invoice" ADD COLUMN "items" JSONB NOT NULL DEFAULT '[]', ADD COLUMN "taxRatePercent" DOUBLE PRECISION, ADD COLUMN "taxIncluded" BOOLEAN;
+ALTER TABLE "PackingList" ADD COLUMN "commercialReconciliation" JSONB;
+COMMIT;

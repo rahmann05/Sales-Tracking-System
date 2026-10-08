@@ -1,6 +1,7 @@
 /** getPackingListById - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
+import {invoiceReconciliation} from '../../../../../shared/invoice-reconciliation.mjs';
 
 /**
  * Get single packing list with details
@@ -20,5 +21,5 @@ export const getPackingListById = async (id) => {
     },
   });
   if (!pl) throw new AppError('Packing list tidak ditemukan', 404);
-  return pl;
+  return {...pl,commercial:invoiceReconciliation(pl)};
 };

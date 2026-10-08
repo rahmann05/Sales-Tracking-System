@@ -1,12 +1,12 @@
 import {assertSalesAccess} from '../../../utils/team-scope.js';
+import {assertOrderReviewDecision,orderReviewConflict} from './order-review-assignment.service.js';
 /** rejectOrder - single-responsibility service (extracted from orders.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { createNotification } from "../../notifications/notifications.service.js";
 import { ORDER_STATUS, NOTIFICATION_TYPES } from "../../../utils/constants.js";
 
 
-export const rejectOrder = async (orderId, adminId, reason = null) => {
+export const rejectOrder = async (orderId, adminId, reason = null, options={}) => {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { pjpStop: { include: { outlet: true } } },
@@ -21,7 +21,18 @@ export const rejectOrder = async (orderId, adminId, reason = null) => {
   if(!reviewer||!['ADMIN','SUPERVISOR'].includes(reviewer.role))throw new AppError('Tidak berwenang memproses order',403);
   await assertSalesAccess(reviewer,order.createdBy);
   if(!reason?.trim())throw new AppError('Alasan penolakan wajib',400);
-  const changed=await prisma.order.updateMany({where:{id:orderId,status:'PENDING_APPROVAL'},data:{status:'REJECTED',approvedBy:adminId,approvedAt:new Date(),rejectionReason:reason.trim()}});
+  const changed=await prisma.$transaction(async tx=>{
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
+    const current=await tx.order.findUnique({where:{id:orderId}});
+    if(!current||current.deletedAt||current.status!==ORDER_STATUS.PENDING_APPROVAL)throw new AppError('Order sudah diproses atau tidak aktif',409);
+    const decision=await assertOrderReviewDecision(tx,current,await tx.user.findUnique({where:{id:adminId}}),options);
+    const released=await tx.packingList.count({where:{sourceOrderId:orderId,OR:[{status:'RELEASED'},{deliveryStops:{some:{}}}]}});
+    if(released)throw new AppError('Order sudah dilepas untuk pengiriman. Selesaikan atau tarik kembali packing sebelum menolak order.',409);
+    const result=await tx.order.updateMany({where:{id:orderId,status:'PENDING_APPROVAL'},data:{status:'REJECTED',approvedBy:adminId,approvedAt:new Date(),rejectionReason:reason.trim(),history:[...(current.history||[]),{action:'REJECT',actorId:adminId,at:new Date().toISOString(),note:reason.trim(),...decision}]}});
+    if(!result.count)throw new AppError('Order sudah diproses',409);
+    await tx.notification.create({data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_REJECTED,title:'Order Ditolak',message:`Order Anda ditolak. Alasan: ${reason.trim()}`,payload:{orderId:order.id}}});
+    return result;
+  },{isolationLevel:'Serializable'}).catch(orderReviewConflict);
   if(!changed.count)throw new AppError('Order sudah diproses',409);
   const updatedOrder = await prisma.order.findUnique({
     where: { id: orderId },
@@ -33,14 +44,5 @@ export const rejectOrder = async (orderId, adminId, reason = null) => {
     },
   });
 
-  await createNotification(
-    order.createdBy,
-    NOTIFICATION_TYPES.ORDER_REJECTED,
-    'Order Ditolak',
-    `Order Anda di outlet "${order.pjpStop.outlet.name}" ditolak${reason ? `. Alasan: ${reason}` : ''}`,
-    { orderId: order.id }
-  );
-
-  // rejectionReason is transient (not persisted in schema) but returned for immediate UI display
   return { ...updatedOrder, rejectionReason: reason };
 };

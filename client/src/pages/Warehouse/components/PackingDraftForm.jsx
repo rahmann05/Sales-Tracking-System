@@ -4,6 +4,7 @@ import { PackingInvoicesSection } from './PackingInvoicesSection';
 import React, { useEffect, useState } from 'react';
 import { deliveryApi, outletsApi } from '../../../services/api';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
+import {useApp} from '../../../context/AppContext';
 import { LuCircleAlert, LuRefreshCw, LuPackage, LuX } from 'react-icons/lu';
 export function PackingDraftForm({
   document: doc,
@@ -11,32 +12,28 @@ export function PackingDraftForm({
   onSaved,
   onCancel
 }) {
+  const {settings}=useApp();
   const [code, setCode] = useState(doc?.code || '');
   const [outlet, setOutlet] = useState(doc?.outlet || order?.pjpStop?.outlet || null);
   const [search, setSearch] = useState('');
   const [outlets, setOutlets] = useState([]);
   const [searchingOutlets, setSearchingOutlets] = useState(false);
-  const [items, setItems] = useState(doc?.items || order?.items?.map(i => ({
+  const [items, setItems] = useState(doc?.items || (order?.fulfillmentLines || order?.items)?.filter(i=>(i.unpacked ?? i.quantity)>0).map(i => ({
     lineId: i.id,
+    sourceOrderItemId: i.id,
     sku: i.product?.sku || '',
     name: i.product?.name || '',
-    quantity: i.quantity,
-    unit: 'unit'
+    quantity: i.unpacked ?? i.quantity,
+    unitPrice:i.unitPrice,
+    unit:i.unit||'unit',baseUnit:i.baseUnit??null,unitsPerUnit:i.unitsPerUnit??null
   })) || [{
+    lineId:crypto.randomUUID(),
     name: '',
     sku: '',
-    unit: 'unit',
+    unit: '',
     quantity: 1
   }]);
-  const [invoices, setInvoices] = useState(doc?.invoices?.map(({
-    invoiceNumber,
-    totalCartons,
-    totalAmount
-  }) => ({
-    invoiceNumber,
-    totalCartons,
-    totalAmount
-  })) || []);
+  const [invoices, setInvoices] = useState(doc?.invoices?.map(i=>({invoiceNumber:i.invoiceNumber,totalCartons:i.totalCartons,totalAmount:i.totalAmount,items:i.items||[],taxRatePercent:i.taxRatePercent??undefined,taxIncluded:i.taxIncluded??undefined})) || []);
   const [cartons, setCartons] = useState(doc?.totalCartons || 0);
   const [weight, setWeight] = useState(doc?.totalWeight || 0);
   const [notes, setNotes] = useState(doc?.notes || '');
@@ -123,9 +120,10 @@ export function PackingDraftForm({
   };
   const addItem = () => {
     setItems(prev => [...prev, {
+      lineId:crypto.randomUUID(),
       name: '',
       sku: '',
-      unit: 'unit',
+      unit: '',
       quantity: 1
     }]);
   };
@@ -137,6 +135,7 @@ export function PackingDraftForm({
       invoiceNumber: '',
       totalCartons: 1,
       totalAmount: ''
+      ,items:[],taxRatePercent:order?.taxRatePercent??Number(settings.TAX_RATE_PERCENT??11),taxIncluded:order?.taxIncluded??settings.ORDER_PRICES_INCLUDE_TAX!==false
     }]);
   };
   const removeInvoice = index => {
@@ -175,7 +174,7 @@ export function PackingDraftForm({
         <PackingOutletSection doc={doc} outlet={outlet} outlets={outlets} search={search} searchingOutlets={searchingOutlets} setOutlet={setOutlet} setOutlets={setOutlets} setSearch={setSearch} sourceOrderId={sourceOrderId} />
 
         {/* ── Items List Section ── */}
-        <PackingItemsSection addItem={addItem} items={items} removeItem={removeItem} setItems={setItems} />
+        <PackingItemsSection orderLinked={Boolean(sourceOrderId)} addItem={addItem} items={items} removeItem={removeItem} setItems={setItems} />
 
         {/* ── Cartons & Weight Summary ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-surface-container/40 border border-border-glass">
@@ -201,7 +200,7 @@ export function PackingDraftForm({
         </div>
 
         {/* ── Invoices Section ── */}
-        <PackingInvoicesSection addInvoice={addInvoice} doc={doc} invoices={invoices} isCartonBalanced={isCartonBalanced} removeInvoice={removeInvoice} setInvoices={setInvoices} totalCartonsNum={totalCartonsNum} totalInvoiceCartons={totalInvoiceCartons} />
+        <PackingInvoicesSection items={items} orderLinked={!!sourceOrderId} addInvoice={addInvoice} doc={doc} invoices={invoices} isCartonBalanced={isCartonBalanced} removeInvoice={removeInvoice} setInvoices={setInvoices} totalCartonsNum={totalCartonsNum} totalInvoiceCartons={totalInvoiceCartons} />
 
         {/* ── Additional Notes & Reason ── */}
         <div className="space-y-3">

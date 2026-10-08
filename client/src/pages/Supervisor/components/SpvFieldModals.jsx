@@ -16,6 +16,7 @@ export const SpvFieldModals = ({
     onChangeNotes,
     checklist,
     onChangeChecklist,
+    followUp, onChangeFollowUp, salesOptions,
     offPjpForm,
     onChangeOffPjpForm,
     onClose,
@@ -44,6 +45,9 @@ export const SpvFieldModals = ({
                 stop={selectedStop}
                 checklist={checklist}
                 onChangeChecklist={onChangeChecklist}
+                followUp={followUp}
+                onChangeFollowUp={onChangeFollowUp}
+                salesOptions={salesOptions}
                 inputNotes={inputNotes}
                 onChangeNotes={onChangeNotes}
                 onClose={onClose}

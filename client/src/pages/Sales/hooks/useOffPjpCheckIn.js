@@ -1,4 +1,5 @@
 import { useApp } from '../../../context/AppContext';
+import {visitOutcomeError} from '../../../../../shared/visit-outcome.mjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGeofence } from '../../../shared/hooks/useGeofence';
 import { getDetailedAddressFromGps } from '../../../services/reverseGeocodeService';
@@ -11,6 +12,7 @@ import { getDetailedAddressFromGps } from '../../../services/reverseGeocodeServi
 export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
     const { settings } = useApp();
     const [salesResult, setSalesResult] = useState({ orderAmount: '', productIds: [] });
+    const [visitOutcome,setVisitOutcome]=useState({purpose:''});
     const [outletName, setOutletName] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [phone, setPhone] = useState('');
@@ -90,8 +92,22 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const pendingSubmission = useRef(null), sending = useRef(false);
+    const [retryPending, setRetryPending] = useState(false);
     const handleConfirm = async () => {
-        if (saving) return;
+        if (sending.current) return;
+        if (pendingSubmission.current) {
+            sending.current = true; setSaving(true); setError('');
+            try { await onSubmit(pendingSubmission.current); pendingSubmission.current = null; setRetryPending(false); }
+            catch (err) {
+                if ([400, 403, 422].includes(err.status)) { pendingSubmission.current = null; setRetryPending(false); }
+                setError(err.message);
+            }
+            finally { sending.current = false; setSaving(false); }
+            return;
+        }
+        const outcomeError=visitOutcome.purpose&&visitOutcomeError(visitOutcome);
+        if(outcomeError){setError(outcomeError);return;}
         const gps = capturedGps || userLocation;
         if (!gps || !Number.isFinite(gps.lat) || !Number.isFinite(gps.lng)) { setError('GPS belum tersedia. Ambil ulang foto.'); return; }
         if (!outletName.trim()) return alert('Harap isi Nama Toko / Outlet terlebih dahulu.');
@@ -99,21 +115,31 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
         if (address.trim().length < 5) { setError('Isi alamat toko minimal 5 karakter.'); return; }
         if (!capturedPhoto) return alert('Harap jepret foto presensi terlebih dahulu menggunakan kamera aktif.');
 
-        setSaving(true); setError('');
-        try { await onSubmit({
+        sending.current = true; setSaving(true); setError('');
+        const payload = {
+            requestId: crypto.randomUUID(),
             ...(settings.ATTENDANCE_ALLOW_MANUAL_SALES ? { orderAmount: Number(salesResult.orderAmount || 0), productIds: salesResult.productIds } : {}),
             outletName: outletName.trim(),
             customerName: customerName.trim(),
             phone: phone.trim() || '-',
             address: address.trim(),
             reason: notes || 'Kunjungan Luar RJP',
+            ...(visitOutcome.purpose?{visitOutcome}:{}),
             photoUrl: capturedPhoto,
             gpsLocation: gps,
-        }); } catch (err) { setError(err.message); } finally { setSaving(false); }
+        };
+        pendingSubmission.current = structuredClone(payload);
+        setRetryPending(true);
+        try { await onSubmit(pendingSubmission.current); pendingSubmission.current = null; setRetryPending(false); }
+        catch (err) {
+            if ([400, 403, 422].includes(err.status)) { pendingSubmission.current = null; setRetryPending(false); }
+            setError(err.message);
+        } finally { sending.current = false; setSaving(false); }
     };
 
     return {
-        saving, error, salesResult, setSalesResult,        outletName, setOutletName,
+        visitOutcome,setVisitOutcome,
+        saving, error, retryPending, salesResult, setSalesResult,        outletName, setOutletName,
         customerName, setCustomerName,
         phone, setPhone,
         address, handleAddressChange,

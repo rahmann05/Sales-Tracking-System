@@ -126,6 +126,7 @@ export const PackingListManager = () => {
 
   // Summary Metrics
   const metrics = useMemo(() => {
+    if(result.metrics) return result.metrics;
     const items = result.items || [];
     let draftCount = 0;
     let releasedCount = 0;

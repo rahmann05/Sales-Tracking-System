@@ -4,6 +4,7 @@ import { resolveBusinessCode } from '../../config/services/business-code.service
 /** createDeliveryRoute - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
+import { assertResources } from './resource-policy.service.js';
 
 
 /**
@@ -15,6 +16,7 @@ export const createDeliveryRoute = async (data, userId) => {
   const allowRedelivery = await getDynamicConfig('DELIVERY_ALLOW_REDELIVERY',true);
   const allowSplit = await getDynamicConfig('PACKING_ALLOW_SPLIT', true);
   return prisma.$transaction(async tx => {
+  await assertResources(tx, { ...data, date: new Date(date) });
   // Verify vehicle exists and is active
   const vehicle = await tx.vehicle.findUnique({ where: { id: vehicleId } });
   if (!vehicle || vehicle.deletedAt || !vehicle.isActive || vehicle.condition !== 'AVAILABLE') throw new AppError('Kendaraan tidak ditemukan atau tidak aktif', 404);
@@ -64,6 +66,8 @@ export const createDeliveryRoute = async (data, userId) => {
     data: {
       code,
       date: new Date(date),
+      plannedStartAt: data.plannedStartAt ? new Date(data.plannedStartAt) : null,
+      plannedEndAt: data.plannedEndAt ? new Date(data.plannedEndAt) : null,
       vehicleId,
       driverId,
       status: 'DRAFT',
@@ -79,6 +83,7 @@ export const createDeliveryRoute = async (data, userId) => {
           outletId: s.outletId,
           sequence: s.sequence,
           allocatedCartons: s.allocatedCartons, allocatedWeight: s.allocatedWeight, allocatedItems: s.allocatedItems,
+          allocatedInvoices: s.allocatedInvoices,
         })),
       },
     },

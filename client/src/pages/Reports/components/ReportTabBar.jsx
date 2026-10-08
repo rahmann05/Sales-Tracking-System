@@ -18,14 +18,14 @@ export const ReportTabBar = ({ activeTab, onSelectTab }) => {
     {
       id: 'WEEKLY',
       label: '2. Rekap Mingguan (WTD)',
-      subtitle: 'Matriks 6 Hari Kerja (Senin-Sabtu)',
+      subtitle: 'Matriks kunjungan mingguan',
       icon: LuCalendarRange,
       badge: 'Mingguan',
     },
     {
       id: 'MTD',
       label: '3. Pencapaian Bulanan (MTD)',
-      subtitle: 'Target vs Realisasi & Pertumbuhan LMA',
+      subtitle: 'Target periode & rasio terhadap bulan lalu',
       icon: LuTrendingUp,
       badge: 'Bulanan',
     },

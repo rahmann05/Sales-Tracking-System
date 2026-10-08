@@ -1,8 +1,9 @@
 export function packingBalance(packing) {
   const stops = packing.deliveryStops || [];
-  const allocatedCartons = stops.reduce((sum, stop) => sum + stop.allocatedCartons - (stop.returnReceivedAt ? stop.rejectedCartons || 0 : 0), 0);
-  const items = (packing.items || []).map(item => ({ ...item, remaining: item.quantity - stops.reduce((sum, stop) => sum + (stop.allocatedItems || []).filter(a => a.lineId === item.lineId).reduce((n, a) => n + a.quantity, 0) - (stop.returnReceivedAt ? (stop.rejectedItems || []).filter(a => a.lineId === item.lineId).reduce((n,a) => n+a.quantity,0) : 0), 0) }));
-  return { ...packing, allocatedCartons, remainingCartons: packing.totalCartons - allocatedCartons, remainingItems: items };
+  const allocatedCartons = stops.reduce((sum, stop) => sum + stop.allocatedCartons - (stop.returnReceivedAt ? stop.reusableCartons || 0 : 0), 0);
+  const items = (packing.items || []).map(item => ({ ...item, remaining: item.quantity - stops.reduce((sum, stop) => sum + (stop.allocatedItems || []).filter(a => a.lineId === item.lineId).reduce((n, a) => n + a.quantity, 0) - (stop.returnReceivedAt ? (stop.reusableItems || []).filter(a => a.lineId === item.lineId).reduce((n,a) => n+a.quantity,0) : 0), 0) }));
+  const remainingInvoices = (packing.invoices || []).map(invoice => ({ ...invoice, remaining: invoice.totalCartons - stops.reduce((n, s) => n + (s.allocatedInvoices || []).filter(i => i.invoiceId === invoice.id).reduce((a, i) => a + i.cartons, 0) - (s.returnReceivedAt ? (s.reusableInvoices || []).filter(i => i.invoiceId === invoice.id).reduce((a, i) => a + i.cartons, 0) : 0), 0) }));
+  return { ...packing, allocatedCartons, remainingCartons: packing.totalCartons - allocatedCartons, remainingItems: items, remainingInvoices };
 }
 
 export function validateAllocation(packing, allocation, allowSplit) {
@@ -19,5 +20,10 @@ export function validateAllocation(packing, allocation, allowSplit) {
   const allItems = balance.remainingItems.every(i => (lines.find(a => a.lineId === i.lineId)?.quantity || 0) === i.remaining);
   if (balance.remainingItems.length && (!lines.length || ((cartons === balance.remainingCartons) !== allItems))) throw new Error('Alokasi karton dan barang harus sama-sama menyisakan muatan atau sama-sama selesai');
   if (!allowSplit && (cartons !== balance.remainingCartons || !allItems)) throw new Error('Pembagian packing list dinonaktifkan admin');
-  return { allocatedCartons: cartons, allocatedItems: lines, allocatedWeight: packing.totalCartons > 0 ? (packing.totalWeight || 0) * cartons / packing.totalCartons : 0 };
+  const invoices = allocation.allocatedInvoices ?? (cartons === balance.remainingCartons ? balance.remainingInvoices.filter(i => i.remaining > 0).map(i => ({ invoiceId: i.id, cartons: i.remaining })) : []);
+  if (balance.remainingInvoices.length) {
+    if (new Set(invoices.map(i => i.invoiceId)).size !== invoices.length || invoices.reduce((n, i) => n + i.cartons, 0) !== cartons) throw new Error('Alokasi karton per faktur harus sama dengan muatan');
+    for (const i of invoices) if (!Number.isInteger(i.cartons) || i.cartons <= 0 || i.cartons > (balance.remainingInvoices.find(x => x.id === i.invoiceId)?.remaining || 0)) throw new Error('Alokasi faktur melebihi sisa');
+  }
+  return { allocatedCartons: cartons, allocatedItems: lines, allocatedInvoices: invoices, allocatedWeight: packing.totalCartons > 0 ? (packing.totalWeight || 0) * cartons / packing.totalCartons : 0 };
 }

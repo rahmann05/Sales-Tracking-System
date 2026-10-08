@@ -1,15 +1,16 @@
 import {wibDayRange} from '../../../../../shared/visit-metrics.mjs';
 /** getDeliveryRoutes - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
+import {parsePagination} from '../../../utils/pagination.js';
 
 /**
  * List delivery routes with filters
  */
 export const getDeliveryRoutes = async (query, userId, userRole) => {
-  const { page = 1, limit = 20, date, status, driverId, vehicleId } = query;
-  const skip = (page - 1) * limit;
+  const { date, status, driverId, vehicleId } = query;
+  const {page,limit,skip}=parsePagination(query);
 
-  const where = {};
+  const where = {cancelledAt:null};
 
   // Supir only sees their own routes
   if (userRole === 'SUPIR') {
@@ -18,7 +19,8 @@ export const getDeliveryRoutes = async (query, userId, userRole) => {
     if (driverId) where.driverId = driverId;
   }
 
-  if(date)where.date=wibDayRange(date);
+  if(query.open==='true')where.closedAt=null;
+  else if(date)where.OR=[{date:wibDayRange(date)},{closedAt:null,cancelledAt:null}];
   if (status) where.status = status;
   if (vehicleId) where.vehicleId = vehicleId;
 
@@ -29,13 +31,14 @@ export const getDeliveryRoutes = async (query, userId, userRole) => {
       take: parseInt(limit),
       orderBy: { date: 'desc' },
       include: {
-        vehicle: { select: { id: true, code: true, name: true } },
+        vehicle: true,
         driver: { select: { id: true, name: true } },
         stops: {
           orderBy: { sequence: 'asc' },
           include: {
             outlet: { select: { id: true, name: true, address: true, latitude: true, longitude: true } },
-            packingList: { select: { id: true, code: true, totalCartons: true, items: true } },
+            packingList: { include: { invoices:true } },
+            attendances: {orderBy:{timestamp:'asc'}},
           },
         },
         createdBy: { select: { id: true, name: true } },

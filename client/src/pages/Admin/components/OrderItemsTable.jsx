@@ -1,4 +1,5 @@
 import React from 'react';
+import {unitDescription} from '../../../../../shared/product-units.mjs';
 
 export const OrderItemsTable = ({ items, totalAmount }) => {
   return (
@@ -7,7 +8,7 @@ export const OrderItemsTable = ({ items, totalAmount }) => {
       {items.map((item, idx) => (
         <div key={idx} className="flex items-center justify-between text-on-surface-variant">
           <span>
-            {item.productName} ({item.qty}x)
+            {item.productName} ({item.qty} {unitDescription(item)})
           </span>
           <span className="font-semibold text-on-surface">Rp {item.subtotal.toLocaleString('id-ID')}</span>
         </div>

@@ -62,6 +62,7 @@ const cluster = pjpData.user?.cluster;
               checkOutPhoto: outAtt?.photoUrl || null,
               checkInNotes: inAtt?.notes || null,
               checkOutNotes: outAtt?.notes || null,
+              visitOutcome:outAtt?.visitOutcome||null,
               durationMinutes: outAtt?.durationMinutes || null,
               deviationMeters: inAtt?.deviationMeters ?? null,
             };

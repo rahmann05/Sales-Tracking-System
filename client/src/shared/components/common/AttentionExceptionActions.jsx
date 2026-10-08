@@ -1,0 +1,38 @@
+import React,{useState} from 'react';
+import {absensiApi,outletsApi,routeChangesApi} from '../../../services/api';
+import {useApp} from '../../../context/AppContext';
+
+const labels={OFF_PJP:'Validasi kunjungan luar PJP',MANUAL_PJP:'Persetujuan hasil manual PJP',MANUAL_OFF_PJP:'Persetujuan hasil manual luar PJP',UNLOCK:'Pengecualian absensi',ROUTE_CHANGE:'Keputusan toko tutup / reroute'};
+export function AttentionExceptionActions({row,onChanged}){
+  const {user}=useApp(),e=row.exception;
+  const [decision,setDecision]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const decisions=e.kind==='ROUTE_CHANGE'?(e.pendingAdmin?['APPROVE','REJECT']:user?.role==='SUPERVISOR'?['SKIP','REJECT']:['REJECT']):['APPROVE','REJECT'];
+  const submit=async event=>{event.preventDefault();if(!decision)return;
+    setBusy(true);setError('');try{
+      if(e.kind==='OFF_PJP')await absensiApi.validateOffPjp(e.id,decision==='APPROVE',note.trim());
+      else if(e.kind.startsWith('MANUAL'))await absensiApi.reviewManualSales(e.kind==='MANUAL_PJP'?'PJP':'OFF_PJP',e.id,decision==='APPROVE'?'APPROVED':'REJECTED',note.trim());
+      else if(e.kind==='UNLOCK')await outletsApi.handleUnlockRequest(e.id,decision==='APPROVE');
+      else if(decision==='SKIP')await routeChangesApi.skip(e.id);
+      else if(decision==='APPROVE')await routeChangesApi.approveReroute(e.id);
+      else await routeChangesApi.rejectReroute(e.id);
+      window.dispatchEvent(new CustomEvent('operational-data-changed'));await onChanged();
+    }catch(err){setError(err.message);}finally{setBusy(false);}
+  };
+  return <section className="space-y-3" aria-label={labels[e.kind]}>
+    <strong>{labels[e.kind]}</strong><p>Pemohon: {e.applicantName||e.applicantId}</p>
+    {e.reason&&<p>Alasan / catatan pemohon: {e.reason}</p>}
+    {e.orderAmount!==undefined&&<p>Hasil manual: Rp {Number(e.orderAmount||0).toLocaleString('id-ID')} · {e.skuSold||0} SKU. Ini bukan penerimaan pembayaran.</p>}
+    {e.latitude!==undefined&&<p>Koordinat kunjungan: {e.latitude}, {e.longitude}</p>}
+    {e.photoUrl&&/^(https?:\/\/|\/(?!\/))/.test(e.photoUrl)&&<a href={e.photoUrl} target="_blank" rel="noopener noreferrer" className="underline">Buka foto bukti kunjungan</a>}
+    {e.replacementOutletName&&<p>Usulan toko pengganti: {e.replacementOutletName}</p>}
+    {e.pendingAdmin&&user?.role!=='ADMIN'&&<p>Menunggu keputusan Admin; SPV tidak dapat menyetujui tahap ini.</p>}
+    {e.kind==='ROUTE_CHANGE'&&!e.pendingAdmin&&<p>Untuk memilih toko pengganti, gunakan penanganan toko tutup pada pusat aksi SPV. Menolak laporan mengembalikan toko asal ke status menunggu kunjungan.</p>}
+    {!row.canDecide&&<p>Tindakan tidak tersedia bagi akun ini. Hubungi SPV / Admin yang berwenang.</p>}
+    {row.canDecide&&<form className="space-y-3" onSubmit={submit}><fieldset disabled={busy} className="space-y-3">
+      <label className="block">Keputusan<select required className="form-input block w-full" value={decision} onChange={event=>setDecision(event.target.value)}><option value="">Pilih keputusan</option>{decisions.map(value=><option key={value} value={value}>{value==='SKIP'?'Akui laporan dan lewati toko':value==='REJECT'?'Tolak pengajuan':e.kind==='ROUTE_CHANGE'?'Setujui reroute':'Setujui pengajuan'}</option>)}</select></label>
+      {(e.kind==='OFF_PJP'||e.kind.startsWith('MANUAL'))&&<label className="block">Catatan keputusan (wajib bila ditolak)<textarea className="form-input block w-full" required={decision==='REJECT'} maxLength={2000} value={note} onChange={event=>setNote(event.target.value)}/></label>}
+      <button className="btn btn-secondary min-h-11" disabled={!decision}>{busy?'Menyimpan…':'Simpan keputusan'}</button>
+    </fieldset></form>}
+    {error&&<p role="alert" className="text-red-600">{error}</p>}
+  </section>;
+}

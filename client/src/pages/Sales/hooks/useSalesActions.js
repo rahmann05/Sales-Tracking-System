@@ -69,6 +69,7 @@ export const useSalesActions = ({
         reason: payload.reason || payload.earlyReason || null,
         orderAmount: payload.orderAmount,
         productIds: payload.productIds,
+        visitOutcome:payload.visitOutcome,
       });
 
       const now = new Date();
@@ -84,6 +85,7 @@ export const useSalesActions = ({
                 checkOutPhoto: payload.photoUrl || null,
                 checkOutGps: payload.gpsLocation || null,
                 checkOutNotes: payload.notes || 'Kunjungan Selesai',
+                visitOutcome:response.data.visitOutcome,
                 durationMinutes: response.data.durationMinutes,
                 orderAmount: response.data.orderAmount,
                 skuSold: response.data.skuSold,
@@ -103,22 +105,23 @@ export const useSalesActions = ({
   }, [setSalesStops, addNotification]);
 
   // Submit Order (Sales)
-  const handleSubmitOrder = useCallback(async ({ stopId, items, paymentType, code }) => {
+  const handleSubmitOrder = useCallback(async ({ stopId, items, paymentType, code, requestId, expectedTotal, expectedTermDays }) => {
     try {
       // Call Backend API
       const res = await ordersApi.createOrder({
-        code,
+        code,requestId,expectedTotal,expectedTermDays,
         pjpStopId: stopId,
         items: items?.map((i) => ({
           productId: i.productId || i.id,
           quantity: Number(i.quantity),
+          unit:i.unit,baseUnit:i.baseUnit,unitsPerUnit:i.unitsPerUnit,
           unitPrice: Number(i.price || i.unitPrice || 0),
         })),
         paymentType: paymentType || 'CASH',
       });
 
       const newOrder = res.data; // Server returns real Order object (Prisma shape)
-      setOrders((prev) => [mapServerOrder(newOrder), ...prev]);
+      setOrders((prev) => [mapServerOrder(newOrder), ...prev.filter(o=>o.id!==newOrder.id)]);
 
       addNotification({
         title: 'Order Baru Masuk (Menunggu Persetujuan)',
@@ -199,6 +202,7 @@ export const useSalesActions = ({
 
   // Sales Action: Absen Toko Luar RJP (Off-PJP)
   const handleSalesAbsenOffPJP = useCallback(async ({
+    requestId,
     outletName,
     customerName,
     phone,
@@ -207,10 +211,13 @@ export const useSalesActions = ({
     photoUrl,
     gpsLocation,
     orderAmount, productIds,
+    visitOutcome,
   }) => {
     try {
       const res = await absensiApi.submitOffPjp({
+        requestId,
         orderAmount, productIds,
+        visitOutcome,
         outletName,
         customerName,
         phone,
@@ -223,17 +230,18 @@ export const useSalesActions = ({
 
       const att = res.data;
       const newRecord = { ...att, salesId: att.userId, salesName: user?.name, createdAt: att.createdAt, validationStatus: att.status === 'APPROVED' ? 'TERVALIDASI' : att.status === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU' };
-      setOffPjpAttendances((prev) => [newRecord, ...prev]);
+      setOffPjpAttendances((prev) => [newRecord, ...prev.filter(item => item.id !== newRecord.id)]);
 
       addNotification({
         title: 'Presensi Toko Luar RJP Masuk',
         message: `Sales ${user?.name || 'Sales'} melakukan presensi di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
         roleTarget: ['SUPERVISOR'],
       });
+      return att;
     } catch (err) {
       console.warn('[API] Submit off-PJP sync error:', err.message);
       addNotification({
-        title: 'Gagal Presensi Off-PJP',
+        title: 'Periksa Pengiriman Presensi Off-PJP',
         message: err.message,
         roleTarget: ['SALES'],
       });

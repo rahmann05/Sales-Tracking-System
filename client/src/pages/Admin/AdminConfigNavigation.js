@@ -28,7 +28,7 @@ export const categories = [{
   key: 'logistics',
   label: 'Transaksi & logistik',
   icon: LuTruck,
-  groups: ['TRANSAKSI', 'PACKING_WORKFLOW', 'LOGISTIK']
+  groups: ['TRANSAKSI', 'PACKING_WORKFLOW', 'LOGISTIK', 'ATTENTION_SLA']
 }, {
   key: 'system',
   label: 'Integrasi & keamanan',

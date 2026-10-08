@@ -1,5 +1,6 @@
 import { RouteCard } from "./DeliveryRouteCard";
 import { CreateRouteForm } from "./CreateRouteForm";
+import {RouteOperationsActions} from './RouteOperationsActions';
 import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi } from '../../../services/api';
 import { LuNavigation, LuPlus, LuX } from "react-icons/lu";
@@ -10,19 +11,20 @@ export const DeliveryRouteBuilder = () => {
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [page,setPage]=useState(1); const [total,setTotal]=useState(0);const [error,setError]=useState('');
   const fetchRoutes = useCallback(async () => {
     setLoading(true);
     try {
       const res = await deliveryApi.getDeliveryRoutes({
-        limit: 50
+        limit: 20, page
       });
-      if (res.success) setRoutes(res.data.items || []);
+      if (res.success) {setRoutes(res.data.items || []);setTotal(res.data.total);setError('');}
     } catch (err) {
-      console.error('Error fetching routes:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
   useEffect(() => {
     fetchRoutes();
   }, [fetchRoutes]);
@@ -64,11 +66,13 @@ export const DeliveryRouteBuilder = () => {
     }} onCancel={() => setShowCreateForm(false)} />}
 
       {/* Route List */}
+      {error&&<p role="alert" className="text-red-600">{error}</p>}
+      <div className="flex gap-3 items-center"><button disabled={page===1||loading} className="min-h-11 border rounded-xl px-3" onClick={()=>setPage(page-1)}>Sebelumnya</button><span>Halaman {page} / {Math.max(1,Math.ceil(total/20))} · {total} rute</span><button disabled={page*20>=total||loading} className="min-h-11 border rounded-xl px-3" onClick={()=>setPage(page+1)}>Berikutnya</button></div>
       {loading ? <div className="text-center py-12 text-on-surface-variant text-sm">Memuat data...</div> : routes.length === 0 ? <div className="text-center py-12 bg-surface border border-border-glass rounded-2xl">
           <LuNavigation className="mx-auto text-3xl text-on-surface-variant/50 mb-2" />
           <p className="text-sm text-on-surface-variant">Belum ada rute pengiriman</p>
         </div> : <div className="space-y-3">
-          {routes.map(route => <RouteCard key={route.id} route={route} onStatusUpdate={handleStatusUpdate} onDelete={handleDelete} />)}
+          {routes.map(route => <section key={route.id} className="space-y-2"><RouteCard route={route} onStatusUpdate={handleStatusUpdate} onDelete={handleDelete} /><RouteOperationsActions route={route} onChanged={fetchRoutes}/></section>)}
         </div>}
     </div>;
 };

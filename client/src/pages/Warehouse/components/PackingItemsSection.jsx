@@ -1,10 +1,12 @@
 import React from 'react';
+import {unitDescription} from '../../../../../shared/product-units.mjs';
 import { LuPlus, LuTrash2, LuPackage } from 'react-icons/lu';
 export function PackingItemsSection({
   addItem,
   items,
   removeItem,
-  setItems
+  setItems,
+  orderLinked=false
 }) {
   return <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -18,19 +20,20 @@ export function PackingItemsSection({
               </span>
             </div>
 
-            <button type="button" onClick={addItem} className="px-3 py-1.5 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-primary flex items-center gap-1.5 transition-all shadow-xs">
+            <button type="button" disabled={orderLinked} onClick={addItem} className="px-3 py-1.5 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-primary flex items-center gap-1.5 transition-all shadow-xs">
               <LuPlus className="text-sm" />
               <span>Tambah Barang</span>
             </button>
           </div>
 
+          <p className="text-xs">Jumlah barang mengikuti satuan pada setiap baris. Karton pengiriman dicatat terpisah; tidak dikonversi otomatis dari jumlah barang.</p>
           <div className="space-y-2.5">
             {items.map((item, index) => <div key={item.lineId || index} className="p-3 rounded-xl bg-surface-container/30 border border-border-glass grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
                 <div className="sm:col-span-3">
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                     SKU / Kode
                   </label>
-                  <input type="text" value={item.sku} onChange={e => setItems(items.map((v, i) => i === index ? {
+                  <input type="text" readOnly={orderLinked} value={item.sku} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             sku: e.target.value
           } : v))} placeholder="Contoh: SKU-001" className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs font-mono text-on-surface" />
@@ -40,7 +43,7 @@ export function PackingItemsSection({
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                     Nama Barang *
                   </label>
-                  <input type="text" required value={item.name} onChange={e => setItems(items.map((v, i) => i === index ? {
+                  <input type="text" readOnly={orderLinked} required value={item.name} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             name: e.target.value
           } : v))} placeholder="Nama produk" className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs font-bold text-on-surface" />
@@ -58,9 +61,9 @@ export function PackingItemsSection({
 
                 <div className="sm:col-span-2">
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
-                    Satuan *
+                    Satuan * {orderLinked&&<span className="block">{unitDescription(item)}</span>}
                   </label>
-                  <input type="text" required value={item.unit} onChange={e => setItems(items.map((v, i) => i === index ? {
+                  <input type="text" readOnly={orderLinked} required value={item.unit} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             unit: e.target.value
           } : v))} placeholder="pcs / karton" className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs text-on-surface" />

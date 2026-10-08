@@ -17,12 +17,12 @@ export const useAdminActions = ({
   addNotification,
 }) => {
   // Admin Action: Approve / Reject Order
-  const handleAdminOrderDecision = useCallback(async ({ orderId, approved, rejectionReason }) => {
+  const handleAdminOrderDecision = useCallback(async ({ orderId, approved, rejectionReason,assignmentRevision=0,overrideReason }) => {
     const orderTarget = orders.find(o => String(o.id) === String(orderId)) || { id: orderId, outletName: 'Outlet' };
 
     try {
       if (approved) {
-        const res = await ordersApi.approveOrder(orderId);
+        const res = await ordersApi.approveOrder(orderId,{assignmentRevision,overrideReason});
         const updated = res?.data ? mapServerOrder(res.data) : null;
         setOrders((prev) =>
           prev.map((o) => (String(o.id) === String(orderId) ? { ...o, ...(updated || {}), status: 'APPROVED' } : o))
@@ -34,7 +34,7 @@ export const useAdminActions = ({
           roleTarget: ['SALES', 'SUPERVISOR'],
         });
       } else {
-        const res = await ordersApi.rejectOrder(orderId, rejectionReason);
+        const res = await ordersApi.rejectOrder(orderId, rejectionReason,{assignmentRevision,overrideReason});
         const updated = res?.data ? mapServerOrder(res.data) : null;
         setOrders((prev) =>
           prev.map((o) =>
@@ -57,7 +57,7 @@ export const useAdminActions = ({
       addNotification({
         title: 'Gagal Memproses Order',
         message: err.message,
-        roleTarget: ['ADMIN'],
+        roleTarget: ['ADMIN','SUPERVISOR'],
       });
       return false;
     }

@@ -2,12 +2,13 @@ import React from 'react';
 import { LuCheck } from 'react-icons/lu';
 import { SpvModalShell } from './SpvModalShell';
 import { SPV_AUDIT_CHECKLIST_ITEMS } from '../../../constants/supervisor';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 
 /**
  * SpvAuditModal Component
  * Single Responsibility: Modal checklist audit kepatuhan toko & evaluasi sales.
  */
-export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving }) => (
+export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving, followUp, onChangeFollowUp, salesOptions=[] }) => (
     <SpvModalShell error={error} saving={saving}
         title="Form Audit & Evaluasi Supervisi"
         subtitle={stop.outletName}
@@ -69,6 +70,18 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                     className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
             </div>
+            {followUp && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||followUp.completed}>
+                <legend className="font-bold text-sm">Tindak lanjut sales</legend>
+                {followUp.completed?<p>Tugas sebelumnya sudah selesai. Riwayat tersedia di pusat aksi.</p>:<>
+                    <label className="flex gap-2 text-sm"><input type="checkbox" checked={followUp.enabled} onChange={e=>onChangeFollowUp({...followUp,enabled:e.target.checked})}/>Tugaskan tindak lanjut</label>
+                    {followUp.enabled&&<>
+                        <label className="block text-sm">Sales penanggung jawab<select className="form-input w-full" value={followUp.ownerId} onChange={e=>onChangeFollowUp({...followUp,ownerId:e.target.value})}><option value="">Pilih sales</option>{salesOptions.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}</select></label>
+                        <label className="block text-sm">Tenggat<input className="form-input w-full" type="date" min={wibDateKey()} value={followUp.dueDate} onChange={e=>onChangeFollowUp({...followUp,dueDate:e.target.value})}/></label>
+                        <label className="block text-sm">Instruksi<textarea className="form-input w-full" maxLength={4000} value={followUp.note} onChange={e=>onChangeFollowUp({...followUp,note:e.target.value})}/></label>
+                    </>}
+                    <p className="text-xs">Tugas yang sudah disimpan tetap terbuka sampai diselesaikan dengan catatan.</p>
+                </>}
+            </fieldset>}
         </div>
     </SpvModalShell>
 );

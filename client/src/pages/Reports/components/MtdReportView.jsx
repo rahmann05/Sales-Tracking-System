@@ -1,4 +1,8 @@
 import { MtdMetrics } from './MtdMetrics';
+import { mtdCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
+import { ReportBasisNote } from './ReportBasisNote';
+import { ReportCalendarEditor } from './ReportCalendarEditor';
+import { ReportArchivePanel } from './ReportArchivePanel';
 import { MtdSalesTable } from './MtdSalesTable';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -59,18 +63,19 @@ export const MtdReportView = () => {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [reportData, setReportData] = useState({
     period: {
-      month: 8,
-      monthName: 'Agustus',
-      year: 2026,
-      workingDaysElapsed: 0,
-      totalWorkingDays: 26,
-      workingDaysRate: '0%'
+      month,
+      monthName: '',
+      year,
+      calendarKnown: false,
+      workingDaysElapsed: null,
+      totalWorkingDays: null,
+      workingDaysRate: '—'
     },
     summary: {
-      monthlyTargetAmount: 0,
+      monthlyTargetAmount: null,
       mtdActualAmount: 0,
-      overallAchievementRate: '0%',
-      overallAchievementRateNum: 0,
+      overallAchievementRate: '—',
+      overallAchievementRateNum: null,
       lastMonthActual: 0,
       mtdToLmaRate: '0%',
       totalMtdPlanCalls: 0,
@@ -79,7 +84,7 @@ export const MtdReportView = () => {
       totalMtdEffectiveCalls: 0,
       mtdEffectiveCallRate: '0%',
       totalMtdSkuSold: 0,
-      avgDailyRevenue: 0
+      avgDailyRevenue: null
     },
     channelBreakdown: [],
     salesmen: []
@@ -128,7 +133,8 @@ export const MtdReportView = () => {
       loadRevision.current++;
     };
   }, [loadData]);
-  const selectedSalesman = salesTeam.find(s => s.id === salesmanId);
+  const salesOptions = reportSalesOptions(salesTeam,reportData.salesmen,salesmanId);
+  const selectedSalesman = salesOptions.find(s => s.id === salesmanId);
   const salesmanName = selectedSalesman?.name || '';
 
   // Export to CSV/Excel
@@ -137,13 +143,7 @@ export const MtdReportView = () => {
       alert('Tidak ada data MTD untuk diekspor.');
       return;
     }
-    const headers = ['No', 'Salesman', 'Klaster', 'Target Bulanan (Rp)', 'MTD Actual (Rp)', '% Target Achievement', 'Last Month Actual (LMA Rp)', '% MTD to LMA (Growth)', 'MTD Plan Calls', 'MTD Actual Calls', 'Call Compliance Rate', 'MTD Effective Calls', 'Effective Call Rate', 'Total SKU Sold', 'Avg SKU per Call'];
-    const csvRows = [headers.join(',')];
-    reportData.salesmen.forEach((s, idx) => {
-      const row = [idx + 1, `"${(s.salesmanName || '').replace(/"/g, '""')}"`, `"${(s.clusterName || '').replace(/"/g, '""')}"`, s.monthlyTarget, s.mtdActualAmount, `"${s.achievementRate}"`, s.lastMonthActual, `"${s.mtdToLmaRate}"`, s.mtdPlanCalls, s.mtdActualCalls, `"${s.callComplianceRate}"`, s.mtdEffectiveCalls, `"${s.effectiveCallRate}"`, s.totalSkuSold, s.avgSkuPerCall];
-      csvRows.push(row.join(','));
-    });
-    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], {
+    const blob = new Blob(['\uFEFF' + mtdCsv(reportData)], {
       type: 'text/csv;charset=utf-8;'
     });
     const url = URL.createObjectURL(blob);
@@ -165,6 +165,9 @@ export const MtdReportView = () => {
       {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
       <MtdMetrics period={period} summary={summary} />
+      <ReportBasisNote basis={reportData.basis} />
+      <ReportArchivePanel kind="MONTH" period={`${year}-${String(month).padStart(2,'0')}`}/>
+      <div className="flex flex-wrap gap-2">{reportData.basis?.calendarMonths?.map(row=><ReportCalendarEditor key={row.month} month={row.month} onSaved={loadData}/>)}</div>
 
       {/* 2. Channel Contribution Cards */}
       {channelBreakdown.length > 0 && <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3">
@@ -183,15 +186,15 @@ export const MtdReportView = () => {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between text-xs text-on-surface-variant font-mono">
-                  <span>Omzet: <strong>Rp {(c.mtdOmzet || 0).toLocaleString('id-ID')}</strong></span>
-                  <span>{c.mtdEc} EC ({c.mtdVisits} Visit)</span>
+                  <span>Nilai order disetujui: <strong>Rp {(c.mtdOmzet || 0).toLocaleString('id-ID')}</strong></span>
+                  <span>{c.mtdEc} EC ({c.mtdVisits} kunjungan; channel saat ini)</span>
                 </div>
               </div>)}
           </div>
         </div>}
 
       {/* 3. Unified Workspace Card: Header + Filters + MTD Breakdown Table */}
-      <MtdSalesTable MONTH_OPTIONS={MONTH_OPTIONS} exportToCsv={exportToCsv} filteredSalesmen={filteredSalesmen} isLoading={isLoading} loadData={loadData} month={month} reportData={reportData} salesTeam={salesTeam} salesmanId={salesmanId} search={search} setIsPdfModalOpen={setIsPdfModalOpen} setMonth={setMonth} setSalesmanId={setSalesmanId} setSearch={setSearch} setYear={setYear} summary={summary} year={year} />
+      <MtdSalesTable MONTH_OPTIONS={MONTH_OPTIONS} exportToCsv={exportToCsv} filteredSalesmen={filteredSalesmen} isLoading={isLoading} loadData={loadData} month={month} reportData={reportData} salesTeam={salesOptions} salesmanId={salesmanId} search={search} setIsPdfModalOpen={setIsPdfModalOpen} setMonth={setMonth} setSalesmanId={setSalesmanId} setSearch={setSearch} setYear={setYear} summary={summary} year={year} />
 
       {/* PDF Modal */}
       {isPdfModalOpen && <MtdReportPdfView reportData={reportData} salesmanName={salesmanName} onClose={() => setIsPdfModalOpen(false)} />}

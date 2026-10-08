@@ -14,7 +14,7 @@ export const updateConfig = async (req, res, next) => {
   try {
     const { key } = req.params;
     const { value } = req.body;
-    const updatedValue = await configService.upsertConfig(key, value);
+    const updatedValue = await configService.upsertConfig(key, value,req.user);
     res.json({ message: 'Config updated successfully', data: updatedValue });
   } catch (error) {
     next(error);
@@ -33,7 +33,7 @@ export const getAllConfigs = async (req, res, next) => {
 export const bulkUpdateConfigs = async (req, res, next) => {
   try {
     const { configs } = req.body;
-    const updated = await configService.bulkUpsertConfigs(configs);
+    const updated = await configService.bulkUpsertConfigs(configs,req.user);
     res.json({ message: 'Configs updated successfully', data: updated });
   } catch (error) {
     next(error);

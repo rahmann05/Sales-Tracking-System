@@ -1,4 +1,7 @@
 import React from 'react';
+import { formatTarget } from '../../../../../shared/sales-targets.mjs';
+import { calendarDayLabel } from '../../../../../shared/report-calendar.mjs';
+import { ReportBasisNote } from './ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
 /**
@@ -54,10 +57,10 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
               CV. SINAR ANUGRAH
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
-              FMCG DISTRIBUTOR • CABANG PADALARANG
+              FMCG DISTRIBUTOR
             </p>
             <p className="text-[9px] text-gray-500 m-0 mt-0.5">
-              Distribution Management System • ReportId: 6230122-WR
+              Distribution Management System
             </p>
           </div>
 
@@ -66,7 +69,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
               WEEKLY PERFORMANCE REPORT
             </h2>
             <p className="text-[10px] font-semibold text-gray-700 m-0 mt-0.5">
-              Rekapitulasi Kunjungan 6 Hari Kerja (Senin - Sabtu)
+              Rekapitulasi Kunjungan Mingguan
             </p>
             <p className="text-[9px] font-mono text-gray-500 m-0">
               Periode: {startFormatted} s/d {endFormatted}
@@ -74,6 +77,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
           </div>
         </div>
 
+        <ReportBasisNote basis={reportData.basis} />
         {/* Summary Box */}
         <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
           <div>
@@ -93,7 +97,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
             </strong>
           </div>
           <div>
-            <span className="text-gray-500 font-semibold block">Total Omzet Mingguan:</span>
+            <span className="text-gray-500 font-semibold block">Total Nilai order disetujui Mingguan:</span>
             <strong className="text-gray-900 text-[11px]">
               Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')} ({summary.totalSkuSold} SKU)
             </strong>
@@ -107,7 +111,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
               <tr className="bg-gray-200 border-b border-black font-black uppercase text-gray-800">
                 <th className="p-1.5 border-r border-black" rowSpan="2">Salesman</th>
                 <th className="p-1.5 border-r border-black" rowSpan="2">Klaster</th>
-                <th className="p-1 border-r border-black text-center" colSpan="6">
+                <th className="p-1 border-r border-black text-center" colSpan={Math.max(1, daysSummary.length)}>
                   Realisasi Kunjungan Harian (Actual / Plan Call)
                 </th>
                 <th className="p-1 border-r border-black text-center" colSpan="4">
@@ -115,16 +119,11 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
                 </th>
               </tr>
               <tr className="bg-gray-100 border-b border-black font-bold text-center text-[8.5px]">
-                <th className="p-1 border-r border-black">Senin</th>
-                <th className="p-1 border-r border-black">Selasa</th>
-                <th className="p-1 border-r border-black">Rabu</th>
-                <th className="p-1 border-r border-black">Kamis</th>
-                <th className="p-1 border-r border-black">Jumat</th>
-                <th className="p-1 border-r border-black">Sabtu</th>
+                {daysSummary.map(day => <th key={day.dateStr} className="p-1 border-r border-black">{day.dayName}<br />{day.formattedDate || day.dateStr}<br />{calendarDayLabel(day.isWorkingDay)}</th>)}
                 <th className="p-1 border-r border-black">Act / Plan</th>
                 <th className="p-1 border-r border-black">Call %</th>
                 <th className="p-1 border-r border-black">EC %</th>
-                <th className="p-1.5 text-right">Omzet (Rp)</th>
+                <th className="p-1.5 text-right">Nilai order disetujui (Rp)</th>
               </tr>
             </thead>
             <tbody>
@@ -137,20 +136,21 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
                 >
                   <td className="p-1.5 border-r border-gray-300 font-bold whitespace-nowrap">
                     {s.salesmanName}
+                    <p className="font-normal text-[9px]">Target: {formatTarget(s.weeklyTotal?.target,s.target?.status)} · {s.weeklyTotal?.targetAchievement}</p>
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-gray-600 whitespace-nowrap">
                     {s.clusterName}
                   </td>
 
                   {/* Days */}
-                  {['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'].map((dayKey) => {
-                    const d = s.days?.[dayKey] || { plan: 0, actual: 0, ec: 0 };
+                  {daysSummary.map(day => {
+                    const d = s.days?.[day.dayName.toLowerCase()] || { plan: 0, actual: 0, ec: 0 };
                     return (
                       <td
-                        key={dayKey}
+                        key={day.dateStr}
                         className="p-1 border-r border-gray-300 text-center font-mono"
                       >
-                        {d.plan > 0 ? (
+                        {d.plan > 0 || d.actual > 0 ? (
                           <span>
                             <strong className={d.actual > 0 ? 'text-gray-900' : 'text-gray-400'}>
                               {d.actual}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { ReportBasisNote } from '../../Reports/components/ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
 /**
@@ -55,10 +56,10 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
               CV. SINAR ANUGRAH
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
-              FMCG DISTRIBUTOR • CABANG PADALARANG
+              FMCG DISTRIBUTOR
             </p>
             <p className="text-[9px] text-gray-500 m-0 mt-0.5">
-              Distribution Management System • ReportId: 6230122-DC
+              Distribution Management System
             </p>
           </div>
 
@@ -75,6 +76,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           </div>
         </div>
 
+        <ReportBasisNote basis={reportData.basis} />
         {/* 2. Metadata & KPI Summary Banner */}
         <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
           <div>
@@ -84,7 +86,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           <div>
             <span className="text-gray-500 font-semibold block">Total Kunjungan (Plan / Actual):</span>
             <strong className="text-gray-900 text-[11px]">
-              {summary.totalActualCalls} / {summary.totalPlanCalls} Call ({summary.totalPlanCalls > 0 ? Math.round((summary.totalActualCalls / summary.totalPlanCalls) * 100) : 0}%)
+              {summary.totalActualCalls} / {summary.totalPlanCalls} Call (kepatuhan PJP: {summary.callComplianceRate || '0%'})
             </strong>
           </div>
           <div>
@@ -94,7 +96,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
             </strong>
           </div>
           <div>
-            <span className="text-gray-500 font-semibold block">Total Order / Omzet:</span>
+            <span className="text-gray-500 font-semibold block">Nilai order disetujui:</span>
             <strong className="text-gray-900 text-[11px]">
               Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')} ({summary.totalSkuSold} SKU)
             </strong>

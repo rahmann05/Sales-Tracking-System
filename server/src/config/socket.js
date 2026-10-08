@@ -22,8 +22,8 @@ export const initSocket = (httpServer) => {
   io.use(async (socket, next) => {
     try {
       const decoded = jwt.verify(socket.handshake.auth?.token, config.jwtSecret);
-      const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, deletedAt: true } });
-      if (!user || user.deletedAt) throw new Error('Akun tidak aktif');
+      const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, deletedAt: true,tokenVersion:true } });
+      if (!user || user.deletedAt || (decoded.tokenVersion||0)!==(user.tokenVersion||0)) throw new Error('Akun tidak aktif');
       socket.data.userId = user.id;
       next();
     } catch { next(new Error('Autentikasi socket diperlukan')); }

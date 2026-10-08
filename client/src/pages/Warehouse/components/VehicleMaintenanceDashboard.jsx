@@ -1,4 +1,5 @@
 import { VehicleMaintenanceCard } from "./VehicleMaintenanceCard";
+import { VehicleConditionControl } from './VehicleConditionControl';
 import { RecordMaintenanceModal } from "./RecordMaintenanceModal";
 import React, { useState, useEffect } from 'react';
 import { vehiclesApi } from '../../../services/api';
@@ -42,7 +43,7 @@ export const VehicleMaintenanceDashboard = () => {
       {loading && vehicles.length === 0 ? <div className="text-center py-12 text-on-surface-variant text-sm">Memuat data...</div> : vehicles.length === 0 ? <div className="text-center py-12 bg-surface border border-border-glass rounded-2xl">
           <p className="text-sm text-on-surface-variant">Belum ada data kendaraan</p>
         </div> : <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {vehicles.map(v => <VehicleMaintenanceCard key={v.id} vehicle={v} onRecord={() => setSelectedVehicle(v)} />)}
+          {vehicles.map(v => <section key={v.id} className="space-y-2"><VehicleMaintenanceCard vehicle={v} onRecord={() => setSelectedVehicle(v)} /><VehicleConditionControl vehicle={v} onChanged={fetchVehicles}/></section>)}
         </div>}
 
       {selectedVehicle && <RecordMaintenanceModal vehicle={selectedVehicle} onClose={() => setSelectedVehicle(null)} onSuccess={() => {

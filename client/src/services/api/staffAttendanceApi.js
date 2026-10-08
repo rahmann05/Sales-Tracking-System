@@ -1,10 +1,11 @@
 import { request } from "../httpClient";
 export const staffAttendanceApi = {
-  getFollowUps: () => request('/staff-attendance/follow-ups'),
-  completeFollowUp: (id, note) => request(`/staff-attendance/follow-ups/${id}`, {
+  getFollowUps: ({status='OPEN',page=1}={}) => request(`/staff-attendance/follow-ups?status=${encodeURIComponent(status)}&page=${page}&limit=50`),
+  reviewFollowUp:(id,data)=>request(`/staff-attendance/follow-ups/${id}/review`,{method:'POST',body:JSON.stringify(data)}),
+  completeFollowUp: (id, note, evidence) => request(`/staff-attendance/follow-ups/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({
-      note
+      note,evidence
     })
   }),
   getToday: () => request('/staff-attendance'),

@@ -88,7 +88,7 @@ export const updateRouteStatus = async (req, res, next) => {
 
 export const deleteDeliveryRoute = async (req, res, next) => {
   try {
-    const result = await deliveryService.deleteDeliveryRoute(req.params.id);
+    const result = await deliveryService.deleteDeliveryRoute(req.params.id,req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

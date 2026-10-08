@@ -1,7 +1,9 @@
 import React from 'react';
+import {InvoiceLinesEditor} from './InvoiceLinesEditor';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 import { LuPlus, LuTrash2, LuTriangleAlert, LuCircleCheck, LuFileText } from 'react-icons/lu';
 export function PackingInvoicesSection({
+  items,orderLinked,
   addInvoice,
   doc,
   invoices,
@@ -33,7 +35,7 @@ export function PackingInvoicesSection({
           <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 border ${isCartonBalanced ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'}`}>
             {isCartonBalanced ? <LuCircleCheck className="text-emerald-600 dark:text-emerald-400 text-sm shrink-0" /> : <LuTriangleAlert className="text-amber-600 dark:text-amber-400 text-sm shrink-0" />}
             <span className="font-semibold">
-              {isCartonBalanced ? `Total karton faktur (${totalInvoiceCartons}) seimbang dengan total karton dokumen (${totalCartonsNum}). Dokumen siap dilepas ke gudang.` : `Total karton faktur (${totalInvoiceCartons}) belum sama dengan total karton dokumen (${totalCartonsNum}). Syarat rilis gudang memerlukan kesamaan karton.`}
+              {isCartonBalanced ? `Total karton faktur (${totalInvoiceCartons}) seimbang dengan dokumen (${totalCartonsNum}). Periksa juga pemetaan barang dan nominal faktur.` : `Total karton faktur (${totalInvoiceCartons}) belum sama dengan total karton dokumen (${totalCartonsNum}). Syarat rilis gudang memerlukan kesamaan karton.`}
             </span>
           </div>
 
@@ -74,6 +76,7 @@ export function PackingInvoicesSection({
                       <LuTrash2 className="text-sm" />
                     </button>
                   </div>
+                  <InvoiceLinesEditor invoice={inv} items={items} orderLinked={orderLinked} onChange={updated=>setInvoices(invoices.map((v,i)=>i===index?updated:v))}/>
                 </div>)}
             </div>}
         </div>;

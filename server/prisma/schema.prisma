@@ -203,6 +203,7 @@ enum OrderStatus {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model User {
+  tokenVersion Int @default(0)
   staffCode String? @unique
   supervisorId String?
   supervisor User? @relation("SalesTeam", fields: [supervisorId], references: [id], onDelete: SetNull)
@@ -380,6 +381,10 @@ model Outlet {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model Pjp {
+  // Captured when the plan is created; IDs below index historical report scope.
+  reportingContext Json?
+  reportSupervisorId String?
+  reportClusterId String?
   code String? @unique
   id          String    @id @default(uuid())
   userId      String
@@ -399,6 +404,8 @@ model Pjp {
   @@index([date])
   @@index([userId, date])
   @@index([status])
+  @@index([reportSupervisorId, date])
+  @@index([reportClusterId, date])
 }
 
 model PjpStop {
@@ -423,6 +430,7 @@ model PjpStop {
 }
 
 model Attendance {
+  visitOutcome Json?
   manualSalesMode String @default("NOTES_ONLY")
   manualSalesStatus String @default("NOTES_ONLY")
   isManualSalesApproved Boolean @default(false)
@@ -463,6 +471,10 @@ model Attendance {
 }
 
 model OffPjpAttendance {
+  reportingContext Json?
+  reportSupervisorId String?
+  reportClusterId String?
+  visitOutcome Json?
   manualSalesMode String @default("NOTES_ONLY")
   manualSalesStatus String @default("NOTES_ONLY")
   isManualSalesApproved Boolean @default(false)
@@ -499,6 +511,8 @@ model OffPjpAttendance {
   @@index([status])
   @@index([outletId])
   @@index([manualSalesStatus])
+  @@index([reportSupervisorId, createdAt])
+  @@index([reportClusterId, createdAt])
 }
 
 model OutletUnlockRequest {
@@ -773,6 +787,9 @@ model CustomerRegistration {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model Product {
+  unit String?
+  baseUnit String?
+  unitsPerUnit Int?
   id         String      @id @default(uuid())
   sku        String      @unique
   name       String
@@ -786,6 +803,12 @@ model Product {
 }
 
 model Order {
+  requestId String? @unique
+  requestHash String?
+  taxIncluded Boolean?
+  customerSnapshot Json?
+  history Json @default("[]")
+  promisedAt DateTime?
   code String? @unique
   rejectionReason String?
   termOfPaymentDays Int @default(0)
@@ -816,6 +839,12 @@ model Order {
 }
 
 model OrderItem {
+  baseUnit String?
+  unitsPerUnit Int?
+  cancelledQuantity Int @default(0)
+  productName String?
+  productSku String?
+  unit String?
   id        String   @id @default(uuid())
   orderId   String
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -836,9 +865,10 @@ model OrderItem {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model PackingList {
+  commercialReconciliation Json?
   status String @default("DRAFT")
   source String @default("MANUAL")
-  sourceOrderId String? @unique
+  sourceOrderId String?
   items Json @default("[]")
   history Json @default("[]")
   overrideReason String?
@@ -859,11 +889,15 @@ model PackingList {
   updatedAt     DateTime @updatedAt
 
   @@index([outletId])
+  @@index([sourceOrderId])
   @@index([createdById])
   @@index([createdAt])
 }
 
 model Invoice {
+  items Json @default("[]")
+  taxRatePercent Float?
+  taxIncluded Boolean?
   id            String      @id @default(uuid())
   invoiceNumber String      @unique
   packingListId String
@@ -884,6 +918,21 @@ model Invoice {
 }
 
 model DeliveryRoute {
+  plannedStartAt DateTime?
+  plannedEndAt DateTime?
+  departedAt DateTime?
+  returnedAt DateTime?
+  closedAt DateTime?
+  cancelledAt DateTime?
+  onHold Boolean @default(false)
+  preparation Json @default("{}")
+  history Json @default("[]")
+  odometerStart Float?
+  odometerEnd Float?
+  actualDistanceKm Float?
+  actualFuelLiters Float?
+  documentsReturned Boolean @default(false)
+  position DeliveryPosition?
   odometerPostedAt DateTime?
 
   id           String         @id @default(uuid())
@@ -914,6 +963,12 @@ model DeliveryRoute {
 }
 
 model DeliveryStop {
+  returnInspection Json?
+  reusableCartons Int @default(0)
+  reusableItems Json @default("[]")
+  reusableInvoices Json @default("[]")
+  allocatedInvoices Json @default("[]")
+  rejectedInvoices Json @default("[]")
   rejectedItems Json @default("[]")
   returnReceivedAt DateTime?
   returnReceivedBy String?
@@ -949,6 +1004,38 @@ model DeliveryStop {
   @@index([status])
 }
 
+model DeliveryPosition {
+  routeId String @id
+  route DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  driverId String
+  latitude Float
+  longitude Float
+  accuracy Float
+  observedAt DateTime
+  receivedAt DateTime @default(now())
+  breadcrumbs Json @default("[]")
+}
+
+model DeliveryIssue {
+  id String @id @default(uuid())
+  routeId String?
+  packingListId String?
+  orderId String?
+  stopId String?
+  title String
+  reason String
+  ownerId String
+  dueAt DateTime
+  status String @default("OPEN")
+  resolution String?
+  createdById String
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  history Json @default("[]")
+  @@index([status, dueAt])
+  @@index([routeId])
+}
+
 model DeliveryAttendance {
   id             String         @id @default(uuid())
   deliveryStopId String
@@ -972,6 +1059,20 @@ model DeliveryAttendance {
 }
 
 // Shift and supervision are separate from sales PJP attendance.
+model AuditEvent {
+  id String @id @default(uuid())
+  actorId String?
+  actorName String?
+  action String
+  entityType String
+  entityId String
+  before Json
+  after Json
+  createdAt DateTime @default(now())
+  @@index([entityType, createdAt])
+  @@index([actorId, createdAt])
+}
+
 model StaffActivity {
   visitMode String?
   followUp Json?

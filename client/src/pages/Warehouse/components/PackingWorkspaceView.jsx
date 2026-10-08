@@ -1,4 +1,5 @@
 import { PackingListCard } from './PackingListCard';
+import { OrderFulfillmentPanel } from './OrderFulfillmentPanel';
 import React from 'react';
 import { PackingOrderReference } from './PackingOrderReference';
 import { PackingDraftForm } from './PackingDraftForm';
@@ -81,6 +82,7 @@ export function PackingWorkspaceView({
         </div>}
 
       {/* ── Metrics Summary Cards ── */}
+      {admin && !form && <details className="border rounded-xl p-4"><summary className="cursor-pointer min-h-11 font-bold">Pantau sisa pemenuhan order</summary><OrderFulfillmentPanel key={result.total} onSelect={order=>setForm({order})}/></details>}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3.5 rounded-xl bg-surface border border-border-glass shadow-xs">
           <span className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1.5">
@@ -220,7 +222,7 @@ export function PackingWorkspaceView({
         const isReleaseBusy = busyAction === `${pl.id}_RELEASE`;
         const isRecallBusy = busyAction === `${pl.id}_RECALL`;
         const isDeleteBusy = busyAction === `${pl.id}_DELETE`;
-        return <PackingListCard admin={admin} busyAction={busyAction} handleDeleteDraft={handleDeleteDraft} handleTransitionAction={handleTransitionAction} isAllocated={isAllocated} isDeleteBusy={isDeleteBusy} isDraft={isDraft} isExpanded={isExpanded} isRecallBusy={isRecallBusy} isReleaseBusy={isReleaseBusy} isReleased={isReleased} needsCompletion={needsCompletion} pl={pl} setForm={setForm} setPrintDoc={setPrintDoc} settings={settings} toggleExpand={toggleExpand} />;
+        return <PackingListCard onChanged={refresh} admin={admin} busyAction={busyAction} handleDeleteDraft={handleDeleteDraft} handleTransitionAction={handleTransitionAction} isAllocated={isAllocated} isDeleteBusy={isDeleteBusy} isDraft={isDraft} isExpanded={isExpanded} isRecallBusy={isRecallBusy} isReleaseBusy={isReleaseBusy} isReleased={isReleased} needsCompletion={needsCompletion} pl={pl} setForm={setForm} setPrintDoc={setPrintDoc} settings={settings} toggleExpand={toggleExpand} />;
       })}
         </div>}
 

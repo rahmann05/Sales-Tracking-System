@@ -11,12 +11,12 @@ test('Reports batch 100 sales without multiplying queries by sales or days',asyn
  replace(prisma.systemConfig,'findMany',async()=>[]);invalidateConfigCache();
  replace(prisma.user,'findMany',async args=>{assert.equal(args.where.supervisorId,'supervisor');return sales;});
  replace(prisma.pjp,'findMany',async args=>{
-  pjpCalls++;assert.deepEqual(args.where.userId.in,sales.map(user=>user.id));
+  pjpCalls++;assert.equal(args.where.OR[0].reportSupervisorId,'supervisor');assert.equal(args.where.OR[1].user.supervisorId,'supervisor');
   const date=new Date('2026-10-06T17:00:00Z');
   if(date<args.where.date.gte || date>args.where.date.lte)return [];
   return sales.map(user=>({userId:user.id,date,stops:[{status:'PENDING',attendances:[],orders:[],outlet:{type:'GENERAL_TRADE'}}]}));
  });
- replace(prisma.offPjpAttendance,'findMany',async args=>{offCalls++;assert.equal(args.where.status,'APPROVED');assert.equal(args.where.userId.in.length,100);return [];});
+ replace(prisma.offPjpAttendance,'findMany',async args=>{offCalls++;assert.equal(args.where.status,'APPROVED');assert.equal(args.where.OR[0].reportSupervisorId,'supervisor');return [];});
  const weekly=await getWeeklyReport({startDate:'2026-10-05',supervisorId:'supervisor'});
  assert.equal(weekly.summary.totalPlanCalls,100);assert.equal(weekly.summary.totalOrderAmount,0);assert.equal(pjpCalls,1);assert.equal(offCalls,1);
  pjpCalls=0;offCalls=0;

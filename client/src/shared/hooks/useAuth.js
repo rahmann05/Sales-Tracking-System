@@ -27,9 +27,11 @@ export const useAuth = () => {
         }
     }, []);
 
-    const logout = useCallback(() => {
-        authApi.logout();
-        window.dispatchEvent(new CustomEvent('auth:logout'));
+    const logout = useCallback(async () => {
+        setAuthLoading(true);
+        try{await authApi.logout();window.dispatchEvent(new CustomEvent('auth:logout'));return true;}
+        catch(error){window.alert(`Sesi server belum berhasil dicabut: ${error.message}`);return false;}
+        finally{setAuthLoading(false);}
     }, []);
 
     return { isAuthenticated: Boolean(user), authLoading: authLoading || sessionLoading, authError: authError || sessionError, login, logout };

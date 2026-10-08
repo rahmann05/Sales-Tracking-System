@@ -21,6 +21,7 @@ export async function decideRoute(actorId,requestId,action,replacementOutletId) 
     const pendingAdmin=r.type==='REROUTE'&&Boolean(r.handledBy)&&Boolean(r.replacementOutletId);
     if(pendingAdmin&&actor.role!=='ADMIN')throw new AppError('Menunggu keputusan admin',403);
     if(action==='APPROVE'&&!pendingAdmin)throw new AppError('Belum ada usulan reroute supervisor',409);
+    const result = await (async () => {
     if(action==='REJECT') {
       const record=await tx.routeChangeRequest.update({where:{id:requestId},data:{status:'REJECTED',approvedBy:actorId}});
       await tx.pjpStop.update({where:{id:r.pjpStopId},data:{status:'PENDING'}});
@@ -39,7 +40,9 @@ export async function decideRoute(actorId,requestId,action,replacementOutletId) 
     let createdPjpStop;
     if(action!=='SKIP')createdPjpStop=await tx.pjpStop.create({data:{pjpId:r.pjpId,outletId:target,sequence:Math.max(0,...r.pjp.stops.map(s=>s.sequence))+1,status:'PENDING'},include:{outlet:true}});
     await reconcilePjp(tx,r.pjpId);return {routeChangeRequest:record,createdPjpStop};
+    })();
+  await createNotification(result.routeChangeRequest.reportedBy,'ROUTE_CHANGE_DECIDED','Keputusan perubahan rute',result.createdPjpStop?`Toko pengganti ${result.createdPjpStop.outlet.name} ditambahkan ke PJP.`:`Status pengajuan: ${result.routeChangeRequest.status}`,{pjpId:result.routeChangeRequest.pjpId},tx);
+  return result;
   });
-  await createNotification(result.routeChangeRequest.reportedBy,'ROUTE_CHANGE_DECIDED','Keputusan perubahan rute',result.createdPjpStop?`Toko pengganti ${result.createdPjpStop.outlet.name} ditambahkan ke PJP.`:`Status pengajuan: ${result.routeChangeRequest.status}`,{pjpId:result.routeChangeRequest.pjpId});
   return result;
 }

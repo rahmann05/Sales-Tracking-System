@@ -1,3 +1,4 @@
+import {dailyCompletion} from '../../../../../shared/report-semantics.mjs';
 import { DataTable } from '../../../shared/components/common/DataTable';
 import { StaffAttendanceReport } from '../../../shared/components/common/StaffAttendanceReport';
 import { summarizeVisits } from '../../../../../shared/visit-metrics.mjs';
@@ -43,9 +44,9 @@ export const SupervisorDailyRecapTab = ({
       const summary = dailyReport.summary;
       return {
         totalTarget: summary.totalPlanCalls || 0,
-        completed: summary.totalActualCalls || 0,
+        completed: (dailyReport.salesmanSummaries||[]).reduce((n,s)=>n+dailyCompletion(s.stops).completed,0),
         skipped: summary.totalSkippedCalls || 0,
-        rerouted: summary.totalExtraCalls || 0,
+        rerouted: incidents.filter(i=>['RESOLVED_DIRECT_REROUTE','RESOLVED_REROUTE_APPROVED'].includes(i.status)).length,
         complianceRate: parseInt(summary.callComplianceRate) || 0,
         offPjpCount: summary.totalExtraCalls || 0,
         skippedList: incidents.filter((i) => i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED'),
@@ -54,14 +55,14 @@ export const SupervisorDailyRecapTab = ({
     }
 
     const totalTarget = salesStops.length;
-    const completedStops = salesStops.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime || s.actualCall === 'Y');
+    const completedStops = salesStops.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime);
     const completed = completedStops.length;
     const skippedIncidents = incidents.filter((i) => i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED');
     const skipped = skippedIncidents.length;
     const reroutedIncidents = incidents.filter((i) => i.status === 'RESOLVED_DIRECT_REROUTE' || i.status === 'RESOLVED_REROUTE_APPROVED');
     const rerouted = reroutedIncidents.length;
     
-    const complianceRate = totalTarget > 0 ? Math.round(summarizeVisits(salesStops).resolved / totalTarget * 100) : 0;
+    const complianceRate = totalTarget > 0 ? Math.round((summarizeVisits(salesStops).completed + summarizeVisits(salesStops).inProgress) / totalTarget * 100) : 0;
 
     return {
       totalTarget,
@@ -83,12 +84,12 @@ export const SupervisorDailyRecapTab = ({
         name: s.salesmanName,
         region: s.clusterName || 'Klaster Terjadwal',
         target: s.planCalls,
-        done: s.actualCalls,
+        done: dailyCompletion(s.stops).completed,
         skips: s.skippedCalls,
-        reroutes: s.extraCalls,
+        reroutes: incidents.filter(i=>(i.salesId===s.salesmanId||i.salesName===s.salesmanName)&&['RESOLVED_DIRECT_REROUTE','RESOLVED_REROUTE_APPROVED'].includes(i.status)).length,
         offPjp: s.extraCalls,
         complianceRate: parseInt(s.complianceRate) || 0,
-        status: s.planCalls === 0 ? 'Belum ada PJP' : s.actualCalls >= s.planCalls ? 'Selesai' : s.actualCalls > 0 ? 'Sedang Kunjungan' : 'Belum Mulai',
+        status: dailyCompletion(s.stops).status,
       }));
     }
 
@@ -97,12 +98,12 @@ export const SupervisorDailyRecapTab = ({
     return team.map((sales) => {
       const stopsForSales = salesStops.filter((s) => s.salesId === sales.id || s.salesName === sales.name || s.salesmanName === sales.name);
       const target = stopsForSales.length;
-      const done = stopsForSales.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime || s.actualCall === 'Y').length;
+      const done = stopsForSales.filter((s) => s.status === 'VISITED' || s.status === 'COMPLETED' || s.checkOutTime).length;
       const skips = incidents.filter((i) => (i.salesId === sales.id || i.salesName === sales.name) && (i.status === 'RESOLVED_SKIP' || i.status === 'SKIPPED')).length;
       const reroutes = incidents.filter((i) => (i.salesId === sales.id || i.salesName === sales.name) && (i.status === 'RESOLVED_DIRECT_REROUTE' || i.status === 'RESOLVED_REROUTE_APPROVED')).length;
       const offPjp = offPjpAttendances.filter((a) => a.salesId === sales.id || a.salesName === sales.name).length;
 
-      const rate = target > 0 ? Math.min(100, Math.round((summarizeVisits(stopsForSales).resolved / target) * 100)) : 0;
+      const rate = target > 0 ? Math.min(100, Math.round(((summarizeVisits(stopsForSales).completed + summarizeVisits(stopsForSales).inProgress) / target) * 100)) : 0;
 
       return {
         ...sales,
@@ -141,7 +142,7 @@ export const SupervisorDailyRecapTab = ({
 
         <div className="bg-surface border border-border-glass rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
-            <span className="text-xs font-semibold">Kunjungan Berhasil</span>
+            <span className="text-xs font-semibold">Kunjungan PJP selesai (OUT)</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/60 flex items-center justify-center text-sm">
               <FiCheckCircle />
             </div>

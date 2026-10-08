@@ -1,4 +1,5 @@
 import { AttendanceSalesInput } from './AttendanceSalesInput';
+import {VisitOutcomeInput} from './VisitOutcomeInput';
 import React from 'react';
 import { FiXCircle, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
@@ -49,6 +50,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
           </span>
         </div>
 
+        <fieldset disabled={form.saving || form.retryPending} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-on-surface block">
             Kamera & Verifikasi GPS Presensi (Wajib):
@@ -82,14 +84,17 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
         />
 
         <AttendanceSalesInput value={form.salesResult} onChange={form.setSalesResult} />
+        <VisitOutcomeInput value={form.visitOutcome} onChange={form.setVisitOutcome}/>
         <AbsenNotesInput
           notes={form.notes}
           onChangeNotes={form.setNotes}
           label="Keterangan / Alasan Kunjungan Luar RJP"
           placeholder="Tuliskan keterangan kunjungan atau alasan toko non-RJP..."
         />
+        </fieldset>
 
         {form.error && <p role="alert" className="text-red-600 text-sm">{form.error}</p>}
+        {form.retryPending && !form.saving && <p role="status" className="text-sm">Hasil pengiriman belum terkonfirmasi. Kirim ulang pengajuan yang sama untuk memeriksa hasilnya. Jika menutup formulir, periksa riwayat kunjungan sebelum membuat pengajuan baru.</p>}
         {form.capturedPhoto && (
           <button
             type="button"
@@ -98,7 +103,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
             className="w-full py-3.5 bg-primary text-on-primary font-bold text-xs rounded-2xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
             <FiCheckCircle className="text-base" />
-            <span>Simpan Absen Toko Luar RJP</span>
+            <span>{form.saving ? 'Memeriksa pengajuan…' : form.retryPending ? 'Kirim ulang pengajuan yang sama' : 'Simpan Absen Toko Luar RJP'}</span>
           </button>
         )}
       </div>

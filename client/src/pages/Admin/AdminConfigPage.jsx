@@ -1,6 +1,7 @@
 import { categories, tools, stringify, initialValues, buttonStyle } from "./AdminConfigNavigation";
 import { displayValue } from "./AdminConfigPage.shared";
 import { ParameterGroup } from "./ConfigParameterGroup";
+import {ConfigHistory} from './ConfigHistory';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { configApi } from '../../services/api';
 import { useApp } from '../../context/AppContext';
@@ -188,6 +189,7 @@ export const AdminConfigPage = () => {
         if (!changes.length || window.confirm('Perubahan belum disimpan. Tetap kembali ke menu admin?')) setActiveTab(TAB_IDS.ROLE_WORKSPACE);
       }}><LuArrowLeft /> Menu admin</button>
     </header>
+    <ConfigHistory/>
     <div className="config-actionbar">
       <div role="status" className="config-save-status">{loading ? 'Memuat parameter…' : loadFailed ? 'Parameter belum dimuat' : changes.length ? `${changes.length} perubahan belum disimpan` : 'Tidak ada perubahan'}</div>
       <div className="config-actions"><button type="button" className={buttonStyle} disabled={!changes.length || saving} onClick={discard}>Batalkan</button><button type="button" className={buttonStyle} disabled={!changes.length || saving} onClick={openReview}>Tinjau ({changes.length})</button><button type="button" className={`${buttonStyle} config-button-primary`} disabled={loading || loadFailed || saving || !changes.length} onClick={save}><LuSave />{saving ? 'Menyimpan…' : 'Simpan'}</button></div>

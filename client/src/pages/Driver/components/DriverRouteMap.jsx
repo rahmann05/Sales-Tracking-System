@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { deliveryApi } from '../../../services/api';
+import { deliveryApi, collectPages } from '../../../services/api';
 import { LuMapPin, LuTruck, LuNavigation } from "react-icons/lu";
 
 const STATUS_COLOR = {
@@ -29,8 +29,8 @@ export const DriverRouteMap = () => {
   const fetchRoutes = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await deliveryApi.getDeliveryRoutes({ date: today });
-      if (res.success) setRoutes(res.data.items || []);
+      const res = await collectPages(deliveryApi.getDeliveryRoutes, { open: 'true' });
+      setRoutes(res.data || []);
     } catch (err) {
       console.error('Error:', err);
     } finally {

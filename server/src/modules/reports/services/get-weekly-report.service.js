@@ -1,7 +1,12 @@
 import { loadReportRecords } from './report-records.service.js';
+import { reportBasis } from '../../../../../shared/report-semantics.mjs';
+import { mergeReportSales, assignmentReportBasis } from './report-assignment.service.js';
+import { loadSalesTargets } from './sales-target.service.js';
+import { targetResult, targetCoverage, targetBasisNote } from '../../../../../shared/sales-targets.mjs';
 import { offPjpSalesResult, visitSalesResult, wibDayRange, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 /** getWeeklyReport - single-responsibility service (extracted from reports.service.js). */
-import { workingDays } from '../../../../../shared/working-calendar.mjs';
+import { calendarWorkingDay, calendarBasis } from '../../../../../shared/report-calendar.mjs';
+import { loadReportCalendars } from './report-calendar.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
@@ -14,7 +19,6 @@ export const getWeeklyReport = async (query = {}) => {
   const { startDate, endDate, userId, clusterId, supervisorId } = query;
   const minVisitDuration = await getDynamicConfig('MINIMUM_VISIT_DURATION_MINUTES', 5);
 
-  const weeklyTarget = await getDynamicConfig('SALES_WEEKLY_TARGET_AMOUNT', 25000000);
   const manualSalesMode = await getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY');
 
   // Plan dates and attendance dates use the same WIB business day.
@@ -28,14 +32,16 @@ export const getWeeklyReport = async (query = {}) => {
   const end = wibDayRange(endDate || last.toISOString().slice(0, 10)).lte;
   const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
   const weekDays = [];
-  const configuredDays = workingDays(await getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6'));
   for (let i = 0; i < 7; i++) {
     const day = new Date(anchor);
     day.setUTCDate(day.getUTCDate() + i);
     const dateStr = day.toISOString().slice(0, 10);
     if (wibDayRange(dateStr).gte > end) break;
-    weekDays.push({ isWorkingDay: configuredDays.includes(day.getUTCDay()), dateStr, dayName: DAY_NAMES[day.getUTCDay()], formattedDate: day.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short' }) });
+    weekDays.push({ dateStr, dayName: DAY_NAMES[day.getUTCDay()], formattedDate: day.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short' }) });
   }
+  const calendarMonths=[...new Set(weekDays.map(day=>day.dateStr.slice(0,7)))];
+  const calendars=await loadReportCalendars(calendarMonths);
+  for(const day of weekDays)day.isWorkingDay=calendarWorkingDay(calendars.get(day.dateStr.slice(0,7)),day.dateStr);
 
   // Fetch Salesmen
   const salesWhere = { role: 'SALES', deletedAt: null };
@@ -43,7 +49,7 @@ export const getWeeklyReport = async (query = {}) => {
   if (clusterId) salesWhere.clusterId = clusterId;
   if (supervisorId) salesWhere.supervisorId = supervisorId;
 
-  const salesmen = await prisma.user.findMany({
+  const currentSales = await prisma.user.findMany({
     where: salesWhere,
     select: {
       id: true,
@@ -61,6 +67,7 @@ export const getWeeklyReport = async (query = {}) => {
   let totalWeeklyOmzet = 0;
   let totalWeeklySku = 0;
   let totalWeeklyDuration = 0;
+  let totalDurationSamples = 0;
   let totalWeeklyAnomalies = 0;
 
   // Day aggregations
@@ -68,6 +75,7 @@ export const getWeeklyReport = async (query = {}) => {
     dateStr: wd.dateStr,
     dayName: wd.dayName,
     formattedDate: wd.formattedDate,
+    isWorkingDay: wd.isWorkingDay,
     planCalls: 0,
     actualCalls: 0,
     effectiveCalls: 0,
@@ -77,7 +85,11 @@ export const getWeeklyReport = async (query = {}) => {
     anomalies: 0,
   }));
 
-  const records=await loadReportRecords(salesmen.map(s=>s.id),start,end,{byDay:true});
+  const records=await loadReportRecords(start,end,{byDay:true,scope:{userId,clusterId,supervisorId}});
+  const salesmen=mergeReportSales(currentSales,records);
+  // A weekly target covers Monday through Sunday; custom/short ranges cannot use it.
+  const isFullWeek=anchor.getUTCDay()===1 && weekDays.length===7 && wibDateKey(end)===last.toISOString().slice(0,10);
+  const targets=isFullWeek?await loadSalesTargets(salesmen.map(s=>s.id),'WEEK',firstKey):new Map();
 
   const salesmanRows = await Promise.all(
     salesmen.map(async (sales) => {
@@ -90,6 +102,7 @@ export const getWeeklyReport = async (query = {}) => {
       let salesOmzet = 0;
       let salesSku = 0;
       let salesDuration = 0;
+      let durationSamples = 0;
       let salesAnomalies = 0;
 
       for (let i = 0; i < weekDays.length; i++) {
@@ -102,6 +115,7 @@ export const getWeeklyReport = async (query = {}) => {
         let dOmzet = 0;
         let dSku = 0;
         let dDuration = 0;
+        let dSamples = 0;
         let dAnomalies = 0;
 
         pjps.forEach((pjp) => {
@@ -123,7 +137,7 @@ export const getWeeklyReport = async (query = {}) => {
 
             dSku += result.skuSold;
             const dur = att?.durationMinutes || 0;
-            dDuration += dur;
+            if(att && Number.isFinite(att.durationMinutes) && att.durationMinutes>=0){dDuration += dur;dSamples++;}
 
             if (dur > 0 && dur < minVisitDuration) dAnomalies += 1;
             if (att?.distanceWarning === 'WARNING') dAnomalies += 1;
@@ -157,6 +171,7 @@ export const getWeeklyReport = async (query = {}) => {
         salesOmzet += dOmzet;
         salesSku += dSku;
         salesDuration += dDuration;
+        durationSamples += dSamples;
         salesAnomalies += dAnomalies;
 
         // Accumulate week days summary
@@ -177,15 +192,19 @@ export const getWeeklyReport = async (query = {}) => {
       totalWeeklyOmzet += salesOmzet;
       totalWeeklySku += salesSku;
       totalWeeklyDuration += salesDuration;
+      totalDurationSamples += durationSamples;
       totalWeeklyAnomalies += salesAnomalies;
 
-      const achievementRate = weeklyTarget > 0 ? `${Math.round((salesOmzet / weeklyTarget) * 100)}%` : '0%';
+      const target=targetResult(targets.get(sales.id),salesOmzet,{supervisorId,clusterId});
+      if(!isFullWeek)target.status='CUSTOM_RANGE';
 
       return {
         salesmanId: sales.id,
         salesmanName: sales.name,
-        clusterName: sales.cluster?.name || 'Cabang Padalarang',
-        region: sales.cluster?.region || 'Jawa Barat',
+        clusterName: sales.cluster?.name || 'Belum ditugaskan',
+        region: sales.cluster?.region || 'Belum ditugaskan',
+        assignments: sales.assignments,
+        target,
         days: dayBreakdowns,
         weeklyTotal: {
           plan: salesPlan,
@@ -195,10 +214,11 @@ export const getWeeklyReport = async (query = {}) => {
           ec: salesEc,
           ecRate: salesActual > 0 ? `${Math.round((salesEc / salesActual) * 100)}%` : '0%',
           omzet: salesOmzet,
-          target: weeklyTarget,
-          targetAchievement: achievementRate,
+          target: target.amount,
+          targetAchievement: target.achievement,
           skuSold: salesSku,
-          avgDuration: salesActual > 0 ? Math.round(salesDuration / salesActual) : 0,
+          durationSamples,
+          avgDuration: durationSamples > 0 ? Math.round(salesDuration / durationSamples) : 0,
           anomalies: salesAnomalies,
         },
       };
@@ -206,10 +226,12 @@ export const getWeeklyReport = async (query = {}) => {
   );
 
   return {
+    basis: { ...reportBasis(), ...assignmentReportBasis(records),...calendarBasis(calendarMonths,calendars),target:'EXPLICIT_SALES_PERIOD',targetNote:targetBasisNote,targetCoverage:targetCoverage(salesmanRows.map(s=>s.target)) },
     period: {
       startDate: wibDateKey(start),
       endDate: wibDateKey(end),
       weekDays,
+      targetPeriod: isFullWeek?firstKey:null,
     },
     summary: {
       totalPlanCalls: totalWeeklyPlan,
@@ -220,7 +242,8 @@ export const getWeeklyReport = async (query = {}) => {
       effectiveCallRate: totalWeeklyActual > 0 ? `${Math.round((totalWeeklyEc / totalWeeklyActual) * 100)}%` : '0%',
       totalOrderAmount: totalWeeklyOmzet,
       totalSkuSold: totalWeeklySku,
-      avgDurationMinutes: totalWeeklyActual > 0 ? Math.round(totalWeeklyDuration / totalWeeklyActual) : 0,
+      durationSamples: totalDurationSamples,
+      avgDurationMinutes: totalDurationSamples > 0 ? Math.round(totalWeeklyDuration / totalDurationSamples) : 0,
       totalAnomalies: totalWeeklyAnomalies,
     },
     daysSummary,

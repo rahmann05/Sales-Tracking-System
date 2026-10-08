@@ -93,13 +93,14 @@ export const AdminApprovalPage = ({
   }, [loadApprovalData]);
   const handleDecision = async payload => {
     const success = await handleAdminOrderDecision(payload);
-    if (success === false) return;
+    if (success === false) return false;
     if (payload.approved) {
       alert('Order berhasil disetujui.');
     } else {
       alert('Order REJECTED.');
     }
     loadApprovalData();
+    return true;
   };
   const handleApproveUnlock = async (requestId, stopId) => {
     const success = await handleApproveUnlockRequest(requestId, stopId);

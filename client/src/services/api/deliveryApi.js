@@ -1,11 +1,18 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const deliveryApi = {
-  receiveReturn: (id, note) => request(`/delivery/stops/${id}/return`, {
+  correctInvoiceCommercial:(id,data)=>request(`/delivery/packing-lists/${id}/invoices`,{method:'PATCH',body:JSON.stringify(data)}),
+  reconcileInvoiceReceipt:(id,data)=>request(`/delivery/packing-lists/${id}/reconciliation`,{method:'POST',body:JSON.stringify(data)}),
+  getOperations: (params={}) => request(`/delivery/operations?${queryString(params)}`),
+  getMyIssues: () => request('/delivery/my-issues'),
+  routeAction: (id,data) => request(`/delivery/routes/${id}/actions`,{method:'POST',body:JSON.stringify(data)}),
+  reportLocation: (id,data) => request(`/delivery/routes/${id}/location`,{method:'POST',body:JSON.stringify(data)}),
+  createIssue: data => request('/delivery/issues',{method:'POST',body:JSON.stringify(data)}),
+  resolveIssue: (id,resolution) => request(`/delivery/issues/${id}/resolve`,{method:'PATCH',body:JSON.stringify({resolution})}),
+  setOrderPromise: (id,data) => request(`/orders/${id}/promise`,{method:'PATCH',body:JSON.stringify(data)}),
+  receiveReturn: (id, data) => request(`/delivery/stops/${id}/return`, {
     method: 'POST',
-    body: JSON.stringify({
-      note
-    })
+    body: JSON.stringify(data)
   }),
   updatePackingList: (id, data) => request(`/delivery/packing-lists/${id}`, {
     method: 'PUT',

@@ -1,0 +1,52 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import jwt from 'jsonwebtoken';
+import {prisma} from '../src/config/prisma.js';
+import {config} from '../src/config/index.js';
+import {httpServer} from '../src/app.js';
+import {savePacking,transitionPacking} from '../src/modules/delivery/services/packing-workflow.service.js';
+import {correctInvoiceCommercial,reconcileInvoiceReceipt} from '../src/modules/delivery/services/invoice-reconciliation.service.js';
+import {invoiceReconciliation} from '../../shared/invoice-reconciliation.mjs';
+import {invalidateConfigCache} from '../src/modules/config/services/dynamic-config.service.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local database only');
+const tag=`VERIFY-INVOICE-${randomUUID()}`,users=[],packings=[];let order,vehicle,route,checks=0;
+const check=(a,b)=>{assert.deepEqual(a,b);checks++;},rejects=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
+const original=prisma.systemConfig.findMany;
+prisma.systemConfig.findMany=async()=>Object.entries({PACKING_SOURCE_MODE:'BOTH',PACKING_AUTO_RELEASE:false,CODE_PACKING_LIST_MODE:'MANUAL',CODE_INVOICE_MODE:'MANUAL'}).map(([key,value])=>({key,value}));invalidateConfigCache();
+try{
+  const people={};for(const role of ['ADMIN','KEPALA_GUDANG','SALES','SUPIR']){people[role]=await prisma.user.create({data:{name:tag,email:`${randomUUID()}@example.invalid`,password:'fixture-no-login',role}});users.push(people[role].id);}
+  const admin=people.ADMIN,warehouse=people.KEPALA_GUDANG;
+  const stop=await prisma.pjpStop.findFirst(),product=await prisma.product.findFirst({where:{deletedAt:null}});assert.ok(stop&&product);
+  order=await prisma.order.create({data:{pjpStopId:stop.id,createdBy:people.SALES.id,status:'APPROVED',totalValue:1110,taxRatePercent:11,taxIncluded:false,taxAmount:110,items:{create:{productId:product.id,quantity:10,unitPrice:100,subtotal:1000,productName:product.name,productSku:product.sku}}},include:{items:true}});
+  const line=order.items[0].id;
+  const draft={code:tag,outletId:stop.outletId,sourceOrderId:order.id,totalCartons:2,items:[{lineId:line,sourceOrderItemId:line,name:product.name,quantity:10,unit:'unit'}],invoices:[{invoiceNumber:`${tag}-A`,totalCartons:1,totalAmount:444,items:[{lineId:line,quantity:4,unitPrice:9999}]},{invoiceNumber:`${tag}-B`,totalCartons:1,totalAmount:666,items:[{lineId:line,quantity:6,unitPrice:9999}]}]};
+  let p=await savePacking(draft,admin.id);packings.push(p.id);check(p.invoices[0].items[0].unitPrice,100);check(p.invoices[0].taxIncluded,false);
+  await rejects(()=>savePacking({...draft,revision:p.revision,invoices:[{...draft.invoices[0],items:[{lineId:line,quantity:11}]}]},admin.id,p.id),400);
+  p=await savePacking({...draft,revision:p.revision,invoices:[{...draft.invoices[0],totalAmount:400},draft.invoices[1]]},admin.id,p.id);
+  check(invoiceReconciliation(p).status,'AMOUNT_DIFFERENCE');await rejects(()=>transitionPacking(p.id,'RELEASE',admin.id),409);
+  let correction={revision:p.revision,note:'Corrected against external invoice',invoices:p.invoices.map(i=>({id:i.id,totalAmount:i.invoiceNumber.endsWith('-A')?444:666,items:i.items.map(l=>({...l,unitPrice:9999}))}))};
+  await rejects(()=>correctInvoiceCommercial(p.id,correction,warehouse),403);
+  const ids=p.invoices.map(i=>i.id).sort();p=await correctInvoiceCommercial(p.id,correction,admin);check(p.invoices.map(i=>i.id).sort(),ids);check(p.invoices.every(i=>i.items[0].unitPrice===100),true);
+  await rejects(()=>correctInvoiceCommercial(p.id,correction,admin),409);
+  await transitionPacking(p.id,'RELEASE',admin.id);
+  vehicle=await prisma.vehicle.create({data:{code:tag,name:tag,maxCartons:10,maxWeightKg:1000,fuelKmPerLiter:10,fuelType:'DIESEL',fuelPricePerLiter:10000}});
+  route=await prisma.deliveryRoute.create({data:{code:tag,date:new Date(),vehicleId:vehicle.id,driverId:people.SUPIR.id,createdById:warehouse.id,status:'PARTIAL',totalCartons:2,stops:{create:{packingListId:p.id,outletId:stop.outletId,sequence:1,status:'PARTIAL_REJECT',allocatedCartons:2,allocatedItems:[{lineId:line,quantity:10}],allocatedInvoices:p.invoices.map(i=>({invoiceId:i.id,cartons:1})),rejectedCartons:1,rejectedItems:[{lineId:line,quantity:2}],rejectedInvoices:[{invoiceId:p.invoices.find(i=>i.invoiceNumber.endsWith('-B')).id,cartons:1}],returnInspection:{note:'Two units unusable'},returnReceivedAt:new Date(),reusableItems:[]}}},include:{stops:true}});
+  const read=()=>prisma.packingList.findUnique({where:{id:p.id},include:{invoices:true,deliveryStops:true}});
+  p=await read();check(invoiceReconciliation(p).status,'NEEDS_ALLOCATION');check(invoiceReconciliation(p).invoices[0].acceptedValue,null);
+  const receipt=()=>({fingerprint:invoiceReconciliation(p).fingerprint,note:'Customer receipt checked',invoices:p.invoices.map(i=>({invoiceId:i.id,items:[{lineId:line,quantity:4}]}))});
+  await rejects(()=>reconcileInvoiceReceipt(p.id,{...receipt(),invoices:p.invoices.map(i=>({invoiceId:i.id,items:[{lineId:line,quantity:i.items[0].quantity}]}))},admin),409);
+  await rejects(()=>reconcileInvoiceReceipt(p.id,receipt(),warehouse),403);
+  p=await reconcileInvoiceReceipt(p.id,receipt(),admin);check(p.commercial.status,'RECONCILED');check(p.commercial.invoices.reduce((n,i)=>n+i.acceptedValue,0),888);check(p.commercial.invoices.reduce((n,i)=>n+i.unacceptedValue,0),222);
+  check(p.invoices.find(i=>i.invoiceNumber.endsWith('-B')).isDelivered,false);
+  await prisma.deliveryStop.update({where:{id:route.stops[0].id},data:{rejectedItems:[{lineId:line,quantity:1}]}});const stale=receipt();p=await read();check(invoiceReconciliation(p).status,'STALE');await rejects(()=>reconcileInvoiceReceipt(p.id,stale,admin),409);
+  check(p.history.some(h=>h.action==='CORRECT_INVOICE_COMMERCIAL'),true);check(p.history.some(h=>h.action==='RECONCILE_INVOICE_RECEIPT'),true);
+  await new Promise(resolve=>httpServer.listen(0,'127.0.0.1',resolve));const root=`http://127.0.0.1:${httpServer.address().port}/api/v1`;
+  const headers=u=>({'Content-Type':'application/json',Authorization:`Bearer ${jwt.sign({id:u.id},config.jwtSecret,{expiresIn:'5m'})}`});
+  check((await fetch(`${root}/delivery/packing-lists/${p.id}/invoices`,{method:'PATCH',headers:headers(warehouse),body:JSON.stringify(correction)})).status,403);
+  const result=await fetch(`${root}/delivery/packing-lists/${p.id}`,{headers:headers(admin)});check(result.status,200);check((await result.json()).data.commercial.status,'STALE');
+  console.log(`Invoice reconciliation integration: ${checks} checks passed (mapping, canonical prices, release guard, correction history, partial receipts, stale results and access).`);
+}finally{
+  if(httpServer.listening)await new Promise(resolve=>httpServer.close(resolve));prisma.systemConfig.findMany=original;invalidateConfigCache();
+  if(route)await prisma.deliveryRoute.delete({where:{id:route.id}});await prisma.packingList.deleteMany({where:{id:{in:packings}}});if(order)await prisma.order.delete({where:{id:order.id}});if(vehicle)await prisma.vehicle.delete({where:{id:vehicle.id}});await prisma.notification.deleteMany({where:{userId:{in:users}}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
+}

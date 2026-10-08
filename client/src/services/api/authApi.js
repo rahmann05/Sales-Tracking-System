@@ -12,7 +12,8 @@ export const authApi = {
     saveSession(res.data);
     return res.data;
   },
-  logout: () => {
+  logout: async () => {
+    try{await request('/auth/logout',{method:'POST'});}catch(error){if(error.status!==401)throw error;}
     clearSession();
   },
   getStoredUser: () => {

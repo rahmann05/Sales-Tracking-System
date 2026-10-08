@@ -1,4 +1,5 @@
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import { dailyCallCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { collectPages, dailyCallsApi, usersApi } from '../../../services/api';
 
@@ -86,60 +87,7 @@ export const useDailyCallMonitor = () => {
       return;
     }
 
-    const headers = [
-      'No',
-      'Salesman',
-      'Tanggal',
-      'Time-In',
-      'Time-Out',
-      'Duration (Min)',
-      'Customer ID',
-      'Customer Name',
-      'Sub Channel',
-      'Freq',
-      'Itny',
-      'Plan Call',
-      'Actual Call',
-      'Effective Call',
-      'SKU Sold',
-      'Order Of The Day (Rp)',
-      'Reason',
-      'Remark',
-      'Deviation (Meters)',
-      'Distance Warning',
-      'Anomali Durasi (<5m)',
-    ];
-
-    const csvRows = [headers.join(',')];
-
-    reportData.rows.forEach((r) => {
-      const rowVals = [
-        r.no,
-        `"${(r.salesmanName || '').replace(/"/g, '""')}"`,
-        r.date,
-        r.timeIn,
-        r.timeOut,
-        r.durationMinutes,
-        `"${r.customerId}"`,
-        `"${(r.customerName || '').replace(/"/g, '""')}"`,
-        r.subChannel,
-        r.freq,
-        r.itny,
-        r.planCall,
-        r.actualCall,
-        r.effectiveCall,
-        r.skuSold,
-        r.orderAmount,
-        `"${(r.reason || '').replace(/"/g, '""')}"`,
-        `"${(r.remark || '').replace(/"/g, '""')}"`,
-        r.deviationMeters,
-        r.distanceWarning,
-        r.isDurationAnomaly ? 'YA' : 'TIDAK',
-      ];
-      csvRows.push(rowVals.join(','));
-    });
-
-    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + dailyCallCsv(reportData)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -157,7 +105,7 @@ export const useDailyCallMonitor = () => {
     setFilterType,
     search,
     setSearch,
-    salesTeam,
+    salesTeam: reportSalesOptions(salesTeam, reportData.salesmanSummaries, salesmanId),
     reportData,
     isLoading, error,
     selectedRow,

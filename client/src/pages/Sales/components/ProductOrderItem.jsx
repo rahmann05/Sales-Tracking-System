@@ -1,4 +1,5 @@
 import React from 'react';
+import {unitDescription} from '../../../../../shared/product-units.mjs';
 import { LuPlus, LuMinus } from 'react-icons/lu';
 
 /**
@@ -11,7 +12,7 @@ export const ProductOrderItem = ({ product, qty, onQtyChange }) => {
       <div>
         <p className="font-bold text-xs text-on-surface">{product.name}</p>
         <p className="text-[11px] text-on-surface-variant">
-          Rp {product.price.toLocaleString('id-ID')} / {product.code} • Stok: {product.stock}
+          Rp {product.price.toLocaleString('id-ID')} / {unitDescription(product)}
         </p>
       </div>
       <div className="flex items-center gap-2">

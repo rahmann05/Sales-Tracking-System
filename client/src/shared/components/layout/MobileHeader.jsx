@@ -3,6 +3,7 @@ import { LuLayers, LuLogOut, LuArrowLeft } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { Avatar } from '../common/Avatar';
+import { MonitoringStatus } from '../common/MonitoringStatus';
 import {getAdminNavigationGroups} from '../../../constants/adminNavigation';
 import { TAB_IDS } from '../../../constants/navigation';
 import '../../../styles/layout/MobileHeader.css';
@@ -45,6 +46,7 @@ export const MobileHeader = ({ onLogout }) => {
 
       {/* Right Controls: Real-time Notifications & User Profile Badge */}
       <div className="mobile-header-actions flex items-center gap-2">
+        <MonitoringStatus />
         <NotificationCenterDropdown />
 
         <button

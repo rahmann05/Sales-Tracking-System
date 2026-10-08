@@ -6,6 +6,7 @@ import { AppError } from '../../utils/errors.js';
 import { calculateDistanceMeters } from '../../utils/geolocation.js';
 import { getDynamicConfig } from '../config/config.service.js';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
+import { notifyFollowUp } from './follow-up-notification.service.js';
 
 async function perform(db,user, data) {
   if (!['SUPERVISOR', 'ADMIN'].includes(user.role)) throw new AppError('Khusus supervisor', 403);
@@ -37,7 +38,7 @@ async function perform(db,user, data) {
   if (!stop || wibDateKey(stop.pjp.date) !== dateKey) throw new AppError('PJP hari ini tidak ditemukan', 404);
   if (user.role !== 'ADMIN' && stop.outlet.cluster?.supervisorId !== user.id) throw new AppError('Toko berada di luar tim supervisi Anda', 403);
   const where = { userId_dateKey_activityKey: { userId: user.id, dateKey, activityKey: data.stopId } };
-  const existing = await db.staffActivity.findUnique({ where });
+  let existing = await db.staffActivity.findUnique({ where });
   if (data.action === 'VISIT_IN') {
     if (existing) throw new AppError('Kunjungan sudah dimulai', 409);
     if(await db.staffActivity.findFirst({where:{userId:user.id,kind:'VISIT',checkOutAt:null},select:{id:true}}))throw new AppError('Selesaikan kunjungan aktif terlebih dahulu',409);
@@ -51,17 +52,24 @@ async function perform(db,user, data) {
   if (!existing || existing.checkOutAt) throw new AppError('Kunjungan belum dimulai atau sudah selesai', 409);
   let followUp;
   if(data.action==='AUDIT' && data.followUp) {
-    await assertSalesAccess(user,data.followUp.ownerId);
-    if(!await db.user.findFirst({where:{id:data.followUp.ownerId,deletedAt:null},select:{id:true}}))throw new AppError('Pemilik tindak lanjut tidak aktif',400);
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${existing.id}`}))`;
+    existing=await db.staffActivity.findUnique({where});
+    await assertSalesAccess(user,data.followUp.ownerId,db);
+    const owner=await db.user.findFirst({where:{id:data.followUp.ownerId,role:'SALES',deletedAt:null},select:{id:true,name:true}});
+    if(!owner)throw new AppError('Penanggung jawab harus sales aktif',400);
+    if(!data.followUp.note?.trim()||data.followUp.note.trim().length>4000)throw new AppError('Instruksi tindak lanjut wajib diisi, maksimal 4000 karakter',400);
     const due=new Date(`${data.followUp.dueDate}T12:00:00Z`);
     if(Number.isNaN(due.getTime())||due.toISOString().slice(0,10)!==data.followUp.dueDate||data.followUp.dueDate<dateKey)throw new AppError('Tenggat harus tanggal valid hari ini atau berikutnya',400);
     if(existing.followUp?.status==='DONE')throw new AppError('Tindak lanjut sudah selesai dan tidak dapat ditimpa',409);
-    followUp={...data.followUp,status:'OPEN',createdBy:user.id,history:[...(existing.followUp?.history||[]),{action:'ASSIGNED',actorId:user.id,at:new Date().toISOString()}]};
+    if(existing.followUp?.status==='SUBMITTED')throw new AppError('Periksa hasil yang sudah dikirim sebelum mengubah penugasan',409);
+    followUp={...data.followUp,note:data.followUp.note.trim(),ownerName:owner.name,status:'OPEN',createdBy:existing.followUp?.createdBy||user.id,createdAt:existing.followUp?.createdAt||new Date().toISOString(),history:[...(existing.followUp?.history||[]),{action:'ASSIGNED',actorId:user.id,at:new Date().toISOString(),before:existing.followUp?{ownerId:existing.followUp.ownerId,dueDate:existing.followUp.dueDate,note:existing.followUp.note}:null,after:{ownerId:owner.id,dueDate:data.followUp.dueDate,note:data.followUp.note.trim()}}]};
   }
   const patch = data.action === 'AUDIT'  ? { checklist: data.checklist || {}, notes: data.notes, ...(followUp?{followUp}:{}) } : { checkOutAt: new Date() };
   const updated = await db.staffActivity.updateMany({ where: { id: existing.id, checkOutAt: null }, data: patch });
   if (!updated.count) throw new AppError('Kunjungan sudah diselesaikan', 409);
-  return db.staffActivity.findUnique({ where });
+  const result = await db.staffActivity.findUnique({ where });
+  if (followUp) await notifyFollowUp(db, result, 'ASSIGNED', user.id);
+  return result;
 }
 
 export const recordSupervisorVisit=(user,data)=>withUserTransaction(user.id,db=>perform(db,user,data));

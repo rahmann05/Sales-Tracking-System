@@ -1,38 +1,52 @@
-import React, { useState } from 'react';
+import React, { useEffect,useState } from 'react';
 import { LuCheck, LuX } from 'react-icons/lu';
 import { OrderItemsTable } from './OrderItemsTable';
 import '../../../styles/components/PendingOrderCard.css';
+import {useApp} from '../../../context/AppContext';
+import {OrderReviewAssignmentEditor} from '../../../shared/components/common/OrderReviewAssignmentEditor';
 
 /**
  * PendingOrderCard Component (Single Responsibility: Order Card with SKU Breakdown for Admin)
  * 1 File per Component
  */
 export const PendingOrderCard = ({ order, onDecision }) => {
+  const {user}=useApp();
+  const assignment=order.approvalAssignment;
+  const assignedElsewhere=assignment?.ownerId&&assignment.ownerId!==user?.id;
+  const blocked=Boolean(assignedElsewhere&&user?.role!=='ADMIN')||user?.permissions?.can_approve_order===false||user?.role==='SUPERVISOR'&&assignment?.ownerValid===false;
+  const [overrideReason,setOverrideReason]=useState(''),[error,setError]=useState('');
+  const needsOverride=Boolean(assignedElsewhere&&user?.role==='ADMIN');
+  const decisionDisabled=blocked||needsOverride&&overrideReason.trim().length<5;
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  useEffect(()=>{setOverrideReason('');setError('');setShowRejectForm(false);},[assignment?.revision]);
 
   const isPending = order.status === 'PENDING_APPROVAL' || order.status === 'PENDING';
 
   const handleApprove = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting||decisionDisabled) return;
     setIsSubmitting(true);
+    setError('');
     try {
-      await onDecision({ orderId: order.id, approved: true });
+      const result=await onDecision({ orderId: order.id, approved: true,assignmentRevision:assignment?.revision||0,overrideReason });
+      if(result===false)setError('Keputusan belum tersimpan. Muat ulang order dan periksa penugasan terbaru.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleReject = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting||decisionDisabled||!rejectReason.trim()) return;
     setIsSubmitting(true);
+    setError('');
     try {
-      await onDecision({
+      const result=await onDecision({
         orderId: order.id,
         approved: false,
-        rejectionReason: rejectReason || 'Ditolak oleh Admin',
+        rejectionReason: rejectReason.trim(),assignmentRevision:assignment?.revision||0,overrideReason,
       });
+      if(result===false)setError('Keputusan belum tersimpan. Muat ulang order dan periksa penugasan terbaru.');
     } finally {
       setIsSubmitting(false);
     }
@@ -64,13 +78,17 @@ export const PendingOrderCard = ({ order, onDecision }) => {
         </span>
       </div>
 
-      <p className="text-xs text-on-surface-variant px-4 pb-3">Persetujuan ini menilai order. Saldo piutang dan plafon kredit belum dikelola sebagai buku transaksi di aplikasi.</p>
+      <p className="text-xs text-on-surface-variant px-4 pb-3">Periksa barang, jumlah, harga, pajak, dan syarat order sebelum memutuskan.</p>
       {order.rejectionReason && <p className="text-sm text-red-600 px-4 pb-3">Alasan penolakan: {order.rejectionReason}</p>}
 
       {/* Items Breakdown */}
       <OrderItemsTable items={order.items} totalAmount={order.totalAmount} />
+      <div className="px-4 pb-3 text-sm space-y-1"><p>Termin: {order.termOfPaymentDays==null?'Belum tercatat':`${order.termOfPaymentDays} hari`}</p><p>Pajak: {order.taxAmount==null?'Belum tercatat':`Rp ${order.taxAmount.toLocaleString('id-ID')} (${order.taxRatePercent}%${order.taxIncluded==null?'':order.taxIncluded?', termasuk harga':', ditambahkan'})`}</p>{order.fulfillmentStatus&&<p>Pemenuhan: {order.fulfillmentStatus} · Janji kirim: {order.promisedAt?new Date(order.promisedAt).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}):'Belum ditetapkan'}</p>}</div>
 
       {/* Approval Buttons */}
+      {assignment&&<div className="px-4 pb-3 text-sm"><p>Pemeriksa: {assignment.ownerName||'Tanggung jawab tim'} · Versi {assignment.revision}</p>{assignment.dueAt&&<p>Tenggat pemeriksaan: {new Date(assignment.dueAt).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB</p>}{assignment.ownerValid===false&&<p role="alert">Pemeriksa sudah tidak memenuhi syarat. Admin perlu mengalihkan atau mengambil alih dengan alasan.</p>}</div>}
+      {!isPending&&assignment&&<div className="px-4 pb-3"><OrderReviewAssignmentEditor orderId={order.id} readOnly/></div>}
+      {isPending&&<div className="px-4 pb-3 space-y-2"><OrderReviewAssignmentEditor orderId={order.id}/>{blocked&&<p>Keputusan tidak tersedia: periksa izin atau minta Admin mengalihkan pemeriksa.</p>}{needsOverride&&<label className="block text-sm">Alasan pengambilalihan Admin<textarea className="form-input block w-full" minLength={5} maxLength={2000} value={overrideReason} onChange={event=>setOverrideReason(event.target.value)} disabled={isSubmitting}/></label>}{error&&<p role="alert" className="text-red-600">{error}</p>}</div>}
       {isPending && (
         <div className="poc-actions-container">
           {!showRejectForm ? (
@@ -78,7 +96,7 @@ export const PendingOrderCard = ({ order, onDecision }) => {
               <button
                 type="button"
                 onClick={handleApprove}
-                disabled={isSubmitting}
+                disabled={isSubmitting||decisionDisabled}
                 className="poc-btn-approve"
               >
                 <LuCheck className="text-base" />
@@ -88,7 +106,7 @@ export const PendingOrderCard = ({ order, onDecision }) => {
               <button
                 type="button"
                 onClick={() => setShowRejectForm(true)}
-                disabled={isSubmitting}
+                disabled={isSubmitting||decisionDisabled}
                 className="poc-btn-reject"
               >
                 <LuX className="text-base" />
@@ -97,19 +115,21 @@ export const PendingOrderCard = ({ order, onDecision }) => {
             </div>
           ) : (
             <div className="poc-reject-form">
-              <label className="poc-reject-label">Alasan Penolakan Order Admin:</label>
+              <label className="poc-reject-label" htmlFor={`reject-${order.id}`}>Alasan penolakan order:</label>
               <input
+                id={`reject-${order.id}`}
                 type="text"
+                maxLength={2000}
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Contoh: Stok kosong / Data order tidak lengkap"
+                placeholder="Contoh: Data order tidak lengkap / Pelanggan membatalkan"
                 className="poc-reject-input"
               />
               <div className="poc-reject-actions">
                 <button
                   type="button"
                   onClick={handleReject}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting||decisionDisabled||!rejectReason.trim()}
                   className="poc-btn-confirm"
                 >
                   {isSubmitting ? 'Menolak…' : 'Konfirmasi Reject'}

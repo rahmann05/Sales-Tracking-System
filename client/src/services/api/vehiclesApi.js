@@ -1,5 +1,6 @@
 import { request } from "../httpClient";
 export const vehiclesApi = {
+  setCondition: (id,data) => request(`/vehicles/${id}/condition`,{method:'PATCH',body:JSON.stringify(data)}),
   getAll: async () => request('/vehicles'),
   create: async data => request('/vehicles', {
     method: 'POST',

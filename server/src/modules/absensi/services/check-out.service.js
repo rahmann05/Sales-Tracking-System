@@ -1,4 +1,6 @@
 import {reconcilePjp} from '../../route-changes/services/route-decision.service.js';
+import {visitOutcomeSchema} from '../visit-outcome.schema.js';
+import {createCollectionFollowUp} from './collection-follow-up.service.js';
 import { attendanceException } from './attendance-policy.service.js';
 /** checkOut - single-responsibility service (extracted from absensi.service.js). */
 import {withUserTransaction} from '../../../utils/user-transaction.js';
@@ -80,6 +82,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   }
 
   const result = await resolveSalesResult(payload);
+  const visitOutcome=payload.visitOutcome?visitOutcomeSchema.parse(payload.visitOutcome):undefined;
   const effective = result.isEffectiveCall;
 
   const attendance = await db.attendance.create({
@@ -97,8 +100,10 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
         reason: reason || earlyReason || (effective ? null : 'Tidak Ada Order'),
         earlyReason: isEarlyCheckout ? cleanEarlyReason : null,
         ...result,
+        ...(visitOutcome?{visitOutcome}:{}),
       },
     });
+    await createCollectionFollowUp(db,{...attendance,outletName:stop.outlet.name},'PJP');
     await db.pjpStop.update({where:{id:pjpStopId},data:{status:VISIT_STATUS.VISITED}});
 
   await reconcilePjp(db,stop.pjpId);

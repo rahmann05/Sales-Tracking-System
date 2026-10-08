@@ -14,8 +14,9 @@ export const authenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
     if(typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())throw new AppError('Token tidak valid',401);
-    const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, name: true, email: true, role: true, roleCode: true, clusterId: true, permissions: true, deletedAt: true } });
+    const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, name: true, email: true, role: true, roleCode: true, clusterId: true, permissions: true, deletedAt: true, tokenVersion:true } });
     if (!user || user.deletedAt) return next(new AppError('Akun tidak aktif', 401));
+    if((decoded.tokenVersion||0)!==(user.tokenVersion||0))return next(new AppError('Sesi telah dicabut. Masuk kembali.',401));
     req.user = await resolveIdentity(user);
     next();
   } catch (error) {

@@ -4,6 +4,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi, collectPages } from '../../services/api';
 import { DriverStopCard } from './components/DriverStopCard';
 import { DriverAttendanceModal } from './components/DriverAttendanceModal';
+import {useApp} from '../../context/AppContext';
+import {RouteOperationsActions} from '../Warehouse/components/RouteOperationsActions';
+import {routeProgress} from '../../../../shared/delivery-operations.mjs';
+import {OperationalIssues} from '../Warehouse/components/OperationalIssues';
 import { LuTruck, LuMapPin, LuPackage, LuCalendar, LuRefreshCw, LuCircleCheck } from 'react-icons/lu';
 
 /**
@@ -11,6 +15,8 @@ import { LuTruck, LuMapPin, LuPackage, LuCalendar, LuRefreshCw, LuCircleCheck } 
  * Shows today's assigned delivery route with stops, attendance buttons, and status tracking.
  */
 export const DriverFieldView = () => {
+  const {driverTracking,user}=useApp();
+  const [issues,setIssues]=useState([]);
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalData, setModalData] = useState(null); // { stop, type: 'attendance' | 'status' }
@@ -22,9 +28,10 @@ export const DriverFieldView = () => {
     setLoading(true);
     try {
       const res = await collectPages(deliveryApi.getDeliveryRoutes, {
-        date: today
+        open: 'true'
       });
       setRoutes(res.data);
+      const mine=await deliveryApi.getMyIssues();setIssues(mine.data);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -34,6 +41,7 @@ export const DriverFieldView = () => {
   }, [today]);
   useEffect(() => {
     fetchRoutes();
+    const timer=setInterval(fetchRoutes,30000);return()=>clearInterval(timer);
   }, [fetchRoutes]);
 
   // Active route (first IN_TRANSIT or READY)
@@ -91,6 +99,9 @@ export const DriverFieldView = () => {
       </div>
 
       {error && <p role="alert" className="text-red-600">{error}</p>}
+      <div className="border rounded-xl p-3 text-sm" role="status">{driverTracking?.message||'Menunggu informasi GPS.'}{driverTracking?.at&&` Terakhir terkirim ${new Date(driverTracking.at).toLocaleTimeString('id-ID')}.`}<p>Lokasi langsung tersedia saat halaman aktif, GPS diizinkan, dan jaringan tersambung. Bila berhenti memperbarui, gudang melihat posisi terakhir beserta waktunya.</p></div>
+      {activeRoute&&<RouteOperationsActions route={activeRoute} driver onChanged={fetchRoutes}/>}
+      {issues.length>0&&<OperationalIssues issues={issues} people={[user]} onChanged={fetchRoutes}/>}
       {routes.length > 1 && <label className="block">Pilih rute <select className="p-3 border rounded-xl" value={activeRoute?.id || ''} onChange={e => setSelectedRouteId(e.target.value)}>{routes.map(r => <option key={r.id} value={r.id}>{r.code} · {r.status}</option>)}</select></label>}
       {/* Progress Summary */}
       {activeRoute && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -103,12 +114,12 @@ export const DriverFieldView = () => {
       {/* Progress Bar */}
       {activeRoute && totalStops > 0 && <div className="bg-surface border border-border-glass rounded-2xl p-3 shadow-sm">
           <div className="flex justify-between text-xs text-on-surface-variant mb-2">
-            <span>Progress Pengiriman</span>
-            <span className="font-bold text-on-surface">{Math.round(deliveredCount / totalStops * 100)}%</span>
+            <span>Stop selesai diproses (termasuk penolakan)</span>
+            <span className="font-bold text-on-surface">{routeProgress(activeRoute).completionPercent}%</span>
           </div>
           <div className="w-full h-3 bg-surface-variant rounded-full overflow-hidden">
             <div className="h-full rounded-full transition-all duration-500" style={{
-          width: `${deliveredCount / totalStops * 100}%`,
+          width: `${routeProgress(activeRoute).completionPercent}%`,
           backgroundColor: deliveredCount === totalStops ? '#16a34a' : '#2563eb'
         }} />
           </div>
@@ -120,7 +131,7 @@ export const DriverFieldView = () => {
           <p className="text-sm font-semibold text-on-surface mb-1">Belum Ada Rute Hari Ini</p>
           <p className="text-xs text-on-surface-variant">Hubungi Kepala Gudang untuk mendapatkan rute pengiriman</p>
         </div> : <div className="space-y-3">
-          {stops.map((stop, idx) => <DriverStopCard key={stop.id} stop={stop} index={idx} totalStops={totalStops} onAbsenIn={() => setModalData({
+          {stops.map((stop, idx) => <DriverStopCard key={stop.id} disabled={activeRoute.status!=='IN_TRANSIT'||activeRoute.onHold||Boolean(activeRoute.returnedAt)} stop={stop} index={idx} totalStops={totalStops} onAbsenIn={() => setModalData({
         stop,
         type: 'absen_in'
       })} onMarkDelivered={() => setModalData({

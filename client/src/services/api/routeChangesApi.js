@@ -1,6 +1,7 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const routeChangesApi = {
+  rejectReroute: id => request(`/route-changes/${id}/reject`,{method:'PATCH'}),
   reportClosed: async ({
     pjpId,
     pjpStopId,

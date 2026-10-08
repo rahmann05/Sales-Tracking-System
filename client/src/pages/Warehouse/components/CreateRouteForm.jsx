@@ -18,6 +18,8 @@ export const CreateRouteForm = ({
   } = useApp();
   const [estimatedKm, setEstimatedKm] = useState('');
   const [date, setDate] = useState(() => wibDateKey());
+  const [startTime,setStartTime]=useState('08:00');
+  const [endTime,setEndTime]=useState('17:00');
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [packingLists, setPackingLists] = useState([]);
@@ -49,7 +51,7 @@ export const CreateRouteForm = ({
             }
           };
         })()]);
-        if (vRes.success) setVehicles(vRes.data || []);
+        if (Array.isArray(vRes.data)) setVehicles(vRes.data);
         if (dRes.success) setDrivers(dRes.data || []);
         if (plRes.success) setPackingLists(plRes.data.items || []);
       } catch (err) {
@@ -67,6 +69,7 @@ export const CreateRouteForm = ({
       code: pl.code,
       totalCartons: pl.remainingCartons,
       remainingCartons: pl.remainingCartons,
+      invoices: (pl.remainingInvoices||[]).filter(i=>i.remaining>0).map(i=>({...i,cartons:i.remaining})),
       items: pl.remainingItems.filter(i => i.remaining > 0).map(i => ({
         ...i,
         quantity: i.remaining
@@ -107,6 +110,8 @@ export const CreateRouteForm = ({
           totalDistanceKm: Number(estimatedKm)
         } : {}),
         date,
+        plannedStartAt: new Date(`${date}T${startTime}:00+07:00`).toISOString(),
+        plannedEndAt: new Date(`${date}T${endTime}:00+07:00`).toISOString(),
         vehicleId: selectedVehicle,
         driverId: selectedDriver,
         notes: notes || undefined,
@@ -115,6 +120,7 @@ export const CreateRouteForm = ({
           outletId: s.outletId,
           sequence: idx + 1,
           allocatedCartons: s.totalCartons,
+          allocatedInvoices: s.invoices.filter(i=>i.cartons>0).map(i=>({invoiceId:i.id,cartons:i.cartons})),
           allocatedItems: s.items.filter(i => i.quantity > 0).map(i => ({
             lineId: i.lineId,
             quantity: i.quantity
@@ -130,11 +136,12 @@ export const CreateRouteForm = ({
   };
 
   // Filter out packing lists that are already assigned to a route
-  const availablePLs = packingLists.filter(pl => pl.remainingCartons > 0 && (settings.PACKING_ALLOW_SPLIT || !pl.deliveryStops?.length) && !selectedPLs.find(s => s.packingListId === pl.id));
+  const availablePLs = packingLists.filter(pl => pl.remainingCartons > 0 && !selectedPLs.find(s => s.packingListId === pl.id));
   return <div className="bg-surface border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4">
       <h3 className="text-sm font-bold text-on-surface">Buat Rute Pengiriman Baru</h3>
       <BusinessCodeInput entity="DELIVERY_ROUTE" value={code} onChange={setCode} disabled={submitting} />
-      <p className="text-sm text-on-surface-variant">Pilih kendaraan dan supir, tambahkan packing list, lalu simpan sebagai draft. Ubah status menjadi Siap Kirim setelah muatan siap.</p>
+      <div className="grid grid-cols-2 gap-3"><label>Berangkat WIB<input className="form-input block w-full" type="time" required value={startTime} onChange={e=>setStartTime(e.target.value)}/></label><label>Target kembali WIB<input className="form-input block w-full" type="time" required value={endTime} onChange={e=>setEndTime(e.target.value)}/></label></div>
+      <p className="text-sm text-on-surface-variant">Pilih kendaraan dan supir, tambahkan packing list, lalu simpan sebagai draft. Konfirmasi penyiapan, pemeriksaan, dan serah terima muatan sebelum berangkat.</p>
       <section className="rounded-xl border border-border-glass bg-surface-container p-4 space-y-3">
         <label className="block text-sm">Estimasi jarak perjalanan (km, opsional)<input type="number" min="0" step="0.1" className="form-input mt-1 w-full" value={estimatedKm} onChange={e => setEstimatedKm(e.target.value)} placeholder="Masukkan estimasi jarak" /></label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
@@ -157,7 +164,7 @@ export const CreateRouteForm = ({
           <label className="text-xs font-semibold text-on-surface-variant block mb-1">Kendaraan</label>
           <select value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
             <option value="">Pilih kendaraan...</option>
-            {vehicles.filter(v => v.isActive).map(v => <option key={v.id} value={v.id}>{v.name} ({v.code}) — Maks {v.maxCartons} krt</option>)}
+            {vehicles.filter(v => v.isActive && v.condition==='AVAILABLE').map(v => <option key={v.id} value={v.id}>{v.name} ({v.code}) — Maks {v.maxCartons} krt</option>)}
           </select>
         </div>
 

@@ -1,5 +1,8 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
+import { SalesTargetEditor } from './SalesTargetEditor';
+import { formatTarget } from '../../../../../shared/sales-targets.mjs';
+import { calendarDayLabel } from '../../../../../shared/report-calendar.mjs';
 import { LuCalendarRange, LuDownload, LuPrinter, LuRefreshCw, LuUser, LuSearch } from 'react-icons/lu';
 /**
  * WeeklyReportView Component
@@ -19,6 +22,7 @@ export function WeeklySalesTable({
   setSearch,
   setStartDate,
   startDate,
+  targetPeriod,
   summary
 }) {
   return <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
@@ -28,11 +32,11 @@ export function WeeklySalesTable({
             <h3 className="text-sm font-bold text-on-surface tracking-tight m-0 flex items-center gap-2">
               Matriks Kinerja Mingguan (WTD)
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container border border-border-glass text-on-surface-variant">
-                6 Hari Kerja (Senin - Sabtu)
+                Kunjungan per hari dalam periode
               </span>
             </h3>
             <p className="text-xs text-on-surface-variant m-0 mt-0.5">
-              Evaluasi kepatuhan rute, efektivitas call, dan realisasi omzet harian per salesman
+              Evaluasi kepatuhan rute, efektivitas call, dan nilai order disetujui per salesman
             </p>
           </div>
 
@@ -57,7 +61,7 @@ export function WeeklySalesTable({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                Tanggal Mulai (Senin)
+                Tanggal Mulai Periode
               </label>
               <div className="relative flex items-center">
                 <LuCalendarRange className="absolute left-3 text-on-surface-variant text-sm" />
@@ -74,7 +78,7 @@ export function WeeklySalesTable({
                 <select value={salesmanId} onChange={e => setSalesmanId(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none">
                   <option value="">Semua Salesman (Tim)</option>
                   {salesTeam.map(sales => <option key={sales.id} value={sales.id}>
-                      {sales.name} ({sales.cluster?.name || 'Klaster Terjadwal'})
+                      {sales.name} ({sales.cluster?.name || 'Belum ditugaskan'}){sales.historicalOnly ? ' · Riwayat periode' : ''}
                     </option>)}
                 </select>
               </div>
@@ -99,37 +103,32 @@ export function WeeklySalesTable({
               <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
                 <th className="">Salesman</th>
                 <th className="">Klaster</th>
-                <th className="text-center">Senin</th>
-                <th className="text-center">Selasa</th>
-                <th className="text-center">Rabu</th>
-                <th className="text-center">Kamis</th>
-                <th className="text-center">Jumat</th>
-                <th className="text-center">Sabtu</th>
+                {daysSummary.map(day => <th key={day.dateStr} className="text-center">{day.dayName}<br />{day.formattedDate || day.dateStr}<br /><span className="font-normal">{calendarDayLabel(day.isWorkingDay)}</span></th>)}
                 <th className="text-center">Total Act / Plan</th>
                 <th className="text-center">Call %</th>
                 <th className="text-center">EC %</th>
-                <th className="text-right">Omzet Mingguan (Rp)</th>
+                <th className="text-right">Nilai order disetujui Mingguan (Rp)</th>
               </tr>
             </thead>
             <tbody>
               {filteredSalesmen.map(s => <tr key={s.salesmanId} className="hover:bg-surface-variant/20 transition-colors border-b border-border-glass/60">
                   <td data-label="Salesman" className="font-bold text-on-surface whitespace-nowrap">
                     {s.salesmanName}
+                    <p className="text-xs font-normal">Target: {formatTarget(s.weeklyTotal?.target,s.target?.status)} · {s.weeklyTotal?.targetAchievement}</p>
+                    <SalesTargetEditor sales={s} kind="WEEK" period={targetPeriod} onSaved={loadData}/>
                   </td>
                   <td data-label="Klaster" className="text-on-surface-variant text-[11px] whitespace-nowrap">
                     {s.clusterName}
                   </td>
 
-                  {/* 6 Day Breakdown */}
-                  {['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'].map(dayKey => {
-              const d = s.days?.[dayKey] || {
+                  {daysSummary.map(day => {
+              const d = s.days?.[day.dayName.toLowerCase()] || {
                 plan: 0,
                 actual: 0,
                 ec: 0
               };
-              const dayCapitalized = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
-              return <td key={dayKey} data-label={dayCapitalized} className="text-center font-mono text-[11px]">
-                        {d.plan > 0 ? <div className="space-y-0.5">
+              return <td key={day.dateStr} data-label={`${day.dayName} ${day.formattedDate || day.dateStr}`} className="text-center font-mono text-[11px]">
+                        {d.plan > 0 || d.actual > 0 ? <div className="space-y-0.5">
                             <span className="font-bold text-on-surface">
                               {d.actual}/{d.plan}
                             </span>
@@ -150,13 +149,13 @@ export function WeeklySalesTable({
                   <td data-label="EC %" className="text-center font-mono font-bold text-emerald-600">
                     {s.weeklyTotal?.ecRate}
                   </td>
-                  <td data-label="Omzet" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td data-label="Nilai order disetujui" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.weeklyTotal?.omzet || 0).toLocaleString('id-ID')}
                   </td>
                 </tr>)}
 
               {filteredSalesmen.length === 0 && <tr>
-                  <td colSpan="12" className="text-center text-on-surface-variant font-semibold">
+                  <td colSpan={daysSummary.length + 6} className="text-center text-on-surface-variant font-semibold">
                     Tidak ada data performa mingguan untuk filter yang dipilih.
                   </td>
                 </tr>}
@@ -166,7 +165,7 @@ export function WeeklySalesTable({
             {filteredSalesmen.length > 0 && <tfoot>
                 <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
                   <td className="" colSpan="2">
-                    TOTAL TIM SALES ({filteredSalesmen.length} Sales)
+                    TOTAL HASIL LAPORAN (sebelum pencarian nama)
                   </td>
                   {daysSummary.map((ds, idx) => <td key={idx} className="text-center font-mono text-[11px]">
                       <div>{ds.actualCalls}/{ds.planCalls}</div>

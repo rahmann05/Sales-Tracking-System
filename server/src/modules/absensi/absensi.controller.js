@@ -33,6 +33,7 @@ export const checkOut = async (req, res, next) => {
       orderAmount,
       skuSold,
       productIds,
+      visitOutcome,
     } = req.body;
 
     const data = await absensiService.checkOut(
@@ -48,6 +49,7 @@ export const checkOut = async (req, res, next) => {
         orderAmount,
         skuSold,
         productIds,
+        visitOutcome,
       }
     );
     return successResponse(res, 201, data, 'Absen OUT berhasil');

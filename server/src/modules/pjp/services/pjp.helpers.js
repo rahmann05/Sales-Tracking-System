@@ -3,6 +3,7 @@ import { workingDays } from '../../../../../shared/working-calendar.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { resolveBusinessCode, getCodePolicy } from '../../config/services/business-code.service.js';
+import { captureReportAssignment, REPORT_USER_SELECT } from '../../reports/services/report-assignment.service.js';
 
 export const getIsoWeekNumber = (date = new Date()) => {
   const d = new Date(`${wibDateKey(date)}T00:00:00Z`);
@@ -34,7 +35,7 @@ export const ensureTodayPjpForSales = async (userId, manualCode) => {
     if ((await getCodePolicy('PJP')).mode === 'MANUAL' && !manualCode?.trim()) return null;
     if (!workingDays(days).includes(dayOfWeek)) return null;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
-    const sales = await tx.user.findUnique({ where: { id: userId } });
+    const sales = await tx.user.findUnique({ where: { id: userId }, select: { ...REPORT_USER_SELECT, deletedAt: true } });
     if (!sales || sales.deletedAt || sales.role !== 'SALES' || !sales.supervisorId) return null;
     const templates = await tx.pjpTemplate.findMany({ where: { userId, dayOfWeek, weekType: { in: [getCurrentWeekType(now, mode), 'ALL'] } }, include: { stops: { orderBy: { sequence: 'asc' }, include: { outlet: {include:{cluster:{select:{supervisorId:true,deletedAt:true}}}} } } } });
     const template = templates.find(t => t.weekType !== 'ALL') || templates[0];
@@ -48,7 +49,7 @@ export const ensureTodayPjpForSales = async (userId, manualCode) => {
       outletIds = activeRoute ? (activeRoute.outletOrder || []).map(o => typeof o === 'string' ? o : o.id).filter(id => validIds.has(id)) : outlets.map(o => o.id);
     }
     if (!outletIds.length) return null;
-    return tx.pjp.create({ data: { code:await resolveBusinessCode('PJP',manualCode,{db:tx,date:now}), userId, date: wibDayRange(now).gte, type: 'SALES', status: 'SCHEDULED',
+    return tx.pjp.create({ data: { ...captureReportAssignment(sales, 'PJP_PLAN', now), code:await resolveBusinessCode('PJP',manualCode,{db:tx,date:now}), userId, date: wibDayRange(now).gte, type: 'SALES', status: 'SCHEDULED',
       stops: { create: [...new Set(outletIds)].map((outletId,i) => ({ outletId, sequence: i+1, status: 'PENDING' })) } },
       include: { user: { select: { id: true, name: true, role: true, cluster: { include: { supervisor: { select: { id: true, name: true } } } } } }, stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } } } });
   });

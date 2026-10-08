@@ -38,16 +38,17 @@ export const reportClosedOutlet = async (salesId, pjpStopId, reason = null, phot
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`closed:${pjpStopId}`}))`;
     if(await tx.routeChangeRequest.findFirst({where:{pjpStopId,status:'PENDING_APPROVAL'}}))throw new AppError('Pengajuan sudah ada',409);
     await tx.pjpStop.update({where:{id:pjpStopId},data:{status:'CLOSED_REPORTED'}});
-    return tx.routeChangeRequest.create({data:{pjpId:stop.pjpId,pjpStopId,type:'SKIP',reportedBy:salesId,reason,photoUrl,status:'PENDING_APPROVAL'},include:{pjpStop:{include:{outlet:true}}}});
-  });
+    const request = await tx.routeChangeRequest.create({data:{pjpId:stop.pjpId,pjpStopId,type:'SKIP',reportedBy:salesId,reason,photoUrl,status:'PENDING_APPROVAL'},include:{pjpStop:{include:{outlet:true}}}});
 
   await createBulkNotificationByRoles(
     [ROLES.SUPERVISOR],
     NOTIFICATION_TYPES.ROUTE_CHANGE_REPORTED,
     'Laporan Outlet Tutup',
     `Sales melaporkan outlet "${stop.outlet.name}" tutup. Pilih tindakan: Reroute atau Skip.`,
-    { routeChangeRequestId: request.id }
+    { routeChangeRequestId: request.id }, tx
   );
 
+  return request;
+  });
   return request;
 };

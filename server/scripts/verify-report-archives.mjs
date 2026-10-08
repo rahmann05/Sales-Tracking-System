@@ -1,0 +1,40 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { prisma } from '../src/config/prisma.js';
+import { createReportArchive, getReportArchive, listReportArchives, archiveHash } from '../src/modules/reports/services/report-archive.service.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local database only');
+const keys=[];let admin;let checks=0;
+const check=(value,expected)=>{assert.deepEqual(value,expected);checks++;};
+const rejects=async(work,status)=>{await assert.rejects(work,e=>e.statusCode===status);checks++;};
+try{
+  admin=await prisma.user.create({data:{name:'Archive fixture',email:`${randomUUID()}@example.invalid`,password:'fixture',role:'ADMIN'}});
+  const requestId=randomUUID(),input={kind:'MONTH',period:'9099-10',requestId,reason:'Fixture immutable monthly report'};
+  keys.push(`_REPORT_ARCHIVE:${requestId}`);
+  await rejects(()=>createReportArchive(input,{role:'SUPERVISOR'}),403);
+  const concurrent=await Promise.all([createReportArchive(input,admin),createReportArchive(input,admin)]);
+  check(concurrent[0].digest,concurrent[1].digest);check(concurrent[0].id,concurrent[1].id);
+  check(await prisma.auditEvent.count({where:{entityType:'REPORT_ARCHIVE',entityId:keys[0]}}),1);
+  const first=await getReportArchive(requestId,admin);check(first.digest,archiveHash(first.report));check(first.scope,'COMPANY');
+  await rejects(()=>createReportArchive({...input,reason:'Changed reason same request'},admin),409);
+  await rejects(()=>getReportArchive(requestId,{role:'SALES'}),403);
+  const secondId=randomUUID();keys.push(`_REPORT_ARCHIVE:${secondId}`);
+  const second=await createReportArchive({...input,requestId:secondId,reason:'Fixture corrected archive separate identity'},admin);
+  check(second.id,secondId);check((await getReportArchive(requestId,admin)).digest,first.digest);
+  const listed=await listReportArchives({kind:'MONTH',period:'9099-10'},admin);
+  check(listed.items.some(row=>row.id===requestId),true);check(listed.items.some(row=>row.id===secondId),true);
+  check(listed.items.every(row=>!row.report),true);
+  const weeklyId=randomUUID();keys.push(`_REPORT_ARCHIVE:${weeklyId}`);
+  const weekly=await createReportArchive({...input,kind:'WEEK',period:'9099-10-02',requestId:weeklyId},admin);
+  check(weekly.report.period.startDate,'9099-10-02');check(weekly.report.period.weekDays.length,7);
+  await rejects(()=>createReportArchive({...input,requestId:randomUUID(),period:'9099-13'},admin),400);
+  const stored=await prisma.systemConfig.findUnique({where:{key:keys[0]}});
+  await prisma.systemConfig.update({where:{key:keys[0]},data:{value:{...stored.value,report:{...stored.value.report,summary:{...stored.value.report.summary,mtdActualAmount:123}}}}});
+  await rejects(()=>getReportArchive(requestId,admin),409);
+  console.log(`Report archive integration passed: ${checks} checks (SQL concurrency, immutable revisions, JSONB integrity, role boundaries and weekly/monthly archives).`);
+}finally{
+  await prisma.auditEvent.deleteMany({where:{entityType:'REPORT_ARCHIVE',entityId:{in:keys}}});
+  await prisma.systemConfig.deleteMany({where:{key:{in:keys}}});
+  if(admin)await prisma.user.delete({where:{id:admin.id}});
+  await prisma.$disconnect();
+}

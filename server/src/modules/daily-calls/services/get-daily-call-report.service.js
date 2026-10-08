@@ -1,4 +1,6 @@
-import { teamSalesWhere } from '../../../utils/team-scope.js';
+import { reportScopeWhere, reportIdentity, assignmentReportBasis } from '../../reports/services/report-assignment.service.js';
+import { reportBasis } from '../../../../../shared/report-semantics.mjs';
+import {visitOutcomeText,includesCollection} from '../../../../../shared/visit-outcome.mjs';
 import { offPjpSalesResult, visitSalesResult, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 /** getDailyCallReport - single-responsibility service (extracted from daily-calls.service.js). */
 import { prisma } from '../../../config/prisma.js';
@@ -27,9 +29,9 @@ export const getDailyCallReport = async (query = {}) => {
   const manualSalesMode = await getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY');
 
   const wherePjp = {
+    ...reportScopeWhere(query),
     date: dayRange,
   };
-  if (query.supervisorId) wherePjp.user = teamSalesWhere(query.supervisorId);
   if (userId) {
     wherePjp.userId = userId;
   }
@@ -61,9 +63,9 @@ export const getDailyCallReport = async (query = {}) => {
 
   // 2. Fetch Off-PJP calls for same date range if any
   const whereOffPjp = {
+    ...reportScopeWhere(query),
     createdAt: dayRange,
   };
-  if (query.supervisorId) whereOffPjp.user = teamSalesWhere(query.supervisorId);
   if (userId) whereOffPjp.userId = userId;
   const offPjpList = await prisma.offPjpAttendance.findMany({
     where: whereOffPjp,
@@ -78,12 +80,13 @@ export const getDailyCallReport = async (query = {}) => {
   const salesMap = {};
 
   for (const pjp of pjps) {
-    const sId = pjp.user?.id || 'UNKNOWN';
+    const identity = reportIdentity(pjp);
+    const sId = identity.id || 'UNKNOWN';
     if (!salesMap[sId]) {
       salesMap[sId] = {
         salesmanId: sId,
-        salesmanName: pjp.user?.name || 'Salesman',
-        clusterName: pjp.user?.cluster?.name || 'Klaster Terjadwal',
+        salesmanName: identity.name || 'Salesman',
+        clusterName: identity.cluster?.name || 'Belum ditugaskan',
         stops: [],
       };
     }
@@ -128,14 +131,15 @@ export const getDailyCallReport = async (query = {}) => {
 
       const isDurationAnomaly = isActual && checkOut && durationMins > 0 && durationMins < MIN_VISIT_DURATION;
       const isDistanceAnomaly = isActual && distWarning === 'WARNING';
-      const isSkipped = !isActual;
+      const isSkipped = ['SKIPPED','CLOSED','CLOSED_REPORTED'].includes(stop.status) && !isActual;
 
       const row = {
         id: stop.id,
         sequence: stop.sequence,
-        salesmanId: pjp.user?.id,
-        salesmanName: pjp.user?.name || 'Salesman',
-        clusterName: pjp.user?.cluster?.name || 'Klaster Terjadwal',
+        salesmanId: identity.id,
+        salesmanName: identity.name || 'Salesman',
+        clusterName: identity.cluster?.name || 'Belum ditugaskan',
+        assignmentHistorical: identity.historical,
         date: dateStr,
         timeIn: formatTimeOnly(checkIn?.timestamp),
         timeOut: formatTimeOnly(checkOut?.timestamp),
@@ -147,8 +151,8 @@ export const getDailyCallReport = async (query = {}) => {
         customerName: outlet.name || 'Outlet',
         customerAddress: outlet.address || '-',
         subChannel: outlet.subChannel || (outlet.type === 'MODERN_TRADE' ? 'MT' : 'RETAIL'),
-        freq: 'F2',
-        itny: outlet.itineraryCode || 'SLD002W2',
+        freq: outlet.visitSchedule?.frequency || '—',
+        itny: outlet.itineraryCode || '—',
         planCall: 'Y',
         actualCall: isActual ? 'Y' : 'N',
         effectiveCall: isEc ? 'Y' : isActual ? 'N' : '',
@@ -157,7 +161,8 @@ export const getDailyCallReport = async (query = {}) => {
         orderAmount,
         reason: checkOut?.reason || checkOut?.earlyReason || (!isEc && isActual ? 'Tidak Ada Order' : isSkipped ? 'Belum Dikunjungi / Terlewat' : ''),
         earlyReason: checkOut?.earlyReason || null,
-        remark: checkOut?.notes || checkIn?.notes || '',
+        visitOutcome:checkOut?.visitOutcome||null,
+        remark: [checkOut?.notes || checkIn?.notes,visitOutcomeText(checkOut?.visitOutcome)].filter(Boolean).join(' · '),
         deviationMeters: devMeters,
         targetAmount: 0,
         photoIn: checkIn?.photoUrl || null,
@@ -180,12 +185,13 @@ export const getDailyCallReport = async (query = {}) => {
   // Append Off-PJP calls into salesMap
   for (const off of offPjpList) {
     const offResult = offPjpSalesResult(off, { manualSalesMode });
-    const sId = off.user?.id || 'UNKNOWN';
+    const identity = reportIdentity(off);
+    const sId = identity.id || 'UNKNOWN';
     if (!salesMap[sId]) {
       salesMap[sId] = {
         salesmanId: sId,
-        salesmanName: off.user?.name || 'Salesman',
-        clusterName: off.user?.cluster?.name || 'Extra Call',
+        salesmanName: identity.name || 'Salesman',
+        clusterName: identity.cluster?.name || 'Belum ditugaskan',
         stops: [],
       };
     }
@@ -193,9 +199,10 @@ export const getDailyCallReport = async (query = {}) => {
     salesMap[sId].stops.push({
       id: off.id,
       sequence: 999,
-      salesmanId: off.user?.id,
-      salesmanName: off.user?.name || 'Salesman',
-      clusterName: 'Extra Call',
+      salesmanId: identity.id,
+      salesmanName: identity.name || 'Salesman',
+      clusterName: identity.cluster?.name || 'Belum ditugaskan',
+      assignmentHistorical: identity.historical,
       date: dateStr,
       timeIn: formatTimeOnly(off.createdAt),
       timeOut: formatTimeOnly(off.createdAt),
@@ -217,7 +224,8 @@ export const getDailyCallReport = async (query = {}) => {
       orderAmount: offResult.orderAmount,
       reason: off.reason || 'Extra Call / Off-PJP',
       earlyReason: null,
-      remark: `Off-PJP: ${off.reason}`,
+      visitOutcome:off.visitOutcome||null,
+      remark: [`Off-PJP: ${off.reason}`,visitOutcomeText(off.visitOutcome)].filter(Boolean).join(' · '),
       deviationMeters: 0,
       targetAmount: 0,
       photoIn: off.photoUrl || null,
@@ -347,7 +355,7 @@ export const getDailyCallReport = async (query = {}) => {
     salesmanDailySummaries.push({
       salesmanId: sales.salesmanId,
       salesmanName: sales.salesmanName,
-      clusterName: sales.clusterName,
+      clusterName: new Set(sales.stops.map(stop => stop.clusterName)).size > 1 ? 'Beberapa penugasan pada periode' : sales.clusterName,
       planCalls: sPlan,
       actualCalls: sActual,
       complianceRate,
@@ -418,9 +426,9 @@ export const getDailyCallReport = async (query = {}) => {
   const totalSku = allEnrichedRows.reduce((sum, r) => sum + (r.skuSold || 0), 0);
 
   const durationSum = allEnrichedRows
-    .filter((r) => r.durationMinutes > 0)
+    .filter((r) => r.rawTimeOut && Number.isFinite(r.durationMinutes) && r.durationMinutes >= 0)
     .reduce((sum, r) => sum + r.durationMinutes, 0);
-  const durationCount = allEnrichedRows.filter((r) => r.durationMinutes > 0).length;
+  const durationCount = allEnrichedRows.filter((r) => r.rawTimeOut && Number.isFinite(r.durationMinutes) && r.durationMinutes >= 0).length;
   const avgDuration = durationCount > 0 ? Math.round((durationSum / durationCount) * 10) / 10 : 0;
 
   const totalPlannedActual = allEnrichedRows.filter(r => r.planCall === 'Y' && r.actualCall === 'Y').length;
@@ -428,6 +436,7 @@ export const getDailyCallReport = async (query = {}) => {
   const ecRate = totalActual > 0 ? `${Math.round((totalEc / totalActual) * 100)}%` : '0%';
 
   return {
+    basis: { ...reportBasis(), ...assignmentReportBasis({rawRecords:[...pjps,...offPjpList]}) },
     meta: {
       date: dateStr,
       reportTitle: 'DAILY CALL & ATTENDANCE AUDIT REPORT',
@@ -437,6 +446,8 @@ export const getDailyCallReport = async (query = {}) => {
     summary: {
       totalPlanCalls: totalPlan,
       totalActualCalls: totalActual,
+      totalCollectionCalls:allEnrichedRows.filter(r=>r.actualCall==='Y'&&includesCollection(r.visitOutcome?.purpose)).length,
+      totalPaymentPromises:allEnrichedRows.filter(r=>r.actualCall==='Y'&&r.visitOutcome?.result==='PROMISED').length,
       callComplianceRate: complianceRate,
       totalEffectiveCalls: totalEc,
       effectiveCallRate: ecRate,

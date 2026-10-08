@@ -1,6 +1,6 @@
 import { mapSalesPjpStops, formatTimeWib, resolveStopStatus } from './mapSalesPjpStops';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { collectPages, getAuthToken, pjpApi, ordersApi, productsApi, absensiApi, outletsApi, usersApi, routeChangesApi } from '../../services/api';
 import { mapServerOrder } from '../../utils/orderMapper';
 import { mapServerRouteChange, mapServerUnlockRequest } from '../../utils/incidentMapper';
@@ -27,10 +27,16 @@ export const useBackendSync = ({
   setIncidents,
   setProducts,
 }) => {
+  const [syncStatus, setSyncStatus] = useState({});
   useEffect(() => {
-    let isMounted = true;
+    let isMounted = true, busy = false, queued = false;
+    setSyncStatus({});
 
     const syncWithBackend = async () => {
+      if (busy) { queued = true; return; }
+      busy = true;
+      const failures = [];
+      const track = async (name, task) => { try { return await task(); } catch (error) { failures.push(name); return null; } };
       try {
         // Hanya sinkron jika ada sesi login valid (token dari auth backend)
         if (!getAuthToken() || !user?.email) return;
@@ -54,16 +60,16 @@ export const useBackendSync = ({
           unlockRes,
           productsRes,
         ] = await Promise.all([
-          fetchClusters(),
-          fetchDivisions(),
-          isManager ? collectPages(usersApi.getAll).catch(() => null) : Promise.resolve(null),
-          isSales ? pjpApi.getTodayPjp().catch(() => null) : Promise.resolve(null),
-          isManager ? collectPages(pjpApi.getAllPjps, { date: wibDateKey() }).catch(() => null) : Promise.resolve(null),
-          (isManager || isSales) ? collectPages(absensiApi.getOffPjpList, { date: wibDateKey() }).catch(() => null) : Promise.resolve(null),
-          (isManager || isSales) ? collectPages(ordersApi.getAllOrders).catch(() => null) : Promise.resolve(null),
-          (isManager || isSales) ? collectPages(routeChangesApi.getAll).catch(() => null) : Promise.resolve(null),
-          (isManager || isSales) ? outletsApi.getUnlockRequests().catch(() => null) : Promise.resolve(null),
-          isSales ? productsApi.getAll().catch(() => null) : Promise.resolve(null),
+          track('Kluster', () => fetchClusters({ strict: true })),
+          track('Divisi', () => fetchDivisions({ strict: true })),
+          isManager ? track('Pengguna', () => collectPages(usersApi.getAll)) : Promise.resolve(null),
+          isSales ? track('Kunjungan hari ini', () => pjpApi.getTodayPjp()) : Promise.resolve(null),
+          isManager ? track('Rute kunjungan', () => collectPages(pjpApi.getAllPjps, { date: wibDateKey() })) : Promise.resolve(null),
+          (isManager || isSales) ? track('Kunjungan di luar PJP', () => collectPages(absensiApi.getOffPjpList, { date: wibDateKey() })) : Promise.resolve(null),
+          (isManager || isSales) ? track('Order', () => collectPages(ordersApi.getAllOrders)) : Promise.resolve(null),
+          (isManager || isSales) ? track('Perubahan rute', () => collectPages(routeChangesApi.getAll)) : Promise.resolve(null),
+          (isManager || isSales) ? track('Pembukaan kunci toko', () => outletsApi.getUnlockRequests()) : Promise.resolve(null),
+          isSales ? track('Produk', () => productsApi.getAll()) : Promise.resolve(null),
         ]);
 
         if (!isMounted) return;
@@ -179,6 +185,7 @@ export const useBackendSync = ({
                   checkOutPhoto: outAtt?.photoUrl || null,
                   checkInNotes: inAtt?.notes || null,
                   checkOutNotes: outAtt?.notes || null,
+                  visitOutcome:outAtt?.visitOutcome||null,
                   durationMinutes: outAtt?.durationMinutes || null,
                   deviationMeters: inAtt?.deviationMeters ?? null,
                 };
@@ -251,7 +258,7 @@ export const useBackendSync = ({
           ...rawRouteChanges.map(mapServerRouteChange),
           ...rawUnlocks.map(mapServerUnlockRequest),
         ];
-        if (routeChangesRes || unlockRes) setIncidents(mappedIncidents);
+        if (routeChangesRes && unlockRes) setIncidents(mappedIncidents);
 
         // 7. Process Products
         if (productsRes?.data) {
@@ -262,22 +269,27 @@ export const useBackendSync = ({
             : productsRes.data.items || [];
           setProducts(rawProducts);
         }
+        if (isMounted) setSyncStatus(previous => failures.length ? { ...previous, error: `Gagal memperbarui: ${failures.join(', ')}. Data sebelumnya mungkin sudah lama.` } : { lastSuccessAt: new Date().toISOString(), error: '' });
       } catch (err) {
+        if (isMounted) setSyncStatus(previous => ({ ...previous, error: err.message }));
         console.warn('[useBackendSync] Sync with backend notice:', err.message);
-      }
+      } finally { busy = false; if (queued && isMounted) { queued = false; syncWithBackend(); } }
     };
 
     syncWithBackend();
     const timer = setInterval(syncWithBackend, 60000);
+    window.addEventListener('online', syncWithBackend);
     window.addEventListener('focus', syncWithBackend);
     window.addEventListener('operational-data-changed', syncWithBackend);
 
     return () => {
       isMounted = false;
       clearInterval(timer);
+      window.removeEventListener('online', syncWithBackend);
       window.removeEventListener('focus', syncWithBackend);
       window.removeEventListener('operational-data-changed', syncWithBackend);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.id, user?.role]);
+  return syncStatus;
 };

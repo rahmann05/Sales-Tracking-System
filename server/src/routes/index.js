@@ -1,4 +1,5 @@
 import teamRoutes from '../modules/teams/teams.routes.js';
+import attentionRoutes from '../modules/attention/attention.routes.js';
 import staffAttendanceRoutes from '../modules/staff-attendance/staff-attendance.routes.js';
 import { invalidateCache } from '../middlewares/cache.middleware.js';
 import { Router } from 'express';
@@ -36,6 +37,7 @@ v1Router.use('/health', healthRoutes);
 v1Router.use('/auth', authRoutes);
 v1Router.use('/users', userRoutes);
 v1Router.use('/teams', teamRoutes);
+v1Router.use('/attention',attentionRoutes);
 v1Router.use('/roles', rolesRoutes);
 v1Router.use('/clusters', clusterRoutes);
 v1Router.use('/outlets', outletRoutes);
