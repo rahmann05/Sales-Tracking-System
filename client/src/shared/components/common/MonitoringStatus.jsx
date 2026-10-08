@@ -30,7 +30,7 @@ export function MonitoringStatus() {
   }, [user?.id, user?.role]);
   const data = syncHealth(syncStatus, now, online), notifications = syncHealth(notificationStatus, now, online);
   const jobsBad = user?.role === 'ADMIN' && (error || !server || !server.schedulerInitialized || now - Date.parse(server.observedAt) > 150000 || server.jobs.some(job => ['FAILED', 'STALLED', 'OVERDUE'].includes(job.status)));
-  const gpsBad = user?.role === 'SUPIR' && ['ERROR', 'STALE', 'DENIED', 'UNAVAILABLE'].includes(driverTracking?.status);
+  const gpsBad = user?.role === 'SUPIR' && ['ERROR', 'STALE', 'DENIED', 'UNAVAILABLE', 'OFFLINE', 'BACKGROUND'].includes(driverTracking?.status);
   const warning = data !== 'CURRENT' || notifications !== 'CURRENT' || jobsBad || gpsBad;
   return <details className="relative text-xs">
     <summary aria-label={`Status pemantauan: ${warning ? 'perlu diperiksa' : 'terhubung'}`} className={`cursor-pointer min-h-11 min-w-11 flex items-center justify-center gap-1 rounded-lg border px-2 ${warning ? 'text-amber-700 bg-amber-50' : 'text-on-surface'}`}><LuActivity aria-hidden="true"/><span className="hidden sm:inline">Pemantauan · {warning ? 'Periksa' : 'Terhubung'}</span><span className="sr-only sm:hidden">{warning ? 'Periksa pemantauan' : 'Pemantauan terhubung'}</span></summary>

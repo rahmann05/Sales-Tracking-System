@@ -99,7 +99,7 @@ export const DriverFieldView = () => {
       </div>
 
       {error && <p role="alert" className="text-red-600">{error}</p>}
-      <div className="border rounded-xl p-3 text-sm" role="status">{driverTracking?.message||'Menunggu informasi GPS.'}{driverTracking?.at&&` Terakhir terkirim ${new Date(driverTracking.at).toLocaleTimeString('id-ID')}.`}<p>Lokasi langsung tersedia saat halaman aktif, GPS diizinkan, dan jaringan tersambung. Bila berhenti memperbarui, gudang melihat posisi terakhir beserta waktunya.</p></div>
+      <div className="border rounded-xl p-3 text-sm" role="status">{driverTracking?.message||'Menunggu informasi GPS.'}{driverTracking?.at&&` Posisi terakhir berhasil dikirim: ${new Date(driverTracking.at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB (${driverTracking.routeCode||'trip'}).`}<p>Lokasi langsung tersedia saat halaman aktif, GPS diizinkan, dan jaringan tersambung. Bila berhenti memperbarui, gudang melihat posisi terakhir beserta waktunya.</p></div>
       {activeRoute&&<RouteOperationsActions route={activeRoute} driver onChanged={fetchRoutes}/>}
       {issues.length>0&&<OperationalIssues issues={issues} people={[user]} onChanged={fetchRoutes}/>}
       {routes.length > 1 && <label className="block">Pilih rute <select className="p-3 border rounded-xl" value={activeRoute?.id || ''} onChange={e => setSelectedRouteId(e.target.value)}>{routes.map(r => <option key={r.id} value={r.id}>{r.code} · {r.status}</option>)}</select></label>}

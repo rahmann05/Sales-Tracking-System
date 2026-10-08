@@ -14,6 +14,7 @@ const originalInterval = globalThis.setInterval, originalClear = globalThis.clea
 const timers = new Map(); let timerId = 0;
 globalThis.setInterval = fn => { timers.set(++timerId, fn); return timerId; }; globalThis.clearInterval = id => timers.delete(id);
 globalThis.window = new EventTarget();
+globalThis.document = new EventTarget(); document.visibilityState = 'visible';
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });
 let checks = 0;
 const check = (actual, expected) => { assert.deepEqual(actual, expected); checks++; };
@@ -50,13 +51,31 @@ try {
   ordersFail = true; routesFail = true; window.dispatchEvent(new Event('focus')); await settle(); health = sync.render(); check(health.lastSuccessAt, lastSuccess); check(health.error.includes('Order'), true); check(health.error.includes('Perubahan rute'), true); check(incidentWrites, 1);
   ordersFail = false; routesFail = false; window.dispatchEvent(new Event('online')); await settle(); health = sync.render(); check(health.error, ''); check(incidentWrites, 2); sync.dispose();
 
-  let gps, cleared = false;
-  navigator.geolocation = { watchPosition: fn => { gps = fn; return 1; }, clearWatch: () => { cleared = true; } };
-  api.trips = async () => ({ data: [{ id: 'trip', code: 'TRIP', status: 'IN_TRANSIT' }] }); api.location = async () => ({ data: { accepted: true } });
+  let gps, gpsError, cleared = 0, watches = 0, reports = 0;
+  navigator.geolocation = { watchPosition: (fn, error) => { gps = fn; gpsError = error; return ++watches; }, clearWatch: () => { cleared++; } };
+  let trips = [{ id: 'trip', code: 'TRIP', status: 'IN_TRANSIT' }], locationFails = false;
+  api.trips = async () => ({ data: trips }); api.location = async () => { reports++; if(locationFails)throw new Error('Network unavailable'); return { data: { accepted: true } }; };
   const driver = harness(useDriverTracking, { id: 'driver', role: 'SUPIR' }); driver.render(); await settle(); check(driver.render().status, 'WAITING');
-  const observed = Date.now(); await gps({ timestamp: observed, coords: { latitude: -6, longitude: 107, accuracy: 10 } }); check(driver.render().status, 'LIVE');
+  gpsError({code:1}); check(driver.render().status,'DENIED'); check(cleared,1);
+  document.visibilityState='hidden';document.dispatchEvent(new Event('visibilitychange'));check(driver.render().status,'DENIED');
+  document.visibilityState='visible';document.dispatchEvent(new Event('visibilitychange'));await settle();check(driver.render().status,'WAITING');check(watches,2);
+  const observed = Date.now(), point = timestamp => ({timestamp,coords:{latitude:-6,longitude:107,accuracy:10}});
+  await gps(point(observed)); check(driver.render().status, 'LIVE');check(driver.render().at,observed);
+  const oldGps=gps,oldError=gpsError;
+  navigator.onLine=false;window.dispatchEvent(new Event('offline'));check(driver.render().status,'OFFLINE');check(driver.render().at,observed);
+  await oldGps(point(observed));check(driver.render().status,'OFFLINE');check(reports,1);
+  navigator.onLine=true;window.dispatchEvent(new Event('online'));await settle();check(driver.render().status,'WAITING');check(driver.render().at,observed);
+  oldError({code:1});check(driver.render().status,'WAITING');await oldGps(point(observed));check(reports,1);
+  locationFails=true;await gps(point(observed));check(driver.render().status,'ERROR');check(driver.render().at,observed);
+  locationFails=false;await gps(point(observed));check(driver.render().status,'LIVE');
+  document.visibilityState='hidden';document.dispatchEvent(new Event('visibilitychange'));check(driver.render().status,'BACKGROUND');
   const originalNow = Date.now; Date.now = () => observed + 120001;
   try { [...timers.values()][0](); check(driver.render().status, 'STALE'); } finally { Date.now = originalNow; }
-  driver.dispose(); check(cleared, true);
+  document.visibilityState='visible';document.dispatchEvent(new Event('visibilitychange'));await settle();check(driver.render().status,'WAITING');
+  await gps(point(observed-120001));check(driver.render().status,'STALE');check(driver.render().at,observed);
+  trips=[{...trips[0],returnedAt:new Date().toISOString()}];window.dispatchEvent(new Event('delivery:changed'));await settle();check(driver.render().status,'IDLE');
+  const reportCount=reports;await gps(point(Date.now()));check(reports,reportCount);
+  trips=[{id:'a',status:'IN_TRANSIT'},{id:'b',status:'IN_TRANSIT'}];window.dispatchEvent(new Event('delivery:changed'));await settle();check(driver.render().status,'IDLE');check(driver.render().message.includes('beberapa'),true);
+  driver.dispose();check(cleared>2,true);
   console.log(`Client monitoring verification passed: ${checks} checks including failed reads, recovery, account-switch races, partial sync preservation and GPS expiry.`);
 } finally { globalThis.setInterval = originalInterval; globalThis.clearInterval = originalClear; }
