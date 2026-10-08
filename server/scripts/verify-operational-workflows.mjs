@@ -193,6 +193,21 @@ try{
  check(deliveredOrder.fulfillmentLines[0].accepted,100);check(deliveredOrder.fulfillmentLines[0].remaining,0);
  check((await getOrders(spv)).data.find(o=>o.id===deliveryOrder.id).fulfillmentLines[0].remaining,0);
  check((await getOrders(admin)).data.find(o=>o.id===deliveryOrder.id).fulfillmentLines[0].remaining,0);
+ // Full rejection must remain distinct from full acceptance, including after physical return and closure.
+ const fullyRejectedPacking=await savePacking({outletId:b.id,totalCartons:2,totalWeight:4,items:[{lineId:`${prefix}-full-line`,name:product.name,sku:product.sku,quantity:20,unit:'unit'}],invoices:[{invoiceNumber:`${prefix}-FULL`,totalCartons:2,totalAmount:2000}]},admin.id);
+ packing.push(fullyRejectedPacking.id);await transitionPacking(fullyRejectedPacking.id,'RELEASE',admin.id);
+ const fullyRejectedTrip=await createDeliveryRoute({date:wibDateKey(),vehicleId:vehicle.id,driverId:driver.id,totalDistanceKm:10,stops:[{packingListId:fullyRejectedPacking.id,outletId:b.id,sequence:1}]},warehouse.id);routes.push(fullyRejectedTrip.id);
+ await prepare(fullyRejectedTrip);await routeAction(fullyRejectedTrip.id,{action:'START',note:'Full rejection scenario',odometer:30},driver);
+ const fullyRejectedStop=fullyRejectedTrip.stops[0];await postAttendance(fullyRejectedStop,'IN');
+ await postAttendance(fullyRejectedStop,'OUT',{status:'REJECTED',rejectReason:'Pelanggan menolak seluruh pengiriman',rejectedCartons:2,rejectedItems:[{lineId:fullyRejectedPacking.items[0].lineId,quantity:20}],rejectedInvoices:[{invoiceId:fullyRejectedPacking.invoices[0].id,cartons:2}]});
+ check((await prisma.deliveryStop.findUnique({where:{id:fullyRejectedStop.id}})).status,'REJECTED');
+ await routeAction(fullyRejectedTrip.id,{action:'RETURN',note:'All cartons returned',odometer:40},driver);
+ await receiveReturn(fullyRejectedStop.id,warehouse.id,{note:'Seluruh barang kembali, tidak layak kirim ulang',receivedCartons:2,reusableCartons:0,items:[{lineId:fullyRejectedPacking.items[0].lineId,received:20,reusable:0}],reusableInvoices:[]});
+ for(const issue of await prisma.deliveryIssue.findMany({where:{routeId:fullyRejectedTrip.id,status:'OPEN'}}))await resolveIssue(issue.id,'Pengembalian fisik sudah diperiksa dan ditindaklanjuti',warehouse);
+ await routeAction(fullyRejectedTrip.id,{action:'CLOSE',note:'All return documents complete',documentsReturned:true},warehouse);
+ check((await prisma.invoice.findFirst({where:{packingListId:fullyRejectedPacking.id}})).isDelivered,false);
+ check(packingBalance(await prisma.packingList.findUnique({where:{id:fullyRejectedPacking.id},include:{deliveryStops:true}})).remainingCartons,0);
+ check((await prisma.vehicle.findUnique({where:{id:vehicle.id}})).totalKm,40);
  const impCode=`${prefix}-IMPORTED`;const imported=await importRjp([{clusterName:`${prefix}-Import`,outletCode:impCode,customerName:'Outlet impor',address:'Alamat impor',area:'Area impor',latitude:0,longitude:0}],spv);check(imported.importedOutletsCount,1);
  const importedOutlet=await prisma.outlet.findUnique({where:{outletCode:impCode}});outlets.push(importedOutlet.id);clusters.push(importedOutlet.clusterId);check(importedOutlet.latitude,0);
  await rejects(()=>importRjp([{clusterName:clusterB.name,outletCode:`${prefix}-INVALID`,customerName:'Invalid',address:'Alamat',area:'Area',latitude:-6,longitude:107}],spv),403);

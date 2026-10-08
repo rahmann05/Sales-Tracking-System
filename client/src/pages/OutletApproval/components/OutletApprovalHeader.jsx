@@ -33,11 +33,11 @@ export const OutletApprovalHeader = ({
       <PageHeader
         badge={
           <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuFileCheck className="text-sm" /> PERSETUJUAN OUTLET NOO
+            <LuFileCheck className="text-sm" /> Pelanggan
           </span>
         }
-        title="Persetujuan Pendaftaran Outlet Baru"
-        subtitle="Verifikasi data fisik toko, titik koordinat GPS, kelayakan kredit, dan persetujuan penambahan rute PJP salesman."
+        title="Persetujuan outlet"
+        subtitle="Verifikasi identitas toko, alamat, dan lokasi sebelum outlet diaktifkan untuk kunjungan sales."
         stats={[
           { label: 'Menunggu Approval', value: statusCounts.SUBMITTED || 0, color: (statusCounts.SUBMITTED || 0) > 0 ? 'rose' : 'emerald' },
           { label: 'Disetujui SPV', value: statusCounts.SPV_APPROVED || 0, color: 'neutral' },
@@ -49,7 +49,7 @@ export const OutletApprovalHeader = ({
               <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs" />
               <input
                 type="text"
-                placeholder="Cari toko / sales..."
+                aria-label="Cari pengajuan outlet" placeholder="Cari toko atau sales…"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="outlet-reg-input pl-8 py-2 text-xs w-full sm:w-56 rounded-xl"

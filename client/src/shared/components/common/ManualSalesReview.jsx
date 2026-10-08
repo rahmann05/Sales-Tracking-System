@@ -1,38 +1,32 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { absensiApi } from '../../../services/api';
-import { applyManualSalesDecision, REVIEW_PAGE_SIZE } from './manualSalesReviewState';
-export function ManualSalesReview() {
-  const [kind,setKind] = useState('PJP'); const [status,setStatus] = useState('PENDING'); const [page,setPage] = useState(1);
-  const [result,setResult] = useState({data:[],total:0}); const [notes,setNotes] = useState({}); const [error,setError] = useState('');
-  const [busyId,setBusyId] = useState(''); const [loading,setLoading] = useState(false); const [notice,setNotice] = useState(''); const revision=useRef(0);
-  const load = useCallback(async () => {
-    const current=++revision.current;setLoading(true);setError('');
-    try { const response=await absensiApi.getManualSales({kind,status,page,limit:REVIEW_PAGE_SIZE}); if(current===revision.current)setResult(response.data); }
-    catch(e) { if(current===revision.current)setError(e.message); }
-    finally { if(current===revision.current)setLoading(false); }
+import React,{useCallback,useEffect,useRef,useState} from 'react';
+import {absensiApi} from '../../../services/api';
+import {applyManualSalesDecision,REVIEW_PAGE_SIZE} from './manualSalesReviewState';
+import {useWorkspaceState} from '../../hooks/useWorkspaceState';
+import {useSelectedDetail} from '../../hooks/useSelectedDetail';
+export function ManualSalesReview(){
+  const [kind,setKind]=useWorkspaceState('manualKind','PJP'),[status,setStatus]=useWorkspaceState('manualStatus','PENDING'),[selectedId,setSelectedId]=useWorkspaceState('manualDetail','');
+  const [page,setPage]=useState(1),[result,setResult]=useState(null),[note,setNote]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[notice,setNotice]=useState('');
+  const revision=useRef(0);
+  const load=useCallback(async()=>{
+    const current=++revision.current;setLoading(true);setError('');setResult(null);
+    try{const response=await absensiApi.getManualSales({kind,status,page,limit:REVIEW_PAGE_SIZE});if(!Array.isArray(response.data?.data))throw new Error('Respons antrean hasil manual belum dapat dibaca.');if(current===revision.current)setResult(response.data);}
+    catch(e){if(current===revision.current)setError(e.message);}finally{if(current===revision.current)setLoading(false);}
   },[kind,status,page]);
-  useEffect(() => { load(); return()=>{revision.current++;}; },[load]);
-  const decide = async (id,decision) => {
-    if(busyId)return;
-    setBusyId(id);setError('');setNotice('');
-    try {
-      await absensiApi.reviewManualSales(kind,id,decision,notes[id] || '');
-      setResult(previous=>applyManualSalesDecision(previous,id,decision,status));
-      setNotes(previous=>{const next={...previous};delete next[id];return next;});
-      setNotice(decision==='APPROVED'?'Hasil manual disetujui dan siap dihitung di laporan.':'Hasil manual ditolak.');
-      window.dispatchEvent(new CustomEvent('operational-data-changed'));
-      load();
-    } catch(e) { setError(e.message); }
-    finally { setBusyId(''); }
+  useEffect(()=>{load();return()=>{revision.current++;};},[load]);
+  const selected=result?.data.find(row=>row.id===selectedId);
+  const detailRef=useSelectedDetail(selected?.id);
+  const decide=async decision=>{
+    if(busy||!selected||decision==='REJECTED'&&!note.trim())return;
+    setBusy(true);setError('');setNotice('');
+    try{await absensiApi.reviewManualSales(kind,selected.id,decision,note);setResult(previous=>applyManualSalesDecision(previous,selected.id,decision,status));setSelectedId('');setNote('');setNotice(decision==='APPROVED'?'Hasil manual disetujui.':'Hasil manual ditolak.');window.dispatchEvent(new CustomEvent('operational-data-changed'));await load();}
+    catch(e){setError(e.message);}finally{setBusy(false);}
   };
-  return <section className="bg-surface border border-border-glass rounded-2xl p-4 space-y-3">
-    <h2 className="text-lg font-semibold">Persetujuan hasil manual absensi</h2>
-    <p className="text-sm text-on-surface-variant">Hasil tanpa order terperinci hanya masuk laporan setelah disetujui. Kunjungan luar PJP perlu divalidasi terlebih dahulu. Data yang dicatat sebagai catatan saja tidak masuk antrean ini.</p>
-    <div className="flex flex-wrap gap-3"><label>Jenis<select className="form-input block" value={kind} onChange={e=>{setKind(e.target.value);setPage(1);setNotice('');}}><option value="PJP">Absensi PJP</option><option value="OFF_PJP">Luar PJP</option></select></label><label>Status<select className="form-input block" value={status} onChange={e=>{setStatus(e.target.value);setPage(1);setNotice('');}}><option value="PENDING">Menunggu</option><option value="APPROVED">Disetujui</option><option value="REJECTED">Ditolak</option></select></label><button type="button" className="self-end border rounded-lg px-3 py-2" onClick={load} disabled={loading}>Muat ulang</button></div>
-    <p className="text-sm text-on-surface-variant"><strong>{result.total}</strong> pengajuan {status==='PENDING'?'menunggu keputusan':status==='APPROVED'?'sudah disetujui':'sudah ditolak'}.</p>
-    {notice && <p role="status" aria-live="polite" className="text-emerald-700">{notice}</p>}{error && <p role="alert" className="text-red-700">{error}</p>}{loading && <p role="status">Memuat pengajuan...</p>}
-    {result.data.map(r=><article key={r.id} className="border-t py-3 space-y-2"><p className="font-semibold">{r.user?.name} · {r.pjpStop?.outlet?.name || r.outletName}</p><p className="text-sm">{new Date(r.createdAt).toLocaleString('id-ID')} · Rp {Number(r.orderAmount || 0).toLocaleString('id-ID')} · {r.skuSold || 0} SKU</p><p className="text-sm">{(r.salesProducts || []).map(p=>p.name).join(', ')}</p>{status === 'PENDING' ? <><label className="block text-sm">Catatan keputusan (wajib jika ditolak)<input className="form-input w-full" maxLength={2000} value={notes[r.id] || ''} onChange={e=>setNotes({...notes,[r.id]:e.target.value})}/></label><div className="flex gap-3"><button type="button" disabled={Boolean(busyId)} className="bg-primary text-on-primary rounded-xl px-3 py-2" onClick={()=>decide(r.id,'APPROVED')}>{busyId===r.id?'Menyimpan…':'Setujui hasil'}</button><button type="button" disabled={Boolean(busyId)} className="border rounded-xl px-3 py-2" onClick={()=>decide(r.id,'REJECTED')}>Tolak</button></div></> : <p className="text-sm">Keputusan: {r.manualSalesStatus} · {r.manualSalesReviewNote || 'Tanpa catatan'} · {r.manualSalesReviewedAt && new Date(r.manualSalesReviewedAt).toLocaleString('id-ID')}</p>}</article>)}
-    {!loading && !result.data.length && <p className="py-4">Tidak ada pengajuan pada filter ini.</p>}
-    <div className="flex justify-end gap-4"><button type="button" disabled={page===1 || loading} onClick={()=>setPage(page-1)}>Sebelumnya</button><span>Halaman {page} · {result.total} pengajuan</span><button type="button" disabled={page*REVIEW_PAGE_SIZE >= result.total || loading} onClick={()=>setPage(page+1)}>Berikutnya</button></div>
+  return <section className="spv-manual-workspace">
+    <div className="spv-detail-heading"><div><h2>Pemeriksaan hasil manual</h2><p className="spv-note">Hasil kunjungan tanpa order terperinci. Validasi kunjungan luar PJP dilakukan lebih dahulu.</p></div></div>
+    <div className="spv-manual-body"><div className="spv-toolbar"><label>Jenis kunjungan<select disabled={busy} value={kind} onChange={e=>{setKind(e.target.value);setPage(1);setSelectedId('');}}><option value="PJP">Dalam PJP</option><option value="OFF_PJP">Luar PJP</option></select></label><label>Status hasil<select disabled={busy} value={status} onChange={e=>{setStatus(e.target.value);setPage(1);setSelectedId('');}}><option value="PENDING">Menunggu</option><option value="APPROVED">Disetujui</option><option value="REJECTED">Ditolak</option></select></label><button type="button" className="app-button" onClick={load} disabled={loading||busy}>Perbarui</button><span className="spv-note">{result?.total??'—'} pengajuan</span></div>
+    {notice&&<p role="status">{notice}</p>}{error&&<p role="alert" className="app-error">{error}</p>}
+    <div className={`spv-queue-layout ${selected?'has-selection':''}`}><div className="spv-panel spv-table-wrap"><table className="spv-table spv-mobile-cards"><thead><tr><th>Sales / outlet</th><th>Waktu pengajuan</th><th>Pemeriksaan</th></tr></thead><tbody>{result?.data.map(row=><tr key={row.id}><td data-label="Outlet / sales"><strong>{row.pjpStop?.outlet?.name||row.outletName}</strong><small>{row.user?.name}</small></td><td data-label="Waktu pengajuan">{new Date(row.createdAt).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB</td><td data-label="Pemeriksaan"><button type="button" className="app-button" disabled={busy} onClick={()=>{setSelectedId(row.id);setNote('');}}>Periksa</button></td></tr>)}{!result?.data.length&&<tr><td colSpan="3">{loading?'Memuat pengajuan…':error?'Data pengajuan belum tersedia.':'Tidak ada pengajuan sesuai filter.'}</td></tr>}</tbody></table></div>
+    {selected&&<aside className="spv-panel spv-queue-detail"><div className="spv-detail-heading"><h2 ref={detailRef} tabIndex={-1}>Detail hasil manual</h2><button type="button" className="app-button" disabled={busy} onClick={()=>setSelectedId('')}>Tutup</button></div><div className="spv-visit-detail"><strong>{selected.pjpStop?.outlet?.name||selected.outletName}</strong><p>Sales: {selected.user?.name}</p><p>Nilai hasil yang dilaporkan: Rp {Number(selected.orderAmount||0).toLocaleString('id-ID')} · {selected.skuSold||0} SKU. Ini bukan penerimaan pembayaran.</p><p>{(selected.salesProducts||[]).map(product=>product.name).join(', ')||'Rincian produk belum tersedia'}</p>{selected.photoUrl&&<a href={selected.photoUrl} target="_blank" rel="noopener noreferrer">Buka foto bukti</a>}{status==='PENDING'?<><label className="app-field">Catatan keputusan (wajib jika ditolak)<textarea value={note} disabled={busy} maxLength={2000} onChange={e=>setNote(e.target.value)}/></label><div className="app-actions"><button type="button" className="app-button app-button-primary" disabled={busy} onClick={()=>decide('APPROVED')}>{busy?'Menyimpan…':'Setujui hasil'}</button><button type="button" className="app-button" disabled={busy||!note.trim()} onClick={()=>decide('REJECTED')}>Tolak hasil</button></div></>:<p>Keputusan: {selected.manualSalesStatus} · {selected.manualSalesReviewNote||'Tanpa catatan'}</p>}</div></aside>}</div>
+    <footer className="admin-pagination"><span>Halaman {page}</span><div><button type="button" disabled={page===1||loading||busy} onClick={()=>setPage(page-1)}>Sebelumnya</button><button type="button" disabled={!result||page*REVIEW_PAGE_SIZE>=result.total||loading||busy} onClick={()=>setPage(page+1)}>Berikutnya</button></div></footer></div>
   </section>;
 }

@@ -2,6 +2,7 @@ import { categories, tools, stringify, initialValues, buttonStyle } from "./Admi
 import { displayValue } from "./AdminConfigPage.shared";
 import { ParameterGroup } from "./ConfigParameterGroup";
 import {ConfigHistory} from './ConfigHistory';
+import {useUnsavedNavigation} from '../../shared/hooks/useUnsavedNavigation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { configApi } from '../../services/api';
 import { useApp } from '../../context/AppContext';
@@ -24,7 +25,6 @@ export const AdminConfigPage = () => {
   const [category, setCategory] = useState('outlet');
   const [groupKey, setGroupKey] = useState('NOO');
   const [lastGroups, setLastGroups] = useState({});
-  const [toolKey, setToolKey] = useState('products');
   const [search, setSearch] = useState('');
   const [review, setReview] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,6 @@ export const AdminConfigPage = () => {
     params: group.params.filter(p => `${group.groupLabel} ${p.label} ${p.key} ${p.description}`.toLocaleLowerCase('id').includes(query))
   })).filter(g => g.params.length);
   const visibleGroups = query ? searchGroups : [selectedGroup];
-  const Tool = tools.find(t => t.key === toolKey).component;
   const loadConfigs = useCallback(async () => {
     setLoading(true);
     setLoadFailed(false);
@@ -68,15 +67,7 @@ export const AdminConfigPage = () => {
   useEffect(() => {
     loadConfigs();
   }, [loadConfigs]);
-  useEffect(() => {
-    if (!changes.length) return;
-    const warn = e => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [changes.length]);
+  useUnsavedNavigation(changes.length>0,saving);
   const navigate = next => {
     setLastGroups(prev => ({
       ...prev,
@@ -251,7 +242,8 @@ export const AdminConfigPage = () => {
           </div>)}
         </section> : category === 'tools' && !query ? <>
           <div><h2 className="text-lg font-bold">Alat operasional</h2><p className="text-sm text-on-surface-variant mt-1">Kelola data dan jalankan kegiatan harian. Setiap alat memiliki tombol simpan atau proses sendiri.</p>{changes.length > 0 && <p role="status" className="text-sm mt-3 border border-amber-300 bg-amber-50 text-amber-900 rounded-xl p-3">Alat ini memakai parameter yang sudah tersimpan. Simpan perubahan parameter terlebih dahulu jika ingin menggunakannya di sini.</p>}</div>
-          <div role="group" aria-label="Pilih alat operasional" className="flex flex-wrap gap-2">{tools.map(t => <button type="button" key={t.key} aria-pressed={toolKey === t.key} onClick={() => setToolKey(t.key)} className={`${buttonStyle} ${toolKey === t.key ? 'bg-primary/10 text-primary border-primary/30' : 'bg-surface'}`}>{t.label}</button>)}</div><Tool />
+          <div className="admin-settings-tools">{tools.map(tool=><button type="button" key={tool.key} className="admin-button" onClick={()=>setActiveTab(tool.tab)}>{tool.label}<LuChevronRight/></button>)}</div>
+
         </> : <>
           <div><h2 className="text-lg font-bold">{query ? 'Hasil pencarian' : currentCategory.label}</h2><p className="text-sm text-on-surface-variant mt-1">{query ? `${searchGroups.reduce((sum, g) => sum + g.params.length, 0)} parameter ditemukan di seluruh kategori.` : 'Pilih kelompok pengaturan di bawah. Nilai yang diubah ditandai hingga disimpan.'}</p></div>
           {!query && <div className="config-group-picker"><label htmlFor="config-group">Kelompok pengaturan</label><select id="config-group" className="config-input" value={groupKey} onChange={e => setGroupKey(e.target.value)}>{currentCategory.groups.map(key => {

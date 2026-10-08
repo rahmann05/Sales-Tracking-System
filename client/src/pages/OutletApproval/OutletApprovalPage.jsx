@@ -19,6 +19,7 @@ export const OutletApprovalPage = () => {
     items,
     statusCounts,
     isLoading,
+    loadError,
     filterStatus,
     setFilterStatus,
     searchQuery,
@@ -65,11 +66,11 @@ export const OutletApprovalPage = () => {
       )}
 
       {/* 3. Approval Table Queue */}
-      <OutletApprovalTable
+      {loadError ? <div role="alert" className="app-error"><p>{loadError}</p><button type="button" className="app-button" onClick={refreshData}>Coba lagi</button></div> : <OutletApprovalTable
         items={items}
         isLoading={isLoading}
         onReview={setSelectedItem}
-      />
+      />}
 
       {/* 4. Review Detail Modal */}
       {selectedItem && (

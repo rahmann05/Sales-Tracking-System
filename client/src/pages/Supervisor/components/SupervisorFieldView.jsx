@@ -1,145 +1,36 @@
-import { LiveSalesGpsTrackingTab } from '../../TeamTracking/components/LiveSalesGpsTrackingTab';
-import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
-import React, { useState, useEffect, useMemo } from 'react';
-import { useApp } from '../../../context/AppContext';
-import { useSupervisorFieldVisits } from '../hooks/useSupervisorFieldVisits';
-import { SupervisorShiftHeader } from './SupervisorShiftHeader';
-import { SpvStopCard } from './SpvStopCard';
-import { SpvFieldModals } from './SpvFieldModals';
-import { LuMapPin, LuClipboardList, LuPlus } from 'react-icons/lu';
-import { pjpApi, collectPages } from '../../../services/api';
-
-/**
- * SupervisorFieldView Component (Orchestrator)
- * Single Responsibility: Compose SPV field workspace dari child components.
- * State & business logic didelegasikan ke `useSupervisorFieldVisits`.
- */
-export const SupervisorFieldView = ({ selectedDate }) => {
-  const { user } = useApp();
-  const [loadError, setLoadError] = useState('');
-  const [todayPjps, setTodayPjps] = useState([]);
-  
-  useEffect(() => {
-    let isMounted = true;
-    const dateQuery = selectedDate || wibDateKey();
-    const load = () => collectPages(pjpApi.getAllPjps, { date: dateQuery })
-      .then((res) => {
-        if (!isMounted) return;
-        const pjps = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
-        setTodayPjps(pjps.filter((p) => wibDateKey(p.date) === dateQuery));
-        setLoadError('');
-      })
-      .catch(e => { if (isMounted) setLoadError(e.message); });
-    load();
-    window.addEventListener('focus', load);
-    window.addEventListener('operational-data-changed', load);
-    return () => {
-      isMounted = false;
-      window.removeEventListener('focus', load);
-      window.removeEventListener('operational-data-changed', load);
-    };
-  }, [user?.id, selectedDate]);
-
-  const salesOptions = useMemo(() => {
-    const uniqueSales = new Map();
-    todayPjps.forEach(p => {
-      if (p.user) {
-        uniqueSales.set(p.user.id, {
-          value: p.user.id,
-          label: `${p.user.name} (${p.user.cluster?.name || 'RJP'})`
-        });
-      }
-    });
-    return Array.from(uniqueSales.values());
-  }, [todayPjps]);
-
-  const field = useSupervisorFieldVisits(todayPjps, salesOptions);
-
-  return (
-    <div className="space-y-6">
-      {loadError && <p role="alert">{loadError}</p>}
-
-      <SupervisorShiftHeader />
-
-      {field.error && <p role="alert" className="text-red-600 text-sm">{field.error}</p>}
-      <div className="space-y-4">
-        <h4 className="text-base font-bold text-on-surface flex items-center gap-2">
-          <LuMapPin className="text-primary text-base" />
-          <span>Pantauan Posisi & PJP Sales</span>
-        </h4>
-        <p className="text-xs text-on-surface-variant">
-          Pilih sales di daftar untuk memantau posisinya dan menampilkan rute kunjungannya (PJP) di peta hari ini.
-        </p>
-        <LiveSalesGpsTrackingTab 
-          onSelectSalesId={field.setSelectedSales}
-          spvStops={field.spvStops}
-        />
-      </div>
-
-      {field.selectedSales && (
-        <div className="space-y-4 pt-6 border-t border-border-glass">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h4 className="text-lg font-black text-on-surface flex items-center gap-2">
-                <LuClipboardList className="text-primary" /> Daftar Target Kunjungan Supervisi
-              </h4>
-              <p className="text-xs text-on-surface-variant mt-1">
-                Toko-toko yang ada pada daftar kunjungan (PJP) sales yang Anda pilih. Lakukan absen masuk di toko yang ingin Anda supervisi.
-              </p>
-            </div>
-            
-            <button 
-              type="button" 
-              onClick={field.openOffPjp}
-              className="px-5 py-2.5 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition-all shadow-sm flex items-center gap-2 cursor-pointer text-xs shrink-0"
-            >
-              <LuPlus className="text-base" /> Absen Toko Terpisah / Mandiri
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-            {field.spvStops.map((stop, i) => (
-              <SpvStopCard
-                  key={stop.id}
-                  stop={stop}
-                  index={i}
-                  record={field.spvVisitRecords[stop.id] || { status: 'PENDING' }}
-                  onAbsenIn={() => field.openAbsenIn(stop)}
-                  onAbsenOut={() => field.openAbsenOut(stop)}
-                  onOpenAudit={() => field.openAudit(stop)}
-              />
-            ))}
-            {field.spvStops.length === 0 && (
-              <div className="col-span-full py-10 text-center border-2 border-dashed border-border-glass rounded-3xl">
-                <p className="text-on-surface-variant text-sm font-semibold">Tidak ada PJP untuk sales ini hari ini.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <SpvFieldModals 
-        error={field.error}
-        saving={field.saving}
-        activeModal={field.activeModal}
-        spvMode={field.spvMode}
-        setSpvMode={field.setSpvMode}
-        selectedStop={field.selectedStop}
-        inputNotes={field.inputNotes}
-        onChangeNotes={field.setInputNotes}
-        checklist={field.checklist}
-        onChangeChecklist={field.setChecklist}
-        followUp={field.followUp}
-        onChangeFollowUp={field.setFollowUp}
-        salesOptions={salesOptions}
-        offPjpForm={field.offPjpForm}
-        onChangeOffPjpForm={field.setOffPjpForm}
-        onClose={field.closeModal}
-        onConfirmAbsenIn={field.confirmAbsenIn}
-        onSaveAudit={field.saveAudit}
-        onConfirmAbsenOut={field.confirmAbsenOut}
-        onConfirmOffPjp={field.confirmOffPjp}
-      />
-    </div>
-  );
-};
+import {useSelectedDetail} from '../../../shared/hooks/useSelectedDetail';
+import React,{useState,useEffect,useMemo} from 'react';
+import {LuPlus,LuRefreshCw} from 'react-icons/lu';
+import {useApp} from '../../../context/AppContext';
+import {pjpApi,collectPages} from '../../../services/api';
+import {wibDateKey} from '../../../../../shared/visit-metrics.mjs';
+import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
+import {useSupervisorFieldVisits} from '../hooks/useSupervisorFieldVisits';
+import {SupervisorShiftHeader} from './SupervisorShiftHeader';
+import {SpvStopCard} from './SpvStopCard';
+import {SpvFieldModals} from './SpvFieldModals';
+export function SupervisorFieldView({selectedDate}){
+  const {user}=useApp();
+  const [pjps,setPjps]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
+  const [filter,setFilter]=useWorkspaceState('spvFieldStatus','all'),[detailId,setDetailId]=useWorkspaceState('spvFieldStop','');
+  useEffect(()=>{let live=true;setLoading(true);setError('');collectPages(pjpApi.getAllPjps,{date:selectedDate||wibDateKey()}).then(res=>{if(live)setPjps((Array.isArray(res.data)?res.data:res.data?.data||[]).filter(p=>wibDateKey(p.date)===(selectedDate||wibDateKey())));}).catch(e=>{if(live)setError(e.message);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[selectedDate,user?.id,refresh]);
+  const salesOptions=useMemo(()=>Array.from(new Map(pjps.filter(p=>p.user).map(p=>[p.user.id,{value:p.user.id,label:p.user.name}])).values()),[pjps]);
+  const field=useSupervisorFieldVisits(pjps,salesOptions,refresh);
+  const records=Object.values(field.spvVisitRecords);
+  const active=records.find(record=>record.kind==='VISIT'&&record.status==='IN_VISIT');
+  const activeStop=pjps.flatMap(p=>(p.stops||[]).map(stop=>({...stop,salesId:p.user?.id}))).find(stop=>stop.id===active?.activityKey);
+  const selected=!field.recordsLoading&&!field.recordsError?field.spvStops.find(stop=>stop.id===detailId):null;
+  const detailRef=useSelectedDetail(selected?.id);
+  const rows=field.spvStops.filter(stop=>filter==='all'||(field.spvVisitRecords[stop.id]?.status||'PENDING')===filter);
+  return <div className="spv-field-workspace">
+    <SupervisorShiftHeader/>
+    {active&&<div className="spv-active-visit" role="status"><div><strong>Kunjungan Anda sedang berlangsung: {active.outletName}</strong><p>Masuk {active.checkInTime}. Lengkapi audit dan absen keluar untuk menyelesaikan.</p></div>{activeStop&&<button type="button" className="app-button app-button-primary" onClick={()=>{field.setSelectedSales(activeStop.salesId);setDetailId(activeStop.id);}}>Lanjutkan kunjungan</button>}</div>}
+    <div className="spv-toolbar"><label>Sales yang didampingi<select value={field.selectedSales} onChange={e=>{field.setSelectedSales(e.target.value);setDetailId('');}}><option value="">Pilih sales</option>{salesOptions.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}</select></label><label>Kunjungan Anda<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">Seluruh target PJP</option><option value="PENDING">Belum dikunjungi</option><option value="IN_VISIT">Sedang berlangsung</option><option value="COMPLETED">Selesai</option></select></label><button type="button" className="app-button" disabled={loading} onClick={()=>setRefresh(value=>value+1)}><LuRefreshCw/>Perbarui</button><button type="button" className="app-button app-button-primary" disabled={field.saving} onClick={field.openOffPjp}><LuPlus/>Kunjungan mandiri</button></div>
+    {(error||field.recordsError||field.error)&&<p role="alert" className="app-error">{error||field.recordsError||field.error}</p>}
+    <p className="spv-note">Daftar ini menunjukkan target supervisi dari PJP sales. Status dan presensi berikut adalah milik Anda sebagai Supervisor.</p>
+    <div className={`spv-queue-layout ${selected?'has-selection':''}`}><section className="spv-panel spv-table-wrap"><table className="spv-table spv-mobile-cards"><thead><tr><th>Outlet</th><th>Alamat</th><th>Supervisi Anda</th><th>Aksi</th></tr></thead><tbody>{!loading&&!error&&!field.recordsLoading&&!field.recordsError&&rows.map(stop=>{const status=field.spvVisitRecords[stop.id]?.status||'PENDING';return <tr key={stop.id} aria-selected={detailId===stop.id}><td data-label="Outlet"><strong>{stop.outletName}</strong><small>{stop.assignedSales}</small></td><td data-label="Alamat">{stop.address}</td><td data-label="Supervisi Anda"><span className="app-status">{{PENDING:'Belum dikunjungi',IN_VISIT:'Berlangsung',COMPLETED:'Selesai'}[status]}</span></td><td data-label="Aksi"><button type="button" className="app-button" onClick={()=>setDetailId(stop.id)}>Buka kunjungan</button></td></tr>;})}{(loading||error||field.recordsLoading||field.recordsError||!rows.length)&&<tr><td colSpan="4">{loading||field.recordsLoading?'Memuat target dan presensi supervisi…':error||field.recordsError?'Target belum dapat ditampilkan. Coba perbarui.':'Tidak ada target PJP sesuai pilihan. Kunjungan mandiri tetap tersedia.'}</td></tr>}</tbody></table></section>
+    {selected&&<aside className="spv-panel spv-queue-detail"><div className="spv-detail-heading"><h2 ref={detailRef} tabIndex={-1}>Detail supervisi</h2><button type="button" className="app-button" onClick={()=>setDetailId('')}>Tutup</button></div><SpvStopCard stop={selected} record={field.spvVisitRecords[selected.id]||{status:'PENDING'}} onAbsenIn={()=>field.openAbsenIn(selected)} onOpenAudit={()=>field.openAudit(selected)} onAbsenOut={()=>field.openAbsenOut(selected)}/></aside>}</div>
+    {records.some(record=>record.kind==='OFF_PJP')&&<section className="spv-panel"><div className="spv-detail-heading"><h2>Kunjungan mandiri hari ini</h2></div><div className="spv-independent-list">{records.filter(record=>record.kind==='OFF_PJP').map(record=><article key={record.id}><strong>{record.outletName}</strong><p>{record.notes}</p><small>Tercatat {record.checkInTime||record.checkOutTime||'—'}</small></article>)}</div></section>}
+    <SpvFieldModals error={field.error} saving={field.saving} activeModal={field.activeModal} spvMode={field.spvMode} setSpvMode={field.setSpvMode} selectedStop={field.selectedStop} inputNotes={field.inputNotes} onChangeNotes={field.setInputNotes} checklist={field.checklist} onChangeChecklist={field.setChecklist} followUp={field.followUp} onChangeFollowUp={field.setFollowUp} salesOptions={salesOptions} offPjpForm={field.offPjpForm} onChangeOffPjpForm={field.setOffPjpForm} onClose={field.closeModal} onConfirmAbsenIn={field.confirmAbsenIn} onSaveAudit={field.saveAudit} onConfirmAbsenOut={field.confirmAbsenOut} onConfirmOffPjp={field.confirmOffPjp}/>
+  </div>;
+}

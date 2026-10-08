@@ -58,7 +58,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
   });
 
   return (
-    <div className={`space-y-5 w-full max-w-[1800px] mx-auto ${showHeader ? 'p-3 sm:p-4 md:p-6 pb-24' : ''}`}>
+    <div className={`space-y-5 w-full max-w-[1800px] mx-auto ${showHeader ? 'workspace-page' : ''}`}>
       {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={refreshData} disabled={isLoading}>Coba lagi</button></div>}
       {/* 1. Page Header Title Banner (Only rendered when standalone) */}
       {showHeader && (
@@ -79,10 +79,10 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       )}
 
       {/* 2. Top Summary KPI Cards (Clicking Anomalies switches to dedicated table) */}
-      <DailyCallHeaderKpi
+      {isLoading ? <p role="status">Memuat ringkasan kunjungan…</p> : reportData?.summary && <DailyCallHeaderKpi
         summary={reportData?.summary}
         onSelectAnomalies={() => setActiveTableView('ANOMALIES_ONLY')}
-      />
+      />}
       <ReportBasisNote basis={reportData?.basis} />
 
       {/* 3. Unified Data & Audit Workspace Card */}
@@ -109,7 +109,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                   activeTableView === 'ALL_VISITS' ? 'bg-white/20 text-white' : 'bg-surface-container'
                 }`}
               >
-                {reportData?.rows?.length || 0}
+                {isLoading || error ? '—' : reportData?.rows?.length || 0}
               </span>
             </button>
 
@@ -132,7 +132,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                   activeTableView === 'SALESMAN_TIMELINE' ? 'bg-white/20 text-white' : 'bg-surface-container'
                 }`}
               >
-                {reportData?.salesmanSummaries?.length || 0}
+                {isLoading || error ? '—' : reportData?.salesmanSummaries?.length || 0}
               </span>
             </button>
 
@@ -166,7 +166,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                     activeTableView === 'ANOMALIES_ONLY' ? 'bg-white/20 text-white' : 'bg-surface-container'
                   }`}
                 >
-                  0
+                  {isLoading || error ? '—' : 0}
                 </span>
               )}
             </button>
@@ -196,6 +196,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
+              disabled={isLoading || Boolean(error) || !reportData?.summary}
               className="h-10 px-3.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / PDF Resmi"
             >
@@ -261,7 +262,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       )}
 
       {/* 7. Official Printable PDF Document View */}
-      {isPdfModalOpen && (
+      {isPdfModalOpen && !isLoading && reportData?.summary && (
         <DailyCallPdfView
           reportData={reportData}
           date={date}

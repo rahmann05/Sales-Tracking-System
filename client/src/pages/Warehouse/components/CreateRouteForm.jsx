@@ -3,7 +3,8 @@ import { BusinessCodeInput } from '../../../shared/components/common/BusinessCod
 import { useApp } from '../../../context/AppContext';
 import { calculateFuelCost, evaluateDropProfitability } from '../../../services/logisticsOptimizerService';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import { deliveryApi, vehiclesApi } from '../../../services/api';
 
 import { LuPlus, LuPackage, LuX, LuArrowUp, LuArrowDown } from "react-icons/lu";
@@ -12,6 +13,7 @@ export const CreateRouteForm = ({
   onCreated,
   onCancel
 }) => {
+  const [error,setError]=useState(''),[dataLoading,setDataLoading]=useState(true);
   const [code, setCode] = useState('');
   const {
     settings
@@ -28,6 +30,11 @@ export const CreateRouteForm = ({
   const [selectedPLs, setSelectedPLs] = useState([]); // Array of { packingListId, outletId, outletName, totalCartons }
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const snapshot=JSON.stringify([code,estimatedKm,date,startTime,endTime,selectedVehicle,selectedDriver,selectedPLs,notes]);
+  const initialSnapshot=useRef(snapshot);
+  const dirty=snapshot!==initialSnapshot.current;
+  useUnsavedNavigation(dirty,submitting);
+  const cancel=()=>{if(!submitting&&(!dirty||window.confirm('Perubahan rute belum disimpan. Batalkan perubahan ini?')))onCancel();};
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -55,8 +62,8 @@ export const CreateRouteForm = ({
         if (dRes.success) setDrivers(dRes.data || []);
         if (plRes.success) setPackingLists(plRes.data.items || []);
       } catch (err) {
-        console.error('Error loading form data:', err);
-      }
+        setError(err.message||'Gagal memuat kendaraan, driver, atau dokumen packing. Buka ulang formulir setelah koneksi pulih.');
+      }finally{setDataLoading(false);}
     };
     fetchData();
   }, []);
@@ -98,10 +105,11 @@ export const CreateRouteForm = ({
   });
   const handleSubmit = async () => {
     if (submitting) return;
-    if (overCapacity) return alert('Muatan melebihi kapasitas kendaraan. Kurangi packing list atau pilih kendaraan lain.');
-    if (!selectedVehicle) return alert('Pilih kendaraan');
-    if (!selectedDriver) return alert('Pilih supir');
-    if (selectedPLs.length === 0) return alert('Tambahkan minimal 1 packing list');
+    if (overCapacity) {setError('Muatan melebihi kapasitas kendaraan. Kurangi alokasi atau pilih kendaraan lain.');return;}
+    if (!selectedVehicle) {setError('Pilih kendaraan.');return;}
+    if (!selectedDriver) {setError('Pilih driver.');return;}
+    if (selectedPLs.length === 0) {setError('Tambahkan minimal satu packing list.');return;}
+    if(!date||!startTime||!endTime||endTime<=startTime){setError('Isi tanggal serta target kembali setelah waktu berangkat.');return;}
     setSubmitting(true);
     try {
       await deliveryApi.createDeliveryRoute({
@@ -129,7 +137,7 @@ export const CreateRouteForm = ({
       });
       onCreated();
     } catch (err) {
-      alert(err.message || 'Gagal membuat rute');
+      setError(err.message || 'Gagal membuat rute');
     } finally {
       setSubmitting(false);
     }
@@ -137,8 +145,8 @@ export const CreateRouteForm = ({
 
   // Filter out packing lists that are already assigned to a route
   const availablePLs = packingLists.filter(pl => pl.remainingCartons > 0 && !selectedPLs.find(s => s.packingListId === pl.id));
-  return <div className="bg-surface border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4">
-      <h3 className="text-sm font-bold text-on-surface">Buat Rute Pengiriman Baru</h3>
+  return <div className="logistics-route-form bg-surface border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4">
+      <h3 className="text-sm font-bold text-on-surface">Penugasan & muatan trip</h3>{error&&<p role="alert" className="admin-feedback error">{error}</p>}{dataLoading&&<p role="status">Memuat pilihan armada dan dokumen…</p>}<fieldset disabled={submitting||dataLoading} className="space-y-5">
       <BusinessCodeInput entity="DELIVERY_ROUTE" value={code} onChange={setCode} disabled={submitting} />
       <div className="grid grid-cols-2 gap-3"><label>Berangkat WIB<input className="form-input block w-full" type="time" required value={startTime} onChange={e=>setStartTime(e.target.value)}/></label><label>Target kembali WIB<input className="form-input block w-full" type="time" required value={endTime} onChange={e=>setEndTime(e.target.value)}/></label></div>
       <p className="text-sm text-on-surface-variant">Pilih kendaraan dan supir, tambahkan packing list, lalu simpan sebagai draft. Konfirmasi penyiapan, pemeriksaan, dan serah terima muatan sebelum berangkat.</p>
@@ -156,13 +164,13 @@ export const CreateRouteForm = ({
         {/* Date */}
         <div>
           <label className="text-xs font-semibold text-on-surface-variant block mb-1">Tanggal</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <input aria-label="Tanggal trip" type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
 
         {/* Vehicle */}
         <div>
           <label className="text-xs font-semibold text-on-surface-variant block mb-1">Kendaraan</label>
-          <select value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+          <select aria-label="Kendaraan trip" value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
             <option value="">Pilih kendaraan...</option>
             {vehicles.filter(v => v.isActive && v.condition==='AVAILABLE').map(v => <option key={v.id} value={v.id}>{v.name} ({v.code}) — Maks {v.maxCartons} krt</option>)}
           </select>
@@ -171,7 +179,7 @@ export const CreateRouteForm = ({
         {/* Driver */}
         <div>
           <label className="text-xs font-semibold text-on-surface-variant block mb-1">Supir</label>
-          <select value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+          <select aria-label="Driver trip" value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
             <option value="">Pilih supir...</option>
             {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
@@ -186,7 +194,7 @@ export const CreateRouteForm = ({
                 <LuPackage className="text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{pl.code} • {pl.outlet?.name}</div>
-                  <div className="text-[10px] text-on-surface-variant">{pl.totalCartons} Karton • {pl.invoices?.length} Faktur</div>
+                  <div className="text-[10px] text-on-surface-variant">{pl.remainingCartons} karton tersisa • {pl.invoices?.length} faktur</div>
                 </div>
                 <LuPlus className="text-primary shrink-0" />
               </button>)}
@@ -205,13 +213,13 @@ export const CreateRouteForm = ({
                   <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{s.outletName}</div>
                   <div className="text-[10px] text-on-surface-variant">{s.code} • {s.totalCartons} krt</div>
                 </div>
-                <button onClick={() => moveStop(idx, -1)} disabled={idx === 0} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
+                <button aria-label={`Naikkan urutan ${s.outletName}`} onClick={() => moveStop(idx, -1)} disabled={idx === 0} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
                   <LuArrowUp className="text-sm" />
                 </button>
-                <button onClick={() => moveStop(idx, 1)} disabled={idx === selectedPLs.length - 1} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
+                <button aria-label={`Turunkan urutan ${s.outletName}`} onClick={() => moveStop(idx, 1)} disabled={idx === selectedPLs.length - 1} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
                   <LuArrowDown className="text-sm" />
                 </button>
-                <button onClick={() => removePackingList(s.packingListId)} className="p-1 rounded text-red-500 hover:bg-red-50">
+                <button aria-label={`Hapus alokasi ${s.outletName}`} onClick={() => removePackingList(s.packingListId)} className="p-1 rounded text-red-500 hover:bg-red-50">
                   <LuX className="text-sm" />
                 </button>
                 <PackingAllocationFields entry={s} allowSplit={settings.PACKING_ALLOW_SPLIT} onChange={updated => setSelectedPLs(selectedPLs.map(v => v.packingListId === updated.packingListId ? updated : v))} />
@@ -228,15 +236,15 @@ export const CreateRouteForm = ({
         {overCapacity && <span className="flex items-center gap-1 text-xs text-red-600 font-semibold"><FiAlertTriangle /> Melebihi kapasitas kendaraan!</span>}
       </div>
 
-      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Catatan (opsional)" rows={2} className="w-full px-3 py-2 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+      <textarea aria-label="Catatan trip" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Catatan (opsional)" rows={2} className="w-full px-3 py-2 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
 
       <div className="flex justify-end gap-2">
-        <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant border border-border-glass hover:bg-surface-variant transition-colors">
+        <button onClick={cancel} className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant border border-border-glass hover:bg-surface-variant transition-colors">
           Batal
         </button>
         <button onClick={handleSubmit} disabled={submitting || overCapacity || selectedPLs.length === 0 || !selectedVehicle || !selectedDriver} className="px-5 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
           {submitting ? 'Menyimpan...' : 'Simpan Rute'}
         </button>
       </div>
-    </div>;
+    </fieldset></div>;
 };

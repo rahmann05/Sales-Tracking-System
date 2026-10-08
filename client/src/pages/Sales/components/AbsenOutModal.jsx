@@ -1,9 +1,11 @@
+import {useFormDraft} from '../../../shared/hooks/useFormDraft';
+import {SalesDialog} from './SalesDialog';
 import { AttendanceSalesInput } from './AttendanceSalesInput';
 import {VisitOutcomeInput} from './VisitOutcomeInput';
 import {visitOutcomeError} from '../../../../../shared/visit-outcome.mjs';
 import { useApp } from '../../../context/AppContext';
 import React, { useState, useEffect } from 'react';
-import { FiXCircle, FiCheckCircle, FiAlertTriangle, FiClock } from 'react-icons/fi';
+import { FiCheckCircle, FiAlertTriangle, FiClock } from 'react-icons/fi';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { AbsenNotesInput } from './AbsenNotesInput';
 
@@ -11,7 +13,7 @@ const EARLY_REASON_OPTIONS = [
   'Pemilik Toko Sedang Terburu-buru / Sibuk',
   'Toko Tutup / Sedang Istirahat Siang',
   'Hanya Mengantar Nota / Tagihan Pembayaran',
-  'Stok Masih Sangat Penuh (Tidak Mengambil Order)',
+  'Pelanggan belum membutuhkan order',
   'Kendala Teknis / Darurat Lapangan Lainnya',
 ];
 
@@ -21,10 +23,11 @@ const EARLY_REASON_OPTIONS = [
  * Duration Anti-Fraud Check, and Result Notes.
  */
 export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
-  const { settings } = useApp();
+  const { settings,user } = useApp();
+  const draft=useFormDraft(`AbsenOutModal:${stop?.id}`,{notes:'',visitOutcome:{purpose:''},salesResult:{orderAmount:'',productIds:[]},earlyReason:''});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const cacheKey = stop?.id ? `sales_cached_photo_out_${stop.id}` : null;
+  const cacheKey = stop?.id ? `sales_cached_photo_out_${user.id}_${stop.id}` : null;
   const [capturedPhoto, setCapturedPhoto] = useState(() => {
     try {
       return (cacheKey && sessionStorage.getItem(cacheKey)) || null;
@@ -33,10 +36,10 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     }
   });
   const [gpsData, setGpsData] = useState(null);
-  const [notes, setNotes] = useState('');
-  const [visitOutcome,setVisitOutcome]=useState({purpose:''});
-  const [salesResult, setSalesResult] = useState({ orderAmount: '', productIds: [] });
-  const [earlyReason, setEarlyReason] = useState('');
+  const notes=draft.value.notes,setNotes=draft.field('notes');
+  const visitOutcome=draft.value.visitOutcome,setVisitOutcome=draft.field('visitOutcome');
+  const salesResult=draft.value.salesResult,setSalesResult=draft.field('salesResult');
+  const earlyReason=draft.value.earlyReason,setEarlyReason=draft.field('earlyReason');
   const [elapsedSecs, setElapsedSecs] = useState(0);
 
   const checkInTimestamp = stop?.inTimestamp;
@@ -79,7 +82,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   };
 
   const handleRetake = () => {
-    setCapturedPhoto(null);
+    setCapturedPhoto(null);setGpsData(null);
     if (cacheKey) {
       try {
         sessionStorage.removeItem(cacheKey);
@@ -93,7 +96,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     if(outcomeError){setError(outcomeError);return;}
     if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
     if (settings.ATTENDANCE_REQUIRE_PHOTO && !capturedPhoto) {
-      alert('Harap ambil foto selfie presensi keluar terlebih dahulu menggunakan kamera.');
+      setError('Ambil foto presensi keluar menggunakan kamera terlebih dahulu.');
       return;
     }
 
@@ -114,30 +117,11 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
       ...(settings.ATTENDANCE_ALLOW_MANUAL_SALES ? { orderAmount: Number(salesResult.orderAmount || 0), productIds: salesResult.productIds } : {}),
       durationMinutes: Math.round((elapsedSecs / 60) * 10) / 10,
     });
-    if (cacheKey) sessionStorage.removeItem(cacheKey);
+    draft.clear();if (cacheKey) sessionStorage.removeItem(cacheKey);
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Absensi toko">
-      <div className="bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
-        {/* Header Modal */}
-        <div className="modal-header">
-          <div>
-            <h3 className="font-bold text-lg text-on-surface">Absen Out Toko (Check-Out)</h3>
-            <p className="text-xs text-on-surface-variant font-medium">{stop.outletName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup absensi"
-            disabled={saving}
-            className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant"
-          >
-            <FiXCircle className="text-xl" />
-          </button>
-        </div>
-
+  return <SalesDialog title="Hasil kunjungan & absen keluar" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
         {/* Duration Status Bar */}
         <div className="p-3 bg-surface-container rounded-2xl border border-border-glass flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 font-bold text-on-surface">
@@ -177,7 +161,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
               </div>
             </div>
 
-            {settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT && <select
+            {settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT && <select aria-label="Alasan absen keluar lebih awal"
               value={earlyReason}
               onChange={(e) => setEarlyReason(e.target.value)}
               className="w-full p-2.5 bg-surface border border-amber-500/40 rounded-xl text-xs font-semibold text-on-surface focus:ring-2 focus:ring-amber-500 outline-none"
@@ -236,7 +220,5 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
             <span>Selesaikan Kunjungan & Absen Out</span>
           </button>
         )}
-      </div>
-    </div>
-  );
+  </SalesDialog>;
 };

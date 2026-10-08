@@ -1,6 +1,8 @@
+import {useFormDraft} from '../../../shared/hooks/useFormDraft';
+import {SalesDialog} from './SalesDialog';
 import { useApp } from '../../../context/AppContext';
 import React, { useState } from 'react';
-import { FiXCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiCheckCircle } from 'react-icons/fi';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { AbsenNotesInput } from './AbsenNotesInput';
 
@@ -9,10 +11,11 @@ import { AbsenNotesInput } from './AbsenNotesInput';
  * Single Responsibility: Sales Rep Absen In with Live Camera, Real-Time GPS Tracking, and Keterangan Masuk.
  */
 export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
-  const { settings } = useApp();
+  const { settings,user } = useApp();
+  const draft=useFormDraft(`AbsenInModal:${stop?.id}`,{notes:'Kunjungan pelanggan'});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const cacheKey = stop?.id ? `sales_cached_photo_in_${stop.id}` : null;
+  const cacheKey = stop?.id ? `sales_cached_photo_in_${user.id}_${stop.id}` : null;
   const [capturedPhoto, setCapturedPhoto] = useState(() => {
     try {
       return (cacheKey && sessionStorage.getItem(cacheKey)) || null;
@@ -21,7 +24,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
     }
   });
   const [gpsData, setGpsData] = useState(null);
-  const [notes, setNotes] = useState('Kunjungan Rutin & Cek Stok');
+  const notes=draft.value.notes,setNotes=draft.field('notes');
 
   if (!stop) return null;
 
@@ -36,7 +39,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
   };
 
   const handleRetake = () => {
-    setCapturedPhoto(null);
+    setCapturedPhoto(null);setGpsData(null);
     if (cacheKey) {
       try {
         sessionStorage.removeItem(cacheKey);
@@ -48,7 +51,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
     if (saving) return;
     if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
     if (settings.ATTENDANCE_REQUIRE_PHOTO && !capturedPhoto) {
-      alert('Harap ambil foto selfie presensi terlebih dahulu menggunakan kamera.');
+      setError('Ambil foto presensi menggunakan kamera terlebih dahulu.');
       return;
     }
     setSaving(true); setError('');
@@ -58,29 +61,11 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
       gpsLocation: gpsData,
       notes: notes || 'Kunjungan Rutin',
     });
-    if (cacheKey) sessionStorage.removeItem(cacheKey);
+    draft.clear();if (cacheKey) sessionStorage.removeItem(cacheKey);
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Absensi toko">
-      <div className="bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
-        <div className="modal-header">
-          <div>
-            <h3 className="font-bold text-lg text-on-surface">Absen In Toko (Check-In)</h3>
-            <p className="text-xs text-on-surface-variant">{stop.outletName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup absensi"
-            disabled={saving}
-            className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant"
-          >
-            <FiXCircle className="text-xl" />
-          </button>
-        </div>
-
+  return <SalesDialog title="Absen masuk" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
         {/* 1. Live Device Camera & GPS Verification (Top Section) */}
         <DeviceCameraCapture outletId={stop.outletId}
           capturedPhoto={capturedPhoto}
@@ -119,7 +104,5 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
             <span>Konfirmasi Absen In Toko</span>
           </button>
         )}
-      </div>
-    </div>
-  );
+  </SalesDialog>;
 };

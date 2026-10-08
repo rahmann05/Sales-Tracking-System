@@ -1,3 +1,5 @@
+import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
+import {notifySuccess} from '../../services/notificationService';
 import { AdminApprovalView } from './AdminApprovalView';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -12,6 +14,7 @@ import { mapServerUnlockRequest } from '../../utils/incidentMapper';
  */
 export const AdminApprovalPage = ({
   onGoBack,
+  ordersOnly=false,hideHeading=false,
   embedded = false
 }) => {
   const {
@@ -25,9 +28,10 @@ export const AdminApprovalPage = ({
     setActiveTab,
     salesList = []
   } = useApp();
-  const [orderFilter, setOrderFilter] = useState('PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
-  const [selectedSales, setSelectedSales] = useState('ALL'); // 'ALL' | <salesName>
+  const [orderFilter, setOrderFilter] = useWorkspaceState('orderStatus','PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [selectedSales, setSelectedSales] = useWorkspaceState('orderSales','ALL'); // 'ALL' | <salesName>
   const [loading, setLoading] = useState(false);
+  const [loadError,setLoadError]=useState('');
   const [manualPendingCount, setManualPendingCount] = useState(0);
   const unlockRequests = (incidents || []).filter(i => i.type === 'UNLOCK_REQUEST');
   const pendingUnlockCount = unlockRequests.filter(r => r.status === 'PENDING').length;
@@ -63,6 +67,7 @@ export const AdminApprovalPage = ({
         status: 'PENDING',
         limit: 1
       }).catch(() => null)]);
+      setLoadError([!ordersRes&&'order',!unlockRes&&'izin presensi',(!manualPjpRes||!manualOffRes)&&'presensi manual'].filter(Boolean).length?'Sebagian data gagal dimuat: '+[!ordersRes&&'order',!unlockRes&&'izin presensi',(!manualPjpRes||!manualOffRes)&&'presensi manual'].filter(Boolean).join(', ')+'.':'');
       if (ordersRes?.data && setOrders) {
         const raw = Array.isArray(ordersRes.data) ? ordersRes.data : Array.isArray(ordersRes.data?.data) ? ordersRes.data.data : ordersRes.data.items || [];
         setOrders(raw.map(mapServerOrder));
@@ -77,7 +82,7 @@ export const AdminApprovalPage = ({
       }
       const pjpTotal = Number(manualPjpRes?.data?.total || manualPjpRes?.total || 0);
       const offTotal = Number(manualOffRes?.data?.total || manualOffRes?.total || 0);
-      setManualPendingCount(pjpTotal + offTotal);
+      if(manualPjpRes&&manualOffRes)setManualPendingCount(pjpTotal + offTotal);
     } catch (err) {
       console.warn('Failed to load approval data:', err);
     } finally {
@@ -95,9 +100,9 @@ export const AdminApprovalPage = ({
     const success = await handleAdminOrderDecision(payload);
     if (success === false) return false;
     if (payload.approved) {
-      alert('Order berhasil disetujui.');
+      notifySuccess('Order berhasil disetujui.');
     } else {
-      alert('Order REJECTED.');
+      notifySuccess('Order ditolak.');
     }
     loadApprovalData();
     return true;
@@ -135,5 +140,5 @@ export const AdminApprovalPage = ({
     }
     return true;
   });
-  return <AdminApprovalView approvedOrders={approvedOrders} approvedOrdersBySales={approvedOrdersBySales} embedded={embedded} filteredOrders={filteredOrders} handleApproveUnlock={handleApproveUnlock} handleBackToHub={handleBackToHub} handleDecision={handleDecision} handleRejectUnlock={handleRejectUnlock} loadApprovalData={loadApprovalData} loading={loading} manualPendingCount={manualPendingCount} orderFilter={orderFilter} orders={orders} ordersBySales={ordersBySales} pendingOrders={pendingOrders} pendingOrdersBySales={pendingOrdersBySales} pendingUnlockCount={pendingUnlockCount} salesOptions={salesOptions} selectedSales={selectedSales} setOrderFilter={setOrderFilter} setSelectedSales={setSelectedSales} unlockRequests={unlockRequests} />;
+  return <AdminApprovalView ordersOnly={ordersOnly} hideHeading={hideHeading} loadError={loadError} approvedOrders={approvedOrders} approvedOrdersBySales={approvedOrdersBySales} embedded={embedded} filteredOrders={filteredOrders} handleApproveUnlock={handleApproveUnlock} handleBackToHub={handleBackToHub} handleDecision={handleDecision} handleRejectUnlock={handleRejectUnlock} loadApprovalData={loadApprovalData} loading={loading} manualPendingCount={manualPendingCount} orderFilter={orderFilter} orders={orders} ordersBySales={ordersBySales} pendingOrders={pendingOrders} pendingOrdersBySales={pendingOrdersBySales} pendingUnlockCount={pendingUnlockCount} salesOptions={salesOptions} selectedSales={selectedSales} setOrderFilter={setOrderFilter} setSelectedSales={setSelectedSales} unlockRequests={unlockRequests} />;
 };

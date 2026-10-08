@@ -1,5 +1,6 @@
+import {useFormDraft} from '../../../shared/hooks/useFormDraft';
+import {SalesDialog} from './SalesDialog';
 import React, { useState } from 'react';
-import { FiXCircle } from 'react-icons/fi';
 import { LuKey, LuSend } from 'react-icons/lu';
 
 /**
@@ -7,14 +8,16 @@ import { LuKey, LuSend } from 'react-icons/lu';
  * Single Responsibility: Modal for Sales Rep to submit an outlet unlock request to Admin / Supervisor.
  */
 export const RequestUnlockModal = ({ stop, activeVisitingStop, onClose, onSubmitUnlockRequest }) => {
-  const [reason, setReason] = useState('Toko sebelumnya belum selesai proses atau terkendala akses');
+  const reason=draft.value.reason,setReason=draft.field('reason');
 
+  const draft=useFormDraft(`RequestUnlockModal:${stop?.id}`,{reason:''});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   if (!stop) return null;
 
   const handleSubmit = async () => {
     if (saving) return;
+    if(reason.trim().length<3){setError('Jelaskan kendala lokasi minimal 3 karakter.');return;}
     setSaving(true); setError('');
     try {
     await onSubmitUnlockRequest({
@@ -24,53 +27,26 @@ export const RequestUnlockModal = ({ stop, activeVisitingStop, onClose, onSubmit
       activeVisitingOutlet: activeVisitingStop?.outletName || 'Outlet Sebelumnya',
       reason,
     });
+    draft.clear();
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return (
-    <div className="modal-backdrop">
-      <div className="bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
-        {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
-        <div className="modal-header">
-          <div>
-            <h3 className="font-bold text-lg text-on-surface">Minta Buka Kunci (Unlock)</h3>
-            <p className="text-xs text-on-surface-variant">Tujuan: {stop.outletName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant"
-          >
-            <FiXCircle className="text-xl" />
-          </button>
-        </div>
-
+  return <SalesDialog title="Ajukan pengecualian GPS" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty} restored={draft.restored} draftError={draft.storageError}>
+{error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-800 space-y-1">
           <p className="font-bold flex items-center gap-1.5 text-amber-900">
             <LuKey className="text-sm" /> Status Kunjungan Saat Ini
           </p>
-          <p>
-            Anda masih tercatat memiliki kunjungan aktif di{' '}
-            <strong>{activeVisitingStop?.outletName || 'Outlet Lain'}</strong> tanpa Absen Out.
-          </p>
+          <p>{activeVisitingStop ? `Kunjungan aktif Anda: ${activeVisitingStop.outletName}. Selesaikan kunjungan tersebut sebelum berpindah outlet.` : 'Permohonan ini ditinjau Admin atau Supervisor untuk pengecualian pemeriksaan lokasi.'}</p>
           <p className="text-[11px] text-amber-700">
-            Kirimkan permohonan ke Admin/Supervisor agar outlet ini dapat dibuka untuk presensi.
+            Persetujuan pengecualian GPS tidak menggantikan absen keluar atau aturan urutan kunjungan.
           </p>
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold text-on-surface">Alasan Permintaan Unlock:</label>
-          <select
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="w-full p-2.5 rounded-xl border border-border-glass bg-surface text-xs font-semibold text-on-surface focus:outline-none focus:border-primary"
-          >
-            <option value="Toko sebelumnya tutup mendadak / gembok">Toko sebelumnya tutup mendadak / gembok</option>
-            <option value="Urutan kunjungan dialihkan karena rute jalan macet">Urutan kunjungan dialihkan karena rute jalan macet</option>
-            <option value="Pemilik toko sebelumnya meminta reschedule kunjungan">Pemilik toko sebelumnya meminta reschedule kunjungan</option>
-            <option value="Kendala sinyal / teknis pada saat Absen Out toko sebelumnya">Kendala sinyal / teknis pada saat Absen Out toko sebelumnya</option>
-            <option value="Lainnya (Izin Khusus Supervisor)">Lainnya (Izin Khusus Supervisor)</option>
-          </select>
+          <label htmlFor="sales-gps-exception-reason" className="text-xs font-bold text-on-surface">Kendala lokasi yang perlu diperiksa</label>
+          <textarea id="sales-gps-exception-reason" rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Jelaskan ketidaksesuaian titik outlet, lokasi sementara, atau kendala GPS yang Anda alami." />
+          <p className="sales-note">Tuliskan kondisi sebenarnya agar Supervisor dapat memeriksa permohonan Anda.</p>
         </div>
 
         <button
@@ -80,9 +56,7 @@ export const RequestUnlockModal = ({ stop, activeVisitingStop, onClose, onSubmit
           className="w-full py-3 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
         >
           <LuSend className="text-sm" />
-          <span>Kirim Permohonan Unlock ke Admin</span>
+          <span>Kirim permohonan untuk diperiksa</span>
         </button>
-      </div>
-    </div>
-  );
+  </SalesDialog>;
 };

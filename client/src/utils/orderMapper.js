@@ -23,6 +23,7 @@ export const mapServerOrder = (o = {}) => ({
   createdAt: o.createdAt
     ? new Date(o.createdAt).toISOString().replace('T', ' ').substring(0, 16)
     : '',
+  createdAtIso:o.createdAt||null,
   items: (o.items || []).map(mapServerOrderItem),
   totalAmount: o.totalValue ?? o.totalAmount ?? 0,
   paymentType: o.paymentType || 'CASH',

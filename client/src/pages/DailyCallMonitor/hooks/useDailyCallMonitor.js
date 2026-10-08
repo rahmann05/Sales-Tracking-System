@@ -1,3 +1,4 @@
+import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import { dailyCallCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -7,11 +8,11 @@ import { collectPages, dailyCallsApi, usersApi } from '../../../services/api';
  * useDailyCallMonitor Hook
  * Single Responsibility: Fetch Daily Call Report data from backend with filters, sales team list, and export support.
  */
-export const useDailyCallMonitor = () => {
-  const [date, setDate] = useState(wibDateKey);
-  const [salesmanId, setSalesmanId] = useState('');
-  const [filterType, setFilterType] = useState('ALL');
-  const [search, setSearch] = useState('');
+export const useDailyCallMonitor = ({enabled=true}={}) => {
+  const [date, setDate] = useWorkspaceState('callDate',wibDateKey());
+  const [salesmanId, setSalesmanId] = useWorkspaceState('callSales','');
+  const [filterType, setFilterType] = useWorkspaceState('callType','ALL');
+  const [search, setSearch] = useWorkspaceState('callSearch','');
   const [salesTeam, setSalesTeam] = useState([]);
 
   const [reportData, setReportData] = useState({
@@ -44,19 +45,20 @@ export const useDailyCallMonitor = () => {
       try {
         const res = await collectPages(usersApi.getAll,{role:'SALES'});
         if (res?.data) {
-          setSalesTeam(res.data);
+          setSalesTeam(res.data.filter(person=>person.role==='SALES'));
         }
       } catch (err) {
         console.warn('[useDailyCallMonitor] Failed to fetch sales team:', err.message);
       }
     };
-    fetchSalesTeam();
-  }, []);
+    if(enabled)fetchSalesTeam();
+  }, [enabled]);
 
   // 2. Load Report Data
   const loadData = useCallback(async () => {
+    if(!enabled){setIsLoading(false);return;}
     const revision=++loadRevision.current;
-    setIsLoading(true);setError('');
+    setIsLoading(true);setError('');setSelectedRow(null);setReportData({summary:null,rows:[],salesmanSummaries:[]});
     try {
       const res = await dailyCallsApi.getReport({
         date,
@@ -73,7 +75,7 @@ export const useDailyCallMonitor = () => {
     } finally {
       if(revision===loadRevision.current)setIsLoading(false);
     }
-  }, [date, salesmanId, filterType, search]);
+  }, [date, salesmanId, filterType, search,enabled]);
 
   useEffect(() => {
     loadData();

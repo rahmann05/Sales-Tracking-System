@@ -36,7 +36,7 @@ export function PackingOutletSection({
             </div> : <div className="space-y-2 relative">
               <div className="relative">
                 <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm pointer-events-none" />
-                <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Ketik minimal 2 huruf nama atau kode toko..." className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-surface-container/40 border border-border-glass text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all" />
+                <input aria-label="Cari outlet tujuan" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Ketik minimal 2 huruf nama atau kode toko..." className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-surface-container/40 border border-border-glass text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all" />
                 {searchingOutlets && <LuRefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 text-primary text-xs animate-spin" />}
               </div>
 

@@ -1,19 +1,23 @@
 import React,{useState,useEffect,useCallback,useRef} from 'react';
 import {wibDateKey} from '../../../../../shared/visit-metrics.mjs';
 import {staffAttendanceApi} from '../../../services/api';
+import {useWorkspaceState} from '../../hooks/useWorkspaceState';
+import {useSelectedDetail} from '../../hooks/useSelectedDetail';
 import {FollowUpActions} from './FollowUpActions';
-const labels={OPEN:'Terbuka',SUBMITTED:'Menunggu pemeriksaan',DONE:'Selesai diperiksa'};
+const labels={OPEN:'Perlu dikerjakan',SUBMITTED:'Menunggu pemeriksaan',DONE:'Selesai diperiksa'};
 export const FollowUpPanel=()=>{
  const [loading,setLoading]=useState(true),[data,setData]=useState(null),[error,setError]=useState('');
- const [status,setStatus]=useState('OPEN'),[page,setPage]=useState(1);const flight=useRef(0);
- const reload=useCallback(async()=>{const seq=++flight.current;setLoading(true);try{const res=await staffAttendanceApi.getFollowUps({status,page});if(seq===flight.current){setData({rows:res.data,scope:`${status}:${page}`});setError('');}}catch(e){if(seq===flight.current)setError(e.message);}finally{if(seq===flight.current)setLoading(false);}},[status,page]);
- useEffect(()=>{reload();const tick=setInterval(reload,60000);return()=>{flight.current++;clearInterval(tick);};},[reload]);
- const rows=data?.scope===`${status}:${page}`?data.rows:[];
- return <section className="followup-panel space-y-3"><h3>Tindak lanjut kunjungan</h3><p className="text-xs">Kirim hasil dan bukti/referensi, lalu tunggu pemeriksaan SPV atau Admin. Pemeriksaan bukan verifikasi pelunasan.</p>
-  <label>Status <select value={status} onChange={e=>{setStatus(e.target.value);setPage(1);}}>{Object.entries(labels).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
-  {error&&<p role="alert" className="text-red-600">{error}</p>}{loading&&<p role="status">Memuat tugas audit / kunjungan…</p>}
-  {!loading&&!error&&!rows.length&&<p>Tidak ada tugas sesuai filter.</p>}
-  {rows.map(r=><article key={r.id} className="workspace-card space-y-3"><p className="font-medium">{r.outletName} · {r.followUp.status==='DONE'&&!r.followUp.review?'Selesai (riwayat lama)':labels[r.followUp.status]}</p><p className="text-sm">PIC: {r.followUp.ownerName||(r.followUp.sourceKind?r.user?.name:null)||r.followUp.ownerId} · Tenggat {r.followUp.dueDate}{r.followUp.status==='OPEN'&&r.followUp.dueDate<wibDateKey()?' · Terlambat':''}</p><FollowUpActions id={r.id} followUp={r.followUp} onChanged={reload}/></article>)}
-  <nav aria-label="Halaman tindak lanjut" className="flex gap-3 items-center"><button disabled={page===1||loading} onClick={()=>setPage(page-1)} className="btn btn-secondary">Sebelumnya</button><span>Halaman {page}</span><button disabled={rows.length<50||loading} onClick={()=>setPage(page+1)} className="btn btn-secondary">Berikutnya</button></nav>
+ const [status,setStatus]=useWorkspaceState('followUpStatus','OPEN'),[page,setPage]=useWorkspaceState('followUpPage','1'),[selectedId,setSelectedId]=useWorkspaceState('followUp','');const flight=useRef(0);
+ const guarded=action=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true})))action();};
+ const current=Math.max(1,Number(page)||1);
+ const reload=useCallback(async()=>{const seq=++flight.current;setLoading(true);try{const res=await staffAttendanceApi.getFollowUps({status,page:current});if(seq===flight.current){setData({rows:res.data,scope:`${status}:${current}`});setError('');}}catch(e){if(seq===flight.current){setData(null);setError(e.message);}}finally{if(seq===flight.current)setLoading(false);}},[status,current]);
+ useEffect(()=>{reload();const tick=setInterval(reload,60000);window.addEventListener('focus',reload);return()=>{flight.current++;clearInterval(tick);window.removeEventListener('focus',reload);};},[reload]);
+ const rows=data?.scope===`${status}:${current}`?data.rows:[],selected=rows.find(r=>r.id===selectedId),ref=useSelectedDetail(selected?.id);
+ return <section className="followup-panel sales-workspace">
+  <p className="sales-note">Kirim hasil dan bukti/referensi kepada SPV atau Admin. Pemeriksaan tugas bukan verifikasi pelunasan.</p>
+  <div className="sales-toolbar"><label>Status tugas<select value={status} onChange={e=>{const next=e.target.value;guarded(()=>{setStatus(next);setPage('1',{replace:true});});}}>{Object.entries(labels).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><button className="app-button" disabled={loading} onClick={reload}>Perbarui tugas</button><span className="sales-note">Maksimal 50 tugas per halaman</span></div>
+  {error&&<p role="alert" className="app-error">{error}</p>}{loading&&<p role="status">Memuat tindak lanjut…</p>}
+  {!error&&<div className={`sales-split ${selected?'has-selection':''}`}><section className="sales-panel"><div className="sales-table-wrap"><table className="sales-table sales-mobile-cards"><thead><tr><th scope="col">Outlet / tugas</th><th scope="col">Tenggat WIB</th><th scope="col">Status</th><th scope="col">Tindakan</th></tr></thead><tbody>{rows.map(r=><tr key={r.id} aria-selected={r.id===selectedId}><td data-label="Outlet / tugas"><strong>{r.outletName||'Tindak lanjut kunjungan'}</strong><small>{r.followUp.note}</small></td><td data-label="Tenggat WIB">{r.followUp.dueDate||'Belum ditetapkan'}{r.followUp.status==='OPEN'&&r.followUp.dueDate&&r.followUp.dueDate<wibDateKey()&&<small>Lewat tenggat</small>}</td><td data-label="Status">{r.followUp.status==='DONE'&&!r.followUp.review?'Selesai (riwayat lama)':labels[r.followUp.status]||r.followUp.status}</td><td data-label="Tindakan"><button className="app-button" aria-pressed={r.id===selectedId} onClick={()=>{if(r.id!==selectedId)guarded(()=>setSelectedId(r.id));}}>Buka tugas</button></td></tr>)}</tbody></table></div>{!loading&&!rows.length&&<div className="sales-empty"><h2>Tidak ada tugas sesuai status</h2><p>Pilih status lain untuk melihat tugas yang sudah dikirim atau diperiksa.</p></div>}<nav aria-label="Halaman tindak lanjut" className="sales-pagination"><button disabled={current===1||loading} onClick={()=>guarded(()=>setPage(String(current-1)))} className="app-button">Sebelumnya</button><span>Halaman {current}</span><button disabled={rows.length<50||loading} onClick={()=>guarded(()=>setPage(String(current+1)))} className="app-button">Berikutnya</button></nav></section>
+  {selected&&<aside className="sales-panel sales-detail"><div className="sales-detail-heading"><h2 ref={ref} tabIndex={-1}>Detail tindak lanjut</h2><button className="app-button" onClick={()=>guarded(()=>setSelectedId(''))}>Kembali ke daftar</button></div><div className="sales-followup-detail"><strong>{selected.outletName}</strong><p>PIC: {selected.followUp.ownerName||selected.followUp.ownerId}</p><FollowUpActions key={selected.id} id={selected.id} followUp={selected.followUp} onChanged={reload}/></div></aside>}</div>}
  </section>;
 };

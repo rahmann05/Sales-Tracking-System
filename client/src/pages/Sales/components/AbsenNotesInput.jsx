@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useId} from 'react';
 import { LuFileText } from 'react-icons/lu';
 
 /**
@@ -11,15 +11,16 @@ export const AbsenNotesInput = ({
   label = 'Keterangan / Catatan Kunjungan',
   placeholder = 'Tuliskan keterangan kunjungan atau catatan tambahan...',
 }) => {
+  const inputId=useId();
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+      <label htmlFor={inputId} className="text-xs font-bold text-on-surface flex items-center gap-1.5">
         <LuFileText className="text-primary text-sm" />
         <span>{label}</span>
       </label>
 
       {/* Clean direct textarea */}
-      <textarea
+      <textarea id={inputId}
         value={notes}
         onChange={(e) => onChangeNotes(e.target.value)}
         rows={2}

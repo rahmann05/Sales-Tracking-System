@@ -1,0 +1,13 @@
+import React from 'react';
+import { LuCircleAlert, LuCheck, LuMapPin, LuPackage } from 'react-icons/lu';
+import StatusBadge from './StatusBadge';
+
+export default function TripDetail({ trip, openDocs }) {
+  return <section className="trip-detail" aria-label={`Detail perjalanan ${trip.id}`}><div className="trip-detail-heading"><div><h2>{trip.id}<StatusBadge>{trip.status}</StatusBadge></h2><p>{trip.area} · {trip.driver} · {trip.vehicle}</p></div><button className="secondary" onClick={() => openDocs(trip)}><LuPackage />Dokumen muatan</button></div>
+    {trip.tone === 'orange' && <div className="attention-banner"><LuCircleAlert /><p><strong>Lokasi belum diperbarui sejak 09.42.</strong> Hubungi driver untuk memastikan kondisi perjalanan. Posisi pada peta adalah lokasi terakhir, bukan posisi saat ini.</p></div>}
+    {trip.tone === 'blue' && <div className="info-banner"><LuMapPin /><p>Lokasi berasal dari absen terakhir driver. Pergerakan kendaraan di antara titik absen tidak tersedia.</p></div>}
+    <div className="trip-metrics"><div><strong>{trip.resolved}<small> / {trip.stops.length}</small></strong><span>Stop diproses</span></div><div><strong>{trip.delivered}<small> / {trip.stops.length}</small></strong><span>Diterima penuh</span></div><div><strong>{trip.cartons}</strong><span>Karton dimuat</span></div><div><strong>{trip.id === 'TRP-0086' ? '1' : '0'}</strong><span>Masalah pengiriman</span></div></div>
+    <div className="stop-table table-scroll"><table className="data-table"><thead><tr><th>Urutan / tujuan</th><th>Rencana / aktual</th><th>Hasil pengiriman</th><th>Tindakan berikutnya</th></tr></thead><tbody>{trip.stops.map((s, i) => <tr key={`${s}-${i}`}><td><div className="stop-name"><span className={`stop-index ${i < trip.resolved ? 'done' : ''}`}>{i < trip.resolved ? <LuCheck /> : i + 1}</span><span><strong>{s}</strong><small>Tujuan {i + 1} dari {trip.stops.length}</small></span></div></td><td><strong>{9 + i}.00</strong><small>{i < trip.resolved ? `${9 + i}.12 · Absen tiba & selesai` : 'Belum ada absen'}</small></td><td><StatusBadge tone={i < trip.delivered ? 'green' : i < trip.resolved ? 'orange' : 'gray'}>{i < trip.delivered ? 'Diterima penuh' : i < trip.resolved ? 'Diterima sebagian' : 'Belum dikunjungi'}</StatusBadge></td><td className="muted">{i < trip.delivered ? 'Selesai' : i < trip.resolved ? 'Tinjau sisa barang & alasan' : 'Menunggu kedatangan driver'}</td></tr>)}</tbody></table></div>
+    <div className="trip-explanation">Stop diproses mencakup hasil penuh, sebagian, atau gagal. Hasil tersebut tetap dibedakan saat menutup perjalanan.</div>
+  </section>;
+}

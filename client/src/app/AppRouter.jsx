@@ -1,3 +1,4 @@
+import {logisticsPages} from './LogisticsPages';
 import { lazyNamed } from "./AppRouter.shared";
 import { PageLoading } from "./AppRouterPageLoading";
 import { RoleWorkspace } from "./AppRouterRoleWorkspace";
@@ -11,11 +12,22 @@ import { ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES, OUTLET_VALIDA
 
 // Helper for route-level code splitting (Google Web Vitals Best Practice)
 
+const SupervisorMonitorPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorMonitorPage'),'SupervisorMonitorPage');
+const SupervisorApprovalPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorApprovalPage'),'SupervisorApprovalPage');
+const SupervisorFieldPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorFieldPage'),'SupervisorFieldPage');
+const SupervisorAttentionPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorAttentionPage'),'SupervisorAttentionPage');
+const SalesFieldView=lazyNamed(()=>import('../pages/Sales/SalesFieldView'),'SalesFieldView');
+const SalesOrdersPage=lazyNamed(()=>import('../pages/Sales/SalesOrdersPage'),'SalesOrdersPage');
+const SalesFollowUpPage=lazyNamed(()=>import('../pages/Sales/SalesFollowUpPage'),'SalesFollowUpPage');
+const SalesSchedulePage=lazyNamed(()=>import('../pages/Sales/SalesSchedulePage'),'SalesSchedulePage');
+const SalesMapPage=lazyNamed(()=>import('../pages/Sales/SalesMapPage'),'SalesMapPage');
 const DashboardPage = lazyNamed(() => import('../pages/Dashboard/DashboardPage'), 'DashboardPage');
 const RoutePlanningPage = lazyNamed(() => import('../pages/RoutePlanning/RoutePlanningPage'), 'RoutePlanningPage');
 const CreateClusterPage = lazyNamed(() => import('../pages/RoutePlanning/CreateClusterPage'), 'CreateClusterPage');
 const TeamTrackingPage = lazyNamed(() => import('../pages/TeamTracking/TeamTrackingPage'), 'TeamTrackingPage');
 const ReportsPage = lazyNamed(() => import('../pages/Reports/ReportsPage'), 'ReportsPage');
+const AdminAttentionPage = lazyNamed(() => import('../pages/Admin/AdminAttentionPage'), 'AdminAttentionPage');
+const AdminToolPage = lazyNamed(() => import('../pages/Admin/AdminToolPage'), 'AdminToolPage');
 const AdminApprovalPage = lazyNamed(() => import('../pages/Admin/AdminApprovalPage'), 'AdminApprovalPage');
 const AdminConfigPage = lazyNamed(() => import('../pages/Admin/AdminConfigPage'), 'AdminConfigPage');
 const AdminUserListPage = lazyNamed(() => import('../pages/Admin/AdminUserListPage'), 'AdminUserListPage');
@@ -37,6 +49,7 @@ const DriverRouteMap = lazyNamed(() => import('../pages/Driver/components/Driver
  * Single Responsibility: Define which tab requires which roles + denial message.
  */
 const ACCESS_CONTROL = {
+  [TAB_IDS.ADMIN_ATTENTION]: {roles:[ROLES.ADMIN],title:'Akses dibatasi',description:'Halaman tindak lanjut admin hanya tersedia untuk Admin.'},
   [TAB_IDS.ROUTE_PLANNING]: {
     roles: ROUTE_PLANNING_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
@@ -155,6 +168,18 @@ export const AppRouter = ({
     return <Interactive><RoleWorkspace role={role} onGoBack={onGoBack} /></Interactive>;
   }
 
+  const salesPages={[TAB_IDS.SALES_VISITS]:SalesFieldView,[TAB_IDS.SALES_ORDERS]:SalesOrdersPage,[TAB_IDS.SALES_FOLLOW_UP]:SalesFollowUpPage};
+  if(salesPages[activeTab]){
+    const Page=salesPages[activeTab];
+    return role===ROLES.SALES?<Suspense fallback={<PageLoading/>}><Interactive><Page/></Interactive></Suspense>:<AccessDenied title="Akses dibatasi" description="Halaman ini hanya tersedia untuk Sales." onGoBack={onGoBack}/>;
+  }
+  const supervisorPages={[TAB_IDS.SPV_MONITOR]:SupervisorMonitorPage,[TAB_IDS.SPV_APPROVAL]:SupervisorApprovalPage,[TAB_IDS.SPV_FIELD]:SupervisorFieldPage,[TAB_IDS.SPV_ATTENTION]:SupervisorAttentionPage};
+  if(supervisorPages[activeTab]){
+    const Page=supervisorPages[activeTab];
+    return isTabPermissionAllowed(activeTab,user)?<Suspense fallback={<PageLoading/>}><Interactive><Page/></Interactive></Suspense>:<AccessDenied title="Akses dibatasi" description="Halaman ini memerlukan akses Supervisor yang sesuai." onGoBack={onGoBack}/>;
+  }
+
+  if(logisticsPages[activeTab]){const Page=logisticsPages[activeTab];return isTabPermissionAllowed(activeTab,user)?<Suspense fallback={<PageLoading/>}><Interactive><Page/></Interactive></Suspense>:<AccessDenied title="Akses dibatasi" description="Fitur ini memerlukan peran dan izin yang sesuai." onGoBack={onGoBack}/>;}
   // Check RBAC for restricted tabs
   const accessRule = ACCESS_CONTROL[activeTab];
   let hasAccess = false;
@@ -186,20 +211,29 @@ export const AppRouter = ({
   }
   hasAccess = hasAccess && isTabPermissionAllowed(activeTab, user);
   if (!hasAccess) {
-    return <AccessDenied title={accessRule.title} description={accessRule.description} onGoBack={onGoBack} />;
+    return <AccessDenied title={accessRule?.title||'Akses dibatasi'} description={accessRule?.description||'Fitur ini hanya tersedia untuk Admin.'} onGoBack={onGoBack} />;
   }
 
   // Public tab routing with Suspense code splitting
   let tabContent;
   switch (activeTab) {
+    case TAB_IDS.ADMIN_PRODUCTS:
+    case TAB_IDS.ADMIN_PJP:
+    case TAB_IDS.ADMIN_MASTERS:
+    case TAB_IDS.ADMIN_ATTENDANCE:
+      tabContent = <Interactive><AdminToolPage /></Interactive>;
+      break;
+    case TAB_IDS.ADMIN_ATTENTION:
+      tabContent = <Interactive><AdminAttentionPage /></Interactive>;
+      break;
     case TAB_IDS.ADMIN_APPROVAL:
-      tabContent = <Interactive><AdminApprovalPage onGoBack={onGoBack} /></Interactive>;
+      tabContent = <Interactive>{role===ROLES.SUPERVISOR?<SupervisorApprovalPage/>:<AdminApprovalPage onGoBack={onGoBack} />}</Interactive>;
       break;
     case TAB_IDS.DASHBOARD:
-      tabContent = <MapOverlay><DashboardPage /></MapOverlay>;
+      tabContent = <MapOverlay>{user?.role==='SALES'?<SalesMapPage/>:<DashboardPage/>}</MapOverlay>;
       break;
     case TAB_IDS.DAILY_CALL_MONITOR:
-      tabContent = <Interactive><DailyCallMonitorPage /></Interactive>;
+      tabContent = <Interactive>{role===ROLES.SUPERVISOR?<SupervisorMonitorPage/>:<DailyCallMonitorPage />}</Interactive>;
       break;
     case TAB_IDS.OUTLET_REGISTRATION:
       tabContent = <Interactive><OutletRegistrationPage /></Interactive>;
@@ -211,7 +245,7 @@ export const AppRouter = ({
       tabContent = <Interactive><OutletRegistrationReportPage /></Interactive>;
       break;
     case TAB_IDS.ROUTE_PLANNING:
-      tabContent = <Interactive><RoutePlanningPage /></Interactive>;
+      tabContent = <Interactive>{role===ROLES.SALES?<SalesSchedulePage/>:<RoutePlanningPage />}</Interactive>;
       break;
     case TAB_IDS.MASTER_CLUSTERS:
       tabContent = <Interactive><RoutePlanningPage /></Interactive>;

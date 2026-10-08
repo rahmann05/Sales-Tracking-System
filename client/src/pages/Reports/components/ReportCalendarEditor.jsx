@@ -1,3 +1,4 @@
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportsApi } from '../../../services/api';
@@ -27,9 +28,8 @@ export function ReportCalendarEditor({ month, onSaved }) {
   };
   return <>
     <button type="button" className="app-button text-xs" onClick={()=>setOpen(true)}>Kalender laporan {month}</button>
-    {open&&<div className="fixed inset-0 z-50 bg-black/60 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={`Kalender laporan ${month}`}>
-      <div className="bg-surface rounded-xl p-5 w-full max-w-xl max-h-[90vh] overflow-y-auto space-y-3">
-        <h3 className="font-bold">Kalender laporan {month}</h3>
+    {open&&<NativeDialog open title={`Kalender laporan ${month}`} busy={saving} onClose={()=>setOpen(false)} className="admin-calendar-dialog">
+      <div className="space-y-4">
         <p className="text-xs">Tetapkan hari kerja periode ini sesuai kondisi sebenarnya. Kalender ini untuk laporan dan tidak mengubah jadwal PJP.</p>
         {error&&<p role="alert" className="app-error">{error}</p>}
         {busy?<p role="status">Memuat kalender dan riwayat…</p>:loaded&&<form className="space-y-3" onSubmit={submit}>
@@ -52,6 +52,6 @@ export function ReportCalendarEditor({ month, onSaved }) {
         <button type="button" className="app-button" disabled={saving} onClick={()=>setOpen(false)}>Tutup</button>
         <details><summary>Riwayat perubahan (30 terakhir)</summary>{history.length?history.map(event=><p key={event.id} className="text-xs border-b py-2">Versi {event.after?.revision} · {new Date(event.createdAt).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB · {event.actorName||'Admin'} · Hari kerja: {(event.after?.weekdays||[]).map(day=>DAY_NAMES[day]).join(', ')||'Tidak ada'} · Pengecualian: {(event.after?.exceptions||[]).map(row=>`${row.date} ${row.working?'kerja':'libur'}`).join('; ')||'Tidak ada'} · {event.after?.reason}</p>):<p>Belum ada penetapan kalender.</p>}</details>
       </div>
-    </div>}
+    </NativeDialog>}
   </>;
 }

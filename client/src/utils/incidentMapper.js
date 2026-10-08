@@ -7,7 +7,7 @@
 
 const formatTime = (iso) =>
   iso
-    ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB'
+    ? new Date(iso).toLocaleString('id-ID', {timeZone:'Asia/Jakarta',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) + ' WIB'
     : '';
 
 // Server RouteChangeRequest status/type → UI incident status

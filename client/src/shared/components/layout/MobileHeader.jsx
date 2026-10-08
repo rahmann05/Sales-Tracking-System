@@ -1,10 +1,10 @@
+import {managedRoles,roleNavigationGroups,roleHomeLabel,roleParentTab} from '../../../constants/roleNavigation';
 import React from 'react';
 import { LuLayers, LuLogOut, LuArrowLeft } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { Avatar } from '../common/Avatar';
 import { MonitoringStatus } from '../common/MonitoringStatus';
-import {getAdminNavigationGroups} from '../../../constants/adminNavigation';
 import { TAB_IDS } from '../../../constants/navigation';
 import '../../../styles/layout/MobileHeader.css';
 
@@ -13,8 +13,8 @@ import '../../../styles/layout/MobileHeader.css';
  */
 export const MobileHeader = ({ onLogout }) => {
   const { user, activeTab, setActiveTab } = useApp();
-  const isAdmin = user?.role === 'ADMIN';
-  const currentAdmin=getAdminNavigationGroups(user).flatMap(group=>group.items).find(item=>item.id===activeTab);
+  const isAdmin = managedRoles.includes(user?.role);
+  const currentAdmin=roleNavigationGroups(user).flatMap(group=>group.items).find(item=>item.id===roleParentTab(user,activeTab));
   const isLanding = activeTab === TAB_IDS.ROLE_WORKSPACE;
 
   return (
@@ -37,7 +37,7 @@ export const MobileHeader = ({ onLogout }) => {
           </div>
         )}
         <div>
-          <h1 className="mobile-brand-title">{isAdmin?(isLanding?'Beranda admin':currentAdmin?.label || 'Buat kluster'):'Sinar Anugrah'}</h1>
+          <p className="mobile-brand-title">{isAdmin?(isLanding?roleHomeLabel(user?.role):currentAdmin?.label || 'Buat kluster'):'Sinar Anugrah'}</p>
           <span className="mobile-brand-subtitle font-bold text-primary">
             Operasional distribusi
           </span>

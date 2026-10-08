@@ -1,8 +1,10 @@
 import {unitDescription} from '../../../../../shared/product-units.mjs';
 import React,{useState} from 'react';
 import {deliveryApi} from '../../../services/api';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 export function ReturnReceiptAction({stop,onReceived}){
   const [note,setNote]=useState(''),[received,setReceived]=useState(''),[reusable,setReusable]=useState(''),[items,setItems]=useState({}),[invoices,setInvoices]=useState({}),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  useUnsavedNavigation(!stop.returnInspection&&Boolean(note||received!==''||reusable!==''||Object.keys(items).length||Object.keys(invoices).length),busy);
   if(!(stop.rejectedCartons>0))return null;
   if(stop.returnInspection)return <p className="text-sm">Retur diperiksa: {stop.returnInspection.receivedCartons} karton diterima fisik; {stop.reusableCartons} layak kirim ulang. {stop.returnNote}</p>;
   const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{await deliveryApi.receiveReturn(stop.id,{note,receivedCartons:Number(received),reusableCartons:Number(reusable),items:(stop.rejectedItems||[]).map(i=>({lineId:i.lineId,received:Number(items[i.lineId]?.received||0),reusable:Number(items[i.lineId]?.reusable||0)})),reusableInvoices:Object.entries(invoices).filter(([,v])=>Number(v)>0).map(([invoiceId,v])=>({invoiceId,cartons:Number(v)}))});await onReceived();}catch(e){setError(e.message);}finally{setBusy(false);}};

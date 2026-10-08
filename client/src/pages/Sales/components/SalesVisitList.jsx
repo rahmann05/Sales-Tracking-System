@@ -1,0 +1,5 @@
+import React from 'react';
+import {visitStatusLabel} from '../salesPresentation';
+export function SalesVisitList({stops,selectedId,onSelect}){
+  return <section className="sales-panel sales-table-wrap" aria-label="Daftar kunjungan"><table className="sales-table sales-mobile-cards"><thead><tr><th>Urutan / outlet</th><th>Alamat</th><th>Status kunjungan</th><th>Aksi</th></tr></thead><tbody>{stops.map(stop=><tr key={stop.id} aria-selected={stop.id===selectedId}><td data-label="Urutan / outlet"><strong>{stop.sequence}. {stop.outletName}</strong><small>{stop.outletCode||'Kode belum tersedia'}</small></td><td data-label="Alamat">{stop.address||'Belum tercatat'}</td><td data-label="Status"><span className="sales-status">{visitStatusLabel(stop.status)}</span>{stop.checkInTime&&<small>Masuk {stop.checkInTime}{stop.checkOutTime?` · Keluar ${stop.checkOutTime}`:''}</small>}</td><td data-label="Aksi"><button type="button" className="app-button" onClick={()=>onSelect(stop.id)}>Buka kunjungan</button></td></tr>)}{!stops.length&&<tr><td colSpan="4">Tidak ada outlet sesuai filter. Sesuaikan pencarian atau status kunjungan.</td></tr>}</tbody></table></section>;
+}

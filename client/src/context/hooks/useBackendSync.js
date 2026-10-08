@@ -36,7 +36,7 @@ export const useBackendSync = ({
       if (busy) { queued = true; return; }
       busy = true;
       const failures = [];
-      const track = async (name, task) => { try { return await task(); } catch (error) { failures.push(name); return null; } };
+      const track = async (name, task) => { try { return await task(); } catch { failures.push(name); return null; } };
       try {
         // Hanya sinkron jika ada sesi login valid (token dari auth backend)
         if (!getAuthToken() || !user?.email) return;

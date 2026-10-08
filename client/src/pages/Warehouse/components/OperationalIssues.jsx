@@ -1,9 +1,11 @@
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import React,{useState} from 'react';
 import {deliveryApi} from '../../../services/api';
 export function OperationalIssues({issues,people,reference,onChanged}){
   const [adding,setAdding]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [title,setTitle]=useState(''),[reason,setReason]=useState(''),[owner,setOwner]=useState(''),[due,setDue]=useState(''),[resolutions,setResolutions]=useState({});
-  const run=async fn=>{setBusy(true);setError('');try{await fn();setAdding(false);await onChanged();}catch(e){setError(e.message);}finally{setBusy(false);}};
+  useUnsavedNavigation(Boolean(adding&&(title||reason||owner||due)||Object.values(resolutions).some(Boolean)),busy);
+  const run=async fn=>{setBusy(true);setError('');try{await fn();setAdding(false);setTitle('');setReason('');setOwner('');setDue('');setResolutions({});await onChanged();}catch(e){setError(e.message);}finally{setBusy(false);}};
   return <section className="space-y-3"><h3 className="font-bold">Tindak lanjut ({issues.length})</h3>
     {issues.map(i=><form key={i.id} className="border rounded-xl p-3 space-y-2" onSubmit={e=>{e.preventDefault();run(()=>deliveryApi.resolveIssue(i.id,resolutions[i.id]));}}><strong>{i.title}</strong><p>{i.reason}</p><p className="text-sm">PIC: {people.find(p=>p.id===i.ownerId)?.name||i.ownerId} · Tenggat {new Date(i.dueAt).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} {new Date(i.dueAt)<new Date()?'· Terlambat':''}</p><label className="block">Hasil tindak lanjut<textarea required maxLength={2000} className="form-input block w-full" value={resolutions[i.id]||''} onChange={e=>setResolutions({...resolutions,[i.id]:e.target.value})}/></label><button disabled={busy} className="min-h-11 border rounded-xl px-3">Selesaikan tindak lanjut</button></form>)}
     {reference&&<button className="min-h-11 border rounded-xl px-3" type="button" onClick={()=>setAdding(!adding)}>{adding?'Batal mencatat':'Catat masalah / tugaskan PIC'}</button>}

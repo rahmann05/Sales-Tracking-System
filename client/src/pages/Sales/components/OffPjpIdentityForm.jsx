@@ -30,7 +30,7 @@ export const OffPjpIdentityForm = ({
                 <span>Nama Toko / Outlet *</span>
                 <span className="text-[10px] font-normal text-rose-500">Wajib diisi</span>
             </label>
-            <FieldInput icon={LuStore} value={outletName} onChange={e => onOutletNameChange(e.target.value)} placeholder="Contoh: Toko Berkah Mandiri 2" />
+            <FieldInput aria-label="Nama outlet" icon={LuStore} value={outletName} onChange={e => onOutletNameChange(e.target.value)} placeholder="Contoh: Toko Berkah Mandiri 2" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -39,12 +39,12 @@ export const OffPjpIdentityForm = ({
                     <span>Nama Pemilik / Customer *</span>
                     <span className="text-[10px] font-normal text-rose-500">Wajib</span>
                 </label>
-                <FieldInput icon={LuUser} value={customerName} onChange={e => onCustomerNameChange(e.target.value)} placeholder="Nama Pemilik Toko" />
+                <FieldInput aria-label="Nama pemilik" icon={LuUser} value={customerName} onChange={e => onCustomerNameChange(e.target.value)} placeholder="Nama Pemilik Toko" />
             </div>
 
             <div className="space-y-1">
                 <label className="text-xs font-bold text-on-surface">No. Telepon / WhatsApp</label>
-                <FieldInput icon={LuPhone} value={phone} onChange={e => onPhoneChange(e.target.value)} placeholder="0812-xxxx-xxxx" />
+                <FieldInput type="tel" aria-label="Nomor telepon" icon={LuPhone} value={phone} onChange={e => onPhoneChange(e.target.value)} placeholder="0812-xxxx-xxxx" />
             </div>
         </div>
 
@@ -57,9 +57,9 @@ export const OffPjpIdentityForm = ({
                 <div className="flex items-center gap-2">
                     {isAddressAutoFetched && <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                             <LuSparkles className="text-[11px]" />
-                            Detail RT/RW dari GPS
+                            Alamat dari GPS · periksa kembali
                         </span>}
-                    <button type="button" onClick={onRefreshAddress} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 cursor-pointer" title="Deteksi ulang alamat dari GPS">
+                    <button type="button" onClick={onRefreshAddress} disabled={!userLocation||isGeocodingLoading} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 cursor-pointer" title="Deteksi ulang alamat dari GPS">
                         <LuRefreshCw className={`text-[10px] ${isGeocodingLoading ? 'animate-spin' : ''}`} />
                         <span>Perbarui Alamat</span>
                     </button>
@@ -67,7 +67,7 @@ export const OffPjpIdentityForm = ({
             </div>
 
             <div className="relative">
-                <textarea rows={3} value={address} onChange={e => onAddressChange(e.target.value)} placeholder="Mendeteksi lokasi satelit GPS dan mengambil detail No, RT/RW, Kelurahan, Kecamatan..." className="w-full bg-surface p-2.5 rounded-xl border border-border-glass text-xs text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 placeholder:text-on-surface-variant/60 font-medium leading-relaxed" />
+                <textarea aria-label="Alamat outlet" rows={3} value={address} onChange={e => onAddressChange(e.target.value)} placeholder="Isi alamat lengkap dan periksa hasil deteksi GPS jika tersedia." className="w-full bg-surface p-2.5 rounded-xl border border-border-glass text-xs text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 placeholder:text-on-surface-variant/60 font-medium leading-relaxed" />
                 {isGeocodingLoading && <div className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-primary font-semibold bg-surface/95 backdrop-blur-sm px-2 py-0.5 rounded-md shadow-xs border border-primary/20">
                         <LuRefreshCw className="animate-spin text-xs" />
                         <span>Mengambil alamat detail...</span>

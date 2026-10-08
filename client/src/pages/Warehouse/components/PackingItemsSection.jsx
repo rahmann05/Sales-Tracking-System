@@ -33,7 +33,7 @@ export function PackingItemsSection({
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                     SKU / Kode
                   </label>
-                  <input type="text" readOnly={orderLinked} value={item.sku} onChange={e => setItems(items.map((v, i) => i === index ? {
+                  <input type="text" readOnly={orderLinked} aria-label={`SKU atau kode baris ${index+1}`} value={item.sku} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             sku: e.target.value
           } : v))} placeholder="Contoh: SKU-001" className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs font-mono text-on-surface" />
@@ -43,7 +43,7 @@ export function PackingItemsSection({
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                     Nama Barang *
                   </label>
-                  <input type="text" readOnly={orderLinked} required value={item.name} onChange={e => setItems(items.map((v, i) => i === index ? {
+                  <input type="text" readOnly={orderLinked} required aria-label={`Nama barang baris ${index+1}`} value={item.name} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             name: e.target.value
           } : v))} placeholder="Nama produk" className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs font-bold text-on-surface" />
@@ -53,7 +53,7 @@ export function PackingItemsSection({
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                     Jumlah *
                   </label>
-                  <input type="number" required min="1" step="1" value={item.quantity} onChange={e => setItems(items.map((v, i) => i === index ? {
+                  <input type="number" required min="1" step="1" aria-label={`Jumlah barang baris ${index+1}`} value={item.quantity} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             quantity: Math.max(1, Number(e.target.value))
           } : v))} className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs font-bold text-on-surface text-right" />
@@ -63,7 +63,7 @@ export function PackingItemsSection({
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                     Satuan * {orderLinked&&<span className="block">{unitDescription(item)}</span>}
                   </label>
-                  <input type="text" readOnly={orderLinked} required value={item.unit} onChange={e => setItems(items.map((v, i) => i === index ? {
+                  <input type="text" readOnly={orderLinked} required aria-label={`Satuan barang baris ${index+1}`} value={item.unit} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             unit: e.target.value
           } : v))} placeholder="pcs / karton" className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs text-on-surface" />

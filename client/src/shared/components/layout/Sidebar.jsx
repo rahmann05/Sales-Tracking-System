@@ -1,8 +1,8 @@
+import {managedRoles,roleNavigationGroups,roleHomeLabel,roleParentTab} from '../../../constants/roleNavigation';
 import { SidebarBrand } from "./SidebarBrand";
 import { SidebarNavItem } from "./SidebarNavItem";
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
-import { getAdminNavigationGroups, adminParentTab } from '../../../constants/adminNavigation';
 import { getNavigationTabs, TAB_IDS } from '../../../constants/navigation';
 import '../../../styles/layout/Sidebar.css';
 
@@ -23,7 +23,7 @@ export const Sidebar = ({
     user
   } = useApp();
   const navItems = getNavigationTabs(user);
-  const groups = user?.role === 'ADMIN' ? getAdminNavigationGroups(user) : null;
+  const groups = managedRoles.includes(user?.role)?roleNavigationGroups(user):null;
   return <aside className="sidebar-container">
       <SidebarBrand />
 
@@ -31,9 +31,10 @@ export const Sidebar = ({
         {groups ? <>
           <SidebarNavItem item={{
           ...navItems[0],
-          label: 'Beranda admin'
+          label: roleHomeLabel(user?.role)
         }} isActive={activeTab === TAB_IDS.ROLE_WORKSPACE} onClick={setActiveTab} />
-          {groups.map(group => <section className="sidebar-nav-group" key={group.id} aria-labelledby={`sidebar-${group.id}`}><h2 id={`sidebar-${group.id}`}>{group.label}</h2>{group.items.map(item => <SidebarNavItem key={item.id} item={item} isActive={adminParentTab(activeTab) === item.id} onClick={setActiveTab} />)}</section>)}
+          <p className="admin-rail-label">Ruang kerja</p>
+          {groups.map(group => <SidebarNavItem key={group.id} item={{id:group.items[0].id,label:group.label,icon:group.icon}} isActive={group.items.some(item=>item.id===roleParentTab(user,activeTab))} onClick={setActiveTab} />)}
         </> : navItems.map(item => <SidebarNavItem key={item.id} item={item} isActive={activeTab === item.id} onClick={setActiveTab} />)}
       </nav>
 

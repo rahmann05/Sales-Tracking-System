@@ -120,8 +120,8 @@ export const WeeklyReportView = () => {
       {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={loadData} disabled={isLoading}>Coba lagi</button></div>}
       {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
-      <WeeklyMetrics summary={summary} />
-      <ReportBasisNote basis={reportData.basis} />
+      {!isLoading && !error && <WeeklyMetrics summary={summary} />}
+      {!isLoading && !error && <ReportBasisNote basis={reportData.basis} />}
       <ReportArchivePanel kind="WEEK" period={startDate}/>
       <div className="flex flex-wrap gap-2">{reportData.basis?.calendarMonths?.map(row=><ReportCalendarEditor key={row.month} month={row.month} onSaved={loadData}/>)}</div>
 
@@ -129,6 +129,6 @@ export const WeeklyReportView = () => {
       <WeeklySalesTable daysSummary={daysSummary} exportToCsv={exportToCsv} filteredSalesmen={filteredSalesmen} isLoading={isLoading} loadData={loadData} salesTeam={salesOptions} salesmanId={salesmanId} search={search} setIsPdfModalOpen={setIsPdfModalOpen} setSalesmanId={setSalesmanId} setSearch={setSearch} setStartDate={setStartDate} startDate={startDate} targetPeriod={reportData.period?.targetPeriod} summary={summary} />
 
       {/* PDF Modal */}
-      {isPdfModalOpen && <WeeklyReportPdfView reportData={reportData} salesmanName={salesmanName} onClose={() => setIsPdfModalOpen(false)} />}
+      {isPdfModalOpen && !isLoading && !error && <WeeklyReportPdfView reportData={reportData} salesmanName={salesmanName} onClose={() => setIsPdfModalOpen(false)} />}
     </div>;
 };

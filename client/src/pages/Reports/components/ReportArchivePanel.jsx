@@ -1,3 +1,4 @@
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportsApi } from '../../../services/api';
@@ -41,9 +42,8 @@ export function ReportArchivePanel({kind,period}){
   const file=selected?`arsip-${selected.kind}-${selected.period}-${selected.id}`:'';
   return <>
     <button type="button" className="app-button text-xs" onClick={()=>setOpen(true)}>Arsip perusahaan {period}</button>
-    {open&&<div className="fixed inset-0 z-50 bg-black/60 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={`Arsip laporan ${period}`}>
-      <div className="bg-surface rounded-xl p-5 w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-3">
-        <h3 className="font-bold">Arsip laporan perusahaan · {period}</h3>
+    {open&&<NativeDialog open title={`Arsip laporan ${period}`} busy={busy} onClose={()=>setOpen(false)} className="admin-archive-dialog">
+      <div className="space-y-4">
         <p className="text-sm">Arsip mengambil laporan terbaru seluruh sales dari server, tanpa filter sales atau pencarian di layar. Isinya tidak dapat ditimpa. Ini bukan penutupan transaksi; periode berjalan tetap dapat berubah.</p>
         {error&&<p role="alert" className="app-error">{error}</p>}
         {busy&&<p role="status">Memproses arsip…</p>}
@@ -69,6 +69,6 @@ export function ReportArchivePanel({kind,period}){
         </section>}
         <button type="button" className="app-button" disabled={busy} onClick={()=>setOpen(false)}>Tutup</button>
       </div>
-    </div>}
+    </NativeDialog>}
   </>;
 }

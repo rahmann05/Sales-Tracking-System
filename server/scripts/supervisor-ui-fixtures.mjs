@@ -1,0 +1,37 @@
+// Synthetic data for visual QA of the actual frontend. No database is connected.
+import {fixture as adminFixture,orders as adminOrders} from './admin-ui-fixtures.mjs';
+export const user={id:'ui-spv',email:'supervisor-ui@example.invalid',name:'Ratna Supervisor',role:'SUPERVISOR',permissions:{can_approve_order:true,can_unlock_absensi:true,can_view_live_tracking:true,can_view_daily_call:true,can_access_rjp:true,can_manage_rjp:true,can_manage_outlets:true,can_approve_outlet:true,can_validate_outlet:true,can_view_team:true,can_view_reports:true,can_view_outlet_report:true,can_register_outlet:true}};
+const names=['Adi Pratama','Dewi Lestari','Rizal Maulana','Sales Belum Mengirim Posisi'];
+const sales=names.map((name,i)=>({id:`sales-${i}`,name,email:`sales-${i}@example.invalid`,role:'SALES',supervisorId:user.id,supervisor:user,cluster:{id:'cluster-1',name:'Wilayah contoh',supervisorId:user.id},assignedClusters:[],pjpTemplates:[]}));
+const outlets=[0,1,2,3].map(i=>({id:`outlet-${i}`,name:['Toko Sumber Jaya','Mitra Sejahtera','Toko Anugrah','Sinar Baru'][i],code:`OUT-${100+i}`,outletCode:`OUT-${100+i}`,address:'Alamat contoh untuk pengujian tampilan Supervisor',latitude:-6.88-i*.012,longitude:107.58+i*.015,ownerName:'Pemilik contoh',phone:'0800000000',status:'ACTIVE',radiusMeters:50,clusterId:'cluster-1',cluster:{id:'cluster-1',name:'Wilayah contoh',supervisorId:user.id}}));
+const orders=adminOrders.map(order=>({...order,approvalAssignment:{...order.approvalAssignment,ownerId:user.id,ownerName:user.name}}));
+const now=()=>new Date().toISOString();
+const report=query=>{
+  const selected=query.get('userId');
+  const rows=sales.flatMap((s,i)=>outlets.slice(0,3).map((o,n)=>({id:`visit-${i}-${n}`,no:i*3+n+1,salesmanId:s.id,salesmanName:s.name,clusterName:'Wilayah contoh',customerId:o.code,customerName:o.name,customerAddress:o.address,customerLat:o.latitude,customerLng:o.longitude,planCall:'Y',actualCall:n<2?'Y':'N',effectiveCall:n===0?'Y':'N',timeIn:n<2?'09:15':'-',timeOut:n===0?'09:35':'-',durationMinutes:n===0?20:0,durationFormatted:n===0?'20 menit':'',orderAmount:n===0?250000:0,skuSold:n===0?2:0,subChannel:'GT',itny:'RJP',isDurationAnomaly:false,isDistanceAnomaly:false,isTravelAnomaly:false,isSkipped:false}))).filter(row=>(!selected||row.salesmanId===selected)&&row.customerName.toLowerCase().includes((query.get('search')||'').toLowerCase()));
+  return {date:query.get('date')||'2026-10-08',rows,totalRows:rows.length,summary:{totalPlanCalls:rows.length,totalActualCalls:rows.filter(r=>r.actualCall==='Y').length,totalEffectiveCalls:rows.filter(r=>r.effectiveCall==='Y').length,totalAnomalies:0,totalOrderAmount:rows.reduce((n,r)=>n+r.orderAmount,0),totalSkuSold:rows.reduce((n,r)=>n+r.skuSold,0),effectiveCallRate:'33%',effectiveCallRateNum:33},salesmanSummaries:sales.filter(s=>!selected||s.id===selected).map(s=>({salesmanId:s.id,salesmanName:s.name,clusterName:'Wilayah contoh',planCalls:3,actualCalls:2,effectiveCalls:1,totalOmzet:250000,totalSkuSold:2,onTimeCompliantCalls:2,extraCalls:0,skippedCalls:0,travelAnomalies:0,durationAnomalies:0,stops:rows.filter(row=>row.salesmanId===s.id)})),basis:{note:'Data sintetis untuk pemeriksaan UI; bukan kegiatan operasional.',generatedAt:now()}};
+};
+export function fixture(path,query){
+  if(path==='/auth/me')return user;
+  if(path==='/users')return [user,...sales];
+  if(path==='/orders')return {data:orders,pagination:{page:1,totalPages:1,hasNextPage:false}};
+  if(path.includes('/review-assignment')){const order=orders.find(o=>path.includes(o.id))||orders[0];return {status:order.status,assignment:order.approvalAssignment,people:[user,...sales],history:[]};}
+  if(path==='/users/live-locations')return sales.map((s,i)=>({salesId:s.id,salesName:s.name,clusterName:'Wilayah contoh',latitude:-6.89-i*.01,longitude:107.6+i*.015,locationSource:['LIVE_GPS_PING','LAST_ATTENDANCE','LIVE_GPS_PING','CLUSTER_CENTER'][i],lastUpdated:i===3?null:new Date(Date.now()-(i===2?7200000:i===1?1800000:10000)).toISOString(),isOnline:i===0||i===1,activityStatus:i===0?'IN_VISIT':'LAST_SEEN',activityDescription:i===0?'Sedang kunjungan di Toko Sumber Jaya':i===3?'Belum ada rekaman lokasi':'Aktivitas terakhir tercatat',pjpProgress:{totalStops:3,completedStops:i%3,nextStopName:'Mitra Sejahtera'},breadcrumbs:[]}));
+  if(path==='/daily-calls')return report(query);
+  if(path==='/reports/weekly')return {period:{startDate:query.get('startDate'),endDate:'2026-10-10',weekDays:[]},summary:{totalPlanCalls:12,totalActualCalls:8,callComplianceRate:'67%',totalEffectiveCalls:4,effectiveCallRate:'50%',totalOrderAmount:1000000,totalSkuSold:8,avgDurationMinutes:20,durationSamples:4,totalAnomalies:0},daysSummary:[],salesmen:[],basis:{note:'Data sintetis untuk pengujian layout laporan.',generatedAt:now()}};
+  if(path==='/reports/mtd')return {period:{month:10,monthName:'Oktober',year:2026,calendarKnown:false,workingDaysElapsed:null,totalWorkingDays:null,workingDaysRate:'—'},summary:{monthlyTargetAmount:null,mtdActualAmount:1000000,overallAchievementRate:'—',overallAchievementRateNum:null,lastMonthActual:0,mtdToLmaRate:'—',totalMtdPlanCalls:12,totalMtdActualCalls:8,mtdCallComplianceRate:'67%',totalMtdEffectiveCalls:4,mtdEffectiveCallRate:'50%',totalMtdSkuSold:8,avgDailyRevenue:null},channelBreakdown:[],salesmen:[],basis:{note:'Data sintetis untuk pengujian layout laporan.',generatedAt:now()}};
+  if(path==='/reports/archives')return {items:[],total:0};
+  if(path==='/reports/calendar')return {calendar:null,days:[]};
+  if(path==='/absensi/manual-sales'){const pending=query.get('status')==='PENDING';const rows=pending?[{id:'manual-1',user:sales[0],pjpStop:{outlet:outlets[0]},createdAt:now(),orderAmount:250000,skuSold:2,manualSalesStatus:'PENDING',salesProducts:[{name:'Produk contoh A'}]}]:[];return {items:rows,data:rows,total:rows.length};}
+  if(path==='/teams')return {sales,supervisors:[user],canClaim:true};
+  if(path==='/clusters')return [{id:'cluster-1',name:'Wilayah contoh',region:'Area pengujian',supervisorId:user.id,supervisor:user,outlets,_count:{outlets:4}}];
+  if(path==='/outlets')return outlets;
+  if(path==='/pjp')return sales.map((s,i)=>({id:`pjp-${i}`,userId:s.id,user:s,date:query.get('date')||'2026-10-08',stops:outlets.slice(0,3).map((o,n)=>({id:`pjp-stop-${i}-${n}`,outletId:o.id,outlet:o,sequence:n+1,status:n===0?'IN_VISIT':'PENDING',attendances:[]}))}));
+  if(path==='/pjp/templates')return {sales,outlets,workingDays:[1,2,3,4,5,6],currentWeekType:'WEEK_1',weekMode:'MONTH_CYCLE'};
+  if(path==='/staff-attendance')return [{id:'shift-spv',kind:'SHIFT',activityKey:'SHIFT',checkInAt:now(),checkOutAt:null},{id:'visit-spv',kind:'VISIT',activityKey:'pjp-stop-0-0',outletName:outlets[0].name,checkInAt:now(),checkOutAt:null,notes:'Catatan supervisi contoh',checklist:{}}];
+  if(path==='/outlets/unlock-requests')return [{id:'unlock-1',status:'PENDING_APPROVAL',outletId:outlets[0].id,outlet:outlets[0],requestedByUser:sales[0],reason:'Permintaan contoh untuk pemeriksaan UI',createdAt:now()}];
+  if(path==='/route-changes')return [{id:'change-1',status:'PENDING_APPROVAL',type:'SKIP',pjpStopId:'pjp-stop-1-0',pjpStop:{outlet:outlets[1]},reportedByUser:sales[1],reason:'Toko tutup saat dikunjungi',createdAt:now()}];
+  if(path==='/absensi/off-pjp')return [{id:'off-1',status:'PENDING',userId:sales[2].id,user:sales[2],outletName:'Outlet prospek contoh',address:'Alamat contoh',reason:'Kunjungan tambahan',createdAt:now()}];
+  if(path==='/attention/escalations')return {items:[],total:0,limit:25};
+  return adminFixture(path,query);
+}

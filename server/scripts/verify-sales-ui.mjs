@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {visitStatusLabel,completedVisitStatuses,stampWib} from '../../client/src/pages/Sales/salesPresentation.js';
+const client=fileURLToPath(new URL('../../client/',import.meta.url));
+const require=createRequire(new URL('../../client/package.json',import.meta.url));
+const {build}=require('esbuild');
+const built=await build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,loader:{'.css':'empty'},plugins:[{name:'context-fixture',setup(build){build.onResolve({filter:/context\/AppContext(?:\.jsx)?$/},()=>({path:'context',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const useApp=()=>({user:{role:"SALES",id:"sales"},setActiveTab:()=>{}});',loader:'js'}));}}],stdin:{resolveDir:client,loader:'jsx',contents:`
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import assert from 'node:assert/strict';
+import {getSalesNavigationGroups} from './src/constants/salesNavigation.js';
+import {getNavigationTabs,isTabPermissionAllowed,TAB_IDS} from './src/constants/navigation.js';
+import {SalesPage} from './src/pages/Sales/SalesPage.jsx';
+import {SalesOrderDetail} from './src/pages/Sales/components/SalesOrderDetail.jsx';
+import {SalesDailyPerformanceTracker} from './src/pages/Sales/components/SalesDailyPerformanceTracker.jsx';
+const user={role:'SALES',permissions:{}};
+const groups=getSalesNavigationGroups(user),ids=groups.flatMap(g=>g.items.map(i=>i.id));
+assert.equal(groups.length,6);assert.equal(new Set(ids).size,ids.length);
+assert.deepEqual([...ids].sort(),getNavigationTabs(user).filter(i=>i.id!==TAB_IDS.ROLE_WORKSPACE).map(i=>i.id).sort());
+for(const role of ['ADMIN','SUPERVISOR','SUPIR','KEPALA_GUDANG']){assert.deepEqual(getSalesNavigationGroups({role}),[]);for(const id of [TAB_IDS.SALES_VISITS,TAB_IDS.SALES_ORDERS,TAB_IDS.SALES_FOLLOW_UP])assert.equal(isTabPermissionAllowed(id,{role}),false);}
+const restricted=getSalesNavigationGroups({role:'SALES',permissions:{can_access_rjp:false,can_manage_rjp:false,can_register_outlet:false,can_view_dashboard:false}}).flatMap(g=>g.items.map(i=>i.id));
+assert.ok(!restricted.includes(TAB_IDS.ROUTE_PLANNING));assert.ok(!restricted.includes(TAB_IDS.OUTLET_REGISTRATION));assert.ok(!restricted.includes(TAB_IDS.DASHBOARD));
+const home=renderToStaticMarkup(<SalesPage/>);assert.equal((home.match(/class="admin-module-card"/g)||[]).length,6);assert.equal((home.match(/<button/g)||[]).length,6,'Single entry per single-feature card');assert.doesNotMatch(home,/sidebar|Tindak lanjut kunjungan|Saldo piutang/);
+const emptyMetrics=renderToStaticMarkup(<SalesDailyPerformanceTracker targetDailyVisits={0}/>);assert.match(emptyMetrics,/Target belum ditetapkan/);assert.doesNotMatch(emptyMetrics,/100%|NaN|Infinity/);
+const order=renderToStaticMarkup(<SalesOrderDetail order={{id:'own-order',code:'SO-TEST',status:'APPROVED',fulfillmentStatus:'PARTIAL',items:[],fulfillmentLines:[]}}/>);assert.match(order,/Disetujui/);assert.match(order,/Diterima sebagian/);assert.match(order,/Belum ditetapkan/);assert.doesNotMatch(order,/<form|<button|<input|<select/);
+`}});
+new Function('require','module','exports',built.outputFiles[0].text)(require,{exports:{}},{});
+assert.equal(completedVisitStatuses.includes('CLOSED'),false);assert.equal(completedVisitStatuses.includes('SKIPPED'),false);
+assert.equal(visitStatusLabel('ORDERED'),'Order dibuat · belum keluar');assert.equal(stampWib(null),'Belum tercatat');assert.equal(stampWib('invalid'),'Belum tercatat');
+process.stdout.write('Sales UI verification passed: six unique work areas, restricted permissions, role-only routes, nonduplicated home, honest metrics/timestamps and read-only own-order detail.\n');

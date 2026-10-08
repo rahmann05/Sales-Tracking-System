@@ -1,6 +1,7 @@
 import React from 'react';
 import { LuX, LuMapPin, LuCamera, LuShoppingBag, LuExternalLink, LuCircleCheck } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 
 /**
  * DailyCallDetailModal Component
@@ -12,8 +13,8 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${row.customerLat},${row.customerLng}`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-surface rounded-3xl border border-border-glass max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
+    <NativeDialog open title={`Detail kunjungan · ${row.customerName}`} onClose={onClose} className="spv-form-dialog">
+      <div className="space-y-4">
         {/* Modal Header */}
         <div className="flex items-start justify-between pb-3 border-b border-border-glass">
           <div>
@@ -32,13 +33,6 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-xl text-on-surface-variant hover:text-on-surface text-xl font-bold hover:bg-surface-variant transition-all cursor-pointer"
-          >
-            <LuX />
-          </button>
         </div>
 
         {/* Warning Banner if Anomaly */}
@@ -102,7 +96,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
         <div className="p-3.5 bg-surface-container-low rounded-2xl border border-border-glass space-y-2 text-xs">
           <div className="flex items-center justify-between">
             <span className="font-bold text-on-surface flex items-center gap-1.5">
-              <LuShoppingBag className="text-primary" /> Nilai Transaksi Kunjungan:
+              <LuShoppingBag className="text-primary" /> Nilai order kunjungan:
             </span>
             <strong className="text-sm font-black text-emerald-600">
               Rp {row.orderAmount ? row.orderAmount.toLocaleString('id-ID') : '0'}
@@ -186,7 +180,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
           </a>
         </div>
       </div>
-    </div>
+    </NativeDialog>
   );
 };
 

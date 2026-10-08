@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "dev:admin-preview": "vite --config vite.admin-preview.config.js",
+    "build:admin-preview": "vite build --config vite.admin-preview.config.js",
     "verify:architecture": "node scripts/audit-components.mjs"
   },
   "dependencies": {

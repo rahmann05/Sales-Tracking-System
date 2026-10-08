@@ -22,7 +22,7 @@ export const OutletLockBadge = ({ lockReason, onRequestUnlock, stop }) => {
         className="w-full py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.99]"
       >
         <LuKey className="text-xs" />
-        <span>Minta Buka Kunci (Request Unlock ke Admin)</span>
+        <span>Ajukan pengecualian presensi</span>
       </button>
     </div>
   );

@@ -13,10 +13,10 @@ export const OutletValidationPage = () => {
       <PageHeader
         badge={
           <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuMapPin className="text-sm" /> GEOLOCATION AUDIT & VERIFIKASI
+            <LuMapPin className="text-sm" /> Pelanggan
           </span>
         }
-        title="Validasi Titik Koordinat GPS Outlet"
+        title="Validasi lokasi outlet"
         subtitle="Bandingkan nama, alamat, dan koordinat dengan peta, lalu tinjau serta catat koreksi sebelum dipakai untuk radius presensi."
       />
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 
@@ -10,6 +10,8 @@ export const useOutletApproval = () => {
   const [items, setItems] = useState([]);
   const [statusCounts, setStatusCounts] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const loadRevision = useRef(0);
   const [filterStatus, setFilterStatus] = useState('SUBMITTED');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -21,26 +23,32 @@ export const useOutletApproval = () => {
   const [feedbackMsg, setFeedbackMsg] = useState(null);
 
   const loadData = useCallback(async () => {
+    const revision = ++loadRevision.current;
     setIsLoading(true);
+    setLoadError('');
+    setItems([]);
+    setStatusCounts({});
     try {
       const res = await customerRegistrationsApi.getAll({
         status: filterStatus === 'ALL' ? undefined : filterStatus,
         search: debouncedSearch || undefined,
         limit: 50,
       });
-      if (res?.data) {
+      if (!Array.isArray(res?.data)) throw new Error('Respons pengajuan outlet belum dapat dibaca.');
+      if (revision === loadRevision.current) {
         setItems(res.data);
         setStatusCounts(res.statusCounts || {});
       }
     } catch (err) {
-      console.warn('[useOutletApproval] Failed to load data:', err);
+      if (revision === loadRevision.current) setLoadError(err.message || 'Gagal memuat pengajuan outlet.');
     } finally {
-      setIsLoading(false);
+      if (revision === loadRevision.current) setIsLoading(false);
     }
   }, [filterStatus, debouncedSearch]);
 
   useEffect(() => {
     loadData();
+    return () => { loadRevision.current++; };
   }, [loadData]);
 
   const handleApprove = async (item) => {
@@ -82,6 +90,7 @@ export const useOutletApproval = () => {
     items,
     statusCounts,
     isLoading,
+    loadError,
     filterStatus,
     setFilterStatus,
     searchQuery,

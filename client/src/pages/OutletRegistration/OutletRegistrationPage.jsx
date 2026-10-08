@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
 import { LuCheck, LuInfo, LuFileText, LuClock } from "react-icons/lu";
 import { useOutletRegistrationForm } from './hooks/useOutletRegistrationForm';
 import { useOutletRegistrationHistory } from './hooks/useOutletRegistrationHistory';
@@ -12,10 +13,10 @@ import '../../styles/pages/OutletRegistration.css';
  * Single Responsibility: Compose physical document form and history tab for Sales Outlet Registration.
  */
 export const OutletRegistrationPage = () => {
-  const [activeTab, setActiveTab] = useState('FORM'); // 'FORM' | 'HISTORY'
+  const [activeTab, setActiveTab] = useWorkspaceState('registrationView','FORM'); // 'FORM' | 'HISTORY'
 
   const {
-    submissions,
+    submissions,historyError,
     isLoading: isLoadingHistory,
     selectedSubmission,
     setSelectedSubmission,
@@ -23,10 +24,10 @@ export const OutletRegistrationPage = () => {
   } = useOutletRegistrationHistory();
 
   const {
-    formData,
+    formData,draftRestored,draftError,
     updateField,
     isSubmitting,
-    isLocating,
+    isLocating,gpsError,
     isSearchingPlace,
     placeSearchResults,
     verifiedPlace,
@@ -46,8 +47,9 @@ export const OutletRegistrationPage = () => {
 
   return (
     <div className="outlet-reg-container pb-32">
+      <header className="sales-heading"><div><p className="admin-eyebrow">Pelanggan / Pengajuan</p><h1>Outlet baru</h1><p>Lengkapi identitas, lokasi, dan rencana kunjungan. Pantau keputusan pengajuan melalui Riwayat.</p></div></header>
       {/* Tab Switcher Minimalis */}
-      <div className="flex items-center justify-end max-w-5xl mx-auto mb-4">
+      <div className="flex items-center justify-start mb-0">
         <div className="flex bg-surface-container rounded-xl p-1 border border-border-glass shadow-xs">
           <button
             type="button"
@@ -58,7 +60,7 @@ export const OutletRegistrationPage = () => {
                 : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            <LuFileText className="text-sm" /> Formulir Pendaftaran
+            <LuFileText className="text-sm" /> Daftarkan outlet
           </button>
           <button
             type="button"
@@ -69,11 +71,12 @@ export const OutletRegistrationPage = () => {
                 : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            <LuClock className="text-sm" /> Riwayat Pengajuan ({submissions.length})
+            <LuClock className="text-sm" /> Riwayat pengajuan
           </button>
         </div>
       </div>
 
+      {draftRestored&&<p role="status" className="sales-form-help">Draft teks dipulihkan. Ambil ulang GPS, foto outlet, dan foto dokumen sebelum mengajukan.</p>}{draftError&&<p role="alert" className="app-error">{draftError}</p>}
       {/* 2. Formulir Registrasi (Format Dokumen Fisik Resmi) */}
       {activeTab === 'FORM' && (
         <form onSubmit={submitForm} className="space-y-6 pb-20">
@@ -90,14 +93,14 @@ export const OutletRegistrationPage = () => {
           )}
 
           {submitError && (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 text-sm flex items-center gap-2 max-w-5xl mx-auto">
+            <div role="alert" className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 text-sm flex items-center gap-2 max-w-5xl mx-auto">
               <LuInfo className="text-lg shrink-0" />
               <span>{submitError}</span>
             </div>
           )}
 
           {/* Authentic Physical Document Form Layout */}
-          <PhysicalDocumentForm
+          <fieldset disabled={isSubmitting} className="sales-registration-fieldset"><PhysicalDocumentForm
             formData={formData}
             updateField={updateField}
             isSearchingPlace={isSearchingPlace}
@@ -107,11 +110,12 @@ export const OutletRegistrationPage = () => {
             handleSelectGooglePlace={handleSelectGooglePlace}
             handleUnlockGooglePlace={handleUnlockGooglePlace}
             isLocating={isLocating}
+            gpsError={gpsError}
             handleDetectGPS={handleDetectGPS}
             toggleDay={toggleDay}
             onReset={resetForm}
             isSubmitting={isSubmitting}
-          />
+          /></fieldset>
         </form>
       )}
 
@@ -119,6 +123,7 @@ export const OutletRegistrationPage = () => {
       {activeTab === 'HISTORY' && (
         <RegistrationHistoryTable
           submissions={submissions}
+          error={historyError}
           isLoading={isLoadingHistory}
           onRefresh={refreshHistory}
           onSelectDetail={setSelectedSubmission}

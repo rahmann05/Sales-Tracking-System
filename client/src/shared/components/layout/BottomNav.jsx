@@ -31,7 +31,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
   const isSecondaryActive = Boolean(activeSecondaryItem);
 
   const totalCols = primaryItems.length + (hasMore?1:0);
-  const shortLabels = { 'role-workspace':'Beranda', 'admin-approval':'Order & izin', 'daily-call-monitor':'Absensi', 'route-planning':'Jadwal', 'outlet-registration':'Outlet baru', 'outlet-management':'Outlet', 'delivery-packing-list':'Packing', 'delivery-routes':'Rute', 'delivery-monitor':'Monitor', 'dashboard':'Peta' };
+  const shortLabels = { 'role-workspace':'Beranda', 'admin-approval':'Order', 'daily-call-monitor':'Absensi', 'route-planning':'Jadwal', 'outlet-registration':'Outlet baru', 'outlet-management':'Outlet', 'delivery-packing-list':'Packing', 'delivery-routes':'Rute', 'delivery-monitor':'Monitor', 'dashboard':'Peta', 'reports':'Laporan' };
 
   return (
     <>

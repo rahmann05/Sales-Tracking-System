@@ -9,7 +9,7 @@ import { PageHeader } from '../../../../shared/components/common/PageHeader';
  */
 export const RjpSpvHeader = ({ onOpenAutoRollingModal }) => {
   return (
-    <PageHeader
+    <PageHeader headingAs="h2"
       badge={
         <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
           <LuShieldCheck className="text-sm" /> MATRIKS ROLLING JADWAL RJP

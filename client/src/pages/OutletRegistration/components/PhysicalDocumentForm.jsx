@@ -5,7 +5,7 @@ import { RegistrationTerritorySection } from './RegistrationTerritorySection';
 import { RegistrationChannelSection } from './RegistrationChannelSection';
 import { RegistrationPaymentSection } from './RegistrationPaymentSection';
 import { RegistrationVisitSection } from './RegistrationVisitSection';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { LuSend } from "react-icons/lu";
 import { IdCardCameraModal } from './IdCardCameraModal';
@@ -82,8 +82,7 @@ const DAYS_LIST = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
 
 /**
  * PhysicalDocumentForm Component
- * Single Responsibility: Render the exact official physical paper form sheet layout (Form Registrasi Outlet)
- * with Google Place validation placed directly below outlet name & identity section.
+ * Render outlet registration in four task groups with explicit GPS and camera actions.
  */
 export const PhysicalDocumentForm = ({
   formData,
@@ -94,7 +93,7 @@ export const PhysicalDocumentForm = ({
   searchGooglePlaces,
   handleSelectGooglePlace,
   handleUnlockGooglePlace,
-  isLocating,
+  isLocating,gpsError,
   handleDetectGPS,
   toggleDay,
   onReset,
@@ -110,6 +109,7 @@ export const PhysicalDocumentForm = ({
   const debounceTimerRef = useRef(null);
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  useEffect(()=>()=>clearTimeout(debounceTimerRef.current),[]);
   const handleNameChange = e => {
     const val = e.target.value;
     updateField('name', val);
@@ -132,73 +132,40 @@ export const PhysicalDocumentForm = ({
     }
   };
   const cardTypeLabel = formData.taxType === 'PKP' ? 'NPWP' : 'KTP';
-  return <div className="bg-surface border-2 border-slate-700/80 rounded-2xl shadow-xl p-4 sm:p-7 max-w-5xl mx-auto space-y-4 text-on-surface">
-      {/* ─── Header Form Fisik Resmi ───────────────────────────────────────────── */}
-      <div className="border-b-2 border-slate-700/80 pb-3 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <div className="font-black text-sm tracking-wider uppercase text-on-surface">
-            CV SINAR ANUGRAH
-          </div>
-          <div className="text-[10px] font-bold text-on-surface-variant tracking-widest uppercase">
-            FMCG DISTRIBUTOR
-          </div>
-        </div>
-
-        <div className="text-center">
-          <h2 className="text-base sm:text-lg font-black tracking-tight uppercase border-b-2 border-slate-700/80 pb-0.5 px-3">
-            FORM REGISTRASI OUTLET
-          </h2>
-          <span className="text-[10px] font-mono text-on-surface-variant">
-            DOKUMEN PENGAJUAN RESMI
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-on-surface-variant block">DIVISI:</span>
-            <span className="text-xs font-black text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/30">
-              {formData.divisionName || formData.division || '-'}
-            </span>
-          </div>
-        </div>
-      </div>
-
+  return <div className="sales-registration-document bg-surface border-2 border-slate-700/80 rounded-2xl shadow-xl p-4 sm:p-7 max-w-5xl mx-auto space-y-4 text-on-surface">
+      <div className="sales-registration-intro"><div><h2>Data calon pelanggan</h2><p className="sales-note">Isi data berikut sesuai kondisi outlet. Pengajuan akan diperiksa sebelum menjadi pelanggan aktif.</p></div><nav className="sales-registration-nav" aria-label="Bagian formulir outlet">{[['identity','Identitas'],['location','Lokasi & dokumen'],['plan','Wilayah & kunjungan'],['submit','Periksa & ajukan']].map(([id,label])=><button type="button" className="app-button" key={id} onClick={()=>document.getElementById(`registration-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'})}>{label}</button>)}</nav></div>
       {/* ─── Baris Divisi & Cabang Operasional ──────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold bg-surface-container-low p-2.5 rounded-xl border border-border-glass">
         <div className="flex items-center gap-2">
           <span className="w-20 text-on-surface-variant shrink-0">DIVISI :</span>
-          <select value={formData.division || formData.divisionName || ''} onChange={e => {
+          <select aria-label="Divisi" value={formData.division || formData.divisionName || ''} onChange={e => {
           const selectedDiv = divisions.find(d => d.name === e.target.value);
           updateField('division', e.target.value);
           updateField('divisionName', e.target.value);
           if (selectedDiv) updateField('divisionId', selectedDiv.id);
         }} className="flex-1 px-2.5 py-1 bg-surface font-black text-xs rounded-lg border border-border-glass text-primary focus:border-primary outline-none cursor-pointer">
-            {divisions.length > 0 ? divisions.map(div => <option key={div.id} value={div.name}>{div.name}</option>) :
-          // Fallback sementara jika divisions belum termuat
-          <>
-                <option value="BELFOODS">BELFOODS</option>
-                <option value="MIX">MIX</option>
-              </>}
+            {!divisions.some(div=>div.name===(formData.division||formData.divisionName))&&<option value={formData.division||formData.divisionName||''}>{formData.division||formData.divisionName||'Pilih divisi'}</option>}
+            {divisions.map(div=><option key={div.id} value={div.name}>{div.name}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-20 text-on-surface-variant shrink-0">CABANG :</span>
-          <input type="text" value={formData.branch} onChange={e => updateField('branch', e.target.value)} className="flex-1 px-2.5 py-1 bg-surface font-bold text-xs rounded-lg border border-border-glass focus:border-primary outline-none" placeholder="PADALARANG" />
+          <input aria-label="Cabang" type="text" value={formData.branch} onChange={e => updateField('branch', e.target.value)} className="flex-1 px-2.5 py-1 bg-surface font-bold text-xs rounded-lg border border-border-glass focus:border-primary outline-none" placeholder="PADALARANG" />
         </div>
       </div>
 
       <BusinessCodeInput entity="NOO" value={formData.registrationCode || ''} onChange={value => updateField('registrationCode', value)} disabled={isSubmitting} />
       {/* ─── BOX 1: IDENTITAS OUTLET ─────────────────────────────────────────── */}
-      <RegistrationIdentitySection LOCATION_OPTIONS={LOCATION_OPTIONS} formData={formData} handleNameChange={handleNameChange} handleSelectGooglePlace={handleSelectGooglePlace} handleUnlockGooglePlace={handleUnlockGooglePlace} hasSearched={hasSearched} isDebouncing={isDebouncing} isSearchingPlace={isSearchingPlace} placeSearchResults={placeSearchResults} setHasSearched={setHasSearched} settings={settings} updateField={updateField} verifiedPlace={verifiedPlace} />
+      <section id="registration-identity" className="sales-registration-group"><h3>1. Identitas outlet</h3><RegistrationIdentitySection LOCATION_OPTIONS={LOCATION_OPTIONS} formData={formData} handleNameChange={handleNameChange} handleSelectGooglePlace={handleSelectGooglePlace} handleUnlockGooglePlace={handleUnlockGooglePlace} hasSearched={hasSearched} isDebouncing={isDebouncing} isSearchingPlace={isSearchingPlace} placeSearchResults={placeSearchResults} setHasSearched={setHasSearched} settings={settings} updateField={updateField} verifiedPlace={verifiedPlace} />
 
       {/* ─── BOX 2: VALIDASI GOOGLE PLACE & TITIK GPS (DI BAWAH NAMA OUTLET) ─── */}
-      <RegistrationLocationSection formData={formData} handleDetectGPS={handleDetectGPS} isLocating={isLocating} setIsOutletCameraOpen={setIsOutletCameraOpen} settings={settings} verifiedPlace={verifiedPlace} />
+      </section><section id="registration-location" className="sales-registration-group"><h3>2. Lokasi & dokumen</h3><RegistrationLocationSection formData={formData} handleDetectGPS={handleDetectGPS} isLocating={isLocating} gpsError={gpsError} setIsOutletCameraOpen={setIsOutletCameraOpen} settings={settings} verifiedPlace={verifiedPlace} />
 
       {/* ─── BOX 3: JENIS PAJAK & DOKUMEN KTP/NPWP ────────────────────────────── */}
       <RegistrationTaxSection cardTypeLabel={cardTypeLabel} formData={formData} setIsKtpCameraOpen={setIsKtpCameraOpen} settings={settings} updateField={updateField} />
 
       {/* ─── BOX 4: AREA & WILAYAH ────────────────────────────────────────────── */}
-      <RegistrationTerritorySection clusters={clusters} formData={formData} updateField={updateField} />
+      </section><section id="registration-plan" className="sales-registration-group"><h3>3. Wilayah & rencana kunjungan</h3><RegistrationTerritorySection clusters={clusters} formData={formData} updateField={updateField} />
 
       {/* ─── BOX 5: CHANNEL & SUB CHANNEL ─────────────────────────────────────── */}
       <RegistrationChannelSection GT_SUB_CHANNELS={GT_SUB_CHANNELS} MT_SUB_CHANNELS={MT_SUB_CHANNELS} TIERS={TIERS} formData={formData} updateField={updateField} />
@@ -209,10 +176,11 @@ export const PhysicalDocumentForm = ({
       {/* ─── BOX 7: KUNJUNGAN (CALL PLAN PJP) ─────────────────────────────────── */}
       <RegistrationVisitSection DAYS_LIST={DAYS_LIST} formData={formData} toggleDay={toggleDay} updateField={updateField} />
 
+      </section><section id="registration-submit" className="sales-registration-group"><h3>4. Periksa & ajukan</h3>
       {/* ─── BOX 8: MAPPING PATOKAN FISIK ────────────────────────────────────── */}
       <div className="border border-slate-700/80 rounded-xl overflow-hidden p-3.5 bg-surface space-y-2 text-xs">
-        <label className="font-black block text-sm">Mapping Lokasi :</label>
-        <textarea rows={6} value={formData.mappingLocation} onChange={e => updateField('mappingLocation', e.target.value)} className="w-full min-h-[140px] p-3 text-xs bg-transparent border border-slate-400 rounded-lg focus:border-primary outline-none resize-y" placeholder="Tuliskan deskripsi patokan fisik, ancer-ancer lokasi, ciri bangunan, atau petunjuk jalan menuju toko secara rinci..." />
+        <label htmlFor="registration-landmark" className="font-black block text-sm">Patokan & petunjuk lokasi</label>
+        <textarea id="registration-landmark" rows={3} value={formData.mappingLocation} onChange={e => updateField('mappingLocation', e.target.value)} className="w-full min-h-[96px] p-3 text-xs bg-transparent border border-slate-400 rounded-lg focus:border-primary outline-none resize-y" placeholder="Tuliskan deskripsi patokan fisik, ancer-ancer lokasi, ciri bangunan, atau petunjuk jalan menuju toko secara rinci..." />
       </div>
 
       {/* ─── Tombol Aksi Submit & Reset Terpadu di Dokumen ─────────────────────── */}
@@ -221,7 +189,7 @@ export const PhysicalDocumentForm = ({
           * Pastikan seluruh data fisik outlet dan foto kamera telah sesuai sebelum mengajukan.
         </span>
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <button type="button" onClick={onReset} className="px-4 py-2.5 rounded-xl border-2 border-slate-500 hover:bg-surface-container font-bold text-xs transition-all cursor-pointer">
+          <button type="button" onClick={()=>{if(window.confirm('Kosongkan seluruh isian formulir ini?'))onReset();}} disabled={isSubmitting} className="px-4 py-2.5 rounded-xl border-2 border-slate-500 hover:bg-surface-container font-bold text-xs transition-all cursor-pointer">
             Reset Formulir
           </button>
           <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50">
@@ -231,6 +199,7 @@ export const PhysicalDocumentForm = ({
         </div>
       </div>
 
+      </section>
       {/* ─── Hardware Camera Modals ───────────────────────────────────────────── */}
       <IdCardCameraModal isOpen={isKtpCameraOpen} onClose={() => setIsKtpCameraOpen(false)} onCapture={photoDataUrl => updateField('taxDocumentUrl', photoDataUrl)} cardType={cardTypeLabel} outletName={formData.name} division={formData.division} />
 

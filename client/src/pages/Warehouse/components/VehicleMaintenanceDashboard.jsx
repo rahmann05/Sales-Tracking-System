@@ -1,54 +1,16 @@
-import { VehicleMaintenanceCard } from "./VehicleMaintenanceCard";
-import { VehicleConditionControl } from './VehicleConditionControl';
-import { RecordMaintenanceModal } from "./RecordMaintenanceModal";
-import React, { useState, useEffect } from 'react';
-import { vehiclesApi } from '../../../services/api';
-import { LuWrench, LuRefreshCw } from 'react-icons/lu';
-// Use fi-icons for missing lu-icons
-
-export const VehicleMaintenanceDashboard = () => {
-  const [vehicles, setVehicles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const fetchVehicles = async () => {
-    setLoading(true);
-    try {
-      const res = await vehiclesApi.getAll();
-      if (res.status === 'success' || res.data) setVehicles(res.data || res);
-    } catch (err) {
-      console.error('Failed to fetch vehicles', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    fetchVehicles();
-  }, []);
-  return <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto pb-16 md:pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-on-surface flex items-center gap-2">
-            <LuWrench className="text-primary" />
-            Pemeliharaan Kendaraan
-          </h1>
-          <p className="text-sm text-on-surface-variant mt-1">Pantau status kilometer dan jadwal servis armada</p>
-        </div>
-        <button onClick={fetchVehicles} className="p-2 rounded-xl border border-border-glass bg-surface hover:bg-surface-variant transition-colors" title="Refresh">
-          <LuRefreshCw className={`text-on-surface-variant ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-
-      {/* List */}
-      {loading && vehicles.length === 0 ? <div className="text-center py-12 text-on-surface-variant text-sm">Memuat data...</div> : vehicles.length === 0 ? <div className="text-center py-12 bg-surface border border-border-glass rounded-2xl">
-          <p className="text-sm text-on-surface-variant">Belum ada data kendaraan</p>
-        </div> : <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {vehicles.map(v => <section key={v.id} className="space-y-2"><VehicleMaintenanceCard vehicle={v} onRecord={() => setSelectedVehicle(v)} /><VehicleConditionControl vehicle={v} onChanged={fetchVehicles}/></section>)}
-        </div>}
-
-      {selectedVehicle && <RecordMaintenanceModal vehicle={selectedVehicle} onClose={() => setSelectedVehicle(null)} onSuccess={() => {
-      setSelectedVehicle(null);
-      fetchVehicles();
-    }} />}
-    </div>;
-};
+import React,{useState,useEffect,useCallback,useRef} from 'react';
+import {LuRefreshCw,LuSearch} from 'react-icons/lu';
+import {vehiclesApi} from '../../../services/api';
+import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
+import {VehicleMaintenanceCard} from './VehicleMaintenanceCard';
+import {VehicleConditionControl} from './VehicleConditionControl';
+import {RecordMaintenanceModal} from './RecordMaintenanceModal';
+const condition={AVAILABLE:'Layak digunakan',IN_SERVICE:'Dalam perawatan',BROKEN:'Tidak layak',READY:'Siap digunakan'};
+export function VehicleMaintenanceDashboard(){
+ const [vehicles,setVehicles]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState(''),[record,setRecord]=useState(null);
+ const [selectedId,select]=useWorkspaceState('warehouseVehicle',''),flight=useRef(0);
+ const refresh=useCallback(async()=>{const version=++flight.current;setLoading(true);try{const res=await vehiclesApi.getAll();if(version===flight.current){setVehicles(res.data||[]);setError('');}}catch(e){if(version===flight.current)setError(e.message);}finally{if(version===flight.current)setLoading(false);}},[]);
+ useEffect(()=>{refresh();return()=>{flight.current++;};},[refresh]);
+ const visible=vehicles.filter(v=>`${v.code} ${v.name}`.toLocaleLowerCase('id-ID').includes(search.trim().toLocaleLowerCase('id-ID'))),selected=visible.find(v=>v.id===selectedId)||visible[0];
+ return <div className="workspace-page logistics-workspace"><header className="admin-page-heading"><div><p className="admin-eyebrow">Gudang / Armada</p><h1>Kendaraan & servis</h1><p>Periksa kondisi kendaraan, kapasitas, dan servis sebelum menetapkan trip.</p></div><button type="button" disabled={loading} className="admin-button" onClick={refresh}><LuRefreshCw/>Perbarui</button></header>{error&&<p role="alert" className="admin-feedback error">{error} Data terakhir tetap ditampilkan; perbarui sebelum mengubah kondisi.</p>}<div className="admin-toolbar"><label className="admin-search"><LuSearch/><input type="search" aria-label="Cari kendaraan" placeholder="Cari kode atau nama kendaraanâ€¦" value={search} onChange={e=>setSearch(e.target.value)}/></label><span className="admin-footnote">{vehicles.length} kendaraan terdaftar</span></div><div className="logistics-split"><section className="admin-panel logistics-stop-list"><div className="admin-panel-heading"><h2>Armada</h2></div><ul>{visible.map(v=><li key={v.id}><button type="button" aria-pressed={selected?.id===v.id} onClick={()=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true})))select(v.id);}}><span><strong>{v.code} Â· {v.name}</strong><small>{condition[v.condition]||v.condition||'Kondisi belum tersedia'}</small><small>{Number(v.totalKm||0).toLocaleString('id-ID')} km Â· {v.maxCartons} karton</small></span></button></li>)}</ul>{!visible.length&&<p className="admin-empty">{loading?'Memuat armadaâ€¦':'Tidak ada kendaraan sesuai pencarian.'}</p>}</section>{selected&&<fieldset disabled={!!error} className="logistics-vehicle-detail"><VehicleMaintenanceCard vehicle={selected} onRecord={()=>setRecord(selected)}/><section className="admin-panel logistics-action-panel"><VehicleConditionControl key={selected.id} vehicle={selected} onChanged={refresh}/></section></fieldset>}</div>{record&&<RecordMaintenanceModal vehicle={record} onClose={()=>setRecord(null)} onSuccess={()=>{setRecord(null);refresh();}}/>}</div>;
+}

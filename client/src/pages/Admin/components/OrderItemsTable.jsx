@@ -3,20 +3,8 @@ import {unitDescription} from '../../../../../shared/product-units.mjs';
 
 export const OrderItemsTable = ({ items, totalAmount }) => {
   return (
-    <div className="space-y-1.5 text-xs border-t border-border-glass pt-3">
-      <span className="font-bold text-on-surface block">Rincian Item SKU:</span>
-      {items.map((item, idx) => (
-        <div key={idx} className="flex items-center justify-between text-on-surface-variant">
-          <span>
-            {item.productName} ({item.qty} {unitDescription(item)})
-          </span>
-          <span className="font-semibold text-on-surface">Rp {item.subtotal.toLocaleString('id-ID')}</span>
-        </div>
-      ))}
-      <div className="flex items-center justify-between font-bold text-sm text-primary pt-2 border-t border-border-glass/50">
-        <span>Total Nilai Order:</span>
-        <span>Rp {totalAmount.toLocaleString('id-ID')}</span>
-      </div>
+    <div className="order-items-table overflow-x-auto">
+      <table className="w-full text-xs text-left"><caption className="text-left font-semibold pb-3">Rincian barang</caption><thead><tr><th>Barang / satuan</th><th>Jumlah</th><th>Harga satuan</th><th>Subtotal</th></tr></thead><tbody>{items.map((item,index)=><tr key={item.productId||index}><td><strong>{item.productName}</strong><span className="block text-on-surface-variant">{unitDescription(item)}</span></td><td>{item.qty}</td><td>Rp {Number(item.unitPrice||0).toLocaleString('id-ID')}</td><td>Rp {Number(item.subtotal||0).toLocaleString('id-ID')}</td></tr>)}</tbody><tfoot><tr><th colSpan={3}>Total nilai order</th><td>Rp {Number(totalAmount||0).toLocaleString('id-ID')}</td></tr></tfoot></table>
     </div>
   );
 };

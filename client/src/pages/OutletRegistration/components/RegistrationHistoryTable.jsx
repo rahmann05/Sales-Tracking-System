@@ -29,6 +29,7 @@ const STATUS_BADGE_MAP = {
 export const RegistrationHistoryTable = ({
   submissions = [],
   isLoading = false,
+  error = '',
   onRefresh,
   onSelectDetail,
 }) => {
@@ -40,13 +41,14 @@ export const RegistrationHistoryTable = ({
             <LuClock className="text-primary" /> Riwayat Pengajuan Registrasi Outlet
           </h3>
           <p className="text-xs text-on-surface-variant m-0 mt-0.5">
-            Status verifikasi dan persetujuan bertingkat (Salesman &rarr; SPV &rarr; Ops Manager &rarr; Admin)
+            Pengajuan → Pemeriksaan → Aktivasi pelanggan oleh Supervisor / Admin
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           <button
             type="button"
+            disabled={isLoading||Boolean(error)||!submissions.length}
             onClick={() => exportCustomerExcel(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.csv`)}
             className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
             title="Ekspor ke Excel / CSV"
@@ -55,6 +57,7 @@ export const RegistrationHistoryTable = ({
           </button>
           <button
             type="button"
+            disabled={isLoading||Boolean(error)||!submissions.length}
             onClick={() => exportCustomerNd6Txt(submissions, `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`)}
             className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
             title="Ekspor Format ND6 TXT"
@@ -72,7 +75,7 @@ export const RegistrationHistoryTable = ({
         </div>
       </div>
 
-      {isLoading ? (
+      {error ? <p role="alert" className="app-error">Riwayat belum dapat dimuat: {error}</p> : isLoading ? (
         <div className="py-12 text-center text-xs text-on-surface-variant">
           Memuat data riwayat pendaftaran...
         </div>
@@ -107,7 +110,7 @@ export const RegistrationHistoryTable = ({
             </thead>
             <tbody className="divide-y divide-border-glass">
               {submissions.map((item) => {
-                const badge = STATUS_BADGE_MAP[item.registrationStatus] || STATUS_BADGE_MAP.SUBMITTED;
+                const badge = STATUS_BADGE_MAP[item.registrationStatus] || {label:item.registrationStatus||'Belum tersedia',cls:'bg-surface-container'};
 
                 return (
                   <tr key={item.id} className="hover:bg-surface-variant/20 transition-colors">
@@ -115,7 +118,7 @@ export const RegistrationHistoryTable = ({
                       {new Date(item.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'short',
-                        year: 'numeric',
+                        year: 'numeric',timeZone:'Asia/Jakarta',
                       })}
                     </td>
                     <td data-label="Nama Toko" className="">

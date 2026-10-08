@@ -36,7 +36,7 @@ export const AppProvider = ({ children }) => {
   const driverTracking = useDriverTracking(user);
 
   // 4. Global Tab Navigation State
-  const [activeTab, setActiveTab] = useBrowserNavigation(user);
+  const [activeTab, setActiveTab] = useBrowserNavigation(user,sessionLoading);
 
   // 5. Master data (clusters & divisions) + fetchers
   const { clusters, setClusters, fetchClusters, divisions, setDivisions, fetchDivisions } = useMasterData();

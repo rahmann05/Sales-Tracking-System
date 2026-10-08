@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
+import React from 'react';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import { ReportTabBar } from './components/ReportTabBar';
 import { DailyCallMonitorPage } from '../DailyCallMonitor/DailyCallMonitorPage';
 import { WeeklyReportView } from './components/WeeklyReportView';
 import { MtdReportView } from './components/MtdReportView';
-import { LuFileSpreadsheet, LuLayers } from 'react-icons/lu';
+import { LuFileSpreadsheet } from 'react-icons/lu';
 
 /**
  * ReportsPage Component
@@ -12,24 +13,20 @@ import { LuFileSpreadsheet, LuLayers } from 'react-icons/lu';
  * (1. Daily Call Real-Time, 2. Weekly Performance WTD, 3. Month-to-Date MTD vs Target).
  */
 export const ReportsPage = () => {
-  const [activeTab, setActiveTab] = useState('DAILY');
+  const [activeTab, setActiveTab] = useWorkspaceState('reportView','DAILY');
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-[1800px] mx-auto pb-24">
+    <div className="workspace-page reports-workspace space-y-6">
       {/* 1. Suite Header Banner */}
       <PageHeader
         badge={
           <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuFileSpreadsheet className="text-sm" /> ND6 DISTRIBUTION REPORTING SUITE
+            <LuFileSpreadsheet className="text-sm" /> Laporan
           </span>
         }
-        title="Pusat Laporan Distribusi & Analitik Penjualan"
-        subtitle="Analisis terpadu alur distribusi dari absensi harian real-time, rekap performa mingguan (WTD), hingga evaluasi pencapaian Month-to-Date (MTD) vs target penjualan."
-        actions={
-          <span className="px-3.5 py-2 rounded-xl bg-surface border border-border-glass text-primary text-xs font-mono font-bold flex items-center gap-2 shadow-xs">
-            <LuLayers className="text-sm" /> Standar Distribusi ND6
-          </span>
-        }
+        title="Laporan operasional"
+        subtitle="Pantau kunjungan harian, hasil mingguan, dan pencapaian bulanan tim sales."
+
       />
 
       {/* 2. ND6 Report Mode Navigation Tabs */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { customerRegistrationsApi } from '../../../services/api';
+import { customerRegistrationsApi, collectPages } from '../../../services/api';
 
 /**
  * useOutletRegistrationHistory Hook
@@ -7,18 +7,19 @@ import { customerRegistrationsApi } from '../../../services/api';
  */
 export const useOutletRegistrationHistory = () => {
   const [submissions, setSubmissions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [historyError,setHistoryError]=useState('');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await customerRegistrationsApi.getAll({ limit: 50 });
+      const res = await collectPages(customerRegistrationsApi.getAll);
       if (res?.data) {
-        setSubmissions(res.data);
+        setSubmissions(res.data);setHistoryError('');
       }
     } catch (err) {
-      console.warn('[OutletRegistrationHistory] Failed to load submissions:', err);
+      setSubmissions([]);setHistoryError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -29,7 +30,7 @@ export const useOutletRegistrationHistory = () => {
   }, [fetchHistory]);
 
   return {
-    submissions,
+    submissions,historyError,
     isLoading,
     selectedSubmission,
     setSelectedSubmission,

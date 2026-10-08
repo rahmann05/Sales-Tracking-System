@@ -1,3 +1,4 @@
+import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
 import { ClusterOutletsModal } from './components/master/ClusterOutletsModal';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -43,7 +44,7 @@ export const RoutePlanningPage = () => {
     return RJP_ROLE_TAB_MAP.SALES;
   }, [isSupervisorOrAdmin]);
 
-  const [activeTab, setActiveTab] = useState(allowedTabs[0]?.id || 'SALES_VIEW');
+  const [activeTab, setActiveTab] = useWorkspaceState('rjpView',allowedTabs[0]?.id || 'SALES_VIEW');
 
   useEffect(() => {
     if (!allowedTabs.some((t) => t.id === activeTab)) {

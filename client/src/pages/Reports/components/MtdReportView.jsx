@@ -164,13 +164,13 @@ export const MtdReportView = () => {
       {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={loadData} disabled={isLoading}>Coba lagi</button></div>}
       {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
-      <MtdMetrics period={period} summary={summary} />
-      <ReportBasisNote basis={reportData.basis} />
+      {!isLoading && !error && <MtdMetrics period={period} summary={summary} />}
+      {!isLoading && !error && <ReportBasisNote basis={reportData.basis} />}
       <ReportArchivePanel kind="MONTH" period={`${year}-${String(month).padStart(2,'0')}`}/>
       <div className="flex flex-wrap gap-2">{reportData.basis?.calendarMonths?.map(row=><ReportCalendarEditor key={row.month} month={row.month} onSaved={loadData}/>)}</div>
 
       {/* 2. Channel Contribution Cards */}
-      {channelBreakdown.length > 0 && <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3">
+      {!isLoading && !error && channelBreakdown.length > 0 && <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3">
           <div className="flex items-center gap-2">
             <LuLayers className="text-primary text-base" />
             <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider m-0">
@@ -197,6 +197,6 @@ export const MtdReportView = () => {
       <MtdSalesTable MONTH_OPTIONS={MONTH_OPTIONS} exportToCsv={exportToCsv} filteredSalesmen={filteredSalesmen} isLoading={isLoading} loadData={loadData} month={month} reportData={reportData} salesTeam={salesOptions} salesmanId={salesmanId} search={search} setIsPdfModalOpen={setIsPdfModalOpen} setMonth={setMonth} setSalesmanId={setSalesmanId} setSearch={setSearch} setYear={setYear} summary={summary} year={year} />
 
       {/* PDF Modal */}
-      {isPdfModalOpen && <MtdReportPdfView reportData={reportData} salesmanName={salesmanName} onClose={() => setIsPdfModalOpen(false)} />}
+      {isPdfModalOpen && !isLoading && !error && <MtdReportPdfView reportData={reportData} salesmanName={salesmanName} onClose={() => setIsPdfModalOpen(false)} />}
     </div>;
 };

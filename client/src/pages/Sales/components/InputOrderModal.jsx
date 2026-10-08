@@ -1,9 +1,10 @@
+import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {orderPricing} from '../../../../../shared/order-pricing.mjs';
 import { ProductForm } from '../../../shared/components/common/ProductForm';
 import React, { useState } from 'react';
 import {ordersApi} from '../../../services/api';
 import { LuSend } from 'react-icons/lu';
-import { FiXCircle } from 'react-icons/fi';
+import {SalesDialog} from './SalesDialog';
 import { ProductOrderItem } from './ProductOrderItem';
 import { useApp } from '../../../context/AppContext';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
@@ -18,11 +19,13 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
   const requestKey=`order-request:${user.id}:${stop?.id}`;
   const [pending,setPending]=useState(()=>{try{const saved=JSON.parse(sessionStorage.getItem(requestKey));return saved?.items?saved:null;}catch{return null;}});
   const [addingProduct, setAddingProduct] = useState(false);
-  const [code,setCode]=useState(pending?.code||'');
+  const [search,setSearch]=useState('');
+  const draft=useFormDraft(`order:${stop?.id}`,{code:'',orderItems:[],paymentType:stop?.outlet?.paymentType||settings.DEFAULT_PAYMENT_TYPE||'CASH'});
+  const code=pending?.code??draft.value.code,setCode=draft.field('code');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [orderItems, setOrderItems] = useState(()=>pending?.items.map(i=>({product:{id:i.productId,name:i.productName,price:i.unitPrice,unit:i.unit,baseUnit:i.baseUnit,unitsPerUnit:i.unitsPerUnit},qty:i.quantity}))||[]);
-  const [paymentType, setPaymentType] = useState(pending?.paymentType||stop?.outlet?.paymentType || settings.DEFAULT_PAYMENT_TYPE || 'CASH');
+  const orderItems=pending?.items.map(i=>({product:{id:i.productId,name:i.productName,price:i.unitPrice,unit:i.unit,baseUnit:i.baseUnit,unitsPerUnit:i.unitsPerUnit},qty:i.quantity}))||draft.value.orderItems,setOrderItems=draft.field('orderItems');
+  const paymentType=pending?.paymentType??draft.value.paymentType,setPaymentType=draft.field('paymentType');
 
   if (!stop) return null;
 
@@ -30,7 +33,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
     setOrderItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (!existing && delta > 0) {
-        return [...prev, { product, qty: 1 }];
+        return [...prev, { product, qty: delta }];
       }
       if (existing) {
         const newQty = existing.qty + delta;
@@ -50,7 +53,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
   const handleSubmit = async () => {
     if (saving) return;
     if (orderItems.length === 0) {
-      alert('Pilih minimal 1 produk untuk membuat order.');
+      setError('Pilih minimal satu produk untuk membuat order.');
       return;
     }
 
@@ -76,89 +79,31 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
       pricing,
       totalAmount: calculateTotal(),
     };
-    sessionStorage.setItem(requestKey,JSON.stringify(payload));setPending(payload);
+    try{sessionStorage.setItem(requestKey,JSON.stringify(payload));}catch{setError('Browser tidak dapat menyimpan identitas pengiriman. Kosongkan ruang sesi lalu coba lagi.');return;}setPending(payload);
     setSaving(true); setError('');
-    try { await onSubmitOrder(payload);sessionStorage.removeItem(requestKey);setPending(null); } catch (err) { setError(err.message); } finally { setSaving(false); }
+    try { await onSubmitOrder(payload);sessionStorage.removeItem(requestKey);draft.clear();setPending(null); } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
-  const resumeEditing=async()=>{setSaving(true);setError('');try{const result=await ordersApi.findRequest(pending.requestId);if(result.data){setError('Order sudah tersimpan. Kirim ulang order yang sama untuk mengambil hasilnya.');return;}sessionStorage.removeItem(requestKey);setPending(null);}catch(e){setError(e.message);}finally{setSaving(false);}};
+  const resumeEditing=async()=>{setSaving(true);setError('');try{const result=await ordersApi.findRequest(pending.requestId);if(result.data){setError('Order sudah tersimpan. Kirim ulang order yang sama untuk mengambil hasilnya.');return;}draft.setValue({code:pending.code,orderItems,paymentType:pending.paymentType});sessionStorage.removeItem(requestKey);setPending(null);}catch(e){setError(e.message);}finally{setSaving(false);}};
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface border border-border-glass rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border-glass pb-3">
-          <div>
-            <h3 className="font-bold text-lg text-on-surface">Form Input Order Sales</h3>
-            <p className="text-xs text-on-surface-variant">Outlet: {stop.outletName} ({stop.outletCode})</p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant">
-            <FiXCircle className="text-xl" />
-          </button>
-        </div>
-
-        {pending&&<div role="status" className="p-3 border rounded-xl text-sm">Hasil order sebelumnya belum dikonfirmasi. Kirim ulang menggunakan data yang sama agar tidak ganda. Total yang dikirim: Rp {pending.expectedTotal.toLocaleString('id-ID')}.<button type="button" disabled={saving} className="block min-h-11 underline" onClick={resumeEditing}>Periksa hasil sebelum mengubah order</button></div>}
-        <fieldset disabled={saving||!!pending} className="space-y-5">
-        <BusinessCodeInput entity="ORDER" value={code} onChange={setCode} disabled={saving||!!pending} />
-        <div className="text-xs bg-surface-variant/40 p-3 rounded-2xl border border-border-glass flex items-center justify-between">
-          <span className="text-on-surface-variant">Saldo piutang:</span>
-          <p className="font-bold text-amber-600">Belum tersedia dari buku transaksi</p>
-        </div>
-
-        <div className="space-y-3">
-          <h4 className="font-bold text-sm text-on-surface">Pilih Produk SKU</h4>
-          {settings.SALES_ALLOW_PRODUCT_CREATE && (addingProduct ? <ProductForm onCancel={() => setAddingProduct(false)} onSaved={product => { setProducts(prev => [...prev, product]); setAddingProduct(false); }} /> : <button type="button" className="btn btn-secondary min-h-11" onClick={() => setAddingProduct(true)}>Tambah produk</button>)}
-          <div className="space-y-2">
-            {!products.length && <p className="text-sm text-on-surface-variant">Belum ada produk. Admin dapat menambahkan melalui Katalog produk di Pengaturan.</p>}
-            {products.map((prd) => {
-              const existing = orderItems.find((item) => item.product.id === prd.id);
-              const qty = existing ? existing.qty : 0;
-              return (
-                <div key={prd.id}><ProductOrderItem
-                  key={prd.id}
-                  product={prd}
-                  qty={qty}
-                  onQtyChange={updateProductQty}
-                />
-                {settings.SALES_ALLOW_PRICE_OVERRIDE && qty > 0 && <label className="block text-sm mt-2">Harga per unit {prd.name} (Rp)<input type="number" min="1" step="1" className="form-input w-full" value={existing.product.price} onChange={e => setOrderItems(prev => prev.map(item => item.product.id === prd.id ? { ...item, product: { ...item.product, price: Number(e.target.value) } } : item))} /></label>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="form-label">Syarat Pembayaran</label>
-          <select
-            value={paymentType}
-            onChange={(e) => setPaymentType(e.target.value)}
-            className="form-select"
-          >
-            <option value="CASH">CASH (Bayar Tunai saat kirim)</option>
-            <option value="TOP">TOP (Termin / Tempo)</option>
-            <option value="TRANSFER">TRANSFER (Transfer Bank)</option>
-          </select>
-        </div>
-
-        <p className="text-sm">Termin: {terms} hari{stop.outlet?.paymentType && paymentType!==stop.outlet.paymentType?' · Berbeda dari syarat pelanggan':''}</p>
-        <div className="text-sm space-y-1"><p>Subtotal: Rp {pricing.subtotal.toLocaleString('id-ID')}</p><p>Pajak {pricing.taxRatePercent}% ({pricing.taxIncluded?'sudah termasuk':'ditambahkan'}): Rp {pricing.taxAmount.toLocaleString('id-ID')}</p></div>
-        </fieldset>
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <div className="pt-3 border-t border-border-glass flex items-center justify-between">
-          <div>
-            <span className="text-xs text-on-surface-variant">Total Nilai Order:</span>
-            <p className="text-lg font-bold text-primary">Rp {calculateTotal().toLocaleString('id-ID')}</p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving || !orderItems.length}
-            className="px-6 py-2.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-md"
-          >
-            <LuSend className="text-sm" />
-            <span>{pending?'Kirim ulang order yang sama':'Submit Order ke Admin'}</span>
-          </button>
-        </div>
+  const visibleProducts=products.filter(p=>`${p.name} ${p.code||p.sku||''}`.toLocaleLowerCase('id-ID').includes(search.trim().toLocaleLowerCase('id-ID')));
+  return <SalesDialog title="Buat order" description={`${stop.outletName} · ${stop.outletCode||'Kode belum tersedia'}`} onClose={onClose} busy={saving} dirty={draft.dirty||!!pending} restored={draft.restored} draftError={draft.storageError} wide>
+    {pending&&<div role="status" className="sales-form-help">Hasil pengiriman sebelumnya belum dikonfirmasi. Kirim ulang data yang sama agar tidak ganda.<button type="button" disabled={saving} className="app-button" onClick={resumeEditing}>Periksa hasil sebelum mengubah order</button></div>}
+    <fieldset disabled={saving||!!pending}>
+      <div className="sales-order-builder">
+        <section className="sales-catalog"><h3>Pilih produk</h3><label>Cari produk<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nama atau kode produk…"/></label>
+          {settings.SALES_ALLOW_PRODUCT_CREATE && (addingProduct ? <ProductForm onCancel={() => setAddingProduct(false)} onSaved={product => { setProducts(prev => [...prev, product]); setAddingProduct(false); }} /> : <button type="button" className="app-button" onClick={() => setAddingProduct(true)}>Tambah produk</button>)}
+          <div className="sales-product-list">{visibleProducts.map(prd=>{const existing=orderItems.find(i=>i.product.id===prd.id);return <div key={prd.id}><ProductOrderItem product={existing?.product||prd} qty={existing?.qty||0} onQtyChange={updateProductQty}/>{settings.SALES_ALLOW_PRICE_OVERRIDE&&existing&&<label>Harga per unit (Rp)<input aria-label={`Harga ${prd.name}`} type="number" min="1" step="1" value={existing.product.price} onChange={e=>setOrderItems(prev=>prev.map(i=>i.product.id===prd.id?{...i,product:{...i.product,price:Number(e.target.value)}}:i))}/></label>}</div>;})}</div>
+          {!visibleProducts.length&&<p className="sales-note">{products.length?'Tidak ada produk sesuai pencarian.':'Katalog produk belum tersedia. Hubungi Admin.'}</p>}
+        </section>
+        <aside className="sales-order-summary"><h3>Ringkasan order</h3><BusinessCodeInput entity="ORDER" value={code} onChange={setCode} disabled={saving||!!pending}/>
+          <div>{orderItems.length?orderItems.map(i=><div className="sales-cart-line" key={i.product.id}><span>{i.product.name} × {i.qty}</span><span>Rp {(i.product.price*i.qty).toLocaleString('id-ID')}</span></div>):<p className="sales-note">Belum ada produk dipilih.</p>}</div>
+          <label>Syarat order<select value={paymentType} onChange={e=>setPaymentType(e.target.value)}><option value="CASH">Tunai (CASH)</option><option value="TOP">Tempo (TOP)</option><option value="TRANSFER">Transfer</option></select></label>
+          <p className="sales-note">Termin: {terms} hari{stop.outlet?.paymentType&&paymentType!==stop.outlet.paymentType?' · Berbeda dari syarat pelanggan':''}. Pembayaran dilakukan di luar aplikasi.</p>
+          <div className="sales-order-totals"><p><span>Subtotal</span><span>Rp {pricing.subtotal.toLocaleString('id-ID')}</span></p><p><span>Pajak {pricing.taxRatePercent}%</span><span>Rp {pricing.taxAmount.toLocaleString('id-ID')}</span></p><small className="sales-note">Pajak {pricing.taxIncluded?'sudah termasuk dalam harga':'ditambahkan ke subtotal'}.</small><p><span>Total</span><strong>Rp {calculateTotal().toLocaleString('id-ID')}</strong></p></div>
+        </aside>
       </div>
-    </div>
-  );
+    </fieldset>
+    {error&&<p role="alert" className="app-error">{error}</p>}
+    <div className="sales-modal-actions"><p className="sales-note">Order dikirim untuk pemeriksaan sebelum diproses.</p><button type="button" onClick={handleSubmit} disabled={saving||!orderItems.length} className="app-button app-button-primary"><LuSend/>{saving?'Mengirim…':pending?'Kirim ulang order yang sama':'Kirim order untuk diperiksa'}</button></div>
+  </SalesDialog>;
 };

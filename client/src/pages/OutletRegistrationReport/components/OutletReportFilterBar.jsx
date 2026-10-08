@@ -45,10 +45,10 @@ export const OutletReportFilterBar = ({
             className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-bold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Status</option>
-            <option value="SUBMITTED">SUBMITTED</option>
-            <option value="SPV_APPROVED">SPV_APPROVED</option>
-            <option value="REGISTERED_ACTIVE">REGISTERED_ACTIVE</option>
-            <option value="REJECTED">REJECTED</option>
+            <option value="SUBMITTED">Menunggu persetujuan</option>
+            <option value="SPV_APPROVED">Disetujui SPV</option>
+            <option value="REGISTERED_ACTIVE">Aktif di sistem</option>
+            <option value="REJECTED">Ditolak</option>
           </select>
         </div>
 

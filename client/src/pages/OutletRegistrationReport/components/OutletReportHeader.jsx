@@ -76,10 +76,10 @@ export const OutletReportHeader = ({
             </div>
           </div>
           <h1 className="text-xl md:text-2xl font-black text-on-surface tracking-tight m-0">
-            Laporan Pendaftaran & Approval Outlet
+            Laporan registrasi outlet
           </h1>
           <p className="text-xs text-on-surface-variant mt-1 m-0">
-            Modul pelaporan admin untuk ekspor data (Excel/CSV/TXT), kelola & input NIK KTP, cetak formulir resmi fisik, dan aktivasi ke master database
+            Telusuri status pengajuan toko, cetak formulir, dan ekspor data pelanggan.
           </p>
         </div>
 
@@ -92,7 +92,7 @@ export const OutletReportHeader = ({
               className="h-9 px-3.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
               title="Kelola dan Input NIK 16-Digit Pemilik Toko"
             >
-              <LuIdCard className="text-sm" /> <span>Kelola / Input NIK</span>
+              <LuIdCard className="text-sm" /> <span>Kelola NIK</span>
             </button>
           )}
           {onExportNikExcel && (
@@ -102,7 +102,7 @@ export const OutletReportHeader = ({
               className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
               title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom: Code, Name, NIK, Owner, Alamat, PKP, NPWP)"
             >
-              <LuFileSpreadsheet /> <span>Ekspor IMPORT NIK</span>
+              <LuFileSpreadsheet /> <span>Ekspor NIK</span>
             </button>
           )}
           <button

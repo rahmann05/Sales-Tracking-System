@@ -1,13 +1,15 @@
+import {useFormDraft} from '../../../shared/hooks/useFormDraft';
+import {SalesDialog} from './SalesDialog';
 import React, { useState } from 'react';
 import { LuCamera, LuCheck } from "react-icons/lu";
-import { FiXCircle } from 'react-icons/fi';
 
 /**
  * ReportClosedModal Component (Single Responsibility: Modal for Reporting Closed Outlet Incident)
  * 1 File per Component
  */
 export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
-  const [closedReason, setClosedReason] = useState('Toko Gembok / Tutup Permanen');
+  const draft=useFormDraft(`ReportClosedModal:${stop?.id}`,{closedReason:'Toko Gembok / Tutup Permanen'});
+  const closedReason=draft.value.closedReason,setClosedReason=draft.field('closedReason');
   const [closedPhoto, setClosedPhoto] = useState(null);
 
   const [saving, setSaving] = useState(false);
@@ -34,23 +36,12 @@ export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
       reason: closedReason,
       photoUrl: closedPhoto || null,
     });
+    draft.clear();
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
-        {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
-        <div className="modal-header">
-          <div>
-            <h3 className="font-bold text-lg text-on-surface">Lapor Toko Tutup</h3>
-            <p className="text-xs text-on-surface-variant">{stop.outletName}</p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-surface-variant text-on-surface-variant">
-            <FiXCircle className="text-xl" />
-          </button>
-        </div>
-
+  return <SalesDialog title="Laporkan toko tutup" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!closedPhoto} restored={draft.restored} draftError={draft.storageError}>
+{error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
         <div className="space-y-2">
           <label className="form-label">Alasan Toko Tutup</label>
           <select
@@ -111,7 +102,5 @@ export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
         >
           Kirim Laporan ke Supervisor
         </button>
-      </div>
-    </div>
-  );
+  </SalesDialog>;
 };

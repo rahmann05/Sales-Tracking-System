@@ -20,6 +20,7 @@ export const PageHeader = ({
   actions,
   stats = [],
   className = '',
+  headingAs: Heading = 'h1',
 }) => {
   return (
     <header
@@ -38,9 +39,9 @@ export const PageHeader = ({
           </div>
         )}
 
-        <h1>
+        <Heading>
           {title}
-        </h1>
+        </Heading>
 
         {subtitle && (
           <p className="editorial-page-subtitle">

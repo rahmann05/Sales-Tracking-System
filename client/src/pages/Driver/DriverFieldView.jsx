@@ -1,149 +1,43 @@
-import { MetricCard } from '../../shared/components/common/MetricCard';
-import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
-import React, { useState, useEffect, useCallback } from 'react';
-import { deliveryApi, collectPages } from '../../services/api';
-import { DriverStopCard } from './components/DriverStopCard';
-import { DriverAttendanceModal } from './components/DriverAttendanceModal';
+import React,{useState} from 'react';
+import {LuRefreshCw,LuArrowRight,LuMapPin} from 'react-icons/lu';
 import {useApp} from '../../context/AppContext';
+import {deliveryApi} from '../../services/api';
+import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
+import {useSelectedDetail} from '../../shared/hooks/useSelectedDetail';
+import {TAB_IDS} from '../../constants/navigation';
+import {useDriverTrips} from './useDriverTrips';
+import {DriverStopCard} from './components/DriverStopCard';
+import {DriverAttendanceModal} from './components/DriverAttendanceModal';
 import {RouteOperationsActions} from '../Warehouse/components/RouteOperationsActions';
-import {routeProgress} from '../../../../shared/delivery-operations.mjs';
 import {OperationalIssues} from '../Warehouse/components/OperationalIssues';
-import { LuTruck, LuMapPin, LuPackage, LuCalendar, LuRefreshCw, LuCircleCheck } from 'react-icons/lu';
-
-/**
- * DriverFieldView — The Supir's main workspace (similar to SalesFieldView).
- * Shows today's assigned delivery route with stops, attendance buttons, and status tracking.
- */
-export const DriverFieldView = () => {
-  const {driverTracking,user}=useApp();
-  const [issues,setIssues]=useState([]);
-  const [routes, setRoutes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modalData, setModalData] = useState(null); // { stop, type: 'attendance' | 'status' }
-
-  const today = wibDateKey();
-  const [selectedRouteId, setSelectedRouteId] = useState('');
-  const [error, setError] = useState('');
-  const fetchRoutes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await collectPages(deliveryApi.getDeliveryRoutes, {
-        open: 'true'
-      });
-      setRoutes(res.data);
-      const mine=await deliveryApi.getMyIssues();setIssues(mine.data);
-      setError('');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [today]);
-  useEffect(() => {
-    fetchRoutes();
-    const timer=setInterval(fetchRoutes,30000);return()=>clearInterval(timer);
-  }, [fetchRoutes]);
-
-  // Active route (first IN_TRANSIT or READY)
-  const activeRoute = routes.find(r => r.id === selectedRouteId) || routes.find(r => r.status === 'IN_TRANSIT') || routes.find(r => r.status === 'READY') || routes[0];
-  const stops = activeRoute?.stops || [];
-
-  // Stats
-  const totalStops = stops.length;
-  const deliveredCount = stops.filter(s => s.status === 'DELIVERED').length;
-  const pendingCount = stops.filter(s => s.status === 'PENDING').length;
-  const totalCartons = activeRoute?.totalCartons || 0;
-  const handleAttendance = async (stopId, data) => {
-    await deliveryApi.submitDriverAttendance(stopId, data);
-    setModalData(null);
-    await fetchRoutes();
-  };
-  return <div className="p-4 md:p-6 space-y-5 max-w-3xl mx-auto pb-16 md:pb-8">
-      {/* Header */}
-      <div className="role-page-header">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-primary/10">
-            <LuTruck className="text-2xl text-primary" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold text-on-surface">Rute Pengiriman Hari Ini</h1>
-            <div className="text-xs text-on-surface-variant mt-0.5 flex items-center gap-2">
-              <LuCalendar className="text-xs" />
-              {new Date().toLocaleDateString('id-ID', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric'
-            })}
-            </div>
-          </div>
-          <button onClick={fetchRoutes} className="p-2 rounded-xl border border-border-glass hover:bg-surface-variant transition-colors">
-            <LuRefreshCw className={`text-on-surface-variant ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-
-        {/* Route Info */}
-        {activeRoute && <div className="mt-3 pt-3 border-t border-border-glass flex items-center gap-3 flex-wrap text-xs">
-            <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold">{activeRoute.code}</span>
-            <span className="text-on-surface-variant">
-              <LuTruck className="inline mr-1" />
-              {activeRoute.vehicle?.name} ({activeRoute.vehicle?.code})
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{
-          color: activeRoute.status === 'IN_TRANSIT' ? '#d97706' : activeRoute.status === 'COMPLETED' ? '#16a34a' : '#2563eb',
-          backgroundColor: activeRoute.status === 'IN_TRANSIT' ? '#fef3c7' : activeRoute.status === 'COMPLETED' ? '#dcfce7' : '#dbeafe'
-        }}>
-              {activeRoute.status === 'READY' ? 'Siap Kirim' : activeRoute.status === 'IN_TRANSIT' ? 'Dalam Perjalanan' : activeRoute.status === 'COMPLETED' ? 'Selesai' : activeRoute.status}
-            </span>
-          </div>}
-      </div>
-
-      {error && <p role="alert" className="text-red-600">{error}</p>}
-      <div className="border rounded-xl p-3 text-sm" role="status">{driverTracking?.message||'Menunggu informasi GPS.'}{driverTracking?.at&&` Posisi terakhir berhasil dikirim: ${new Date(driverTracking.at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB (${driverTracking.routeCode||'trip'}).`}<p>Lokasi langsung tersedia saat halaman aktif, GPS diizinkan, dan jaringan tersambung. Bila berhenti memperbarui, gudang melihat posisi terakhir beserta waktunya.</p></div>
-      {activeRoute&&<RouteOperationsActions route={activeRoute} driver onChanged={fetchRoutes}/>}
-      {issues.length>0&&<OperationalIssues issues={issues} people={[user]} onChanged={fetchRoutes}/>}
-      {routes.length > 1 && <label className="block">Pilih rute <select className="p-3 border rounded-xl" value={activeRoute?.id || ''} onChange={e => setSelectedRouteId(e.target.value)}>{routes.map(r => <option key={r.id} value={r.id}>{r.code} · {r.status}</option>)}</select></label>}
-      {/* Progress Summary */}
-      {activeRoute && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <MetricCard label="Total Toko" value={totalStops} icon={LuMapPin} color="#2563eb" />
-          <MetricCard label="Terkirim" value={deliveredCount} icon={LuCircleCheck} color="#16a34a" />
-          <MetricCard label="Menunggu" value={pendingCount} icon={LuTruck} color="#d97706" />
-          <MetricCard label="Total Karton" value={totalCartons} icon={LuPackage} color="#7c3aed" />
-        </div>}
-
-      {/* Progress Bar */}
-      {activeRoute && totalStops > 0 && <div className="bg-surface border border-border-glass rounded-2xl p-3 shadow-sm">
-          <div className="flex justify-between text-xs text-on-surface-variant mb-2">
-            <span>Stop selesai diproses (termasuk penolakan)</span>
-            <span className="font-bold text-on-surface">{routeProgress(activeRoute).completionPercent}%</span>
-          </div>
-          <div className="w-full h-3 bg-surface-variant rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-500" style={{
-          width: `${routeProgress(activeRoute).completionPercent}%`,
-          backgroundColor: deliveredCount === totalStops ? '#16a34a' : '#2563eb'
-        }} />
-          </div>
-        </div>}
-
-      {/* Stop Cards */}
-      {loading ? <div className="text-center py-12 text-on-surface-variant text-sm">Memuat rute...</div> : !activeRoute ? <div className="text-center py-16 bg-surface border border-border-glass rounded-2xl">
-          <LuTruck className="mx-auto text-4xl text-on-surface-variant/50 mb-3" />
-          <p className="text-sm font-semibold text-on-surface mb-1">Belum Ada Rute Hari Ini</p>
-          <p className="text-xs text-on-surface-variant">Hubungi Kepala Gudang untuk mendapatkan rute pengiriman</p>
-        </div> : <div className="space-y-3">
-          {stops.map((stop, idx) => <DriverStopCard key={stop.id} disabled={activeRoute.status!=='IN_TRANSIT'||activeRoute.onHold||Boolean(activeRoute.returnedAt)} stop={stop} index={idx} totalStops={totalStops} onAbsenIn={() => setModalData({
-        stop,
-        type: 'absen_in'
-      })} onMarkDelivered={() => setModalData({
-        stop,
-        type: 'delivered'
-      })} onMarkRejected={() => setModalData({
-        stop,
-        type: 'rejected'
-      })} />)}
-        </div>}
-
-      {/* Attendance Modal */}
-      {modalData && <DriverAttendanceModal stop={modalData.stop} type={modalData.type} onClose={() => setModalData(null)} onSubmitAttendance={handleAttendance} />}
-    </div>;
-};
+import {deliveryRouteLabel,deliveryStopLabel} from '../Warehouse/deliveryLabels';
+import {routeProgress} from '../../../../shared/delivery-operations.mjs';
+import {orderedStops,nextDeliveryStop} from '../../../../shared/driver-workspace.mjs';
+const stamp=v=>v?new Date(v).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}):'Belum tercatat';
+export function DriverFieldView(){
+ const {driverTracking,user,setActiveTab}=useApp();
+ const {routes,issues,loading,error,updatedAt,refresh,activeRoute:trip,selectTrip}=useDriverTrips();
+ const [selectedStopId,selectStop]=useWorkspaceState('driverStop',''),[modal,setModal]=useState(null);
+ const stops=orderedStops(trip),next=nextDeliveryStop(stops),selected=stops.find(s=>s.id===selectedStopId)||next||stops[0],progress=routeProgress(trip||{});
+ const detailRef=useSelectedDetail(selectedStopId?selected?.id:null,true);
+ const disabled=!!error||trip?.status!=='IN_TRANSIT'||trip?.onHold||!!trip?.returnedAt;
+ const tripIssues=issues.filter(i=>i.routeId===trip?.id||stops.some(s=>s.id===i.deliveryStopId));
+ const save=async(id,data)=>{await deliveryApi.submitDriverAttendance(id,data);setModal(null);await refresh();};
+ return <div className="workspace-page logistics-workspace driver-workspace">
+  <header className="admin-page-heading"><div><p className="admin-eyebrow">Driver / Pelaksanaan pengiriman</p><h1>Trip saya</h1><p>Trip yang belum ditutup, termasuk penugasan dari tanggal sebelumnya.</p></div><button type="button" className="admin-button" disabled={loading} onClick={refresh}><LuRefreshCw/>{loading?'Memperbarui…':'Perbarui'}</button></header>
+  <p role="status" className="admin-footnote">Pembaruan setiap 30 detik · Terakhir berhasil: {stamp(updatedAt)} WIB</p>
+  {error&&<p role="alert" className="admin-feedback error">{error} Data terakhir tetap ditampilkan. Perbarui data sebelum melakukan tindakan.</p>}
+  {loading&&!routes.length?<p className="admin-empty">Memuat trip yang ditugaskan…</p>:!trip?<section className="admin-panel admin-empty"><h2>Belum ada trip terbuka</h2><p>Hubungi Kepala Gudang untuk memeriksa penugasan Anda.</p></section>:<>
+   <section className="admin-panel logistics-trip-heading"><div><span className="admin-status">{deliveryRouteLabel(trip)}</span><h2>{trip.code}</h2><p>{trip.vehicle?.code||'Truk belum ditetapkan'} · {trip.vehicle?.name} · Tanggal trip {trip.date?new Date(trip.date).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta'}):'Belum tersedia'}</p></div><div className="logistics-heading-tools">{routes.length>1&&<label>Trip yang ditugaskan<select value={trip.id} onChange={e=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true}))){selectTrip(e.target.value);selectStop('');}}}>{routes.map(r=><option key={r.id} value={r.id}>{r.code} · {deliveryRouteLabel(r)}</option>)}</select></label>}<button type="button" className="admin-button" onClick={()=>{selectTrip(trip.id);setActiveTab(TAB_IDS.DELIVERY_DRIVER_MAP);}}><LuMapPin/>Peta tujuan</button></div></section>
+   <div className="logistics-metrics">{[['Tujuan diproses',`${progress.resolved}/${progress.total}`],['Diterima penuh',progress.delivered],['Diterima sebagian',stops.filter(s=>s.status==='PARTIAL_REJECT').length],['Ditolak',stops.filter(s=>s.status==='REJECTED').length]].map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+   <section className="admin-panel logistics-next"><div><p className="admin-eyebrow">{trip.returnedAt?'Perjalanan telah kembali':next?'Tujuan berikutnya':'Seluruh tujuan telah diproses'}</p><h2>{trip.returnedAt?'Menunggu pemeriksaan dan penutupan gudang':next?next.outlet?.name:'Konfirmasikan perjalanan kembali'}</h2><p>{trip.onHold?'Trip ditahan. Hubungi Kepala Gudang sebelum melanjutkan.':trip.status==='DRAFT'?'Gudang sedang menyiapkan muatan. Tunggu serah terima.':trip.status==='READY'?'Periksa serah terima muatan dan isi odometer sebelum berangkat.':next?.outlet?.address||'Trip selesai setelah bukti dan retur diperiksa oleh gudang.'}</p></div>{next&&<button type="button" className="admin-button primary" onClick={()=>{selectStop(next.id);detailRef.current?.scrollIntoView({behavior:'smooth',block:'start'});}}>Buka tujuan<LuArrowRight/></button>}</section>
+   {!trip.returnedAt&&['READY','COMPLETED','PARTIAL'].includes(trip.status)&&<section className="admin-panel logistics-action-panel"><h2>Tindakan perjalanan</h2><fieldset disabled={!!error}><RouteOperationsActions key={trip.id} route={trip} driver onChanged={refresh}/></fieldset></section>}
+   <div className="logistics-split"><section className="admin-panel logistics-stop-list"><div className="admin-panel-heading"><h2>Urutan tujuan</h2><span>{progress.completionPercent}% diproses</span></div><ol>{stops.map((stop,index)=><li key={stop.id}><button type="button" aria-pressed={selected?.id===stop.id} onClick={()=>selectStop(stop.id)}><span className="logistics-sequence">{index+1}</span><span><strong>{stop.outlet?.name||'Outlet'}</strong><small>{deliveryStopLabel(stop.status)}{stop.status==='PENDING'&&stop.arrivedAt?' · Sudah tiba':''}</small><small>{stop.allocatedCartons??0} karton · {stop.packingList?.code}</small></span>{stop.id===next?.id&&<span className="admin-status">Berikutnya</span>}</button></li>)}</ol></section>
+    <section ref={detailRef} tabIndex={-1} className="logistics-stop-detail" aria-label="Rincian tujuan pilihan">{selected?<><DriverStopCard stop={selected} index={stops.indexOf(selected)} totalStops={stops.length} disabled={disabled} onAbsenIn={()=>setModal({stop:selected,type:'absen_in'})} onMarkDelivered={()=>setModal({stop:selected,type:'delivered'})} onMarkRejected={()=>setModal({stop:selected,type:'rejected'})}/>{disabled&&selected.status==='PENDING'&&<p className="admin-footnote">Absensi tersedia setelah trip berangkat, tidak ditahan, dan data berhasil diperbarui.</p>}<p className="admin-footnote">Tiba: {stamp(selected.arrivedAt)} · Selesai diproses: {stamp(selected.completedAt)}</p></>:<p className="admin-empty">Trip belum memiliki tujuan.</p>}</section>
+   </div>
+   <section className="admin-panel logistics-gps"><h2>Status GPS ponsel</h2><p role="status">{driverTracking?.message||'Menunggu informasi GPS.'}</p>{driverTracking?.at&&<p>Terakhir berhasil dikirim: {stamp(driverTracking.at)} WIB · {driverTracking.routeCode||'Trip'}</p>}<p className="admin-footnote">Lokasi langsung tersedia saat halaman aktif, izin GPS diberikan, dan jaringan tersambung. Gudang melihat waktu serta sumber posisi terakhir ketika pembaruan berhenti.</p></section>
+   {tripIssues.length>0&&<section className="admin-panel logistics-action-panel"><fieldset disabled={!!error}><OperationalIssues issues={tripIssues} people={[user]} onChanged={refresh}/></fieldset></section>}
+  </>}
+  {modal&&<DriverAttendanceModal stop={modal.stop} type={modal.type} onClose={()=>setModal(null)} onSubmitAttendance={save}/>}
+ </div>;
+}

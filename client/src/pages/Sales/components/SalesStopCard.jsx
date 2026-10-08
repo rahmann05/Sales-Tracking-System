@@ -1,138 +1,25 @@
 import React from 'react';
 import {visitOutcomeText} from '../../../../../shared/visit-outcome.mjs';
-import { LuMapPin, LuNavigation } from 'react-icons/lu';
-import { OutletPhoto } from './OutletPhoto';
-import { OutletExcelMetadata } from './OutletExcelMetadata';
-import { OutletGooglePlaceInfo } from './OutletGooglePlaceInfo';
-import { SalesStopActions } from './SalesStopActions';
-import { useOutletLockStatus } from '../hooks/useOutletLockStatus';
-import { useApp } from '../../../context/AppContext';
-
-/**
- * SalesStopCard Component
- * Single Responsibility: Container card orchestrating outlet information,
- * photo, Excel metadata, Google API information, Geofence status, lock state, and actions.
- * Equal height standard: h-full flex flex-col justify-between
- */
-export const SalesStopCard = React.memo(({
-  stop,
-  allStops = [],
-  onAbsenIn,
-  onAbsenOut,
-  onInputOrder,
-  onClosedReport,
-  onRequestUnlock,
-}) => {
-  const { settings } = useApp();
-  const radius = settings.ATTENDANCE_USE_OUTLET_RADIUS ? (stop.radiusMeters || settings.ATTENDANCE_RADIUS_METERS) : settings.ATTENDANCE_RADIUS_METERS;
-  const hasDistance = Number.isFinite(stop.currentDistance);
-  const isInsideGeofence = hasDistance && stop.currentDistance <= radius;
-  const customerName = stop.customerName || stop.outletName;
-  const customerId = stop.customerId || stop.outletCode;
-
-  // Single Responsibility Hook for calculating lock status
-  const { isLocked, lockReason } = useOutletLockStatus(stop, allStops);
-
-  return (
-    <div
-      className={`operational-card bg-surface border rounded-2xl p-5 shadow-sm space-y-4 transition-all relative h-full flex flex-col justify-between ${
-        stop.status === 'ORDERED'
-          ? 'border-blue-500/40 bg-blue-500/5'
-          : stop.status === 'VISITED' || stop.status === 'COMPLETED'
-          ? 'border-emerald-500/40 bg-emerald-500/5'
-          : stop.status === 'CLOSED'
-          ? 'border-rose-500/40 bg-rose-500/5'
-          : stop.status === 'SKIPPED'
-          ? 'border-amber-500/40 bg-amber-500/5 opacity-75'
-          : isLocked
-          ? 'border-amber-500/30 bg-surface opacity-90'
-          : 'border-border-glass hover:border-primary/40'
-      }`}
-    >
-      {/* Top Body Details */}
-      <div className="space-y-3.5">
-        {/* 1. Header Bar: Sequence Number, Store Title, and Status Badge */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 mt-0.5">
-              #{stop.sequence}
-            </span>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap min-h-[1.75rem]">
-                <h4 className="font-bold text-on-surface text-base tracking-tight">{customerName}</h4>
-                <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface-variant text-on-surface-variant">
-                  {customerId}
-                </span>
-              </div>
-              <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-                <LuMapPin className="text-primary text-xs shrink-0" />
-                <span>{stop.address}</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Status Badge */}
-          <span
-            className={`text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
-              stop.status === 'ORDERED'
-                ? 'bg-blue-500/10 text-blue-600'
-                : stop.status === 'VISITED' || stop.status === 'COMPLETED'
-                ? 'bg-emerald-500/10 text-emerald-600'
-                : stop.status === 'ARRIVED'
-                ? 'bg-amber-500/10 text-amber-600'
-                : stop.status === 'CLOSED'
-                ? 'bg-rose-500/10 text-rose-600'
-                : stop.status === 'SKIPPED'
-                ? 'bg-amber-500/10 text-amber-600'
-                : 'bg-surface-variant text-on-surface-variant'
-            }`}
-          >
-            {stop.status}
-          </span>
-        </div>
-
-        {/* 2. Outlet Photo Section: ONLY displayed if Google Places photo is available */}
-        <OutletPhoto
-          photoUrl={stop.googlePlaceDetails?.photoUrl || stop.photoUrl}
-          customerName={customerName}
-        />
-
-        {/* 3. Excel Columns Metadata Grid */}
-        <OutletExcelMetadata stop={stop} />
-        {stop.visitOutcome&&<p className="text-sm border rounded-xl p-3">{visitOutcomeText(stop.visitOutcome)}</p>}
-
-        {/* 4. Google Places API Details Section */}
-        <OutletGooglePlaceInfo googlePlaceDetails={stop.googlePlaceDetails} />
-
-        {/* 5. Geofence Distance Indicator */}
-        <div className="flex items-center justify-between text-xs bg-surface-variant/30 px-3 py-2 rounded-xl">
-          <span className="text-on-surface-variant">Jarak GPS{settings.ATTENDANCE_ENFORCE_GEOFENCE ? '' : ' (batas nonaktif)'}:</span>
-          <span
-            className={`font-bold flex items-center gap-1 ${
-              isInsideGeofence ? 'text-emerald-600' : 'text-amber-600'
-            }`}
-          >
-            <LuNavigation className="text-xs" />
-            {hasDistance ? `${stop.currentDistance} meter · ${isInsideGeofence ? 'Dalam radius' : 'Di luar radius'}` : 'GPS diperiksa saat absen'}
-          </span>
-        </div>
-      </div>
-
-      {/* 6. Action Buttons Section (Pinned cleanly to bottom) */}
-      <div className="pt-2 mt-auto">
-        <SalesStopActions
-          stop={stop}
-          isLocked={isLocked}
-          lockReason={lockReason}
-          onRequestUnlock={onRequestUnlock}
-          onAbsenIn={onAbsenIn}
-          onAbsenOut={onAbsenOut}
-          onInputOrder={onInputOrder}
-          onClosedReport={onClosedReport}
-        />
-      </div>
-    </div>
-  );
+import {OutletPhoto} from './OutletPhoto';
+import {OutletExcelMetadata} from './OutletExcelMetadata';
+import {OutletGooglePlaceInfo} from './OutletGooglePlaceInfo';
+import {SalesStopActions} from './SalesStopActions';
+import {useOutletLockStatus} from '../hooks/useOutletLockStatus';
+import {useApp} from '../../../context/AppContext';
+import {visitStatusLabel} from '../salesPresentation';
+export const SalesStopCard=React.memo(({stop,allStops=[],onAbsenIn,onAbsenOut,onInputOrder,onClosedReport,onRequestUnlock})=>{
+  const {settings}=useApp();
+  const radius=settings.ATTENDANCE_USE_OUTLET_RADIUS?(stop.radiusMeters||settings.ATTENDANCE_RADIUS_METERS):settings.ATTENDANCE_RADIUS_METERS;
+  const hasDistance=Number.isFinite(stop.currentDistance);
+  const {isLocked,lockReason}=useOutletLockStatus(stop,allStops);
+  const coordinates=Number.isFinite(stop.latitude)&&Number.isFinite(stop.longitude)&&Math.abs(stop.latitude)<=90&&Math.abs(stop.longitude)<=180;
+  return <article className="sales-visit-detail"><div><span className="sales-status">{visitStatusLabel(stop.status)}</span><h3>{stop.outletName}</h3><p>{stop.address||'Alamat belum tercatat'}</p></div>
+    <dl><div><dt>Kode outlet</dt><dd>{stop.outletCode||'Belum tercatat'}</dd></div><div><dt>Kontak pelanggan</dt><dd>{[stop.owner,stop.phone].filter(Boolean).join(' · ')||'Belum tercatat'}</dd></div><div><dt>Presensi masuk</dt><dd>{stop.checkInTime||'Belum tercatat'}</dd></div><div><dt>Presensi keluar</dt><dd>{stop.checkOutTime||'Belum tercatat'}</dd></div></dl>
+    <p className="sales-note">{hasDistance?`Jarak terakhir: ${stop.currentDistance} m.`:'GPS diperiksa saat presensi.'} {settings.ATTENDANCE_ENFORCE_GEOFENCE?`Radius yang berlaku: ${radius} m.`:'Pembatasan radius sedang nonaktif.'}</p>
+    <SalesStopActions stop={stop} isLocked={isLocked} lockReason={lockReason} onRequestUnlock={onRequestUnlock} onAbsenIn={onAbsenIn} onAbsenOut={onAbsenOut} onInputOrder={onInputOrder} onClosedReport={onClosedReport}/>
+    {stop.visitOutcome&&<section className="sales-result"><h4>Hasil kunjungan</h4><p>{visitOutcomeText(stop.visitOutcome)}</p></section>}
+    {(stop.checkInNotes||stop.checkOutNotes)&&<section className="sales-result"><h4>Catatan presensi</h4>{stop.checkInNotes&&<p>Masuk: {stop.checkInNotes}</p>}{stop.checkOutNotes&&<p>Keluar: {stop.checkOutNotes}</p>}</section>}
+    <details><summary>Informasi outlet & bukti</summary><div className="sales-outlet-extra"><OutletExcelMetadata stop={stop}/><OutletPhoto photoUrl={stop.googlePlaceDetails?.photoUrl||stop.photoUrl} customerName={stop.outletName}/><OutletGooglePlaceInfo googlePlaceDetails={stop.googlePlaceDetails}/>{coordinates&&<a href={`https://www.google.com/maps/search/?api=1&query=${stop.latitude},${stop.longitude}`} target="_blank" rel="noopener noreferrer">Buka titik outlet di peta</a>}{stop.checkInPhoto&&<a href={stop.checkInPhoto} target="_blank" rel="noopener noreferrer">Buka foto presensi masuk</a>}{stop.checkOutPhoto&&<a href={stop.checkOutPhoto} target="_blank" rel="noopener noreferrer">Buka foto presensi keluar</a>}</div></details>
+  </article>;
 });
-
-SalesStopCard.displayName = 'SalesStopCard';
+SalesStopCard.displayName='SalesStopCard';

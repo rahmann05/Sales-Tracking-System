@@ -1,3 +1,4 @@
+import {deliveryNavigationUrl} from '../../../../../shared/driver-workspace.mjs';
 import {unitDescription} from '../../../../../shared/product-units.mjs';
 import React from 'react';
 import { LuMapPin, LuPackage, LuFileText, LuCamera, LuCircleCheck, LuCircleX, LuClock, LuNavigation } from 'react-icons/lu';
@@ -5,9 +6,9 @@ import { FiAlertTriangle } from 'react-icons/fi';
 
 const STATUS_MAP = {
   PENDING: { label: 'Menunggu', color: '#6b7280', bg: '#f3f4f6', Icon: LuClock },
-  DELIVERED: { label: 'Terkirim', color: '#16a34a', bg: '#dcfce7', Icon: LuCircleCheck },
+  DELIVERED: { label: 'Diterima penuh', color: '#16a34a', bg: '#dcfce7', Icon: LuCircleCheck },
   REJECTED: { label: 'Ditolak', color: '#dc2626', bg: '#fee2e2', Icon: LuCircleX },
-  PARTIAL_REJECT: { label: 'Sebagian Ditolak', color: '#d97706', bg: '#fef3c7', Icon: FiAlertTriangle },
+  PARTIAL_REJECT: { label: 'Diterima sebagian', color: '#d97706', bg: '#fef3c7', Icon: FiAlertTriangle },
 };
 
 /**
@@ -15,16 +16,16 @@ const STATUS_MAP = {
  * Similar to SalesStopCard but for delivery context.
  */
 export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDelivered, onMarkRejected, disabled=false }) => {
-  const statusCfg = STATUS_MAP[stop.status] || STATUS_MAP.PENDING;
+  const statusCfg = STATUS_MAP[stop.status] || {label:stop.status||'Status belum tersedia',color:'#697280',bg:'#f3f5f8',Icon:LuClock};
   const StatusIcon = statusCfg.Icon;
-  const isCompleted = stop.status !== 'PENDING';
+  const isCompleted = ['DELIVERED','REJECTED','PARTIAL_REJECT'].includes(stop.status);
   const hasArrived = !!stop.arrivedAt;
 
   const invoices = (stop.packingList?.invoices || []).filter(i=>!(stop.allocatedInvoices||[]).length||stop.allocatedInvoices.some(a=>a.invoiceId===i.id));
   const outletName = stop.outlet?.name || 'Toko';
 
   return (
-    <div className={`operational-card bg-surface border border-b-[3.5px] rounded-2xl shadow-xs overflow-hidden transition-all ${isCompleted
+    <div className={`driver-stop-document operational-card bg-surface border border-b-[3.5px] rounded-2xl shadow-xs overflow-hidden transition-all ${isCompleted
         ? 'border-border-glass border-b-neutral-300 dark:border-b-neutral-700 opacity-80'
         : 'border-primary/30 border-b-primary/60 hover:shadow-sm'
       }`}>
@@ -91,12 +92,12 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
       </div>
 
       {/* Action Buttons with Mobile-Friendly >= 48px Touch Targets */}
-      {!isCompleted && (
+      {stop.status==='PENDING' && (
         <div className="px-4 pb-4 space-y-2.5">
           {/* Navigation button (min 48px) */}
-          {stop.outlet?.latitude && stop.outlet?.longitude && (
+          {deliveryNavigationUrl(stop.outlet) && (
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${stop.outlet.latitude},${stop.outlet.longitude}`}
+              href={deliveryNavigationUrl(stop.outlet)}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 text-sm font-bold transition-all shadow-xs"
@@ -122,14 +123,14 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
                 disabled={disabled}
                 className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-black shadow-md hover:bg-emerald-700 transition-all cursor-pointer"
               >
-                <LuCircleCheck className="text-base" /> Terkirim
+                <LuCircleCheck className="text-base" /> Diterima penuh
               </button>
               <button
                 onClick={onMarkRejected}
                 disabled={disabled}
                 className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-600 text-white text-sm font-black shadow-md hover:bg-rose-700 transition-all cursor-pointer"
               >
-                <LuCircleX className="text-base" /> Ditolak
+                <LuCircleX className="text-base" /> Penolakan / sebagian
               </button>
             </div>
           )}

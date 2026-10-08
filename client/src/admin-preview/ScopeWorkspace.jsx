@@ -1,0 +1,24 @@
+import React, { useState } from 'react';
+import { LuSearch, LuArrowRight } from 'react-icons/lu';
+import { modules, products, rupiah, trips, outlets } from './data';
+import DeliveryTabs from './DeliveryTabs';
+
+const scopes = {
+  outlets: { tabs: ['Master outlet', 'Pengajuan', 'Validasi lokasi'], intent: 'Identitas, wilayah, dokumen, dan lokasi pelanggan ditampilkan dalam satu detail outlet.', fields: ['Outlet', 'Wilayah', 'Informasi berikutnya'], rows: outlets.map(o => [o, 'Cimahi Selatan', 'Identitas · Dokumen · Lokasi · Riwayat']) },
+  sales: { tabs: ['Kunjungan', 'Tim & SPV', 'Wilayah', 'Jadwal & PJP'], intent: 'Pantau rencana dan hasil kunjungan; hubungkan order, catatan penagihan, dan tindak lanjut supervisor.', fields: ['Sales', 'Supervisor', 'Fokus informasi'], rows: [['Rizki Pratama', 'Andi Wijaya', 'Rencana · Absen · Hasil · Order · Tindak lanjut'], ['Dewi Lestari', 'Andi Wijaya', 'Kunjungan penagihan · Catatan pembayaran eksternal'], ['Agus Saputra', 'Rina Amelia', 'PJP · Kunjungan belum selesai · Evaluasi SPV']] },
+  followup: { tabs: ['Antrean pekerjaan', 'Presensi', 'Riwayat eskalasi'], intent: 'Satu antrean yang menjelaskan masalah, penanggung jawab, tenggat, dan tindakan berikutnya.', fields: ['Pekerjaan', 'PIC', 'Tindakan berikutnya'], rows: [['GPS TRP-0087 belum diperbarui', 'Admin operasional', 'Hubungi driver dan verifikasi kondisi perjalanan'], ['Pengiriman sebagian TRP-0086', 'Kepala gudang', 'Periksa sisa barang dan alasan pengiriman'], ['Permintaan koreksi presensi', 'Supervisor', 'Periksa bukti kunjungan dan beri keputusan']] },
+  reports: { tabs: ['Operasional', 'Registrasi outlet', 'Absensi', 'Arsip'], intent: 'Periode dan lingkup dipilih sebelum membaca ringkasan, tabel, atau mengekspor hasil.', fields: ['Laporan', 'Lingkup', 'Informasi utama'], rows: [['Kunjungan sales', 'Tanggal · Tim · Sales', 'Rencana vs realisasi · Hasil kunjungan'], ['Pemenuhan order', 'Periode · Status', 'Order · Packing terkait · Hasil pengiriman'], ['Absensi', 'Tanggal · Peran', 'Waktu aktual · Koreksi · Sumber data']] },
+  system: { tabs: ['Pengguna', 'Peran & izin', 'Parameter', 'Divisi & penomoran'], intent: 'Akun, template peran, pengecualian izin, dan parameter memiliki editor yang berbeda dan jelas.', fields: ['Area', 'Tujuan', 'Pola editor'], rows: [['Pengguna', 'Akun dan penugasan', 'Identitas · Peran · Tim · Status'], ['Peran & izin', 'Template dan pengecualian', 'Daftar fitur · Cari izin · Review perubahan'], ['Parameter', 'Aturan aplikasi', 'Kategori · Nilai · Penjelasan · Riwayat']] },
+  catalog: { tabs: ['Katalog produk'], intent: 'Referensi SKU, nama, satuan, dan harga untuk order. Tidak mengelola persediaan.', fields: ['SKU', 'Nama produk', 'Harga / satuan'], rows: products.map(p => [p.sku, p.name, `${rupiah(p.price)} / ${p.unit}`]) },
+  vehicles: { tabs: ['Kendaraan'], intent: 'Kendaraan dan kapasitas kemasan menjadi referensi saat menyusun perjalanan.', fields: ['Nomor polisi', 'Driver contoh', 'Muatan perjalanan'], rows: trips.map(t => [t.vehicle, t.driver, `${t.cartons} karton`]) },
+};
+export default function ScopeWorkspace({ page, go }) {
+  const spec = scopes[page];
+  const title = modules.find(m => m.id === page)?.title || spec.tabs[0];
+  const [tab, setTab] = useState(spec.tabs[0]);
+  const [query, setQuery] = useState('');
+  const rows = spec.rows.filter(row => row.join(' ').toLowerCase().includes(query.toLowerCase()));
+  return <main id="workspace" className="module-workspace"><div className="page-heading"><div><p className="eyebrow">RANCANGAN STRUKTUR</p><h1>{title}</h1><p>{spec.intent}</p></div></div>{page === 'vehicles' ? <DeliveryTabs page={page} go={go} /> : <nav className="section-tabs" aria-label={`Fitur ${title}`}>{spec.tabs.map(t => <button key={t} aria-current={t === tab ? 'page' : undefined} onClick={() => setTab(t)}>{t}</button>)}</nav>}
+    <div className="scope-note"><strong>{tab}</strong><p>Susunan informasi modul untuk evaluasi navigasi. Interaksi detail modul ini dikerjakan setelah empat alur utama dinilai.</p></div>
+    <section className="list-panel"><div className="list-toolbar"><label className="search-field"><LuSearch /><input aria-label={`Cari rancangan ${title}`} value={query} onChange={e => setQuery(e.target.value)} placeholder="Cari informasi contoh…" /></label></div><div className="table-scroll"><table className="data-table"><thead><tr>{spec.fields.map(f => <th key={f}>{f}</th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={i}>{row.map((value, j) => <td key={j}>{value}</td>)}</tr>)}</tbody></table></div>{!rows.length && <div className="empty-state"><p>Tidak ada informasi yang sesuai.</p><button onClick={() => setQuery('')}>Hapus pencarian</button></div>}</section><button className="text-button scope-return" onClick={() => go('orders')}>Buka prototipe alur Order<LuArrowRight /></button></main>;
+}

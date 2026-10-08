@@ -1,37 +1,7 @@
 import React from 'react';
 import {unitDescription} from '../../../../../shared/product-units.mjs';
-import { LuPlus, LuMinus } from 'react-icons/lu';
-
-/**
- * ProductOrderItem Component (Single Responsibility: Individual SKU Row in Order Form)
- * 1 File per Component
- */
-export const ProductOrderItem = ({ product, qty, onQtyChange }) => {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-xl border border-border-glass bg-surface/50">
-      <div>
-        <p className="font-bold text-xs text-on-surface">{product.name}</p>
-        <p className="text-[11px] text-on-surface-variant">
-          Rp {product.price.toLocaleString('id-ID')} / {unitDescription(product)}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onQtyChange(product, -1)}
-          className="w-7 h-7 rounded-lg border border-border-glass flex items-center justify-center text-on-surface hover:bg-surface-variant transition-all"
-        >
-          <LuMinus className="text-xs" />
-        </button>
-        <span className="w-6 text-center font-bold text-xs text-on-surface">{qty}</span>
-        <button
-          type="button"
-          onClick={() => onQtyChange(product, 1)}
-          className="w-7 h-7 rounded-lg bg-primary text-on-primary flex items-center justify-center hover:bg-primary/90 transition-all"
-        >
-          <LuPlus className="text-xs" />
-        </button>
-      </div>
-    </div>
-  );
-};
+import {LuPlus,LuMinus} from 'react-icons/lu';
+export function ProductOrderItem({product,qty,onQtyChange}){
+  const change=value=>{const next=Number(value);if(Number.isSafeInteger(next)&&next>=0)onQtyChange(product,next-qty);};
+  return <div className="sales-product"><div><p>{product.name}</p><small>Rp {Number(product.price).toLocaleString('id-ID')} / {unitDescription(product)}</small></div><div className="sales-quantity"><button type="button" aria-label={`Kurangi ${product.name}`} disabled={qty===0} onClick={()=>onQtyChange(product,-1)}><LuMinus/></button><input type="number" min="0" step="1" inputMode="numeric" aria-label={`Jumlah ${product.name}`} value={qty} onChange={e=>change(e.target.value)}/><button type="button" aria-label={`Tambah ${product.name}`} onClick={()=>onQtyChange(product,1)}><LuPlus/></button></div></div>;
+}

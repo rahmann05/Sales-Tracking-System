@@ -1,11 +1,12 @@
-import React from 'react';
+import {TAB_IDS} from '../../constants/navigation';
 
 
 
-import { StaffAttendanceReport } from '../../shared/components/common/StaffAttendanceReport';
-import { ProductCatalogManager } from './components/ProductCatalogManager';
-import { PjpCodeGeneration } from './components/PjpCodeGeneration';
-import { CodingMasterForms } from './components/CodingMasterForms';
+
+
+
+
+
 import { CONFIG_DEFINITIONS } from '../../../../shared/config.mjs';
 
 import { LuKey, LuMapPin, LuUsers, LuTruck, LuShieldCheck, LuSlidersHorizontal } from 'react-icons/lu';
@@ -43,19 +44,19 @@ export const categories = [{
 export const tools = [{
   key: 'products',
   label: 'Katalog produk',
-  component: ProductCatalogManager
+  tab: TAB_IDS.ADMIN_PRODUCTS
 }, {
   key: 'attendance',
   label: 'Laporan absensi',
-  component: StaffAttendanceReport
+  tab: TAB_IDS.ADMIN_ATTENDANCE
 }, {
   key: 'pjp',
   label: 'Siapkan PJP',
-  component: PjpCodeGeneration
+  tab: TAB_IDS.ADMIN_PJP
 }, {
   key: 'master',
   label: 'Master divisi / kendaraan',
-  component: CodingMasterForms
+  tab: TAB_IDS.ADMIN_MASTERS
 }];
 export const stringify = value => typeof value === 'object' ? JSON.stringify(value) : String(value);
 export const initialValues = configs => Object.fromEntries(CONFIG_DEFINITIONS.flatMap(g => g.params.map(p => [p.key, stringify(configs[p.key] ?? p.defaultValue)])));

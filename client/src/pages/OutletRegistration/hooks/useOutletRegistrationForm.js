@@ -1,3 +1,5 @@
+import {useFormDraft} from '../../../shared/hooks/useFormDraft';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import { INITIAL_FORM } from "./registrationInitialForm";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { customerRegistrationsApi, configApi } from '../../../services/api';
@@ -12,14 +14,20 @@ export const useOutletRegistrationForm = onSuccess => {
     settings
   } = useApp();
   const searchVersion = useRef(0);
-  const [formData, setFormData] = useState(INITIAL_FORM);
+  const gpsVersion = useRef(0);
+  const [dirty,setDirty]=useState(false);
+  const draft=useFormDraft('outlet-registration',INITIAL_FORM,value=>({...value,latitude:null,longitude:null,photoUrl:null,taxDocumentUrl:null,placeId:null,placeDetails:null}));
+  const formData=draft.value,setFormData=draft.setValue;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [gpsError,setGpsError]=useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
   const [placeSearchResults, setPlaceSearchResults] = useState([]);
   const [verifiedPlace, setVerifiedPlace] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(null);
   const [submitError, setSubmitError] = useState('');
+  useUnsavedNavigation(dirty||draft.restored,isSubmitting);
+  useEffect(()=>()=>{gpsVersion.current++;searchVersion.current++;},[]);
 
   // 1. Load active division from database SystemConfig
   useEffect(() => {
@@ -40,13 +48,16 @@ export const useOutletRegistrationForm = onSuccess => {
     fetchActiveDivision();
   }, []);
 
-  // 2. Auto-detect GPS on initial load
+  // 2. GPS is requested explicitly while the sales rep is at the outlet.
   const handleDetectGPS = useCallback(() => {
     if (!navigator.geolocation) {
-      return;
+      setGpsError('Browser ini belum mendukung GPS. Gunakan perangkat yang mendukung lokasi.');return;
     }
-    setIsLocating(true);
+    const version=++gpsVersion.current;
+    setGpsError('');setIsLocating(true);
     const onLocationSuccess = async pos => {
+      if(version!==gpsVersion.current)return;
+      setDirty(true);
       const lat = parseFloat(pos.coords.latitude.toFixed(6));
       const lng = parseFloat(pos.coords.longitude.toFixed(6));
       searchVersion.current++;
@@ -65,7 +76,7 @@ export const useOutletRegistrationForm = onSuccess => {
       // Reverse geocode to autofill subArea/kelurahan/area
       try {
         const geoRes = await customerRegistrationsApi.reverseGeocode(lat, lng);
-        if (geoRes?.data) {
+        if (geoRes?.data && version===gpsVersion.current) {
           setFormData(prev => ({
             ...prev,
             subAreaKecamatan: prev.subAreaKecamatan || geoRes.data.subAreaKecamatan || '',
@@ -79,9 +90,11 @@ export const useOutletRegistrationForm = onSuccess => {
       }
     };
     navigator.geolocation.getCurrentPosition(onLocationSuccess, () => {
+      if(version!==gpsVersion.current)return;
       // Fallback with low accuracy if high accuracy times out
       navigator.geolocation.getCurrentPosition(onLocationSuccess, err => {
-        console.debug('[GPS notice]:', err.message);
+        if(version!==gpsVersion.current)return;
+        setGpsError('Lokasi belum diperoleh. Aktifkan izin lokasi lalu coba Ambil ulang GPS.');
         setIsLocating(false);
       }, {
         enableHighAccuracy: false,
@@ -94,9 +107,6 @@ export const useOutletRegistrationForm = onSuccess => {
       maximumAge: 30000
     });
   }, []);
-  useEffect(() => {
-    handleDetectGPS();
-  }, [handleDetectGPS]);
 
   // 3. Search Google Places API by keyword
   const searchGooglePlaces = async keyword => {
@@ -119,6 +129,7 @@ export const useOutletRegistrationForm = onSuccess => {
 
   // 4. Select Google Place: Lock Google Place data, auto-fill address (editable), without changing typed name or GPS
   const handleSelectGooglePlace = place => {
+    setDirty(true);
     searchVersion.current++;
     setIsSearchingPlace(false);
     setVerifiedPlace(place);
@@ -141,6 +152,7 @@ export const useOutletRegistrationForm = onSuccess => {
     }));
   };
   const handleUnlockGooglePlace = () => {
+    setDirty(true);
     setVerifiedPlace(null);
     setFormData(prev => ({
       ...prev,
@@ -149,6 +161,7 @@ export const useOutletRegistrationForm = onSuccess => {
     }));
   };
   const updateField = (field, value) => {
+    setDirty(true);
     if (['name', 'latitude', 'longitude'].includes(field)) {
       searchVersion.current++;
       setPlaceSearchResults([]);
@@ -181,6 +194,7 @@ export const useOutletRegistrationForm = onSuccess => {
     }
   };
   const toggleDay = day => {
+    setDirty(true);
     setFormData(prev => {
       const current = prev.visitDays || [];
       const updated = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
@@ -191,14 +205,16 @@ export const useOutletRegistrationForm = onSuccess => {
     });
   };
   const resetForm = () => {
+    gpsVersion.current++;
+    setDirty(false);setGpsError('');setIsLocating(false);
     searchVersion.current++;
     setIsSearchingPlace(false);
-    setFormData(INITIAL_FORM);
+    setFormData(prev=>({...INITIAL_FORM,division:prev.division,divisionName:prev.divisionName,divisionId:prev.divisionId}));
+    draft.clear();
     setVerifiedPlace(null);
     setPlaceSearchResults([]);
     setSubmitError('');
     setSubmitSuccess(null);
-    handleDetectGPS();
   };
   const submitForm = async e => {
     if (e) e.preventDefault();
@@ -207,6 +223,7 @@ export const useOutletRegistrationForm = onSuccess => {
 
     // Detailed Validation & Helpful Error Messages
     const validationErrors = [];
+    if(formData.latitude==null||formData.longitude==null||!Number.isFinite(Number(formData.latitude))||!Number.isFinite(Number(formData.longitude))||Math.abs(Number(formData.latitude))>90||Math.abs(Number(formData.longitude))>180)validationErrors.push('Ambil lokasi GPS outlet sebelum mengajukan.');
     if (manualCodeRequired('NOO', settings) && !formData.registrationCode?.trim()) validationErrors.push('Kode pengajuan NOO wajib diisi manual.');
     if (!formData.name || formData.name.trim().length < 2) {
       validationErrors.push('Nama Outlet wajib diisi minimal 2 karakter.');
@@ -253,9 +270,10 @@ export const useOutletRegistrationForm = onSuccess => {
   };
   return {
     formData,
+    draftRestored:draft.restored,draftError:draft.storageError,
     updateField,
     isSubmitting,
-    isLocating,
+    isLocating,gpsError,
     isSearchingPlace,
     placeSearchResults,
     verifiedPlace,

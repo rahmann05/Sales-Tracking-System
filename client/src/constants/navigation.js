@@ -18,7 +18,23 @@ import { ROLES, ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES, OUTLET
 /** Tab IDs used across the app */
 export const TAB_IDS = Object.freeze({
     ROLE_WORKSPACE: 'role-workspace',
+    WAREHOUSE_ATTENTION:'warehouse-attention',
+    WAREHOUSE_VEHICLES:'warehouse-vehicles',
+    WAREHOUSE_ATTENDANCE:'warehouse-attendance',
+    DRIVER_TRIPS:'driver-trips',
+    SALES_VISITS: 'sales-visits',
+    SALES_ORDERS: 'sales-orders',
+    SALES_FOLLOW_UP: 'sales-follow-up',
+    SPV_MONITOR: 'spv-monitor',
+    SPV_APPROVAL: 'spv-approval',
+    SPV_FIELD: 'spv-field',
+    SPV_ATTENTION: 'spv-attention',
     ADMIN_APPROVAL: 'admin-approval',
+    ADMIN_ATTENTION: 'admin-attention',
+    ADMIN_PRODUCTS: 'admin-products',
+    ADMIN_PJP: 'admin-pjp',
+    ADMIN_ATTENDANCE: 'admin-attendance',
+    ADMIN_MASTERS: 'admin-masters',
     DASHBOARD: 'dashboard',
     DAILY_CALL_MONITOR: 'daily-call-monitor',
     ROUTE_PLANNING: 'route-planning',
@@ -42,11 +58,11 @@ export const TAB_IDS = Object.freeze({
 
 /** Role-specific "home workspace" tab metadata */
 const ROLE_WORKSPACE_MAP = Object.freeze({
-    [ROLES.SALES]: { label: 'Kunjungan hari ini', icon: LuNavigation },
-    [ROLES.SUPERVISOR]: { label: 'Supervisi Lapangan', icon: LuShieldCheck },
+    [ROLES.SALES]: { label: 'Beranda Sales', icon: LuNavigation },
+    [ROLES.SUPERVISOR]: { label: 'Beranda Supervisor', icon: LuShieldCheck },
     [ROLES.ADMIN]: { label: 'Menu Utama Admin', icon: LuLayoutGrid },
-    [ROLES.KEPALA_GUDANG]: { label: 'Dashboard Pengiriman', icon: LuTruck },
-    [ROLES.SUPIR]: { label: 'Rute Pengiriman Hari Ini', icon: LuTruck },
+    [ROLES.KEPALA_GUDANG]: { label: 'Beranda Gudang', icon: LuTruck },
+    [ROLES.SUPIR]: { label: 'Beranda Driver', icon: LuTruck },
 });
 
 /**
@@ -71,6 +87,27 @@ export const getNavigationTabs = (userOrRole) => {
     const permissions = user.permissions || {};
     
     const tabs = [getRoleWorkspaceTab(role)];
+    if(role===ROLES.KEPALA_GUDANG)tabs.push({id:TAB_IDS.WAREHOUSE_ATTENTION,label:'Tindak lanjut gudang',icon:LuFileCheck},{id:TAB_IDS.WAREHOUSE_VEHICLES,label:'Kendaraan & servis',icon:LuTruck},{id:TAB_IDS.WAREHOUSE_ATTENDANCE,label:'Presensi saya',icon:LuUsers});
+    if(role===ROLES.SUPIR)tabs.push({id:TAB_IDS.DRIVER_TRIPS,label:'Trip saya',icon:LuTruck});
+    if(role===ROLES.SALES)tabs.push(
+      {id:TAB_IDS.SALES_VISITS,label:'Kunjungan hari ini',icon:LuNavigation},
+      {id:TAB_IDS.SALES_ORDERS,label:'Order saya',icon:LuClipboardList},
+      {id:TAB_IDS.SALES_FOLLOW_UP,label:'Tindak lanjut',icon:LuFileCheck}
+    );
+    if(role===ROLES.SUPERVISOR)tabs.push(
+      {id:TAB_IDS.SPV_MONITOR,label:'Pantau tim',icon:LuMap},
+      {id:TAB_IDS.SPV_APPROVAL,label:'Persetujuan',icon:LuFileCheck},
+      {id:TAB_IDS.SPV_FIELD,label:'Kunjungan saya',icon:LuNavigation},
+      {id:TAB_IDS.SPV_ATTENTION,label:'Tindak lanjut',icon:LuClipboardList}
+    );
+
+    if (role === ROLES.ADMIN) tabs.push(
+        {id:TAB_IDS.ADMIN_ATTENTION,label:'Tindak lanjut',icon:LuClipboardList},
+        {id:TAB_IDS.ADMIN_PRODUCTS,label:'Katalog produk',icon:LuPackage},
+        {id:TAB_IDS.ADMIN_PJP,label:'Siapkan PJP',icon:LuClipboardList},
+        {id:TAB_IDS.ADMIN_ATTENDANCE,label:'Absensi staf',icon:LuUsers},
+        {id:TAB_IDS.ADMIN_MASTERS,label:'Divisi & kendaraan',icon:LuTruck}
+    );
 
     // 0. Persetujuan Order & Unlock (Admin atau yang punya izin)
     if (role === ROLES.ADMIN || permissions.can_approve_order || permissions.can_unlock_absensi) {
@@ -234,7 +271,15 @@ const TAB_PERMISSION_KEYS = {
   [TAB_IDS.DELIVERY_DRIVER_MAP]: ['can_access_driver_map'],
 };
 export function isTabPermissionAllowed(tabId,user) {
-  if ([TAB_IDS.SYSTEM_CONFIG,TAB_IDS.USER_MANAGEMENT].includes(tabId)) return user.role===ROLES.ADMIN;
+  if([TAB_IDS.WAREHOUSE_ATTENTION,TAB_IDS.WAREHOUSE_VEHICLES,TAB_IDS.WAREHOUSE_ATTENDANCE].includes(tabId))return user?.role===ROLES.KEPALA_GUDANG&&(tabId!==TAB_IDS.WAREHOUSE_ATTENTION||user.permissions?.can_monitor_delivery!==false);
+  if(tabId===TAB_IDS.DRIVER_TRIPS)return user?.role===ROLES.SUPIR&&user.permissions?.can_access_driver_map!==false;
+  if ([TAB_IDS.SALES_VISITS,TAB_IDS.SALES_ORDERS,TAB_IDS.SALES_FOLLOW_UP].includes(tabId)) return user?.role===ROLES.SALES;
+  if ([TAB_IDS.SPV_MONITOR,TAB_IDS.SPV_APPROVAL,TAB_IDS.SPV_FIELD,TAB_IDS.SPV_ATTENTION].includes(tabId)) {
+    if(user?.role!==ROLES.SUPERVISOR)return false;
+    if(tabId===TAB_IDS.SPV_MONITOR)return ['can_view_daily_call','can_view_live_tracking'].some(key=>user.permissions?.[key]!==false);
+    return true;
+  }
+  if ([TAB_IDS.SYSTEM_CONFIG,TAB_IDS.USER_MANAGEMENT,TAB_IDS.ADMIN_ATTENTION,TAB_IDS.ADMIN_PRODUCTS,TAB_IDS.ADMIN_PJP,TAB_IDS.ADMIN_ATTENDANCE,TAB_IDS.ADMIN_MASTERS].includes(tabId)) return user.role===ROLES.ADMIN;
   const keys=TAB_PERMISSION_KEYS[tabId];
   return !keys || keys.some(key=>user.permissions?.[key]!==false);
 }

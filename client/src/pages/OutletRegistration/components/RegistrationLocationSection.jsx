@@ -4,7 +4,7 @@ import { GooglePlaceDetailCard } from './GooglePlaceDetailCard';
 export function RegistrationLocationSection({
   formData,
   handleDetectGPS,
-  isLocating,
+  isLocating,gpsError,
   setIsOutletCameraOpen,
   settings,
   verifiedPlace
@@ -13,23 +13,24 @@ export function RegistrationLocationSection({
         <div className="p-2.5 bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2">
             <LuMapPin className="text-primary" />
-            <span className="font-black">VALIDASI GOOGLE PLACE & KOORDINAT GPS (OTOMATIS TERSIMPAN)</span>
+            <span className="font-black">Lokasi fisik & foto outlet</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 rounded text-[10px] font-black border border-emerald-500/30 flex items-center gap-1">
-              <LuLock className="text-[10px]" /> GPS Terkunci by Sistem
+              <LuLock className="text-[10px]" /> {formData.latitude!=null&&formData.longitude!=null?'Lokasi GPS tersedia':'Lokasi belum tersedia'}
             </span>
             <button type="button" onClick={handleDetectGPS} disabled={isLocating} className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
               <LuRefreshCw className={isLocating ? 'animate-spin' : ''} />
-              <span>{isLocating ? 'Mendeteksi...' : 'Ambil Ulang GPS'}</span>
+              <span>{isLocating ? 'Mendeteksi...' : formData.latitude!=null?'Ambil ulang GPS':'Ambil GPS outlet'}</span>
             </button>
           </div>
         </div>
 
+        {gpsError&&<p role="alert" className="app-error p-3">{gpsError}</p>}
         <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
           {/* Sisi Kiri: Profil Google Place */}
           <div>
-            <GooglePlaceDetailCard place={verifiedPlace} currentLat={Number(formData.latitude) || -6.8722} currentLng={Number(formData.longitude) || 107.5422} searchedQuery={formData.name} />
+            <GooglePlaceDetailCard place={verifiedPlace} currentLat={formData.latitude} currentLng={formData.longitude} searchedQuery={formData.name} />
           </div>
 
           {/* Sisi Kanan: Foto Outlet Live Kamera */}

@@ -72,7 +72,7 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
             </div>
             {followUp && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||followUp.completed}>
                 <legend className="font-bold text-sm">Tindak lanjut sales</legend>
-                {followUp.completed?<p>Tugas sebelumnya sudah selesai. Riwayat tersedia di pusat aksi.</p>:<>
+                {followUp.completed?<p>Tugas sudah selesai atau sedang menunggu pemeriksaan. Buka Tindak lanjut untuk melihat tahap terbaru.</p>:<>
                     <label className="flex gap-2 text-sm"><input type="checkbox" checked={followUp.enabled} onChange={e=>onChangeFollowUp({...followUp,enabled:e.target.checked})}/>Tugaskan tindak lanjut</label>
                     {followUp.enabled&&<>
                         <label className="block text-sm">Sales penanggung jawab<select className="form-input w-full" value={followUp.ownerId} onChange={e=>onChangeFollowUp({...followUp,ownerId:e.target.value})}><option value="">Pilih sales</option>{salesOptions.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}</select></label>

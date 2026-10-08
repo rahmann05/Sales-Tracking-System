@@ -1,5 +1,5 @@
 import { PackingWorkspaceView } from './PackingWorkspaceView';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo,useRef } from 'react';
 import { deliveryApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
 export const PackingListManager = () => {
@@ -23,12 +23,14 @@ export const PackingListManager = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busyAction, setBusyAction] = useState(null); // { id, type }
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Confirmation Modal state
   const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, onConfirm, type: 'danger' | 'primary' }
+  const flight=useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId=++flight.current;
     setLoading(true);
     setError('');
     try {
@@ -38,19 +40,19 @@ export const PackingListManager = () => {
         search,
         status
       });
-      setResult(r.data || {
+      if(requestId===flight.current)setResult(r.data || {
         items: [],
         total: 0
       });
     } catch (e) {
-      setError(e.message || 'Gagal memuat daftar packing list');
+      if(requestId===flight.current)setError(e.message || 'Gagal memuat daftar packing list');
     } finally {
-      setLoading(false);
+      if(requestId===flight.current)setLoading(false);
     }
   }, [page, search, status]);
   useEffect(() => {
     const timer = setTimeout(refresh, 250);
-    return () => clearTimeout(timer);
+    return () => {clearTimeout(timer);flight.current++;};
   }, [refresh]);
 
   // Auto-dismiss success notification

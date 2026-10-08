@@ -1,3 +1,4 @@
+import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import { useApp } from '../../../context/AppContext';
 import { staffAttendanceApi } from '../../../services/api';
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -11,13 +12,13 @@ const timeWib = value => value ? new Date(value).toLocaleTimeString('id-ID', { t
 const mapRecord = r => ({ ...r, status: r.checkOutAt ? 'COMPLETED' : 'IN_VISIT', checkInTime: timeWib(r.checkInAt), checkOutTime: timeWib(r.checkOutAt) });
 
 const mapStop=(s,p,i,mode)=>({id:s.id,latitude:s.outlet?.latitude,longitude:s.outlet?.longitude,sequence:i+1,outletName:s.outlet?.name||'—',owner:s.outlet?.ownerName||'—',phone:s.outlet?.phone||'—',address:s.outlet?.address||'—',radiusMeters:s.outlet?.radiusMeters||50,currentDistance:null,spvVisitType:mode==='JOINT_VISIT'?'Pendampingan sales':mode==='PRIORITY_AUDIT'?'Audit toko pilihan':'Inspeksi toko pilihan',assignedSales:p.user?.name||'—',salesId:p.userId});
-export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
+export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = [], refreshKey = 0) => {
     const { user } = useApp();
     const submitting = useRef(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [spvMode, setSpvMode] = useState(SPV_MODES.JOINT_VISIT);
-    const [selectedSales, setSelectedSales] = useState('');
+    const [selectedSales, setSelectedSales] = useWorkspaceState('spvFieldSales','');
     
     const [selectedTargetStopId, setSelectedTargetStopId] = useState('');
     
@@ -37,24 +38,29 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
     const [offPjpForm, setOffPjpForm] = useState({ outletName: '', address: '', owner: '', reason: '' });
 
     const [spvVisitRecords, setSpvVisitRecords] = useState({});
+    const [recordsLoading, setRecordsLoading] = useState(true);
+    const [recordsError, setRecordsError] = useState('');
 
     const spvStops=useMemo(()=>todayPjps.filter(p=>p.user?.id===selectedSales).flatMap(p=>(p.stops||[]).map((s,i)=>mapStop(s,p,i,spvMode))),[todayPjps,spvMode,selectedSales]);
 
     useEffect(() => {
       let active = true;
+      setRecordsLoading(true);setRecordsError('');setSpvVisitRecords({});
       staffAttendanceApi.getToday().then(res => {
-        if (active) setSpvVisitRecords(Object.fromEntries(res.data.filter(r => r.kind === 'VISIT').map(r => [r.activityKey, mapRecord(r)])));
-      }).catch(err => { if (active) setError(err.message); });
+        if (!Array.isArray(res.data)) throw new Error('Presensi supervisi belum dapat dibaca.');
+        if (active) setSpvVisitRecords(Object.fromEntries(res.data.filter(r => ['VISIT','OFF_PJP'].includes(r.kind)).map(r => [r.activityKey, mapRecord(r)])));
+      }).catch(err => { if (active) setRecordsError(err.message); }).finally(() => { if (active) setRecordsLoading(false); });
       return () => { active = false; };
-    }, [user?.id]);
+    }, [user?.id,refreshKey]);
 
     const submit = async data => {
       if (submitting.current) return;
       submitting.current = true; setSaving(true); setError('');
       try {
         const res = await staffAttendanceApi.record(data);
-        if (res.data.kind === 'VISIT') setSpvVisitRecords(prev => ({ ...prev, [res.data.activityKey]: mapRecord(res.data) }));
+        if (['VISIT','OFF_PJP'].includes(res.data.kind)) setSpvVisitRecords(prev => ({ ...prev, [res.data.activityKey]: mapRecord(res.data) }));
         setActiveModal(null);
+        window.dispatchEvent(new CustomEvent('operational-data-changed'));
         notifySuccess('Catatan supervisi berhasil disimpan.');
       } catch (err) { setError(err.message); }
       finally { submitting.current = false; setSaving(false); }
@@ -74,17 +80,17 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
         setInputNotes(existing?.notes || '');
 
         setChecklist(existing?.checklist || DEFAULT_SPV_CHECKLIST);
-        setFollowUp({enabled:existing?.followUp?.status==='OPEN',ownerId:existing?.followUp?.ownerId||stop.salesId||'',dueDate:existing?.followUp?.dueDate||'',note:existing?.followUp?.note||'',completed:existing?.followUp?.status==='DONE'});
+        setFollowUp({enabled:['OPEN','SUBMITTED','DONE'].includes(existing?.followUp?.status),ownerId:existing?.followUp?.ownerId||stop.salesId||'',dueDate:existing?.followUp?.dueDate||'',note:existing?.followUp?.note||'',completed:['DONE','SUBMITTED'].includes(existing?.followUp?.status)});
         setActiveModal('AUDIT');
     };
 
     const saveAudit = () => {
         if (!selectedStop) return;
-        if (followUp.enabled && (!followUp.ownerId || !followUp.dueDate || !followUp.note.trim())) {
+        if (followUp.enabled && !followUp.completed && (!followUp.ownerId || !followUp.dueDate || !followUp.note.trim())) {
             setError('Sales penanggung jawab, tenggat dan instruksi tindak lanjut wajib diisi.'); return;
         }
         return submit({ action:'AUDIT', stopId:selectedStop.id, notes:inputNotes, checklist,
-            ...(followUp.enabled?{followUp:{ownerId:followUp.ownerId,dueDate:followUp.dueDate,note:followUp.note.trim()}}:{}) });
+            ...(followUp.enabled&&!followUp.completed?{followUp:{ownerId:followUp.ownerId,dueDate:followUp.dueDate,note:followUp.note.trim()}}:{}) });
     };
 
     const openAbsenOut = (stop) => {
@@ -127,7 +133,7 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = []) => {
     const inVisitCount = spvStops.filter((s) => spvVisitRecords[s.id]?.status === 'IN_VISIT').length;
 
     return {
-        saving, error,
+        saving, error, recordsLoading, recordsError,
         spvMode, setSpvMode,
         selectedSales, setSelectedSales,
         selectedTargetStopId, setSelectedTargetStopId,

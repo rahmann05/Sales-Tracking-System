@@ -1,17 +1,23 @@
+import {useFormDraft} from '../../hooks/useFormDraft';
 import React,{useState} from 'react';
 import {useApp} from '../../../context/AppContext';
+import {useUnsavedNavigation} from '../../hooks/useUnsavedNavigation';
 import {staffAttendanceApi} from '../../../services/api';
 export function FollowUpActions({id,followUp:f,onChanged}) {
  const {user}=useApp();
- const [note,setNote]=useState(''),[evidence,setEvidence]=useState(''),[decision,setDecision]=useState('ACCEPT'),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const draft=useFormDraft(`followup:${id}:${f.submission?.id||'open'}:${f.status}`,{note:'',evidence:''});
+ const {note,evidence}=draft.value,setNote=draft.field('note'),setEvidence=draft.field('evidence');
+ const [decision,setDecision]=useState('ACCEPT'),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ useUnsavedNavigation(Boolean(note||evidence),busy);
  const review=f.status==='SUBMITTED'&&['ADMIN','SUPERVISOR'].includes(user?.role)&&f.ownerId!==user.id;
  const submit=f.status==='OPEN'&&f.ownerId===user?.id;
  const save=async e=>{e.preventDefault();setBusy(true);setError('');try{
   if(review)await staffAttendanceApi.reviewFollowUp(id,{decision,note,submissionId:f.submission.id});
   else await staffAttendanceApi.completeFollowUp(id,note,evidence);
-  setNote('');setEvidence('');await onChanged();
+  setNote('');setEvidence('');draft.clear();await onChanged();
  }catch(err){setError(err.message);}finally{setBusy(false);}};
  return <div className="space-y-3">
+  {draft.restored&&<p role="status">Draft hasil dipulihkan. Periksa kembali sebelum mengirim.</p>}{draft.storageError&&<p role="alert">{draft.storageError}</p>}
   <p>Instruksi tugas: {f.note}</p>
   {f.status==='DONE'&&!f.submission&&<p>{f.completionNote}</p>}
   {f.submission&&<div className="border rounded-xl p-3 space-y-1"><strong>Hasil dari PIC</strong><p>{f.submission.note}</p><p>Bukti / referensi: {f.submission.evidence}</p><p className="text-xs">Dikirim {new Date(f.submission.at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})}</p></div>}

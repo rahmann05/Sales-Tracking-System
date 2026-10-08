@@ -162,8 +162,8 @@ export const OutletManagementPage = () => {
   return <div className="page-container space-y-6 pb-24">
       {/* Standardized Header */}
       <PageHeader badge={<span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuStore className="text-sm" /> MASTER DATA OUTLET & TOKO
-          </span>} title="Kelola Master Outlet & Titik Kunjungan" subtitle={`Database resmi ${outlets.length} titik toko pelanggan, pemetaan koordinat GPS presisi, serta pengelolaan NIK 16-digit pemilik toko.`} stats={[{
+            <LuStore className="text-sm" /> Pelanggan
+          </span>} title="Master outlet" subtitle="Kelola identitas pelanggan, alamat, koordinat, dan wilayah toko." stats={[{
       label: 'Total Outlet',
       value: `${outlets.length} Toko`,
       color: 'emerald'
@@ -178,7 +178,7 @@ export const OutletManagementPage = () => {
             </button>
             <button type="button" onClick={() => exportImportNikExcel(outlets, `IMPORT_NIK_${new Date().toISOString().split('T')[0]}.xls`)} className="flex-1 sm:flex-initial px-3.5 py-2.5 bg-surface border border-border-glass hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0" title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom)">
               <LuFileSpreadsheet className="text-sm" />
-              <span>Ekspor IMPORT NIK</span>
+              <span>Ekspor NIK</span>
             </button>
             <button type="button" onClick={() => {
         setFormData({
@@ -194,7 +194,7 @@ export const OutletManagementPage = () => {
         setIsAddModalOpen(true);
       }} className="w-full sm:w-auto px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-primary/90 transition-all cursor-pointer shrink-0">
               <LuPlus className="text-sm" />
-              <span>+ Tambah Outlet Baru</span>
+              <span>Tambah outlet</span>
             </button>
           </div>} />
 

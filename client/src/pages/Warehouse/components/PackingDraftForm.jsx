@@ -1,10 +1,11 @@
 import { PackingOutletSection } from './PackingOutletSection';
 import { PackingItemsSection } from './PackingItemsSection';
 import { PackingInvoicesSection } from './PackingInvoicesSection';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { deliveryApi, outletsApi } from '../../../services/api';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 import {useApp} from '../../../context/AppContext';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import { LuCircleAlert, LuRefreshCw, LuPackage, LuX } from 'react-icons/lu';
 export function PackingDraftForm({
   document: doc,
@@ -12,9 +13,11 @@ export function PackingDraftForm({
   onSaved,
   onCancel
 }) {
-  const {settings}=useApp();
+  const {settings,user}=useApp();
+  const formRef=useRef(null);
+  useEffect(()=>{if(user?.role==='ADMIN'){formRef.current?.closest('main')?.scrollTo({top:0});return;}formRef.current?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});},[]);
   const [code, setCode] = useState(doc?.code || '');
-  const [outlet, setOutlet] = useState(doc?.outlet || order?.pjpStop?.outlet || null);
+  const [outlet, setOutlet] = useState(doc?.outlet || order?.pjpStop?.outlet || order?.customerSnapshot || null);
   const [search, setSearch] = useState('');
   const [outlets, setOutlets] = useState([]);
   const [searchingOutlets, setSearchingOutlets] = useState(false);
@@ -40,6 +43,11 @@ export function PackingDraftForm({
   const [reason, setReason] = useState(doc?.overrideReason || '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const snapshot=JSON.stringify([code,outlet?.id,items,invoices,cartons,weight,notes,reason]);
+  const initialSnapshot=useRef(snapshot);
+  const dirty=snapshot!==initialSnapshot.current;
+  useUnsavedNavigation(dirty,busy);
+  const cancel=()=>{if(!busy&&(!dirty||window.confirm('Perubahan belum disimpan. Batalkan perubahan ini?')))onCancel();};
 
   // Outlet search debounce
   useEffect(() => {
@@ -111,6 +119,7 @@ export function PackingDraftForm({
       } else {
         await deliveryApi.createPackingList(data);
       }
+      initialSnapshot.current=snapshot;
       onSaved(doc ? 'Draft packing list berhasil diperbarui!' : 'Draft packing list berhasil dibuat!');
     } catch (e) {
       setError(e.message || 'Gagal menyimpan draft packing list');
@@ -141,7 +150,7 @@ export function PackingDraftForm({
   const removeInvoice = index => {
     setInvoices(prev => prev.filter((_, i) => i !== index));
   };
-  return <form onSubmit={save} className="rounded-2xl border border-primary/30 bg-surface p-5 md:p-6 space-y-6 shadow-md text-on-surface animate-fade-in">
+  return <form ref={formRef} onSubmit={save} className="rounded-2xl border border-primary/30 bg-surface p-5 md:p-6 space-y-6 shadow-md text-on-surface animate-fade-in">
       {/* Form Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-glass pb-4">
         <div className="space-y-1">
@@ -158,7 +167,7 @@ export function PackingDraftForm({
           </p>
         </div>
 
-        <button type="button" onClick={onCancel} disabled={busy} className="p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-all" title="Tutup form">
+        <button type="button" onClick={cancel} disabled={busy} className="p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-all" title="Tutup form">
           <LuX className="text-lg" />
         </button>
       </div>
@@ -182,7 +191,7 @@ export function PackingDraftForm({
             <label className="block text-xs font-bold text-on-surface mb-1">
               Total Fisik Karton / Kemasan Luar *
             </label>
-            <input type="number" min="0" step="1" required value={cartons} onChange={e => setCartons(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-sm font-black text-on-surface" />
+            <input aria-label="Total karton fisik" type="number" min="0" step="1" required value={cartons} onChange={e => setCartons(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-sm font-black text-on-surface" />
             <span className="text-[10px] text-on-surface-variant mt-1 block">
               Jumlah kemasan karton fisik untuk alokasi kapasitas kendaraan.
             </span>
@@ -192,7 +201,7 @@ export function PackingDraftForm({
             <label className="block text-xs font-bold text-on-surface mb-1">
               Estimasi Berat Total (Kg)
             </label>
-            <input type="number" min="0" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-sm font-bold text-on-surface" />
+            <input aria-label="Estimasi berat total dalam kilogram" type="number" min="0" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-sm font-bold text-on-surface" />
             <span className="text-[10px] text-on-surface-variant mt-1 block">
               Opsional, untuk perhitungan beban tonase kendaraan pengiriman.
             </span>
@@ -208,20 +217,20 @@ export function PackingDraftForm({
               <label className="block text-xs font-bold text-on-surface mb-1">
                 Alasan Override Admin (Wajib jika status order belum di-approve)
               </label>
-              <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Catatan justifikasi override pembuatan packing list dari order pending..." rows={2} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface resize-none" />
+              <textarea aria-label="Alasan pengecualian Admin" value={reason} onChange={e => setReason(e.target.value)} placeholder="Catatan justifikasi override pembuatan packing list dari order pending..." rows={2} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface resize-none" />
             </div>}
 
           <div>
             <label className="block text-xs font-bold text-on-surface mb-1">
               Catatan Instruksi Pengiriman / Khusus Gudang
             </label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Instruksi tambahan untuk tim gudang atau supir (misal: titip faktur asli, simpan di tempat sejuk)..." rows={2} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface resize-none" />
+            <textarea aria-label="Instruksi pengiriman" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Instruksi tambahan untuk tim gudang atau supir (misal: titip faktur asli, simpan di tempat sejuk)..." rows={2} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface resize-none" />
           </div>
         </div>
 
         {/* ── Form Actions ── */}
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-glass">
-          <button type="button" disabled={busy} onClick={onCancel} className="px-4 py-2 rounded-xl border border-border-glass text-xs font-bold text-on-surface hover:bg-surface-container transition-all">
+          <button type="button" disabled={busy} onClick={cancel} className="px-4 py-2 rounded-xl border border-border-glass text-xs font-bold text-on-surface hover:bg-surface-container transition-all">
             Batal
           </button>
           <button type="submit" disabled={busy || !outlet} className="px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer">

@@ -21,6 +21,16 @@ for(const file of files){
  traverse(ast,{ImportDeclaration(p){for(const spec of p.node.specifiers)if(spec.local.name!=='React'&&!p.scope.getBinding(spec.local.name)?.referenced)errors.push(`Unused import: ${path.relative(root,file)}:${p.node.loc.start.line} ${spec.local.name}`);const target=resolve(p.node.source.value,file);if(p.node.source.value.startsWith('.')&&!target)errors.push(`Missing import: ${file} -> ${p.node.source.value}`);if(target)refs.push(target);},ExportNamedDeclaration(p){if(p.node.source){const target=resolve(p.node.source.value,file);if(target)refs.push(target);else if(p.node.source.value.startsWith('.'))errors.push(`Missing export: ${file}`);}},CallExpression(p){if(p.node.callee.type==='Import'&&p.node.arguments[0]?.type==='StringLiteral'){const target=resolve(p.node.arguments[0].value,file);if(target)refs.push(target);else errors.push(`Missing dynamic import: ${file}`);}},ReferencedIdentifier(p){if(!p.scope.hasBinding(p.node.name)&&!globals.has(p.node.name))errors.push(`Unbound: ${path.relative(root,file)}:${p.node.loc.start.line} ${p.node.name}`);}});
 }
 const reached=new Set();function visit(file){if(reached.has(file))return;reached.add(file);for(const child of modules.get(file)||[])visit(child);}
-visit(path.join(root,'client/src/main.jsx'));
+// Each Vite HTML entry owns an import graph, including the isolated design preview.
+const clientRoot=path.join(root,'client');
+for(const entry of fs.readdirSync(clientRoot).filter(name=>name.endsWith('.html'))){
+ const html=fs.readFileSync(path.join(clientRoot,entry),'utf8');
+ for(const match of html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/g)){
+  if(!/\btype=["']module["']/.test(match[0])||/^(https?:)?\/\//.test(match[1]))continue;
+  const target=path.resolve(clientRoot,match[1].replace(/^\//,''));
+  if(!target.startsWith(clientRoot+path.sep)||!modules.has(target))errors.push(`Missing frontend entry: ${entry} -> ${match[1]}`);
+  else visit(target);
+ }
+}
 for(const file of files.filter(f=>f.includes(`${path.sep}client${path.sep}`)))if(!reached.has(file))errors.push(`Unreachable frontend: ${path.relative(root,file)}`);
 if(errors.length){console.error([...new Set(errors)].join('\n'));process.exitCode=1;}else console.log(`Source verification passed: ${checked} JS modules parsed, all frontend imports reachable, no unused imports, missing references or unbound variables.`);
