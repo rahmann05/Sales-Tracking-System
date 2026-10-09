@@ -109,5 +109,5 @@ export const createDeliveryRoute = async (data, userId) => {
   });
 
   return route;
-  }, { isolationLevel: 'Serializable' });
+  }, { isolationLevel: 'Serializable' }).catch(error=>{if(error?.code==='P2034')throw new AppError('Driver, kendaraan atau alokasi berubah bersamaan. Muat ulang sebelum membuat trip.',409);throw error;});
 };

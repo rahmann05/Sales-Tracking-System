@@ -109,7 +109,7 @@ test('NOO attachment policy is enforced by server and can be disabled', async t 
   mock(t,prisma.customerRegistration,'findFirst',async () => null);
   mock(t,prisma.customerRegistration,'create',async ({data}) => ({...data,id:'reg'}));
   mock(t,prisma.user,'findUnique',async () => ({}));
-  mock(t,prisma.user,'findMany',async () => []);
+  mock(t,prisma.user,'findMany',async () => [{id:'sales',name:'Sales',role:'SALES'},{id:'admin',name:'Admin',role:'ADMIN'}]);
   mock(t,globalThis,'fetch',async () => ({json:async () => ({candidates:[]})}));
   mock(t,prisma.outlet,'findMany',async()=>[]);
   mock(t,prisma.user,'findFirst',async()=>({id:'sales',role:'SALES'}));

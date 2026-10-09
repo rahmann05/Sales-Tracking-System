@@ -20,6 +20,7 @@ export const routeEvent = (route, action, actor, detail) => [...(route.history |
 
 export async function routeAction(id, data, user, attempt=0) {
   return prisma.$transaction(async tx => {
+    if(['PICK','CHECK','LOAD','START','RESCHEDULE','RESUME'].includes(data.action))await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`route:${id}`}))`;
     const r = await tx.deliveryRoute.findUnique({ where: { id }, include: operationsInclude });
     if (!r) throw new AppError('Rute tidak ditemukan', 404);

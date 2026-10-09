@@ -1,4 +1,3 @@
-import {prisma} from '../../config/prisma.js';
 import { createPackingListSchema, updatePackingListSchema, createDeliveryRouteSchema } from './delivery.schema.js';
 import { savePacking, transitionPacking } from './services/packing-workflow.service.js';
 import * as deliveryService from './delivery.service.js';
@@ -110,8 +109,6 @@ export const submitDriverAttendance = async (req, res, next) => {
 
 export const updateStopStatus = async (req, res, next) => {
   try {
-    const out=await prisma.deliveryAttendance.findFirst({where:{deliveryStopId:req.params.id,driverId:req.user.id,type:'OUT'},select:{id:true}});
-    if(!out)throw new AppError('Gunakan absensi keluar dengan hasil pengiriman',409);
     const result = await deliveryService.updateStopStatus(req.params.id, req.body, req.user.id);
     res.json({ success: true, data: result });
   } catch (err) {

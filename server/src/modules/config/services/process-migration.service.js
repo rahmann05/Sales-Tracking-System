@@ -9,9 +9,10 @@ import {preparationStages} from '../../../../../shared/warehouse-policy.mjs';
 import {effectivePolicy} from './policy-resolver.service.js';
 import {policySnapshot} from './process-policy.service.js';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
+import {resolveIdentity} from '../../roles/role-assignment.service.js';
 const definitions={
  ORDER:{model:'order',owner:'createdBy',open:{deletedAt:null,status:'PENDING_APPROVAL'},key:k=>k.startsWith('ORDER_APPROVAL_')||k==='ORDER_PRICE_OVERRIDE_APPROVAL_MODE'},
- REGISTRATION:{model:'customerRegistration',owner:'salesmanId',open:{registrationStatus:{in:['SUBMITTED','PENDING','SPV_APPROVED']}},key:k=>['REGISTRATION_APPROVAL_MODE','REGISTRATION_ACTIVATOR','REGISTRATION_ALLOW_REVISION'].includes(k)},
+ REGISTRATION:{model:'customerRegistration',owner:'salesmanId',open:{registrationStatus:{in:['SUBMITTED','SPV_APPROVED']}},key:k=>['REGISTRATION_APPROVAL_MODE','REGISTRATION_ACTIVATOR','REGISTRATION_ALLOW_REVISION'].includes(k)},
  PACKING:{model:'packingList',owner:'createdById',open:{status:'DRAFT'},key:k=>k.startsWith('PACKING_')},
  TRIP:{model:'deliveryRoute',owner:'createdById',open:{closedAt:null,cancelledAt:null},key:k=>k.startsWith('WAREHOUSE_')||k.startsWith('TRIP_')||DRIVER_EVIDENCE_KEYS.includes(k)},
 };
@@ -34,10 +35,16 @@ async function candidate(db,kind,row){
   if(assignment?.ownerId&&!reviewRoleAllowed(decision.mode==='SEQUENTIAL'?'SUPERVISOR':decision.mode,assignment.ownerRole))return {reason:'PIC pemeriksa saat ini tidak sesuai alur baru. Alihkan penugasan dahulu.'};
   const supervisors=actor.supervisorId?await db.user.findMany({where:{id:actor.supervisorId,role:'SUPERVISOR',deletedAt:null}}):[];
   const admins=await db.user.findMany({where:{role:'ADMIN',deletedAt:null,id:{not:actor.id}}});
-  const valid=list=>list.some(p=>p.permissions?.can_approve_order!==false);
-  if((['SUPERVISOR','SEQUENTIAL'].includes(decision.mode)&&!valid(supervisors))||(['ADMIN','SEQUENTIAL'].includes(decision.mode)&&!valid(admins))||(decision.mode==='BOTH'&&!valid([...admins,...supervisors])))return {reason:'Alur baru belum memiliki pemeriksa aktif yang memenuhi syarat.'};
+  const valid=async list=>(await Promise.all(list.map(resolveIdentity))).some(p=>p.permissions?.can_approve_order!==false);
+  const [hasSpv,hasAdmin]=await Promise.all([valid(supervisors),valid(admins)]);
+  if((['SUPERVISOR','SEQUENTIAL'].includes(decision.mode)&&!hasSpv)||(['ADMIN','SEQUENTIAL'].includes(decision.mode)&&!hasAdmin)||(decision.mode==='BOTH'&&!hasAdmin&&!hasSpv))return {reason:'Alur baru belum memiliki pemeriksa aktif yang memenuhi syarat.'};
  }
  if(kind==='REGISTRATION'&&(row.registrationStatus==='SPV_APPROVED'||row.spvApprovedAt))return {reason:'Pengajuan sudah melewati pemeriksaan; gunakan alur awal hingga aktivasi.'};
+ if(kind==='REGISTRATION'){
+  const people=await db.user.findMany({where:{deletedAt:null,OR:[{role:'ADMIN'},{id:actor.supervisorId||'',role:'SUPERVISOR'}]}}),eligible=(await Promise.all(people.map(resolveIdentity))).filter(p=>p.id!==actor.id&&p.permissions?.can_approve_outlet!==false);
+  const has=role=>eligible.some(p=>p.role===role),mode=values.REGISTRATION_APPROVAL_MODE,activator=values.REGISTRATION_ACTIVATOR;
+  if((['ADMIN','SEQUENTIAL'].includes(mode)&&!has('ADMIN'))||(['SUPERVISOR','SEQUENTIAL'].includes(mode)&&!has('SUPERVISOR'))||(mode==='BOTH'&&!eligible.length)||(activator!=='BOTH'&&!has(activator))||!eligible.length)return {reason:'Pemeriksa atau aktivator outlet yang memenuhi syarat belum tersedia.'};
+ }
  if(kind==='TRIP'){
   if(row.departedAt||row.returnedAt||!['DRAFT','READY'].includes(row.status)||['PICK','CHECK','LOAD'].some(k=>row.preparation?.[k]))return {reason:'Persiapan atau perjalanan sudah dimulai; bukti awal harus dipertahankan.'};
   const driver=await db.user.findUnique({where:{id:row.driverId}});
@@ -75,6 +82,7 @@ export async function migrateProcesses(raw,actor){
  const data=z.object({kind:request.shape.kind,ids:request.shape.ids,fingerprint:z.string().length(64),reason:z.string().trim().min(5).max(2000)}).strict().parse(raw);
  const result=await prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('config:settings'))`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
   for(const id of [...data.ids].sort())await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${data.kind==='TRIP'?'route':data.kind.toLowerCase()}:${id}`}))`;
   const prepared=await prepare(tx,{kind:data.kind,ids:data.ids});
   if(prepared.fingerprint!==data.fingerprint)throw new AppError('Proses atau aturan berubah setelah preview. Tinjau ulang.',409);
@@ -87,6 +95,6 @@ export async function migrateProcesses(raw,actor){
    await tx.auditEvent.create({data:{entityType:'PROCESS_POLICY_MIGRATION',entityId:row.id,action:'MIGRATE',actorId:actor.id,actorName:actor.name,before:{kind:data.kind,snapshot:row.policySnapshot||{},status:row.status||row.registrationStatus},after:{kind:data.kind,snapshot,changes,reason:data.reason}}});
   }
   return {count:prepared.results.length};
- },{isolationLevel:'Serializable',timeout:60000}).catch(error=>{if(error?.code==='P2034')throw new AppError('Proses berubah bersamaan; muat ulang dan tinjau ulang.',409);throw error;});
+ },{isolationLevel:'ReadCommitted',timeout:60000}).catch(error=>{if(error?.code==='P2034')throw new AppError('Proses berubah bersamaan; muat ulang dan tinjau ulang.',409);throw error;});
  broadcastCacheInvalidation('policies');return result;
 }

@@ -25,7 +25,7 @@ export const getRoleByCode = async (req, res, next) => {
 
 export const createRole = async (req, res, next) => {
   try {
-    const newRole = await rolesService.createRole(req.body);
+    const newRole = await rolesService.createRole(req.body,req.user);
     res.status(201).json({ success: true, data: newRole, message: 'Role berhasil dibuat' });
   } catch (err) {
     next(err);
@@ -34,7 +34,7 @@ export const createRole = async (req, res, next) => {
 
 export const updateRole = async (req, res, next) => {
   try {
-    const updated = await rolesService.updateRole(req.params.code, req.body);
+    const updated = await rolesService.updateRole(req.params.code, req.body,req.user);
     res.json({ success: true, data: updated, message: 'Role berhasil diperbarui' });
   } catch (err) {
     next(err);
@@ -43,7 +43,7 @@ export const updateRole = async (req, res, next) => {
 
 export const deleteRole = async (req, res, next) => {
   try {
-    const result = await rolesService.deleteRole(req.params.code);
+    const result = await rolesService.deleteRole(req.params.code,req.user);
     res.json(result);
   } catch (err) {
     next(err);

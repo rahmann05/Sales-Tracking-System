@@ -1,5 +1,6 @@
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
+import {assertNewWorkReviewers} from '../../config/services/approval-readiness.service.js';
 /** createRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
 import { AppError } from '../../../utils/errors.js';
 import { prisma } from '../../../config/prisma.js';
@@ -68,9 +69,12 @@ export const createRegistration = async (data, currentUser) => {
   const registration = await prisma.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     if(data.requestId) {const retry=await tx.customerRegistration.findUnique({where:{requestId:data.requestId}});if(retry)return assertRequestReplay(retry,data,currentUser,retry.salesmanId);}
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+    const snapshot=await capturePolicySnapshot();
+    await assertNewWorkReviewers(tx,'REGISTRATION',{policySnapshot:snapshot},currentUser.id);
     await assertNoUnreviewedDuplicate(tx,data,currentUser,data.duplicateReason);
     cleanData.registrationCode=await resolveBusinessCode('NOO',data.registrationCode,{db:tx});
-    return tx.customerRegistration.create({data:{...cleanData,policySnapshot:await capturePolicySnapshot()}});
+    return tx.customerRegistration.create({data:{...cleanData,policySnapshot:snapshot}});
   });
 
   // Kirim notifikasi ke SPV dan Admin

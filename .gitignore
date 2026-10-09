@@ -43,5 +43,11 @@ IMPORT CUSTOMER PVMI CIMAHI.xlsx
 IMPORT NIK.xlsx
 DAILY CALL PVMI 21082026.xlsx
 scripts/
+.agents/
+.claude/
+skills-lock.json
+
 # Local database backups
 .backups/
+.neon
+neon.ts

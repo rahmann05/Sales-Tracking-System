@@ -49,7 +49,7 @@ test('GPS freshness uses observed timestamp and newer attendance wins',()=>{
 });
 test('resource guard blocks overlapping routes but permits sequential trips',async()=>{
   let other={id:'other',code:'OTHER',plannedStartAt:'2026-10-08T01:00:00Z',plannedEndAt:'2026-10-08T04:00:00Z'};
-  const tx={$executeRaw:async()=>{},vehicle:{findUnique:async()=>({isActive:true,condition:'AVAILABLE'})},user:{findUnique:async()=>({role:'SUPIR'})},deliveryRoute:{findMany:async()=>[other]}};
+  const tx={$executeRaw:async()=>{},systemConfig:{findMany:async()=>[]},vehicle:{findUnique:async()=>({isActive:true,condition:'AVAILABLE'})},user:{findUnique:async()=>({role:'SUPIR'})},deliveryRoute:{findMany:async()=>[other]}};
   const c=trip({plannedStartAt:'2026-10-08T02:00:00Z',plannedEndAt:'2026-10-08T05:00:00Z'});
   await assert.rejects(()=>assertResources(tx,c),/masih digunakan/);
   c.plannedStartAt='2026-10-08T04:00:00Z';await assertResources(tx,c);

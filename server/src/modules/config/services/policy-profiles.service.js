@@ -1,4 +1,5 @@
 import {freezeOpenWork} from './process-policy.service.js';
+import {publicationReadiness} from './approval-readiness.service.js';
 import {randomUUID} from 'node:crypto';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
 import {CONFIG_DEFAULTS,CONFIG_PARAMS} from '../../../../../shared/config.mjs';
@@ -50,7 +51,10 @@ export async function previewPolicy(scope,revision){
  if(profile.revision!==revision)throw new AppError('Draf berubah. Muat ulang sebelum meninjau.',409);
  const draft=Object.fromEntries(Object.entries(profile.draft).map(([key,value])=>[key,value===null?parent.values[key]:value]));
  const values={...effective.values,...draft};validateConfigRelations(values);
- const conflicts=policyConflicts(values),impact=await policyImpact(profile.draft,prisma,scope);
+ const active=(profile.versions||[]).filter(v=>!v.cancelledAt&&+new Date(v.effectiveAt)<=Date.now()).sort((a,b)=>b.revision-a.revision)[0];
+ const candidate={...active?.values,...profile.draft};for(const [key,value] of Object.entries(candidate))if(value===null)delete candidate[key];
+ const readiness=await publicationReadiness(prisma,{scope,values:profile.draft,override:{scope,profile:{...profile,versions:[{revision:profile.revision,values:candidate,effectiveAt:new Date(0).toISOString()}]}}});
+ const conflicts=[...policyConflicts(values),...readiness],impact=await policyImpact(profile.draft,prisma,scope);
  return {...impact,conflicts,changes:Object.entries(draft).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(effective.values[key])).map(([key,value])=>({key,before:POLICY_SECRET_KEYS.includes(key)?'[RAHASIA]':effective.values[key],after:POLICY_SECRET_KEYS.includes(key)?'[RAHASIA]':value})),revision,scope};
 }
 export async function publishPolicy(scope,raw,actor){
@@ -59,6 +63,7 @@ export async function publishPolicy(scope,raw,actor){
  if(!Number.isFinite(+at)||+at<Date.now()-60000)throw new AppError('Waktu berlaku harus sekarang atau waktu mendatang',400);
  const result=await prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('config:settings'))`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
   const key=profileKey(scope),profile=(await tx.systemConfig.findUnique({where:{key}}))?.value;
   if(!profile||profile.revision!==raw.revision)throw new AppError('Draf telah berubah. Simpan dan tinjau ulang.',409);
   if(!Object.keys(profile.draft||{}).length)throw new AppError('Tidak ada perubahan dalam draf untuk diterbitkan',400);
@@ -73,6 +78,8 @@ export async function publishPolicy(scope,raw,actor){
   const nextValues={...(last?.values||{}),...profile.draft};for(const [key,value] of Object.entries(nextValues))if(value===null)delete nextValues[key];
   const version={id:randomUUID(),revision:profile.revision+1,values:nextValues,reason:profile.reason,actorId:actor.id,actorName:actor.name,effectiveAt:at.toISOString(),publishedAt:new Date().toISOString()};
   const next={...profile,revision:version.revision,draft:{},versions:[...(profile.versions||[]),version]};
+  const readiness=await publicationReadiness(tx,{scope,at:+at,values:profile.draft,override:{scope,profile:next}});
+  if(readiness.length)throw new AppError(readiness.join(' '),400);
   const users=await tx.user.findMany({where:{deletedAt:null},select:{id:true,role:true,supervisorId:true}});
   for(const user of users){const resolved=await effectivePolicy(user,+at,{override:{scope,profile:next}});const issues=policyConflicts(resolved.values);if(issues.length)throw new AppError(`Konflik pada profil ${user.role}: ${issues.join(' ')}`,400);}
   await freezeOpenWork(tx,scope);

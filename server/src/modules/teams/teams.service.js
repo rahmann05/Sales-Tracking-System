@@ -1,4 +1,5 @@
 import {policyNotification} from '../notifications/services/notification-policy.service.js';
+import {assertReviewersRemain} from '../config/services/approval-readiness.service.js';
 import { z } from 'zod';
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
@@ -26,6 +27,8 @@ export async function assignTeam(salesId, raw, actor) {
     if (actor.role==='SUPERVISOR' && (!canClaim || sales.supervisorId || body.supervisorId !== actor.id)) throw new AppError('Transfer dan pelepasan tim hanya dapat dilakukan admin',403);
     if (body.supervisorId && !await tx.user.findFirst({where:{id:body.supervisorId,role:'SUPERVISOR',deletedAt:null},select:{id:true}})) throw new AppError('Supervisor aktif tidak ditemukan',400);
     if (sales.supervisorId === body.supervisorId) return {changed:false};
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+    await assertReviewersRemain(tx,{patches:{[salesId]:{supervisorId:body.supervisorId}}});
     // Existing PJP and attendance remain immutable. Only future assignments are reset.
     const territories = await tx.cluster.findMany({where:{assignedSalesId:salesId},select:{id:true,supervisorId:true}});
     const released = territories.filter(c=>c.supervisorId !== body.supervisorId || !body.supervisorId).map(c=>c.id);

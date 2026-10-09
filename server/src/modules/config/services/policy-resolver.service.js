@@ -24,6 +24,7 @@ export async function policyProfiles({fresh=false}={}){
 }
 export async function effectivePolicy(actor={},now=Date.now(),options={}){
  const values=Object.fromEntries(await Promise.all(CONFIG_PARAMS.map(async p=>[p.key,await getDynamicConfig(p.key,p.defaultValue,{base:true})])));
+ Object.assign(values,options.baseOverrides||{});
  const profiles=await policyProfiles({fresh:options.fresh}),sources={},versions=[];
  const scopes=['GLOBAL',...(actor.role?[`ROLE:${actor.role}`]:[]),...(actor.supervisorId?[`TEAM:${actor.supervisorId}`]:actor.role==='SUPERVISOR'?[`TEAM:${actor.id}`]:[])];
  for(const scope of scopes){

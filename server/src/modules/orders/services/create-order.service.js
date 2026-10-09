@@ -1,4 +1,5 @@
 import {capturePolicySnapshot,processValue} from '../../config/services/process-policy.service.js';
+import {assertNewWorkReviewers} from '../../config/services/approval-readiness.service.js';
 import {draftFromApprovedOrder} from '../../delivery/services/packing-workflow.service.js';
 import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {orderApprovalDecision} from '../../../../../shared/approval-workflow.mjs';
@@ -22,6 +23,7 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType, manual
   const saved=await withUserTransaction(salesId,async tx=>{
   if(options.requestId){const existing=await tx.order.findUnique({where:{requestId:options.requestId},include:{items:{include:{product:true}},pjpStop:{include:{outlet:true}},createdByUser:{select:{id:true,name:true}}}});if(existing){if(existing.createdBy!==salesId||existing.requestHash!==requestHash)throw new AppError('Identitas pengiriman sudah dipakai untuk isi order berbeda. Periksa order sebelumnya.',409);return existing;}}
   if(await getDynamicConfig('FEATURE_ORDERS_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Pembuatan order baru dijeda oleh Admin',409);
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
   const stop = await tx.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: { pjp: true, attendances: true, outlet: true },
@@ -77,6 +79,7 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType, manual
   snapshot.orderApproval={...approval,priceOverrides,reason:priceOverrideReason};
   snapshot.values={...snapshot.values,ORDER_APPROVAL_MODE:approval.mode};
   const autoApprove=snapshot.values.ORDER_APPROVAL_MODE==='NONE';
+  await assertNewWorkReviewers(tx,'ORDER',{policySnapshot:snapshot},salesId);
   const order = await tx.order.create({
     data: {
       policySnapshot:snapshot,

@@ -6,6 +6,7 @@
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
 import { BUILT_IN_ROLES, ALL_PERMISSIONS, getEmptyPermissions } from './roles.constants.js';
+import {persistRoleDefinitions} from './persist-role-definitions.service.js';
 
 function validatedPermissions(value = {}) {
   const keys=new Set(ALL_PERMISSIONS.map(p=>p.key));
@@ -88,7 +89,7 @@ export const getRoleByCode = async (code) => {
 /**
  * Create a new custom role.
  */
-export const createRole = async (data) => {
+export const createRole = async (data,actor={}) => {
   const rawCode = String(data.code || '').trim().toUpperCase();
   const cleanCode = rawCode.replace(/[^A-Z0-9_]/g, '_');
 
@@ -116,11 +117,7 @@ export const createRole = async (data) => {
 
   const updatedList = [...existingRoles.map(({ userCount, ...rest }) => rest), newRole];
 
-  await prisma.systemConfig.upsert({
-    where: { key: CONFIG_KEY },
-    create: { key: CONFIG_KEY, value: updatedList },
-    update: { value: updatedList },
-  });
+  await persistRoleDefinitions(existingRoles,updatedList,{actor});
 
   return newRole;
 };
@@ -128,7 +125,7 @@ export const createRole = async (data) => {
 /**
  * Update role definition or permission template.
  */
-export const updateRole = async (code, data) => {
+export const updateRole = async (code, data,actor={}) => {
   const normalized = String(code).trim().toUpperCase();
   const existingRoles = await getAllRoles();
   const roleIndex = existingRoles.findIndex((r) => r.code === normalized);
@@ -154,15 +151,12 @@ export const updateRole = async (code, data) => {
   updatedRole.isSystem = current.isSystem;
   updatedRole.code = current.code;
 
+  const previousRoles=[...existingRoles];
   existingRoles[roleIndex] = updatedRole;
 
   const strippedList = existingRoles.map(({ userCount, ...rest }) => rest);
 
-  await prisma.systemConfig.upsert({
-    where: { key: CONFIG_KEY },
-    create: { key: CONFIG_KEY, value: strippedList },
-    update: { value: strippedList },
-  });
+  await persistRoleDefinitions(previousRoles,strippedList,{revokeCode:data.defaultPermissions?normalized:undefined,actor});
 
   return updatedRole;
 };
@@ -170,7 +164,7 @@ export const updateRole = async (code, data) => {
 /**
  * Delete a custom role. Built-in roles cannot be deleted.
  */
-export const deleteRole = async (code) => {
+export const deleteRole = async (code,actor={}) => {
   const normalized = String(code).trim().toUpperCase();
   const existingRoles = await getAllRoles();
   const target = existingRoles.find((r) => r.code === normalized);
@@ -199,11 +193,7 @@ export const deleteRole = async (code) => {
     .filter((r) => r.code !== normalized)
     .map(({ userCount, ...rest }) => rest);
 
-  await prisma.systemConfig.upsert({
-    where: { key: CONFIG_KEY },
-    create: { key: CONFIG_KEY, value: updatedList },
-    update: { value: updatedList },
-  });
+  await persistRoleDefinitions(existingRoles,updatedList,{deleteCode:normalized,actor});
 
   return { success: true, message: `Role '${normalized}' berhasil dihapus` };
 };

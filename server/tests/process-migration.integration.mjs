@@ -1,0 +1,53 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import jwt from 'jsonwebtoken';
+import app from '../src/app.js';
+import {config} from '../src/config/index.js';
+import {prisma} from '../src/config/prisma.js';
+import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
+import {previewProcessMigration,migrateProcesses} from '../src/modules/config/services/process-migration.service.js';
+import {profileKey,invalidatePolicyCache} from '../src/modules/config/services/policy-resolver.service.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
+const tag='migration-'+randomUUID(),users=[],routes=[],packings=[],orders=[],registrations=[],outlets=[],clusters=[],pjps=[];
+let key,checks=0;const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
+const rejects=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
+const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+const api=async(path,actor,method='GET',body)=>{const r=await fetch(`http://127.0.0.1:${server.address().port}/api/v1/config/policies${path}`,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt.sign({id:actor.id},config.jwtSecret)},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};};
+try{
+ const person=async(role,extra={})=>{const u=await prisma.user.create({data:{name:tag,email:randomUUID()+'@example.invalid',password:'unused',role,...extra}});users.push(u.id);return u;};
+ const admin=await person('ADMIN'),spv=await person('SUPERVISOR'),sales=await person('SALES',{supervisorId:spv.id}),warehouse=await person('KEPALA_GUDANG',{supervisorId:spv.id}),driver=await person('SUPIR',{supervisorId:spv.id});
+ const set=async values=>{key=profileKey(`TEAM:${spv.id}`);await prisma.systemConfig.upsert({where:{key},create:{key,value:{versions:[{revision:1,effectiveAt:new Date(0).toISOString(),values}]}},update:{value:{versions:[{revision:2,effectiveAt:new Date(0).toISOString(),values}]}}});invalidatePolicyCache();};
+ await set({ORDER_APPROVAL_MODE:'ADMIN',REGISTRATION_ACTIVATOR:'ADMIN',PACKING_ALLOW_REVISION:false,TRIP_REQUIRE_ODOMETER:false,DELIVERY_ATTENDANCE_MODE:'IN_ONLY'});
+ const snapshot={values:CONFIG_DEFAULTS,versions:[],at:new Date(0).toISOString()};
+ const cluster=await prisma.cluster.create({data:{name:tag,region:'Bandung'}});clusters.push(cluster.id);
+ const outlet=await prisma.outlet.create({data:{name:tag,address:'Alamat uji',outletCode:tag,clusterId:cluster.id,latitude:-6.9,longitude:107.6}});outlets.push(outlet.id);
+ const pjp=await prisma.pjp.create({data:{userId:sales.id,date:new Date(),type:'SALES',stops:{create:{outletId:outlet.id,sequence:1}}},include:{stops:true}});pjps.push(pjp.id);
+ const order=await prisma.order.create({data:{pjpStopId:pjp.stops[0].id,createdBy:sales.id,totalValue:12345,taxRatePercent:11,taxAmount:1223,policySnapshot:snapshot}});orders.push(order.id);
+ const registration=await prisma.customerRegistration.create({data:{name:tag,address:'Alamat uji',salesmanId:sales.id,policySnapshot:snapshot}});registrations.push(registration.id);
+ const packing=await prisma.packingList.create({data:{code:tag,outletId:outlet.id,createdById:warehouse.id,totalCartons:2,items:[{lineId:'real-line',name:'Produk uji',quantity:3}],policySnapshot:snapshot}});packings.push(packing.id);
+ const vehicle=await prisma.vehicle.findFirst({where:{isActive:true}});assert.ok(vehicle,'Seed vehicle required');
+ const route=await prisma.deliveryRoute.create({data:{code:tag,date:new Date(),driverId:driver.id,vehicleId:vehicle.id,createdById:warehouse.id,policySnapshot:snapshot}});routes.push(route.id);
+ eq((await api('/migration?kind=ORDER',sales)).status,403);eq((await api('/audit?state=ALL',sales)).status,403);
+ const preview=await previewProcessMigration({kind:'ORDER',ids:[order.id]});eq(preview.ready,true);eq(preview.items[0].changes.some(c=>c.key==='ORDER_APPROVAL_MODE'),true);
+ const body={kind:'ORDER',ids:[order.id],fingerprint:preview.fingerprint,reason:'Migrasi aturan pada data uji sementara'};
+ await rejects(()=>migrateProcesses(body,sales),403);
+ await prisma.order.update({where:{id:order.id},data:{promisedAt:new Date()}});await rejects(()=>migrateProcesses(body,admin),409);
+ const fresh=await previewProcessMigration({kind:'ORDER',ids:[order.id]});eq((await migrateProcesses({...body,fingerprint:fresh.fingerprint},admin)).count,1);
+ const updated=await prisma.order.findUnique({where:{id:order.id}});eq([updated.totalValue,updated.taxAmount,updated.status],[12345,1223,'PENDING_APPROVAL']);eq(updated.policySnapshot.values.ORDER_APPROVAL_MODE,'ADMIN');eq(updated.policySnapshot.migrations.length,1);
+ await rejects(()=>migrateProcesses({...body,fingerprint:fresh.fingerprint},admin),409);
+ for(const [kind,id] of [['PACKING',packing.id],['REGISTRATION',registration.id],['TRIP',route.id]]){const p=await previewProcessMigration({kind,ids:[id]});eq(p.ready,true);eq((await migrateProcesses({kind,ids:[id],fingerprint:p.fingerprint,reason:body.reason},admin)).count,1);}
+ const trip=await prisma.deliveryRoute.findUnique({where:{id:route.id}});eq(trip.policySnapshot.values.DELIVERY_ATTENDANCE_MODE,'IN_ONLY');eq(trip.departedAt,null);
+ const packed=await prisma.packingList.findUnique({where:{id:packing.id}});eq(packed.items,packing.items);eq(packed.revision,2);
+ await set({ORDER_APPROVAL_MODE:'SUPERVISOR',TRIP_REQUIRE_ODOMETER:true,DELIVERY_ATTENDANCE_MODE:'IN_OUT'});
+ await prisma.order.update({where:{id:order.id},data:{history:[{action:'SUPERVISOR_REVIEW',at:new Date().toISOString()}]}});eq((await previewProcessMigration({kind:'ORDER',ids:[order.id]})).ready,false);
+ await prisma.deliveryRoute.update({where:{id:route.id},data:{preparation:{PICK:{actorId:warehouse.id,at:new Date().toISOString()}}}});eq((await previewProcessMigration({kind:'TRIP',ids:[route.id]})).ready,false);
+ eq(await prisma.auditEvent.count({where:{entityType:'PROCESS_POLICY_MIGRATION',actorId:admin.id}}),4);
+ eq((await api('/draft',admin,'PUT',{scope:`TEAM:${spv.id}`,revision:0,reason:body.reason,values:{AUDIT_ACTIVE_RETENTION_DAYS:30}})).status,400);
+ console.log(`C00 process migration passed: ${checks} assertions; Admin-only, stale preview blocked, four processes migrated, commercial/evidence history preserved.`);
+}finally{
+ server.closeAllConnections();await new Promise(r=>server.close(r));
+ await prisma.auditEvent.deleteMany({where:{actorId:{in:users}}});
+ if(key)await prisma.systemConfig.deleteMany({where:{key}});
+ await prisma.deliveryRoute.deleteMany({where:{id:{in:routes}}});await prisma.packingList.deleteMany({where:{id:{in:packings}}});await prisma.order.deleteMany({where:{id:{in:orders}}});await prisma.customerRegistration.deleteMany({where:{id:{in:registrations}}});await prisma.pjp.deleteMany({where:{id:{in:pjps}}});await prisma.outlet.deleteMany({where:{id:{in:outlets}}});await prisma.cluster.deleteMany({where:{id:{in:clusters}}});await prisma.user.deleteMany({where:{id:{in:users}}});invalidatePolicyCache();await prisma.$disconnect();
+}
