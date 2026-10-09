@@ -8,7 +8,7 @@ import {
 
 const STATUS_FILTERS = [
   { id: 'SUBMITTED', label: 'Menunggu Approval' },
-  { id: 'SPV_APPROVED', label: 'Disetujui SPV' },
+  { id: 'SPV_APPROVED', label: 'Siap aktivasi' },
   { id: 'REGISTERED_ACTIVE', label: 'Aktif di Sistem' },
   { id: 'REJECTED', label: 'Ditolak' },
   { id: 'ALL', label: 'Semua Status' },
@@ -36,12 +36,12 @@ export const OutletApprovalHeader = ({
             <LuFileCheck className="text-sm" /> Pelanggan
           </span>
         }
-        title="Persetujuan outlet"
+        title="Pengajuan & aktivasi outlet"
         subtitle="Verifikasi identitas toko, alamat, dan lokasi sebelum outlet diaktifkan untuk kunjungan sales."
         stats={[
           { label: 'Menunggu Approval', value: statusCounts.SUBMITTED || 0, color: (statusCounts.SUBMITTED || 0) > 0 ? 'rose' : 'emerald' },
-          { label: 'Disetujui SPV', value: statusCounts.SPV_APPROVED || 0, color: 'neutral' },
-          { label: 'Total Pengajuan', value: items.length, color: 'neutral' },
+          { label: 'Siap aktivasi', value: statusCounts.SPV_APPROVED || 0, color: 'neutral' },
+          { label: 'Total Pengajuan', value: statusCounts.TOTAL || 0, color: 'neutral' },
         ]}
         actions={
           <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">

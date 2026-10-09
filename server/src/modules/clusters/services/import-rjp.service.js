@@ -10,6 +10,8 @@ import {resolveBusinessCode,assertCodeAvailable} from '../../config/services/bus
 import {CODE_ENTITIES} from '../../../../../shared/coding.mjs';
 import {importRows,previewRjpImport} from './rjp-import-preview.service.js';
 import {synchronizeOutletCounts} from './cluster-assignment-policy.service.js';
+import {recordOutletChange} from '../../outlets/services/outlet-change-policy.service.js';
+import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service.js';
 export async function importRjp(raw,user,impactToken){
   const rows=importRows.parse(raw);
   if(new Set(rows.map(r=>r.outletCode)).size!==rows.length)throw new AppError('Kode outlet duplikat dalam berkas',400);
@@ -30,10 +32,14 @@ export async function importRjp(raw,user,impactToken){
       if(existing&&(existing.deletedAt||(user.role==='SUPERVISOR'&&existing.cluster.supervisorId!==user.id)))throw new AppError(`Kode ${r.outletCode} sudah dipakai di luar klaster aktif Anda`,409);
       await assertClusterTrade(tx,cluster.id,existing?.type || 'GENERAL_TRADE',existing?.id);
       const data={name:r.customerName,address:r.address,clusterId:cluster.id,latitude:r.latitude,longitude:r.longitude,itineraryCode:r.callFrequency};
-      if(existing)await tx.outlet.update({where:{id:existing.id},data:{...data,validationStatus:'UNVALIDATED',validationConfidence:null,validatedAt:null,googleSuggestedLat:null,googleSuggestedLng:null,validationDetails:{coordinateHistory:existing.validationDetails?.coordinateHistory || []}}});
+      if(existing) {
+        const audit=await recordOutletChange(tx,existing,data,{actor:user,reason:'Impor RJP setelah pratinjau dampak disetujui',source:'IMPORT',updatedAt:existing.updatedAt.toISOString()});
+        await tx.outlet.update({where:{id:existing.id},data:{...data,...audit}});
+      }
       else {
         await assertCodeAvailable(CODE_ENTITIES.find(e=>e.key==='OUTLET'),r.outletCode,tx);
-        await tx.outlet.create({data:{...data,outletCode:r.outletCode,radiusMeters:radius}});
+        const outlet=await tx.outlet.create({data:{...data,outletCode:r.outletCode,radiusMeters:radius,source:'IMPORT',locationEvidence:{source:'IMPORT',actor:actorSnapshot(user),at:new Date().toISOString()}}});
+        await tx.outletChange.create({data:{outletId:outlet.id,actor:actorSnapshot(user),reason:'Pembuatan master melalui impor RJP',source:'IMPORT',before:{},after:data}});
       }
     }
     await tx.clusterRoute.deleteMany({where:{clusterId:{in:[...affected]}}});

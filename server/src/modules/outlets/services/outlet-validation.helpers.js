@@ -195,6 +195,8 @@ export const runReverseGeocode = async (lat, lng, apiKey) => {
         formattedAddress: result.formatted_address || '',
         addressComponents: result.address_components || [],
         placeId: result.place_id,
+        locationType: result.geometry?.location_type || 'UNKNOWN',
+        partialMatch: Boolean(result.partial_match),
       };
     }
 
@@ -210,7 +212,7 @@ export const runReverseGeocode = async (lat, lng, apiKey) => {
  */
 export const runForwardGeocode = async (address, apiKey, adminAnchor = null) => {
   try {
-    const queryAddress = cleanAddressForSearch(address, adminAnchor);
+    const queryAddress = cleanAddressForSearch(address);
 
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(queryAddress)}&key=${apiKey}&language=id&region=id`;
     const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
@@ -223,6 +225,8 @@ export const runForwardGeocode = async (address, apiKey, adminAnchor = null) => 
         success: true,
         lat: loc?.lat,
         lng: loc?.lng,
+        locationType: result.geometry?.location_type || 'UNKNOWN',
+        partialMatch: Boolean(result.partial_match),
         formattedAddress: result.formatted_address || '',
         addressComponents: result.address_components || [],
         placeId: result.place_id,
@@ -275,6 +279,7 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
             businessStatus: bestPlace.business_status || 'UNKNOWN',
             types: bestPlace.types || [],
             source: 'nearby_proximity',
+            candidates: nearbyData.results.map(p=>({placeName:p.name,placeId:p.place_id,lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,formattedAddress:p.vicinity || '',businessStatus:p.business_status || 'UNKNOWN'})),
           };
         }
       }
@@ -299,7 +304,8 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
     const data = await res.json();
 
     if (data.status === 'OK' && data.candidates?.length > 0) {
-      const place = data.candidates[0];
+      const ranked=[...data.candidates].sort((a,b)=>calculateNameSimilarity(cleanName,b.name)-calculateNameSimilarity(cleanName,a.name));
+      const place = ranked[0];
       return {
         success: true,
         placeName: place.name || '',
@@ -310,6 +316,7 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
         businessStatus: place.business_status || 'UNKNOWN',
         types: place.types || [],
         source: 'findplace_text',
+        candidates: ranked.map(p=>({placeName:p.name,placeId:p.place_id,lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,formattedAddress:p.formatted_address || '',businessStatus:p.business_status || 'UNKNOWN'})),
       };
     }
 

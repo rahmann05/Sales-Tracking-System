@@ -1,6 +1,10 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const outletsApi = {
+  directory:params=>request(`/outlets/directory?${queryString(params)}`),
+  profile:id=>request(`/outlets/${id}/profile`),
+  duplicates:body=>request('/outlets/duplicates',{method:'POST',body:JSON.stringify(body)}),
+  reactivate:(id,body)=>request(`/outlets/${id}/reactivate`,{method:'POST',body:JSON.stringify(body)}),
   getAll: async (params = {}) => {
     const query = queryString(params);
     return await request(`/outlets${query ? `?${query}` : ''}`);
@@ -17,9 +21,9 @@ export const outletsApi = {
       body: JSON.stringify(outletData)
     });
   },
-  remove: async id => {
+  remove: async (id,body) => {
     return await request(`/outlets/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',body:JSON.stringify(body)
     });
   },
   requestUnlock: async (outletId, reason) => {

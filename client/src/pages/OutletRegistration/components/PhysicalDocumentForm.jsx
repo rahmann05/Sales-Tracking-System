@@ -154,7 +154,7 @@ export const PhysicalDocumentForm = ({
         </div>
       </div>
 
-      <BusinessCodeInput entity="NOO" value={formData.registrationCode || ''} onChange={value => updateField('registrationCode', value)} disabled={isSubmitting} />
+      <BusinessCodeInput entity="NOO" value={formData.registrationCode || ''} onChange={value => updateField('registrationCode', value)} disabled={isSubmitting||Boolean(formData.revisionId)} />
       {/* ─── BOX 1: IDENTITAS OUTLET ─────────────────────────────────────────── */}
       <section id="registration-identity" className="sales-registration-group"><h3>1. Identitas outlet</h3><RegistrationIdentitySection LOCATION_OPTIONS={LOCATION_OPTIONS} formData={formData} handleNameChange={handleNameChange} handleSelectGooglePlace={handleSelectGooglePlace} handleUnlockGooglePlace={handleUnlockGooglePlace} hasSearched={hasSearched} isDebouncing={isDebouncing} isSearchingPlace={isSearchingPlace} placeSearchResults={placeSearchResults} setHasSearched={setHasSearched} settings={settings} updateField={updateField} verifiedPlace={verifiedPlace} />
 

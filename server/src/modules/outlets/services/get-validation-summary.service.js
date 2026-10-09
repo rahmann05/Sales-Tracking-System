@@ -1,34 +1,6 @@
-/** getValidationSummary - single-responsibility service (extracted from outlet-validation.service.js). */
 import { prisma } from '../../../config/prisma.js';
-
-// ─── Validation Summary ─────────────────────────────────────────────────────
-
-/**
- * Get validation summary statistics for all outlets.
- */
-export const getValidationSummary = async (actor) => {
-  const where = {deletedAt:null,...(actor?.role==='SUPERVISOR'?{cluster:{supervisorId:actor.id,deletedAt:null}}:{})};
-  const counts = await prisma.outlet.groupBy({
-    by: ['validationStatus'],
-    where,
-    _count: { id: true },
-  });
-
-  const total = await prisma.outlet.count({ where });
-
-  const summary = {
-    total,
-    UNVALIDATED: 0,
-    VALID: 0,
-    LIKELY_VALID: 0,
-    WARNING: 0,
-    SUSPECT: 0,
-    INCOMPLETE: 0,
-  };
-
-  counts.forEach((row) => {
-    summary[row.validationStatus] = row._count.id;
-  });
-
-  return summary;
-};
+import { reviewScope } from './outlet-review-policy.service.js';
+export async function getValidationSummary(actor) {
+  const rows=await prisma.outletReview.groupBy({by:['status'],where:{outlet:await reviewScope(actor,prisma)},_count:{id:true}});
+  return Object.fromEntries(['OPEN','WAITING_FIELD','COMPLETED'].map(status=>[status,rows.find(r=>r.status===status)?._count.id || 0]));
+}

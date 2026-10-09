@@ -316,6 +316,17 @@ model ClusterRoute {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model Outlet {
+  requestId String? @unique
+  registrationId String? @unique
+  registration CustomerRegistration? @relation(fields: [registrationId], references: [id])
+  source String @default("MASTER")
+  taxType TaxType @default(NON_PKP)
+  taxNumber String?
+  taxName String?
+  taxAddress String?
+  locationEvidence Json?
+  reviews OutletReview[]
+  changes OutletChange[]
   paymentType PaymentType @default(CASH)
   termOfPaymentDays Int @default(0)
   visitSchedule Json?
@@ -699,6 +710,11 @@ model Division {
 }
 
 model CustomerRegistration {
+  revisionHistory Json?
+  visitIntervalWeeks Int?
+  locationEvidence Json?
+  requestId String? @unique
+  outlet Outlet?
   registrationCode String? @unique
   id           String  @id @default(uuid())
   customerCode String? @unique
@@ -735,8 +751,8 @@ model CustomerRegistration {
   subAreaKecamatan String?
   kelurahan        String?
   city             String     @default("")
-  latitude         Float?     @default(0)
-  longitude        Float?     @default(0)
+  latitude         Float?
+  longitude        Float?
   placeId          String?
   placeDetails     Json?
   photoId          String?
@@ -801,6 +817,47 @@ model CustomerRegistration {
   @@index([clusterId])
   @@index([registrationStatus])
   @@index([registrationStatus, deletedAt])
+}
+
+model OutletReview {
+  id String @id @default(uuid())
+  outletId String
+  outlet Outlet @relation(fields: [outletId], references: [id])
+  reason String
+  status String @default("OPEN")
+  revision Int @default(1)
+  requestedBy Json
+  decision Json?
+  runs OutletValidationRun[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  closedAt DateTime?
+  @@index([outletId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model OutletValidationRun {
+  id String @id @default(uuid())
+  reviewId String
+  review OutletReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  snapshot Json
+  result Json
+  actor Json
+  createdAt DateTime @default(now())
+  @@index([reviewId, createdAt])
+}
+
+model OutletChange {
+  id String @id @default(uuid())
+  outletId String
+  outlet Outlet @relation(fields: [outletId], references: [id])
+  actor Json
+  reason String
+  source String
+  before Json
+  after Json
+  createdAt DateTime @default(now())
+  @@index([outletId, createdAt])
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

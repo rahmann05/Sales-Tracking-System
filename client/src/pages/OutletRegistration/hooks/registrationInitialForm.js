@@ -29,6 +29,7 @@ export const INITIAL_FORM = {
   termOfPaymentDays: 0,
   bankAccountInfo: '',
   visitWeekSchedule: 'ALL_WEEK',
+  visitIntervalWeeks:1,
   visitDays: ['SENIN'],
   outletKnownBy: ''
 };

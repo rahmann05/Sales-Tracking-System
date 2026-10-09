@@ -9,6 +9,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
 
 
 const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null) => {
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
   const stop = await db.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: {
@@ -19,6 +20,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   });
 
   if (!stop) throw new AppError('Stop PJP tidak ditemukan', 404);
+  if(stop.outlet.deletedAt)throw new AppError('Outlet sudah nonaktif. Minta Supervisor menyesuaikan rencana kunjungan.',409);
   if (stop.pjp.userId !== userId) {
     throw new AppError('Anda tidak berhak melakukan absensi pada PJP ini', 403);
   }

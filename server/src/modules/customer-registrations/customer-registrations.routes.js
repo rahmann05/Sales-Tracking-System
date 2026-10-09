@@ -4,6 +4,8 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import * as controller from './customer-registrations.controller.js';
 import * as schema from './customer-registrations.schema.js';
 import { ROLES } from '../../utils/constants.js';
+import {updateRegistrationLegal} from './services/update-registration-legal.service.js';
+import {reviseRegistration} from './services/revise-registration.service.js';
 
 const router = express.Router();
 
@@ -32,6 +34,8 @@ router.get(
 
 // 3. Get single registration by ID
 router.get('/:id', controller.getRegistrationById);
+router.post('/:id/revise',authorizeWithPermission([ROLES.SALES,ROLES.ADMIN,ROLES.SUPERVISOR],'can_register_outlet'),validate(schema.reviseRegistrationSchema),async(req,res,next)=>{try{res.json({status:'success',data:await reviseRegistration(req.params.id,req.body,req.user)});}catch(error){next(error);}});
+router.patch('/:id',authorizeWithPermission([ROLES.ADMIN,ROLES.SUPERVISOR],'can_manage_outlets'),async(req,res,next)=>{try{res.json({status:'success',data:await updateRegistrationLegal(req.params.id,req.body,req.user)});}catch(error){next(error);}});
 
 // 4. Approve (Supervisor, Admin)
 router.patch(

@@ -85,6 +85,7 @@ export const OutletRegistrationReportPage = () => {
       {finalizeTarget && (
         <AdminFinalizeModal
           item={finalizeTarget}
+          error={feedbackMsg?.type==='error'?feedbackMsg.text:''}
           isProcessing={isProcessing}
           onClose={() => setFinalizeTarget(null)}
           onConfirmFinalize={handleFinalize}

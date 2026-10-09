@@ -1,193 +1,29 @@
-import { ValidationSearchPanel } from './ValidationSearchPanel';
-import { OutletCoordinateForm } from './OutletCoordinateForm';
-import React, { useEffect, useState } from 'react';
-import { NativeDialog } from '../../../shared/components/common/NativeDialog';
-import { outletValidationApi } from '../../../services/api';
-import { OutletMiniMapPreview } from './OutletMiniMapPreview';
-import { LuExternalLink, LuHistory, LuTriangleAlert, LuInfo } from 'react-icons/lu';
-const SIGNALS = {
-  reverseGeocode: 'Alamat di Titik GPS',
-  forwardGeocode: 'Titik Berdasarkan Alamat',
-  findPlace: 'Profil & Identitas Toko',
-  nearbySearch: 'Tempat di Sekitar Titik GPS'
-};
-const SUBCHANNEL_LABELS = {
-  TOKO_RETAIL: 'Toko / Retail',
-  GROSIR: 'Grosir',
-  KOPERASI: 'Koperasi',
-  BIDAN: 'Bidan',
-  OUTLET_MOTORIS: 'Outlet Motoris',
-  APOTIK: 'Apotik',
-  BABY_SHOP: 'Baby Shop / Toko Susu',
-  CHAIN_MINIMARKET: 'Chain Minimarket',
-  LOKAL_MINIMARKET: 'Lokal Minimarket',
-  NAT_SUPERMARKET: 'Nat. Supermarket',
-  LOKAL_SUPERMARKET: 'Lokal Supermarket',
-  HYPERMARKET: 'Hypermarket',
-  DRUGSTORE: 'Drugstore',
-  PERKULAKAN: 'Perkulakan'
-};
-export function OutletValidationDetail({
-  outlet,
-  onClose,
-  onSaved
-}) {
-  const [form, setForm] = useState({
-    latitude: '',
-    longitude: '',
-    reason: ''
-  });
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [locating, setLocating] = useState(false);
-  useEffect(() => {
-    if (outlet) {
-      setForm({
-        latitude: String(outlet.latitude ?? ''),
-        longitude: String(outlet.longitude ?? ''),
-        reason: ''
-      });
-      setError('');
-    }
-  }, [outlet]);
-  const save = async e => {
-    e.preventDefault();
-    if (!outlet) return;
-    setBusy(true);
-    setError('');
-    try {
-      await outletValidationApi.correctCoordinates(outlet.id, {
-        latitude: Number(form.latitude),
-        longitude: Number(form.longitude),
-        reason: form.reason.trim(),
-        updatedAt: outlet.updatedAt
-      });
-      await onSaved();
-      onClose();
-    } catch (err) {
-      setError(err.message || 'Gagal menyimpan koreksi GPS');
-    } finally {
-      setBusy(false);
-    }
-  };
-  const locate = () => {
-    if (!navigator.geolocation) {
-      setError('GPS tidak didukung oleh browser pada perangkat ini.');
-      return;
-    }
-    setLocating(true);
-    setError('');
-    navigator.geolocation.getCurrentPosition(pos => {
-      setForm(f => ({
-        ...f,
-        latitude: String(pos.coords.latitude.toFixed(6)),
-        longitude: String(pos.coords.longitude.toFixed(6))
-      }));
-      setLocating(false);
-    }, err => {
-      setError(err.message || 'Gagal membaca koordinat GPS perangkat.');
-      setLocating(false);
-    }, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    });
-  };
-  if (!outlet) return null;
-  const ch = outlet.channel || outlet.type || 'GENERAL_TRADE';
-  const isGt = ch === 'GENERAL_TRADE';
-  const subChannelLabel = SUBCHANNEL_LABELS[outlet.subChannel] || outlet.subChannel || 'Retail';
-  const latNum = Number(outlet.latitude) || 0;
-  const lngNum = Number(outlet.longitude) || 0;
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${latNum},${lngNum}`;
-  const history = outlet.validationDetails?.coordinateHistory || [];
-  const signals = outlet.validationDetails?.signals || {};
-  const warnings = outlet.validationDetails?.warnings || [];
-  return <NativeDialog open={Boolean(outlet)} title={`Detail & Validasi: ${outlet.name}`} busy={busy} onClose={onClose}>
-      <div className="space-y-5 text-on-surface text-xs">
-        {/* ── 1. Map Preview Section ── */}
-        <div className="space-y-1.5">
-          <OutletMiniMapPreview latitude={outlet.latitude} longitude={outlet.longitude} name={outlet.name} radiusMeters={outlet.radiusMeters || 50} channel={ch} />
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] text-on-surface-variant font-medium">
-              Geofence Radius Presensi: <strong>{outlet.radiusMeters || 50} meter</strong>
-            </span>
-            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
-              <span>Buka di Google Maps</span>
-              <LuExternalLink className="text-[10px]" />
-            </a>
-          </div>
-        </div>
-
-        {/* ── 2. Comprehensive Store Information Grid ── */}
-        <ValidationSearchPanel isGt={isGt} latNum={latNum} lngNum={lngNum} outlet={outlet} subChannelLabel={subChannelLabel} />
-
-        {/* ── 3. Geocoding Validation Signals & Analysis ── */}
-        {outlet.validationDetails?.note && <div className="p-3 rounded-xl bg-surface-container/60 border border-border-glass flex items-start gap-2.5">
-            <LuInfo className="text-primary text-sm shrink-0 mt-0.5" />
-            <p className="text-on-surface font-medium">
-              {outlet.validationDetails.note}
-            </p>
-          </div>}
-
-        {Object.keys(signals).length > 0 && <div className="space-y-2">
-            <h4 className="font-black text-on-surface text-xs uppercase tracking-wider">
-              Sinyal Verifikasi Geocoding
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {Object.entries(signals).map(([key, s]) => <div key={key} className="p-3 rounded-xl bg-surface border border-border-glass shadow-xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-on-surface">{SIGNALS[key] || key}</span>
-                    <span className={`font-mono font-bold text-[11px] px-2 py-0.5 rounded-md border ${s.skipped ? 'bg-surface-container text-on-surface-variant border-border-glass' : s.score >= 70 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : s.score >= 40 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'}`}>
-                      {s.skipped ? 'Dilewati' : `Skor: ${s.score ?? 0}%`}
-                    </span>
-                  </div>
-                  {s.formattedAddress && <p className="text-[11px] text-on-surface-variant truncate">
-                      {s.formattedAddress}
-                    </p>}
-                  {s.distanceMeters != null && <p className="text-[11px] text-on-surface-variant font-medium">
-                      Selisih titik: <strong>{Math.round(s.distanceMeters)} m</strong>
-                    </p>}
-                </div>)}
-            </div>
-          </div>}
-
-        {warnings.length > 0 && <div className="space-y-1.5">
-            {warnings.map((w, idx) => <div key={idx} className="p-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex items-start gap-2 text-[11px]">
-                <LuTriangleAlert className="text-amber-500 shrink-0 text-sm mt-0.5" />
-                <span>{w}</span>
-              </div>)}
-          </div>}
-
-        {/* ── 4. GPS Coordinate Correction Form ── */}
-        <OutletCoordinateForm busy={busy} error={error} form={form} locate={locate} locating={locating} onClose={onClose} outlet={outlet} save={save} setForm={setForm} />
-
-        {/* ── 5. Coordinate Correction Audit History ── */}
-        {history.length > 0 && <div className="space-y-2 pt-2 border-t border-border-glass">
-            <h4 className="font-black text-on-surface text-xs uppercase tracking-wider flex items-center gap-1.5">
-              <LuHistory className="text-primary text-sm" />
-              <span>Riwayat Perubahan Koordinat GPS ({history.length})</span>
-            </h4>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-              {history.map((h, i) => <div key={i} className="p-2.5 rounded-xl bg-surface border border-border-glass shadow-xs text-[11px] flex items-start justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-on-surface block">{h.reason}</span>
-                    <span className="text-[10px] text-on-surface-variant font-mono">
-                      Titik: {h.latitude}, {h.longitude}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-on-surface-variant whitespace-nowrap">
-                    {h.at ? new Date(h.at).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              }) : '-'}
-                  </span>
-                </div>)}
-            </div>
-          </div>}
-      </div>
-    </NativeDialog>;
+import React,{useState} from 'react';
+import {outletValidationApi} from '../../../services/api';
+import {confirmWorkspaceNavigation} from '../../../shared/utils/confirmWorkspaceNavigation';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
+import {OutletMiniMapPreview} from './OutletMiniMapPreview';
+import {OutletCoordinateForm} from './OutletCoordinateForm';
+import {ValidationSearchPanel} from './ValidationSearchPanel';
+import {OutletHistory} from '../../OutletManagement/OutletHistory';
+import {stamp,point,resultLabels,reviewLabels} from '../../OutletManagement/outletPresentation';
+export function OutletValidationDetail({review:r,onRefresh,onClose}) {
+ const [busy,setBusy]=useState(false),[error,setError]=useState(''),[correction,setCorrection]=useState(false),[decision,setDecision]=useState('KEEP'),[note,setNote]=useState(''),[evidence,setEvidence]=useState('');
+ useUnsavedNavigation(Boolean(note||evidence),busy);
+ const o=r.outlet,run=r.runs[0],result=run?.result,stale=run&&['name','address','latitude','longitude','clusterId'].some(k=>run.snapshot[k]!==o[k]),closed=r.status==='COMPLETED';
+ const comparisons=stale?[]:[['findPlace','Profil toko'],['forwardGeocode','Titik alamat']].map(([key,label])=>({...result?.signals?.[key],label})).filter(s=>s.googleLat!=null).map(s=>({latitude:s.googleLat,longitude:s.googleLng,distanceMeters:s.distanceMeters,label:s.label}));
+ const act=async action=>{if(busy)return;setBusy(true);setError('');try{await action();await onRefresh();}catch(e){setError(e.message);await onRefresh();}finally{setBusy(false);}};
+ const saveDecision=e=>{e.preventDefault();act(async()=>{await outletValidationApi.decide(o.id,r.id,{revision:r.revision,action:decision,note,evidence});setNote('');setEvidence('');});};
+ return <section className="outlet-panel outlet-review-detail"><header className="outlet-detail-heading"><div><p className="outlet-eyebrow">{o.outletCode || 'Kode belum tersedia'} · {reviewLabels[r.status]}</p><h2>{o.name}</h2><p>{r.reason}</p><small>Diajukan oleh {r.requestedBy.name} · {stamp(r.createdAt)}</small></div><button type="button" className="app-button" onClick={onClose} disabled={busy}>Kembali</button></header><div className="outlet-detail-content">
+  {error&&<p className="app-error" role="alert">{error}</p>}
+  <div className="outlet-comparison-heading"><div><h3>{stale?'Data berubah setelah pemeriksaan':resultLabels[result?.code] || 'Peta belum diperiksa'}</h3><p className="outlet-muted">{run?`${stamp(run.createdAt)} · ${run.actor.name}`:'Pemeriksaan peta dapat dijalankan bila diperlukan.'}</p></div>{!closed&&<button type="button" className="app-button app-button-primary" disabled={busy} onClick={()=>act(()=>outletValidationApi.validateSingle(o.id,{reviewId:r.id,revision:r.revision}))}>{busy?'Memproses…':'Periksa dengan peta'}</button>}</div>
+  <div className="outlet-master-snapshot"><strong>Data master saat ini</strong><p>{o.address}</p><small>{point(o)} · radius {o.radiusMeters} m · {o.cluster?.name}</small></div>
+  <OutletMiniMapPreview latitude={o.latitude} longitude={o.longitude} name={o.name} radiusMeters={o.radiusMeters} candidates={comparisons}/>
+  {comparisons.length>0&&<p className="outlet-muted">Titik kandidat ditampilkan sebagai pembanding. Kehadirannya di peta bukan rekomendasi untuk mengganti master.</p>}
+  {result?.warnings?.length>0&&<div className="outlet-warning">{result.warnings.map((w,i)=><p key={i}>{w}</p>)}</div>}{result&&<ValidationSearchPanel result={result}/>}
+  {!closed&&<><div className="app-actions"><button type="button" className="app-button" disabled={busy} onClick={()=>{if(!correction||confirmWorkspaceNavigation())setCorrection(v=>!v);}}>{correction?'Tutup koreksi lokasi':'Koreksi lokasi master'}</button></div>{correction&&<OutletCoordinateForm key={o.updatedAt} outlet={o} suggestion={!stale?result?.suggestion:null} onClose={()=>setCorrection(false)} onSaved={onRefresh}/>}
+   <form className="app-form outlet-decision" onSubmit={saveDecision}><h3>Catat keputusan pemeriksaan</h3><p className="outlet-muted">Data boleh dipertahankan berdasarkan bukti lapangan meskipun profil toko tidak ada di peta.</p><label className="app-field">Keputusan<select value={decision} disabled={busy} onChange={e=>setDecision(e.target.value)}><option value="KEEP">Pertahankan data master</option><option value="CORRECTED">Selesai · data sudah dikoreksi</option><option value="WAITING_FIELD">Minta pengecekan lapangan</option></select></label><label className="app-field">Alasan keputusan<textarea required minLength={10} maxLength={2000} value={note} disabled={busy} onChange={e=>setNote(e.target.value)}/></label><label className="app-field">Referensi bukti / tindak lanjut<textarea maxLength={2000} required={Boolean(stale&&decision==='KEEP')} minLength={stale&&decision==='KEEP'?10:undefined} value={evidence} disabled={busy} onChange={e=>setEvidence(e.target.value)} placeholder="Sumber data, hasil kunjungan, atau Sales dan rencana pengecekan lapangan."/></label><button type="submit" className="app-button app-button-primary" disabled={busy}>{busy?'Mencatat…':decision==='WAITING_FIELD'?'Catat tindak lanjut lapangan':'Selesaikan kasus'}</button></form></>}
+  {r.decision&&<div className="outlet-notice"><div><strong>Keputusan terakhir · {r.decision.actor.name}</strong><p>{r.decision.note}</p>{r.decision.evidence&&<p>{r.decision.evidence}</p>}<small>{stamp(r.decision.at)}</small></div></div>}
+  <details className="outlet-disclosure"><summary>Riwayat bukti & perubahan</summary><OutletHistory outlet={{...o,reviews:[r]}}/></details>
+ </div></section>;
 }

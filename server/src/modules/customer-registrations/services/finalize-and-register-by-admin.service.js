@@ -7,6 +7,11 @@ import { ROLES } from '../../../utils/constants.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { resolveBusinessCode } from '../../config/services/business-code.service.js';
+import {assertNoUnreviewedDuplicate} from '../../outlets/services/outlet-duplicates.service.js';
+import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service.js';
+import {synchronizeOutletCounts} from '../../clusters/services/cluster-assignment-policy.service.js';
+import {invalidateClusterCache} from '../../clusters/services/clusters.helpers.js';
+import {invalidateOutletCache} from '../../outlets/services/outlets.helpers.js';
 
 /**
  * 6. Finalize and Register Active Outlet (Supervisor or Admin)
@@ -22,7 +27,10 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
 
   // B01: Prasyarat SPV_APPROVED wajib dipenuhi sebelum aktivasi
   if (registration.registrationStatus === 'REGISTERED_ACTIVE') {
-    throw new AppError('Outlet ini sudah aktif terdaftar sebelumnya', 400);
+    await assertSalesAccess(currentUser,registration.salesmanId);
+    const outlet=await prisma.outlet.findUnique({where:{registrationId:id}});
+    if(outlet)return {registration,outlet};
+    throw new AppError('Pengajuan aktif belum terhubung dengan master. Periksa data master.',409);
   }
   if (registration.registrationStatus !== 'SPV_APPROVED') {
     throw new AppError(`Pengajuan outlet belum disetujui supervisor (Status saat ini: ${registration.registrationStatus})`, 400);
@@ -51,13 +59,18 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
 
   // B01: Transaksi atomik agar update registrasi dan pembuatan master outlet konsisten
   const [updatedRegistration, newOutlet] = await prisma.$transaction(async (tx) => {
-    const changed=await tx.customerRegistration.updateMany({where:{id,registrationStatus:'SPV_APPROVED'},data:{registrationStatus:'REGISTERED_ACTIVE'}});
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
+    const retry=await tx.outlet.findUnique({where:{registrationId:id}});
+    if(retry)return [await tx.customerRegistration.findUnique({where:{id}}),retry];
+    await assertNoUnreviewedDuplicate(tx,{...registration,latitude:Number(lat),longitude:Number(lng)},currentUser,payload.duplicateReason);
+    const changed=await tx.customerRegistration.updateMany({where:{id,registrationStatus:'SPV_APPROVED',updatedAt:registration.updatedAt},data:{registrationStatus:'REGISTERED_ACTIVE'}});
     if(!changed.count)throw new AppError('Pengajuan sudah diproses, muat ulang',409);
     finalCode = await resolveBusinessCode('OUTLET', payload.outletCode || payload.customerCode || registration.customerCode, {db:tx,excludeId:id});
     const reg = await tx.customerRegistration.update({
       where: { id },
       data: {
         customerCode: finalCode,
+        clusterId:targetClusterId,
         registrationStatus: 'REGISTERED_ACTIVE',
         adminId: currentUser.id,
         adminName: currentUser.name,
@@ -69,6 +82,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
     const outlet = await tx.outlet.create({
       data: {
         outletCode: finalCode,
+        registrationId:id,source:'REGISTRATION',taxType:registration.taxType,taxNumber:registration.taxNumber,taxName:registration.taxName,taxAddress:registration.taxAddress,
         name: registration.name,
         address: registration.address,
         latitude: Number(lat),
@@ -77,18 +91,25 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
         channel: registration.channel || 'GENERAL_TRADE',
         type: registration.channel || 'GENERAL_TRADE',
         subChannel: registration.subChannel || 'TOKO_RETAIL',
+        itineraryCode:registration.visitIntervalWeeks?`F${registration.visitIntervalWeeks}`:null,
+        locationEvidence:registration.locationEvidence || {source:'REGISTRATION',actor:actorSnapshot(currentUser),at:new Date().toISOString()},
         ownerName: registration.ownerName || registration.taxName,
         phone: registration.phone,
         paymentType: registration.paymentType,
         termOfPaymentDays: registration.termOfPaymentDays,
-        visitSchedule: {weekType:registration.visitWeekSchedule,days:registration.visitDays},
+        visitSchedule: {weekType:registration.visitWeekSchedule,days:registration.visitDays,intervalWeeks:registration.visitIntervalWeeks},
         radiusMeters: defaultRadius,
         validationStatus: 'UNVALIDATED',
       },
     });
 
+    await tx.outletChange.create({data:{outletId:outlet.id,actor:actorSnapshot(currentUser),reason:payload.duplicateReason || 'Aktivasi pengajuan yang disetujui',source:'REGISTRATION',before:{},after:{registrationId:id,name:outlet.name,address:outlet.address,latitude:outlet.latitude,longitude:outlet.longitude,clusterId:targetClusterId}}});
+    await synchronizeOutletCounts(tx,[targetClusterId]);
+    await tx.clusterRoute.deleteMany({where:{clusterId:targetClusterId}});
+
     return [reg, outlet];
   },{isolationLevel:'Serializable'});
+  finalCode=newOutlet.outletCode;
 
   // Notifikasi ke Salesman dan Ops
   if (registration.salesmanId) {
@@ -104,7 +125,8 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   }
 
   broadcastCacheInvalidation('customer-registrations');
-  broadcastCacheInvalidation('outlets');
+  invalidateOutletCache();
+  invalidateClusterCache(targetClusterId);
 
   return { registration: updatedRegistration, outlet: newOutlet };
 };

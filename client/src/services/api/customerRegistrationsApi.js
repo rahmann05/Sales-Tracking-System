@@ -1,5 +1,7 @@
 import { request } from "../httpClient";
 export const customerRegistrationsApi = {
+  revise:(id,body)=>request(`/customer-registrations/${id}/revise`,{method:'POST',body:JSON.stringify(body)}),
+  update:(id,body)=>request(`/customer-registrations/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
   getAll: async (params = {}) => {
     const cleanParams = {};
     Object.entries(params).forEach(([k, v]) => {

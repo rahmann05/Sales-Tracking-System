@@ -8,6 +8,7 @@ import { useDebounce } from '../../../shared/hooks/useDebounce';
  */
 export const useOutletApproval = () => {
   const [items, setItems] = useState([]);
+  const [page,setPage]=useState(1),[pagination,setPagination]=useState({total:0,totalPages:1});
   const [statusCounts, setStatusCounts] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -33,18 +34,20 @@ export const useOutletApproval = () => {
         status: filterStatus === 'ALL' ? undefined : filterStatus,
         search: debouncedSearch || undefined,
         limit: 50,
+        page,
       });
       if (!Array.isArray(res?.data)) throw new Error('Respons pengajuan outlet belum dapat dibaca.');
       if (revision === loadRevision.current) {
         setItems(res.data);
         setStatusCounts(res.statusCounts || {});
+        setPagination(res.pagination);
       }
     } catch (err) {
       if (revision === loadRevision.current) setLoadError(err.message || 'Gagal memuat pengajuan outlet.');
     } finally {
       if (revision === loadRevision.current) setIsLoading(false);
     }
-  }, [filterStatus, debouncedSearch]);
+  }, [filterStatus, debouncedSearch,page]);
 
   useEffect(() => {
     loadData();
@@ -92,9 +95,10 @@ export const useOutletApproval = () => {
     isLoading,
     loadError,
     filterStatus,
-    setFilterStatus,
+    setFilterStatus:value=>{setFilterStatus(value);setPage(1);},
     searchQuery,
-    setSearchQuery,
+    setSearchQuery:value=>{setSearchQuery(value);setPage(1);},
+    page,setPage,pagination,
     selectedItem,
     setSelectedItem,
     isProcessing,

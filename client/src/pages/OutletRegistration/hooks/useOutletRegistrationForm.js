@@ -1,22 +1,19 @@
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import { INITIAL_FORM } from "./registrationInitialForm";
+import {registrationRevisionFields} from './registrationRevision';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { customerRegistrationsApi, configApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
 import { manualCodeRequired } from '../../../../../shared/coding.mjs';
-/**
- * useOutletRegistrationForm Hook
- * Single Responsibility: Manage form state, automatic GPS/Google Places autofill, lock/unlock mechanics, and submission.
- */
+// Manages registration drafts, explicit location capture, submission and revisions.
 export const useOutletRegistrationForm = onSuccess => {
-  const {
-    settings
-  } = useApp();
+  const {settings} = useApp();
   const searchVersion = useRef(0);
   const gpsVersion = useRef(0);
+  const submissionId=useRef(crypto.randomUUID());
   const [dirty,setDirty]=useState(false);
-  const draft=useFormDraft('outlet-registration',INITIAL_FORM,value=>({...value,latitude:null,longitude:null,photoUrl:null,taxDocumentUrl:null,placeId:null,placeDetails:null}));
+  const draft=useFormDraft('outlet-registration',INITIAL_FORM,value=>({...value,latitude:null,longitude:null,photoUrl:null,taxDocumentUrl:null,placeId:null,placeDetails:null,locationEvidence:null}));
   const formData=draft.value,setFormData=draft.setValue;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gpsError,setGpsError]=useState('');
@@ -68,6 +65,7 @@ export const useOutletRegistrationForm = onSuccess => {
         ...prev,
         latitude: lat,
         longitude: lng,
+        locationEvidence:{source:'GPS',accuracyMeters:pos.coords.accuracy,capturedAt:new Date(pos.timestamp).toISOString()},
         placeId: null,
         placeDetails: null
       }));
@@ -170,6 +168,7 @@ export const useOutletRegistrationForm = onSuccess => {
     }
     setFormData(prev => ({
       ...prev,
+      submissionRequestId:prev.submissionRequestId || submissionId.current,
       [field]: value
     }));
   };
@@ -205,6 +204,7 @@ export const useOutletRegistrationForm = onSuccess => {
     });
   };
   const resetForm = () => {
+    submissionId.current=crypto.randomUUID();
     gpsVersion.current++;
     setDirty(false);setGpsError('');setIsLocating(false);
     searchVersion.current++;
@@ -216,8 +216,14 @@ export const useOutletRegistrationForm = onSuccess => {
     setSubmitError('');
     setSubmitSuccess(null);
   };
+  const startRevision=item=>{
+    submissionId.current=crypto.randomUUID();setSubmitError('');setSubmitSuccess(null);setDirty(true);
+    setFormData(registrationRevisionFields(item,submissionId.current));
+    setVerifiedPlace(item.placeDetails || null);
+  };
   const submitForm = async e => {
     if (e) e.preventDefault();
+    if(isSubmitting)return;
     setSubmitError('');
     setSubmitSuccess(null);
 
@@ -249,12 +255,13 @@ export const useOutletRegistrationForm = onSuccess => {
     try {
       const payload = {
         ...formData,
+        requestId:formData.submissionRequestId || submissionId.current,
         visitDays: Array.isArray(formData.visitDays) ? formData.visitDays.join(',') : formData.visitDays,
-        latitude: Number(formData.latitude) || 0,
-        longitude: Number(formData.longitude) || 0,
+        latitude: Number(formData.latitude),
+        longitude: Number(formData.longitude),
         termOfPaymentDays: Number(formData.termOfPaymentDays) || 0
       };
-      const res = await customerRegistrationsApi.create(payload);
+      const res = formData.revisionId?await customerRegistrationsApi.revise(formData.revisionId,{...payload,updatedAt:formData.revisionUpdatedAt,revisionReason:formData.revisionReason}):await customerRegistrationsApi.create(payload);
       resetForm();
       setSubmitSuccess(res.data);
       if (onSuccess) onSuccess(res.data);
@@ -287,6 +294,6 @@ export const useOutletRegistrationForm = onSuccess => {
     handleTaxDocUpload,
     toggleDay,
     resetForm,
-    submitForm
+    submitForm,startRevision
   };
 };

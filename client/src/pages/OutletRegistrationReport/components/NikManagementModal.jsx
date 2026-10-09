@@ -57,6 +57,7 @@ export const NikManagementModal = ({
     setSaveSuccess(false);
     try {
       const updatePayload = {
+        updatedAt:selectedOutlet.updatedAt,reason:'Pembaruan identitas pajak dan NIK pemilik outlet',
         taxType: formValues.taxType,
         taxNumber: formValues.taxType === 'PKP' ? formValues.taxNumber : cleanedNik,
         taxName: formValues.ownerName,
@@ -65,10 +66,12 @@ export const NikManagementModal = ({
       };
       if (selectedOutlet.id && selectedOutlet.registrationStatus) {
         // Customer Registration
-        await customerRegistrationsApi.update(selectedOutlet.id, updatePayload);
+        const response=await customerRegistrationsApi.update(selectedOutlet.id, updatePayload);
+        setSelectedOutlet(previous=>({...previous,...response.data}));
       } else if (selectedOutlet.id) {
         // Outlet Table
-        await outletsApi.update(selectedOutlet.id, updatePayload);
+        const response=await outletsApi.update(selectedOutlet.id, updatePayload);
+        setSelectedOutlet(previous=>({...previous,...response.data}));
       }
       setSaveSuccess(true);
       if (onDataUpdated) onDataUpdated();

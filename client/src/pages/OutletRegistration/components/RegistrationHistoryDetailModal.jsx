@@ -1,12 +1,13 @@
 import React from 'react';
 import {NativeDialog} from '../../../shared/components/common/NativeDialog';
 import { LuExternalLink } from 'react-icons/lu';
+import {RegistrationRevisionHistory} from './RegistrationRevisionHistory';
 
 /**
  * RegistrationHistoryDetailModal Component
  * Single Responsibility: Render modal preview for a selected outlet submission.
  */
-export const RegistrationHistoryDetailModal = ({ item, onClose }) => {
+export const RegistrationHistoryDetailModal = ({ item, onClose,onRevise }) => {
   if (!item) return null;
 
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
@@ -85,5 +86,7 @@ export const RegistrationHistoryDetailModal = ({ item, onClose }) => {
             </a>
           </div>}
         </div>
+    <RegistrationRevisionHistory history={item.revisionHistory || []}/>
+    {item.registrationStatus==='REJECTED'&&onRevise&&<button type="button" className="app-button app-button-primary" onClick={()=>onRevise(item)}>Perbaiki & ajukan ulang</button>}
   </div></NativeDialog>;
 };

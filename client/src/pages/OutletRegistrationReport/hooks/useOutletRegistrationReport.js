@@ -69,10 +69,10 @@ export const useOutletRegistrationReport = () => {
   }, [loadReportData]);
 
   // Admin Finalize Action
-  const handleFinalize = async (id, customerCode, clusterId) => {
+  const handleFinalize = async (id, customerCode, clusterId,duplicateReason) => {
     setIsProcessing(true);
     try {
-      const result=await customerRegistrationsApi.finalize(id, { customerCode, clusterId });
+      const result=await customerRegistrationsApi.finalize(id, { customerCode, clusterId,duplicateReason:duplicateReason||undefined });
       setFeedbackMsg({
         type: 'success',
         text: `Outlet berhasil diinput ke sistem aktif dengan Kode Outlet "${result.data?.outlet?.outletCode || customerCode}"!`,

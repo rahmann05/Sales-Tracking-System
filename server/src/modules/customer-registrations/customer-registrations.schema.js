@@ -1,7 +1,12 @@
 import { z } from 'zod';
+import {locationEvidenceSchema} from '../outlets/outlets.schema.js';
 
 export const createRegistrationSchema = z.object({
   body: z.object({
+    requestId:z.string().uuid().optional(),
+    visitIntervalWeeks:z.union([z.literal(1),z.literal(2),z.literal(4)]).optional(),
+    locationEvidence:locationEvidenceSchema.optional(),
+    duplicateReason:z.string().trim().min(10).max(1000).optional(),
     registrationCode: z.string().trim().max(128).optional(),
     division: z.enum(['UNICHARM', 'BELFOODS', 'GENERAL']).default('UNICHARM'),
     branch: z.string().default('PADALARANG'),
@@ -27,8 +32,8 @@ export const createRegistrationSchema = z.object({
     subAreaKecamatan: z.string().optional().nullable(),
     kelurahan: z.string().optional().nullable(),
     city: z.string().default('CIMAHI'),
-    latitude: z.coerce.number().optional().default(0),
-    longitude: z.coerce.number().optional().default(0),
+    latitude: z.number().finite().min(-90).max(90),
+    longitude: z.number().finite().min(-180).max(180),
     placeId: z.string().optional().nullable(),
     placeDetails: z.any().optional().nullable(),
     photoUrl: z.string().optional().nullable(),
@@ -68,6 +73,8 @@ export const createRegistrationSchema = z.object({
   }).passthrough(),
 });
 
+export const reviseRegistrationSchema=z.object({body:createRegistrationSchema.shape.body.extend({updatedAt:z.string().datetime(),revisionReason:z.string().trim().min(10).max(1000),requestId:z.string().uuid()})});
+
 export const approveRegistrationSchema = z.object({
   body: z.object({
     note: z.string().optional().nullable(),
@@ -82,6 +89,8 @@ export const rejectRegistrationSchema = z.object({
 
 export const finalizeRegistrationSchema = z.object({
   body: z.object({
+    latitude:z.number().finite().min(-90).max(90).optional(),longitude:z.number().finite().min(-180).max(180).optional(),
+    duplicateReason:z.string().trim().min(10).max(1000).optional(),
     customerCode: z.string().trim().max(128).optional(),
     clusterId: z.string().optional().nullable(),
     note: z.string().optional().nullable(),

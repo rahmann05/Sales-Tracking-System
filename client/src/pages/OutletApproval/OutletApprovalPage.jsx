@@ -1,4 +1,7 @@
-import React from 'react';
+import React,{useState} from 'react';
+import {AdminFinalizeModal} from '../OutletRegistrationReport/components/AdminFinalizeModal';
+import {customerRegistrationsApi} from '../../services/api';
+import '../../styles/pages/OutletWorkspace.css';
 import { LuCheck, LuInfo } from 'react-icons/lu';
 import { useApp } from '../../context/AppContext';
 import { useOutletApproval } from './hooks/useOutletApproval';
@@ -14,6 +17,8 @@ import '../../styles/pages/OutletRegistration.css';
  */
 export const OutletApprovalPage = () => {
   const { user } = useApp();
+  const [activation,setActivation]=useState(null),[activating,setActivating]=useState(false),[activationError,setActivationError]=useState('');
+  const canApprove=['ADMIN','SUPERVISOR'].includes(user?.role)&&user.permissions?.can_approve_outlet!==false;
 
   const {
     items,
@@ -35,7 +40,9 @@ export const OutletApprovalPage = () => {
     handleApprove,
     handleReject,
     refreshData,
+    page,setPage,pagination,
   } = useOutletApproval();
+  const finalize=async(id,customerCode,clusterId,duplicateReason)=>{setActivating(true);setActivationError('');try{await customerRegistrationsApi.finalize(id,{customerCode,clusterId,duplicateReason:duplicateReason||undefined});setActivation(null);await refreshData();}catch(error){setActivationError(error.message);}finally{setActivating(false);}};
 
   return (
     <div className="outlet-reg-container">
@@ -71,6 +78,8 @@ export const OutletApprovalPage = () => {
         isLoading={isLoading}
         onReview={setSelectedItem}
       />}
+      <div className="outlet-pagination"><button type="button" className="app-button" disabled={isLoading||page<=1} onClick={()=>setPage(page-1)}>Sebelumnya</button><span>{pagination.total} pengajuan · {page} / {Math.max(1,pagination.totalPages)}</span><button type="button" className="app-button" disabled={isLoading||page>=pagination.totalPages} onClick={()=>setPage(page+1)}>Berikutnya</button></div>
+      {activationError&&<p className="app-error" role="alert">{activationError}</p>}
 
       {/* 4. Review Detail Modal */}
       {selectedItem && (
@@ -81,8 +90,11 @@ export const OutletApprovalPage = () => {
           onClose={() => setSelectedItem(null)}
           onApprove={handleApprove}
           onOpenReject={() => setIsRejectModalOpen(true)}
+          canApprove={canApprove}
+          onActivate={item=>{setSelectedItem(null);setActivationError('');setActivation(item);}}
         />
       )}
+      {activation&&<AdminFinalizeModal error={activationError} item={activation} isProcessing={activating} onClose={()=>setActivation(null)} onConfirmFinalize={finalize}/>}
 
       {/* 5. Reject Reason Modal */}
       <OutletApprovalRejectModal

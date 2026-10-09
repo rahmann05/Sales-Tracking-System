@@ -1,91 +1,16 @@
-import React from 'react';
-import { LuCompass, LuCrosshair, LuTriangleAlert, LuRefreshCw } from 'react-icons/lu';
-export function OutletCoordinateForm({
-  busy,
-  error,
-  form,
-  locate,
-  locating,
-  onClose,
-  outlet,
-  save,
-  setForm
-}) {
-  return <form onSubmit={save} className="p-4 rounded-2xl bg-surface-container/60 border border-border-glass space-y-3.5">
-          <div className="space-y-1">
-            <h4 className="font-black text-on-surface text-sm flex items-center gap-1.5">
-              <LuCrosshair className="text-primary text-base" />
-              <span>Koreksi Titik Koordinat GPS</span>
-            </h4>
-            <p className="text-[11px] text-on-surface-variant">
-              Pastikan Anda sedang berada di lokasi outlet fisik atau memiliki data titik koordinat yang telah diverifikasi langsung.
-            </p>
-          </div>
-
-          {error && <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold flex items-center gap-2">
-              <LuTriangleAlert className="text-sm shrink-0" />
-              <span>{error}</span>
-            </div>}
-
-          {/* Quick Action Helpers */}
-          <div className="flex flex-wrap items-center gap-2">
-            {outlet.googleSuggestedLat != null && outlet.googleSuggestedLng != null && <button type="button" disabled={busy} onClick={() => setForm(f => ({
-        ...f,
-        latitude: String(outlet.googleSuggestedLat),
-        longitude: String(outlet.googleSuggestedLng)
-      }))} className="px-3 py-1.5 rounded-xl bg-surface border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-xs">
-                <LuCompass className="text-xs text-primary" />
-                <span>Pakai Rekomendasi Titik Google</span>
-              </button>}
-
-            <button type="button" disabled={busy || locating} onClick={locate} className="px-3 py-1.5 rounded-xl bg-surface border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50">
-              <LuCrosshair className={`text-xs text-primary ${locating ? 'animate-spin' : ''}`} />
-              <span>{locating ? 'Mendeteksi GPS…' : 'Ambil Lokasi Perangkat Saya'}</span>
-            </button>
-          </div>
-
-          {/* Lat / Lng inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                Garis Lintang (Latitude)
-              </label>
-              <input type="number" step="any" min={-90} max={90} required value={form.latitude} onChange={e => setForm(f => ({
-          ...f,
-          latitude: e.target.value
-        }))} placeholder="-6.837000" className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass font-mono text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all" />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                Garis Bujur (Longitude)
-              </label>
-              <input type="number" step="any" min={-180} max={180} required value={form.longitude} onChange={e => setForm(f => ({
-          ...f,
-          longitude: e.target.value
-        }))} placeholder="107.563000" className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass font-mono text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all" />
-            </div>
-          </div>
-
-          {/* Reason / Proof Notes */}
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
-              Alasan Koreksi & Bukti Verifikasi Lapangan (min. 10 karakter)
-            </label>
-            <textarea required minLength={10} maxLength={1000} rows={3} value={form.reason} onChange={e => setForm(f => ({
-        ...f,
-        reason: e.target.value
-      }))} placeholder="Contoh: Titik lama bergeser 80m dari toko fisik. Telah diverifikasi langsung di depan toko oleh SPV." className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button type="button" disabled={busy} onClick={onClose} className="px-4 py-2 rounded-xl border border-border-glass text-xs font-bold text-on-surface hover:bg-surface-container transition-all">
-              Batal
-            </button>
-            <button type="submit" disabled={busy || !form.latitude || !form.longitude || form.reason.trim().length < 10} className="px-5 py-2 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50">
-              <LuRefreshCw className={`text-xs ${busy ? 'animate-spin' : ''}`} />
-              <span>{busy ? 'Menyimpan…' : 'Simpan Koreksi Koordinat'}</span>
-            </button>
-          </div>
-        </form>;
+import React,{useEffect,useRef,useState} from 'react';
+import {outletValidationApi} from '../../../services/api';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
+import {point} from '../../OutletManagement/outletPresentation';
+export function OutletCoordinateForm({outlet,onSaved,onClose,suggestion}) {
+ const [form,setForm]=useState({latitude:String(outlet.latitude),longitude:String(outlet.longitude),reason:'',source:'MANUAL'}),[busy,setBusy]=useState(false),[locating,setLocating]=useState(false),[error,setError]=useState(''),[gps,setGps]=useState(null),[dirty,setDirty]=useState(false);
+ useUnsavedNavigation(dirty,busy);
+ const mounted=useRef(true);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+ const update=(key,value)=>{setDirty(true);setForm(p=>({...p,[key]:value,...(['latitude','longitude'].includes(key)?{source:'MANUAL'}:{})}));};
+ const locate=()=>{if(!navigator.geolocation){setError('Perangkat tidak mendukung lokasi.');return;}setLocating(true);setError('');navigator.geolocation.getCurrentPosition(p=>{if(!mounted.current)return;setGps({accuracyMeters:p.coords.accuracy,capturedAt:new Date(p.timestamp).toISOString()});setForm(f=>({...f,latitude:String(p.coords.latitude),longitude:String(p.coords.longitude),source:'GPS'}));setDirty(true);setLocating(false);},()=>{if(!mounted.current)return;setError('Lokasi belum diperoleh. Aktifkan izin lokasi dan coba lagi saat berada di outlet.');setLocating(false);},{enableHighAccuracy:true,timeout:15000,maximumAge:0});};
+ const save=async e=>{e.preventDefault();if(busy)return;setBusy(true);setError('');try{const r=await outletValidationApi.correctCoordinates(outlet.id,{latitude:Number(form.latitude),longitude:Number(form.longitude),updatedAt:outlet.updatedAt,reason:form.reason,locationEvidence:{source:form.source,...(form.source==='GPS'?gps:{})}});setDirty(false);await onSaved(r.data);onClose();}catch(e){setError(e.message);}finally{setBusy(false);}};
+ return <form className="outlet-coordinate-form app-form" onSubmit={save}><h3>Koreksi lokasi master</h3><p className="outlet-muted">Titik saat ini: {point(outlet)}. Perubahan memengaruhi radius kunjungan berikutnya. Pastikan sumber titik dan alasan dapat dijelaskan.</p><div className="app-actions"><button type="button" className="app-button" disabled={busy||locating} onClick={locate}>{locating?'Mengambil lokasi…':'Ambil GPS · saya berada di outlet'}</button>{suggestion&&<button type="button" className="app-button" disabled={busy||locating} onClick={()=>{setForm(f=>({...f,latitude:String(suggestion.latitude),longitude:String(suggestion.longitude),source:'MAP'}));setDirty(true);}}>Salin kandidat peta ({suggestion.distanceMeters} m)</button>}</div>{gps&&form.source==='GPS'&&<p className="outlet-muted">Akurasi perangkat ±{Math.round(gps.accuracyMeters)} m. Periksa titik sebelum menyimpan.</p>}
+  <div className="outlet-form-grid">{[['latitude','Latitude',-90,90],['longitude','Longitude',-180,180]].map(([key,label,min,max])=><label key={key} className="app-field">{label}<input type="number" required min={min} max={max} step="any" value={form[key]} disabled={busy||locating} onChange={e=>update(key,e.target.value)}/></label>)}</div><label className="app-field">Alasan & referensi pengecekan<textarea required minLength={10} maxLength={1000} value={form.reason} disabled={busy} onChange={e=>update('reason',e.target.value)}/></label><p className="outlet-muted">Sumber perubahan: {form.source==='GPS'?'GPS perangkat':form.source==='MAP'?'Kandidat peta · perlu dipastikan':'Input manual'}</p>{error&&<p className="app-error" role="alert">{error}</p>}<footer className="outlet-form-footer"><button type="button" className="app-button" disabled={busy||locating} onClick={()=>{if(!dirty||window.confirm('Tutup koreksi yang belum disimpan?'))onClose();}}>Batal</button><button type="submit" className="app-button app-button-primary" disabled={busy||locating}>{busy?'Menyimpan…':'Simpan koreksi'}</button></footer>
+ </form>;
 }

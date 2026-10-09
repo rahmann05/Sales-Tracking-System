@@ -69,7 +69,7 @@ export const getRegistrations = async (query = {}, currentUser) => {
     // Summary status counts
     prisma.customerRegistration.groupBy({
       by: ['registrationStatus'],
-      where: currentUser?.role === ROLES.SALES ? { salesmanId: currentUser.id, deletedAt: null } : { deletedAt: null },
+      where: Object.fromEntries(Object.entries(where).filter(([key])=>key!=='registrationStatus')),
       _count: { _all: true },
     }),
   ]);
@@ -84,6 +84,7 @@ export const getRegistrations = async (query = {}, currentUser) => {
   statusCounts.forEach((c) => {
     countsMap[c.registrationStatus] = c._count._all;
   });
+  countsMap.TOTAL=statusCounts.reduce((sum,c)=>sum+c._count._all,0);
 
   const response = buildPaginatedResponse(data, total, page, limit);
   return { ...response, statusCounts: countsMap };

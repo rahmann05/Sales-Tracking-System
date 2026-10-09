@@ -1,26 +1,6 @@
 import React from 'react';
-import { PageHeader } from '../../shared/components/common/PageHeader';
-import { OutletValidationPanel } from './components/OutletValidationPanel';
-import { LuMapPin } from "react-icons/lu";
-
-/**
- * OutletValidationPage Component
- * Single Responsibility: Present Google Maps geocoding and physical GPS verification for Outlets.
- */
-export const OutletValidationPage = () => {
-  return (
-    <div className="workspace-page space-y-6">
-      <PageHeader
-        badge={
-          <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuMapPin className="text-sm" /> Pelanggan
-          </span>
-        }
-        title="Validasi lokasi outlet"
-        subtitle="Bandingkan nama, alamat, dan koordinat dengan peta, lalu tinjau serta catat koreksi sebelum dipakai untuk radius presensi."
-      />
-
-      <OutletValidationPanel />
-    </div>
-  );
-};
+import {OutletValidationPanel} from './components/OutletValidationPanel';
+import '../../styles/pages/OutletWorkspace.css';
+export function OutletValidationPage() {
+ return <main className="workspace-page outlet-workspace"><header className="outlet-page-heading"><div><p className="outlet-eyebrow">Pelanggan / Pemeriksaan opsional</p><h1>Pemeriksaan lokasi outlet</h1><p>Tinjau data lama atau data yang diragukan, bandingkan bukti, lalu catat keputusan yang dapat ditelusuri.</p></div></header><OutletValidationPanel/></main>;
+}

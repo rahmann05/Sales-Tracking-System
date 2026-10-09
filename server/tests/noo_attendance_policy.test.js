@@ -65,7 +65,10 @@ test('NOO attachment policy is enforced by server and can be disabled', async t 
   mock(t,prisma.user,'findUnique',async () => ({}));
   mock(t,prisma.user,'findMany',async () => []);
   mock(t,globalThis,'fetch',async () => ({json:async () => ({candidates:[]})}));
-  assert.equal((await createRegistration({name:'Toko',address:'Alamat',registrationCode:'NOO-TEST'}, {id:'sales',name:'Sales'})).registrationStatus,'SUBMITTED');
+  mock(t,prisma.outlet,'findMany',async()=>[]);
+  mock(t,prisma.user,'findFirst',async()=>({id:'sales',role:'SALES'}));
+  mock(t,prisma,'$transaction',async fn=>fn({...prisma,$executeRaw:async()=>1}));
+  assert.equal((await createRegistration({name:'Toko',address:'Alamat',latitude:-6,longitude:107,registrationCode:'NOO-TEST'}, {id:'sales',name:'Sales'})).registrationStatus,'SUBMITTED');
 });
 
 test('check-in geofence on blocks; off accepts and preserves GPS WARNING', async t => {

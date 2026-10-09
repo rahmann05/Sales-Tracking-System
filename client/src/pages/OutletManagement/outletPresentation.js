@@ -1,0 +1,8 @@
+export const reviewLabels={OPEN:'Terbuka',WAITING_FIELD:'Menunggu lapangan',COMPLETED:'Selesai'};
+export const resultLabels={CONSISTENT:'Data konsisten dengan peta',CONFLICT:'Bukti bertentangan',AMBIGUOUS:'Hasil perlu ditinjau',NO_EVIDENCE:'Bukti peta belum cukup',ERROR:'Pemeriksaan belum selesai',INCOMPLETE:'Data belum lengkap'};
+export const signalLabels={reverseGeocode:'Alamat di titik master',forwardGeocode:'Titik berdasarkan alamat',findPlace:'Kandidat profil toko',nearbySearch:'Konteks sekitar titik'};
+export const stateLabels={MATCH:'Cocok',CONFLICT:'Bertentangan',AMBIGUOUS:'Belum pasti',NO_EVIDENCE:'Bukti tidak tersedia',ERROR:'Layanan gagal',CONTEXT:'Konteks tambahan'};
+export const subChannels={TOKO_RETAIL:'Toko retail',GROSIR:'Grosir',KOPERASI:'Koperasi',BIDAN:'Bidan',OUTLET_MOTORIS:'Outlet motoris',APOTIK:'Apotek',BABY_SHOP:'Baby shop',CHAIN_MINIMARKET:'Chain minimarket',LOKAL_MINIMARKET:'Minimarket lokal',NAT_SUPERMARKET:'Supermarket nasional',LOKAL_SUPERMARKET:'Supermarket lokal',HYPERMARKET:'Hypermarket',DRUGSTORE:'Drugstore',PERKULAKAN:'Perkulakan'};
+export const stamp=value=>value?new Date(value).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',dateStyle:'medium',timeStyle:'short'})+' WIB':'Belum tersedia';
+export const point=o=>o?.latitude!=null&&o?.longitude!=null?`${Number(o.latitude).toFixed(6)}, ${Number(o.longitude).toFixed(6)}`:'Belum tersedia';
+export const reviewResult=o=>o?.validationDetails?.stale?'Hasil lama · data telah berubah':resultLabels[o?.validationDetails?.code] || (o?.validatedAt?'Hasil metode lama':'Belum diperiksa · opsional');

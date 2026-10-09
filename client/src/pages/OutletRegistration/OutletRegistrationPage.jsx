@@ -40,6 +40,7 @@ export const OutletRegistrationPage = () => {
     toggleDay,
     resetForm,
     submitForm,
+    startRevision,
   } = useOutletRegistrationForm(() => {
     refreshHistory();
     setTimeout(() => setActiveTab('HISTORY'), 1800);
@@ -80,6 +81,7 @@ export const OutletRegistrationPage = () => {
       {/* 2. Formulir Registrasi (Format Dokumen Fisik Resmi) */}
       {activeTab === 'FORM' && (
         <form onSubmit={submitForm} className="space-y-6 pb-20">
+          {formData.revisionId&&<div className="app-form"><p>Memperbaiki pengajuan {formData.registrationCode}. Kode dan riwayat pengajuan tetap digunakan.</p><label className="app-field">Penjelasan perbaikan<textarea required minLength={10} maxLength={1000} value={formData.revisionReason || ''} onChange={e=>updateField('revisionReason',e.target.value)}/></label></div>}
           {submitSuccess && (
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 text-sm flex items-center gap-2 max-w-5xl mx-auto">
               <LuCheck className="text-lg shrink-0" />
@@ -99,6 +101,7 @@ export const OutletRegistrationPage = () => {
             </div>
           )}
 
+          {submitError.includes('Kemungkinan outlet ganda')&&<label className="app-field">Alasan outlet ini berbeda dari kandidat yang disebutkan<textarea required minLength={10} maxLength={1000} value={formData.duplicateReason || ''} onChange={e=>updateField('duplicateReason',e.target.value)}/></label>}
           {/* Authentic Physical Document Form Layout */}
           <fieldset disabled={isSubmitting} className="sales-registration-fieldset"><PhysicalDocumentForm
             formData={formData}
@@ -135,6 +138,7 @@ export const OutletRegistrationPage = () => {
         <RegistrationHistoryDetailModal
           item={selectedSubmission}
           onClose={() => setSelectedSubmission(null)}
+          onRevise={item=>{startRevision(item);setSelectedSubmission(null);setActiveTab('FORM');}}
         />
       )}
     </div>

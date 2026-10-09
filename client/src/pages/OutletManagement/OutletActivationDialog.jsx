@@ -1,0 +1,8 @@
+import React,{useState} from 'react';
+import {NativeDialog} from '../../shared/components/common/NativeDialog';
+import {outletsApi} from '../../services/api';
+export function OutletActivationDialog({outlet,onClose,onSaved}) {
+ const [reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),active=Boolean(outlet.deletedAt);
+ const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const body={updatedAt:outlet.updatedAt,reason};const r=await (active?outletsApi.reactivate(outlet.id,body):outletsApi.remove(outlet.id,body));await onSaved(r.data);onClose();}catch(e){setError(e.message);}finally{setBusy(false);}};
+ return <NativeDialog open title={active?'Aktifkan kembali outlet':'Nonaktifkan outlet'} onClose={onClose} busy={busy}><form className="app-form" onSubmit={submit}><p><strong>{outlet.name}</strong></p><p className="outlet-muted">{active?'Outlet kembali tersedia untuk perencanaan baru. Jadwal kunjungan tetap disusun melalui planner.':'Server akan memeriksa PJP, order, packing, dan pengiriman yang masih perlu diselesaikan sebelum menonaktifkan outlet.'}</p>{!active&&<p>{outlet.operational.scheduled} stop PJP mendatang · {outlet.operational.deliveries} pengiriman berjalan</p>}{error&&<p className="app-error" role="alert">{error}</p>}<label className="app-field">Alasan<textarea required minLength={10} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)}/></label><div className="app-actions"><button type="button" className="app-button" onClick={onClose} disabled={busy}>Batal</button><button type="submit" className="app-button app-button-primary" disabled={busy}>{busy?'Memproses…':active?'Aktifkan outlet':'Nonaktifkan outlet'}</button></div></form></NativeDialog>;
+}

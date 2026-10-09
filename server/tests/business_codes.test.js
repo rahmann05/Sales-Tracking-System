@@ -119,7 +119,8 @@ test('repeated RJP import preserves external outlet codes while new clusters use
   db.pjpTemplateStop={findMany:async()=>[]};db.pjpPlan={findMany:async()=>[]};db.pjpStop={findMany:async()=>[]};
   db.outlet.findUnique=async()=>outlet;
   db.outlet.findFirst=async()=>null;
-  db.outlet.create=async({data})=>{created++;outlet={id:'outlet',type:'GENERAL_TRADE',cluster,...data};return outlet;};
+  db.outlet.create=async({data})=>{created++;outlet={id:'outlet',type:'GENERAL_TRADE',cluster,updatedAt:new Date(),...data};return outlet;};
+  db.outletChange={create:async()=>({})};
   db.outlet.update=async({data})=>{outlet={...outlet,...data};return outlet;};
   mock(t,prisma,'$transaction',async fn=>fn(db));
   const rows=[{clusterName:'Area',outletCode:'EXTERNAL-99',customerName:'Toko',address:'Alamat',area:'Bandung',latitude:-6,longitude:107}];
