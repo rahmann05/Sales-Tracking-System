@@ -1,21 +1,14 @@
 import React from 'react';
 import { FiAlertTriangle } from "react-icons/fi"; // Use fi-icons for missing lu-icons
 
-export const MaintenanceBar = ({
-  label,
-  currentKm,
-  lastChangeKm,
-  threshold
-}) => {
-  const used = Math.max(0, currentKm - (lastChangeKm || 0));
-  const percentage = Math.min(100, used / threshold * 100);
-  const remaining = Math.max(0, threshold - used);
+export const MaintenanceBar = ({status}) => {
+  const {label,used,percentage,remaining,threshold,enabled,known,source,state}=status;
   let colorClass = 'bg-primary';
   let alert = false;
-  if (percentage >= 100) {
+  if (state==='OVERDUE') {
     colorClass = 'bg-error';
     alert = true;
-  } else if (percentage >= 80) {
+  } else if (state==='DUE_SOON') {
     colorClass = 'bg-warning';
   }
   return <div>
@@ -25,16 +18,16 @@ export const MaintenanceBar = ({
           {alert && <FiAlertTriangle className="text-error" />}
         </span>
         <span className="text-on-surface-variant">
-          {Math.round(used).toLocaleString('id-ID')} / {threshold.toLocaleString('id-ID')} km
+          {known?`${Math.round(used).toLocaleString('id-ID')} / ${threshold.toLocaleString('id-ID')} km`:'Data kilometer belum cukup'}
         </span>
       </div>
       <div className="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
         <div className={`h-full ${colorClass} transition-all duration-500`} style={{
-        width: `${percentage}%`
+        width: `${enabled&&known?percentage:0}%`
       }} />
       </div>
       <div className="text-[10px] text-right mt-1 text-on-surface-variant">
-        {alert ? 'Waktunya ganti!' : `Sisa ${Math.round(remaining).toLocaleString('id-ID')} km`}
+        {!enabled?'Pengingat dinonaktifkan':!known?'Belum dapat dihitung':alert?'Interval servis terlampaui':`Sisa ${Math.round(remaining).toLocaleString('id-ID')} km`} · {source==='VEHICLE'?'Interval khusus kendaraan':'Interval profil'}
       </div>
     </div>;
 };

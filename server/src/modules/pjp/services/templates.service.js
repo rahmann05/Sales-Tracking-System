@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '../../../config/prisma.js';
 import { assertSalesAccess, assertOutletAccess, salesScope } from '../../../utils/team-scope.js';
 import { AppError } from '../../../utils/errors.js';
+import {teamPlanningPolicy} from './planning-policy.service.js';
 const template = z.object({ userId: z.string().min(1), dayOfWeek: z.number().int().min(0).max(6),
   weekType: z.enum(['ALL','WEEK_1','WEEK_2']), outletIds: z.array(z.string().min(1)).max(200) });
 export async function listTemplates(user) {
@@ -13,7 +14,8 @@ export async function listTemplates(user) {
   const outlets = await prisma.outlet.findMany({ where: { deletedAt: null,cluster:{deletedAt:null,...(user.role === 'SUPERVISOR' ? {supervisorId:user.id} : user.role === 'SALES' ? {OR:[{users:{some:{id:user.id}}},{assignedSalesId:user.id}]} : {})}}, select: { id:true, name:true,outletCode:true,address:true,itineraryCode:true,latitude:true,longitude:true, clusterId:true, cluster:{select:{id:true,supervisorId:true,assignedSalesId:true,name:true}} }, orderBy: { name:'asc' } });
   const weekMode=await getDynamicConfig('PJP_WEEK_MODE','ISO_PARITY');
   const supervisors=await prisma.user.findMany({where:{role:'SUPERVISOR',deletedAt:null,...(user.role==='ADMIN'?{}:{id:user.role==='SUPERVISOR'?user.id:sales[0]?.supervisorId||'__none__'})},select:{id:true,name:true},orderBy:{name:'asc'}});
-  return { sales, outlets,supervisors,weekMode, currentWeekType:getCurrentWeekType(new Date(),weekMode), workingDays: workingDays(await getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6')) };
+  const planningPolicies=Object.fromEntries(await Promise.all(supervisors.map(async s=>[s.id,await teamPlanningPolicy(s.id)])));
+  return { sales, outlets,supervisors,planningPolicies,weekMode, currentWeekType:getCurrentWeekType(new Date(),weekMode), workingDays: workingDays(await getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6')) };
 }
 export async function saveTemplates(raw, user) {
   const entries = z.array(template).min(1).max(500).parse(raw);

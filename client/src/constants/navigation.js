@@ -228,7 +228,7 @@ export const getNavigationTabs = (userOrRole) => {
     }
 
     // 11. Pengaturan Sistem & Manajemen User (Admin atau yang punya izin)
-    if (role === ROLES.ADMIN || permissions.can_manage_system_config) {
+    if (role === ROLES.ADMIN) {
         tabs.push({
             id: TAB_IDS.SYSTEM_CONFIG,
             label: 'Pengaturan Sistem',

@@ -1,3 +1,4 @@
+import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import { PackingOutletSection } from './PackingOutletSection';
 import { PackingItemsSection } from './PackingItemsSection';
 import { PackingInvoicesSection } from './PackingInvoicesSection';
@@ -13,6 +14,7 @@ export function PackingDraftForm({
   onSaved,
   onCancel
 }) {
+  const featurePolicy=useFeaturePolicy('PACKING');
   const {settings,user}=useApp();
   const formRef=useRef(null);
   useEffect(()=>{if(user?.role==='ADMIN'){formRef.current?.closest('main')?.scrollTo({top:0});return;}formRef.current?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});},[]);
@@ -233,7 +235,7 @@ export function PackingDraftForm({
           <button type="button" disabled={busy} onClick={cancel} className="px-4 py-2 rounded-xl border border-border-glass text-xs font-bold text-on-surface hover:bg-surface-container transition-all">
             Batal
           </button>
-          <button type="submit" disabled={busy || !outlet} className="px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer">
+          <button type="submit" disabled={busy || !outlet || !doc?.id&&!featurePolicy.canStart} title={!doc?.id?featurePolicy.reason:undefined} className="px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer">
             <LuRefreshCw className={`text-xs ${busy ? 'animate-spin' : ''}`} />
             <span>{busy ? 'Menyimpan Dokumen…' : doc ? 'Simpan Perubahan' : 'Simpan Draft Packing List'}</span>
           </button>

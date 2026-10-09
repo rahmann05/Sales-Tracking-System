@@ -1,3 +1,5 @@
+import {policyNotification} from '../../notifications/services/notification-policy.service.js';
+import {processValue} from '../../config/services/process-policy.service.js';
 import {assertClusterTrade} from '../../clusters/services/cluster-trade-policy.service.js';
 import { assertSalesAccess } from '../../../utils/team-scope.js';
 /** finalizeAndRegisterByAdmin - single-responsibility service (extracted from customer-registrations.service.js). */
@@ -5,7 +7,6 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { ROLES } from '../../../utils/constants.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
-import { getDynamicConfig } from '../../config/config.service.js';
 import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 import {assertNoUnreviewedDuplicate} from '../../outlets/services/outlet-duplicates.service.js';
 import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service.js';
@@ -25,6 +26,10 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   const registration = await prisma.customerRegistration.findUnique({ where: { id } });
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
+  const activator=await processValue(registration,'REGISTRATION_ACTIVATOR','BOTH');
+  if(activator!=='BOTH'&&activator!==currentUser.role)throw new AppError('Akun ini bukan pihak aktivasi dalam aturan pengajuan',403);
+  const mode=await processValue(registration,'REGISTRATION_APPROVAL_MODE','BOTH');
+  if(mode==='SEQUENTIAL'&&currentUser.role!=='ADMIN')throw new AppError('Aktivasi tahap akhir dilakukan Admin setelah SPV',403);
   // B01: Prasyarat SPV_APPROVED wajib dipenuhi sebelum aktivasi
   if (registration.registrationStatus === 'REGISTERED_ACTIVE') {
     await assertSalesAccess(currentUser,registration.salesmanId);
@@ -32,7 +37,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
     if(outlet)return {registration,outlet};
     throw new AppError('Pengajuan aktif belum terhubung dengan master. Periksa data master.',409);
   }
-  if (registration.registrationStatus !== 'SPV_APPROVED') {
+  if (registration.registrationStatus !== 'SPV_APPROVED' && !(mode==='NONE'&&['SUBMITTED','PENDING'].includes(registration.registrationStatus))) {
     throw new AppError(`Pengajuan outlet belum disetujui supervisor (Status saat ini: ${registration.registrationStatus})`, 400);
   }
 
@@ -55,7 +60,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
   if(!cluster)throw new AppError('Klaster aktif tidak ditemukan',400);
   if(currentUser.role==='SUPERVISOR'&&cluster.supervisorId!==currentUser.id)throw new AppError('Klaster berada di luar tim Anda',403);
 
-  const defaultRadius = await getDynamicConfig('DEFAULT_OUTLET_RADIUS_METERS', 50);
+  const defaultRadius = await processValue(registration,'DEFAULT_OUTLET_RADIUS_METERS', 50);
 
   // B01: Transaksi atomik agar update registrasi dan pembuatan master outlet konsisten
   const [updatedRegistration, newOutlet] = await prisma.$transaction(async (tx) => {
@@ -63,7 +68,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
     const retry=await tx.outlet.findUnique({where:{registrationId:id}});
     if(retry)return [await tx.customerRegistration.findUnique({where:{id}}),retry];
     await assertNoUnreviewedDuplicate(tx,{...registration,latitude:Number(lat),longitude:Number(lng)},currentUser,payload.duplicateReason);
-    const changed=await tx.customerRegistration.updateMany({where:{id,registrationStatus:'SPV_APPROVED',updatedAt:registration.updatedAt},data:{registrationStatus:'REGISTERED_ACTIVE'}});
+    const changed=await tx.customerRegistration.updateMany({where:{id,registrationStatus:registration.registrationStatus,updatedAt:registration.updatedAt},data:{registrationStatus:'REGISTERED_ACTIVE'}});
     if(!changed.count)throw new AppError('Pengajuan sudah diproses, muat ulang',409);
     finalCode = await resolveBusinessCode('OUTLET', payload.outletCode || payload.customerCode || registration.customerCode, {db:tx,excludeId:id});
     const reg = await tx.customerRegistration.update({
@@ -113,7 +118,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
 
   // Notifikasi ke Salesman dan Ops
   if (registration.salesmanId) {
-    await prisma.notification.create({
+    await policyNotification(prisma,{
       data: {
         userId: registration.salesmanId,
         type: 'OUTLET_REGISTERED_ACTIVE',

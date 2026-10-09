@@ -1,3 +1,7 @@
+import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
+import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
+import {preparationStages} from '../../../../../shared/warehouse-policy.mjs';
+import {DRIVER_EVIDENCE_KEYS} from '../../../../../shared/operational-policy.mjs';
 import { validateAllocation } from '../../../../../shared/packing.mjs';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { resolveBusinessCode } from '../../config/services/business-code.service.js';
@@ -13,7 +17,7 @@ import { assertResources } from './resource-policy.service.js';
 export const createDeliveryRoute = async (data, userId) => {
   const { date, vehicleId, driverId, notes, stops } = data;
 
-  const allowRedelivery = await getDynamicConfig('DELIVERY_ALLOW_REDELIVERY',true);
+  const allowRedelivery = await getDynamicConfig('DELIVERY_ALLOW_REDELIVERY',true)&&await getDynamicConfig('FEATURE_RETURNS_MODE','ACTIVE')==='ACTIVE';
   const allowSplit = await getDynamicConfig('PACKING_ALLOW_SPLIT', true);
   return prisma.$transaction(async tx => {
   await assertResources(tx, { ...data, date: new Date(date) });
@@ -62,15 +66,18 @@ export const createDeliveryRoute = async (data, userId) => {
 
   const code = await resolveBusinessCode('DELIVERY_ROUTE',data.code,{db:tx,date:new Date(date)});
 
+  const snapshot=await capturePolicySnapshot(),driverSettings=await effectivePolicy(driver);
+  for(const key of DRIVER_EVIDENCE_KEYS)snapshot.values[key]=driverSettings.values[key];
+  snapshot.driver={id:driverId,versions:driverSettings.versions,at:driverSettings.at};
   const route = await tx.deliveryRoute.create({
     data: {
-      code,
+      code,policySnapshot:snapshot,
       date: new Date(date),
       plannedStartAt: data.plannedStartAt ? new Date(data.plannedStartAt) : null,
       plannedEndAt: data.plannedEndAt ? new Date(data.plannedEndAt) : null,
       vehicleId,
       driverId,
-      status: 'DRAFT',
+      status:preparationStages(snapshot.values).length?'DRAFT':'READY',
       totalCartons,
       totalDistanceKm: data.totalDistanceKm,
       fuelConsumedLiters: data.totalDistanceKm != null ? data.totalDistanceKm / vehicle.fuelKmPerLiter : null,

@@ -6,5 +6,5 @@ export const planningBody=z.object({
  startsOn:planningDate,endsOn:planningDate,
  rules:z.array(z.object({userId:z.string().min(1),outletId:z.string().min(1),anchorDate:planningDate,intervalWeeks:z.union([z.literal(1),z.literal(2),z.literal(4)]),reason:z.string().trim().max(500).optional()})).max(500),
  revision:z.number().int().positive().optional(),note:z.string().trim().max(1000).optional(),
-}).superRefine((body,ctx)=>{try{planDates(body.startsOn,body.endsOn);}catch(e){ctx.addIssue({code:z.ZodIssueCode.custom,message:e.message,path:['endsOn']});}});
+}).superRefine((body,ctx)=>{try{planDates(body.startsOn,body.endsOn,366);}catch(e){ctx.addIssue({code:z.ZodIssueCode.custom,message:e.message,path:['endsOn']});}});
 export const publishBody=z.object({revision:z.number().int().positive(),codes:z.record(z.string().trim().min(1).max(128)).default({}),note:z.string().trim().min(5).max(1000),acknowledgeWarnings:z.boolean().default(false)});

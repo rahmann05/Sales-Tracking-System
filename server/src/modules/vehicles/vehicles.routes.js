@@ -4,10 +4,14 @@ import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import {z} from 'zod';
 import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
+import {setMaintenancePolicy} from './services/maintenance-policy.service.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.patch('/:id/service-policy',authorize('ADMIN'),async(req,res,next)=>{
+ try{res.json({status:'success',data:await setMaintenancePolicy(req.params.id,req.body,req.user)});}catch(error){next(error);}
+});
 router.patch('/:id/condition', authorize('ADMIN','SUPERVISOR','KEPALA_GUDANG'), async(req,res,next)=>{
   try {
     const data=z.object({condition:z.enum(['AVAILABLE','IN_SERVICE','BROKEN']),note:z.string().trim().min(1).max(2000)}).parse(req.body);

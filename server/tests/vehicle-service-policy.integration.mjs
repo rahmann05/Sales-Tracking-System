@@ -1,0 +1,60 @@
+// Disposable local fixtures; does not publish or modify operational configuration.
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {prisma} from '../src/config/prisma.js';
+import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
+import {withPolicy} from '../src/modules/config/services/policy-context.service.js';
+import {recordMaintenance} from '../src/modules/vehicles/services/record-maintenance.service.js';
+import {setMaintenancePolicy} from '../src/modules/vehicles/services/maintenance-policy.service.js';
+import {getVehicleById} from '../src/modules/vehicles/services/get-vehicle-by-id.service.js';
+import {routeAction} from '../src/modules/delivery/services/operations.service.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local DB only');
+const prefix=`service-policy-${randomUUID()}`,vehicleIds=[],users=[],routeIds=[];
+let checks=0;
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
+const rejects=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
+const run=(fn,values={})=>withPolicy({values:{...CONFIG_DEFAULTS,FEATURE_NOTIFICATIONS_MODE:'OFF',...values},versions:[],at:new Date().toISOString()},fn);
+try{
+ const actor=await prisma.user.create({data:{name:prefix,email:`${prefix}@example.invalid`,password:'fixture',role:'ADMIN'}});users.push(actor.id);
+ const driver=await prisma.user.create({data:{name:prefix,email:`${prefix}-driver@example.invalid`,password:'fixture',role:'SUPIR'}});users.push(driver.id);
+ const makeVehicle=async()=>{const row=await prisma.vehicle.create({data:{code:`${prefix}-${vehicleIds.length}`,name:prefix,maxCartons:10,maxWeightKg:100,fuelKmPerLiter:10,fuelType:'SOLAR',fuelPricePerLiter:10000}});vehicleIds.push(row.id);return row;};
+ const vehicle=await makeVehicle(),other=await makeVehicle();
+ const policy={updatedAt:vehicle.updatedAt.toISOString(),reason:'Interval khusus kendaraan uji',reminderMode:'ON',intervals:{GANTI_OLI:3000,GANTI_FILTER_OLI:null,GANTI_KANVAS_REM:null}};
+ const updated=await setMaintenancePolicy(vehicle.id,policy,actor);
+ eq(updated.maintenancePolicy.intervals.GANTI_OLI,3000);eq(updated.totalKm,0);
+ eq(await prisma.auditEvent.count({where:{entityId:vehicle.id,action:'VEHICLE_SERVICE_POLICY'}}),1);
+ await rejects(()=>setMaintenancePolicy(vehicle.id,policy,actor),409);
+ const input={requestId:randomUUID(),serviceType:'GANTI_OLI',odometerAtService:1000.5,cost:0,serviceDate:new Date().toISOString()};
+ await rejects(()=>run(()=>recordMaintenance(vehicle.id,input,actor),{VEHICLE_SERVICE_REQUIRE_WORKSHOP:true}),422);
+ eq(await prisma.vehicleServiceRecord.count({where:{vehicleId:vehicle.id}}),0);
+ const first=await run(()=>recordMaintenance(vehicle.id,input,actor));
+ eq(first.record.odometerAtService,1000.5);eq(first.updatedVehicle.totalKm,1000.5);eq(first.updatedVehicle.lastOilChangeKm,1000.5);
+ eq(first.record.workshopName,'');eq(first.record.policySnapshot.maintenancePolicy.intervals.GANTI_OLI,3000);
+ eq(first.record.policySnapshot.values.VEHICLE_SERVICE_REQUIRE_WORKSHOP,false);
+ // A lost-response retry keeps the original record, even if requirements became stricter.
+ const replay=await run(()=>recordMaintenance(vehicle.id,input,actor),{VEHICLE_SERVICE_REQUIRE_WORKSHOP:true});
+ eq(replay.record.id,first.record.id);eq(await prisma.auditEvent.count({where:{entityId:first.record.id}}),1);
+ await rejects(()=>run(()=>recordMaintenance(vehicle.id,{...input,odometerAtService:2000},actor)),409);
+ await rejects(()=>run(()=>recordMaintenance(other.id,input,actor)),409);
+ const concurrent=await Promise.all([2000.5,1500.5,2300.5].map((km,i)=>run(()=>recordMaintenance(vehicle.id,{...input,requestId:randomUUID(),serviceType:i===1?'GANTI_FILTER_OLI':'GANTI_OLI',odometerAtService:km},actor))));
+ eq(concurrent.length,3);
+ let actual=await prisma.vehicle.findUnique({where:{id:vehicle.id}});eq(actual.totalKm,2300.5);eq(actual.lastOilChangeKm,2300.5);eq(actual.lastOilFilterChangeKm,1500.5);
+ const repeatId=randomUUID();
+ const repeats=await Promise.all([1,2].map(()=>run(()=>recordMaintenance(vehicle.id,{...input,requestId:repeatId,odometerAtService:2400.5},actor))));
+ eq(repeats[0].record.id,repeats[1].record.id);eq(await prisma.vehicleServiceRecord.count({where:{requestId:repeatId}}),1);
+ const route=await prisma.deliveryRoute.create({data:{code:prefix,date:new Date(),vehicleId:vehicle.id,driverId:driver.id,createdById:actor.id,status:'COMPLETED',returnedAt:new Date(),odometerStart:2400.5,odometerEnd:2800.5,policySnapshot:{values:{TRIP_REQUIRE_DOCUMENT_RETURN:false,TRIP_BLOCK_OPEN_ISSUES:false,TRIP_REQUIRE_RETURN_INSPECTION:false}}}});routeIds.push(route.id);
+ await Promise.all([run(()=>routeAction(route.id,{action:'CLOSE',note:'Periksa odometer aktual'},actor)),run(()=>recordMaintenance(vehicle.id,{...input,requestId:randomUUID(),odometerAtService:2900.5},actor))]);
+ actual=await prisma.vehicle.findUnique({where:{id:vehicle.id}});eq(actual.totalKm,2900.5);
+ eq(Boolean((await prisma.deliveryRoute.findUnique({where:{id:route.id}})).closedAt),true);
+ eq((await getVehicleById(vehicle.id)).serviceRecords.length,6);
+ console.log(`PASS ${checks} vehicle service policy assertions; no operational configurations changed.`);
+}finally{
+ const records=await prisma.vehicleServiceRecord.findMany({where:{vehicleId:{in:vehicleIds}},select:{id:true}});
+ await prisma.auditEvent.deleteMany({where:{entityId:{in:[...vehicleIds,...records.map(r=>r.id)]}}});
+ await prisma.deliveryRoute.deleteMany({where:{id:{in:routeIds}}});
+ await prisma.vehicleServiceRecord.deleteMany({where:{vehicleId:{in:vehicleIds}}});
+ await prisma.vehicle.deleteMany({where:{id:{in:vehicleIds}}});
+ await prisma.user.deleteMany({where:{id:{in:users}}});
+ await prisma.$disconnect();
+}

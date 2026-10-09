@@ -1,3 +1,4 @@
+import {policyNotifications} from '../notifications/services/notification-policy.service.js';
 import { createHash } from 'node:crypto';
 import { prisma } from '../../config/prisma.js';
 import { attentionDeadline, escalationReady } from '../../../../shared/attention-sla.mjs';
@@ -16,7 +17,7 @@ export async function escalateAttentionRows(rows,admins,{delayHours,now=Date.now
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`attention-escalation:${key}`}))`;
       if(await tx.auditEvent.findFirst({where:{entityType:'SLA_ESCALATION',entityId:key,action:'NOTIFIED'},select:{id:true}}))return false;
       const payload={attentionKey:row.key,category:row.category,stage:row.stage||null,deadline,observedAt:new Date(now).toISOString(),reference:row.reference||null,activityId:row.activityId||null,exceptionId:row.exception?.id||null};
-      await tx.notification.createMany({data:admins.map(admin=>({userId:admin.id,type:'SLA_ESCALATION',title:'Pekerjaan melewati batas eskalasi',message:`${row.title}. Tenggat ${new Date(deadline).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB. ${row.nextAction}. Status berdasarkan pemeriksaan ${new Date(now).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB; periksa antrean untuk status terbaru.`,payload}))});
+      await policyNotifications(tx,{data:admins.map(admin=>({userId:admin.id,type:'SLA_ESCALATION',title:'Pekerjaan melewati batas eskalasi',message:`${row.title}. Tenggat ${new Date(deadline).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB. ${row.nextAction}. Status berdasarkan pemeriksaan ${new Date(now).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB; periksa antrean untuk status terbaru.`,payload}))});
       await tx.auditEvent.create({data:{entityType:'SLA_ESCALATION',entityId:key,action:'NOTIFIED',actorName:'Scheduler SLA',before:{},after:{...payload,recipientIds:admins.map(admin=>admin.id),delayHours}}});
       return true;
     });

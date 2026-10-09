@@ -1,9 +1,6 @@
+import {policyNotifications} from './notification-policy.service.js';
 /** createBulkNotificationByRoles - single-responsibility service (extracted from notifications.service.js). */
 import { prisma } from '../../../config/prisma.js';
-import { emitToUser } from '../../../config/socket.js';
-import { SOCKET_EVENTS } from '../../../utils/constants.js';
-
-
 export const createBulkNotificationByRoles = async (roles, type, title, message, payload = null, db = prisma) => {
   let salesId=payload?.salesId;
   if(!salesId&&payload?.orderId)salesId=(await db.order.findUnique({where:{id:payload.orderId},select:{createdBy:true}}))?.createdBy;
@@ -20,12 +17,7 @@ export const createBulkNotificationByRoles = async (roles, type, title, message,
 
   const notifications = users.map((u) => ({ userId: u.id, type, title, message, payload }));
 
-  await db.notification.createMany({ data: notifications });
+  const {accepted}=await policyNotifications(db,{ data: notifications });
 
-  // Emit real-time to each online user
-  for (const user of db===prisma?users:[]) {
-    try { emitToUser(user.id, SOCKET_EVENTS.NOTIFICATION, { type, title, message, payload }); }
-    catch { console.warn('[Notifications] Socket unavailable; notification remains in inbox.'); }
-  }
-  return notifications;
+  return accepted;
 };

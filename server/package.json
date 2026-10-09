@@ -42,7 +42,12 @@
     "verify:clusters": "node scripts/verify-cluster-management.mjs",
     "verify:cluster-render": "node scripts/verify-cluster-render.mjs",
     "verify:cluster-count": "node scripts/verify-cluster-count.mjs",
-    "verify:workspace-data": "node scripts/verify-workspace-data.mjs"
+    "verify:workspace-data": "node scripts/verify-workspace-data.mjs",
+    "verify:policy": "node tests/verify-policy-coverage.mjs",
+    "verify:policy-workflows": "node tests/policy-workflows.integration.mjs",
+    "verify:vehicle-policy": "node tests/vehicle-service-policy.integration.mjs",
+    "verify:notification-outbox": "node tests/notification-outbox.integration.mjs",
+    "verify:destination-policy": "node tests/destination-policy.integration.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

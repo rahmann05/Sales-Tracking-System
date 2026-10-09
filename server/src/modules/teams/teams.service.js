@@ -1,3 +1,4 @@
+import {policyNotification} from '../notifications/services/notification-policy.service.js';
 import { z } from 'zod';
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
@@ -31,7 +32,7 @@ export async function assignTeam(salesId, raw, actor) {
     if (released.length) await tx.cluster.updateMany({where:{id:{in:released}},data:{assignedSalesId:null}});
     await tx.pjpTemplate.deleteMany({where:{userId:salesId}});
     await tx.user.update({where:{id:salesId},data:{supervisorId:body.supervisorId,clusterId:null}});
-    await tx.notification.create({data:{userId:salesId,title:'Penugasan tim diperbarui',message:`${body.reason}. Jadwal mendatang perlu ditetapkan kembali; PJP yang sudah terbentuk tetap.`,type:'TEAM_ASSIGNMENT',payload:{previousSupervisorId:sales.supervisorId,supervisorId:body.supervisorId,actorId:actor.id,reason:body.reason,releasedClusterIds:released}}});
+    await policyNotification(tx,{data:{userId:salesId,title:'Penugasan tim diperbarui',message:`${body.reason}. Jadwal mendatang perlu ditetapkan kembali; PJP yang sudah terbentuk tetap.`,type:'TEAM_ASSIGNMENT',payload:{previousSupervisorId:sales.supervisorId,supervisorId:body.supervisorId,actorId:actor.id,reason:body.reason,releasedClusterIds:released}}});
     return {changed:true,releasedClusterIds:released};
   });
   invalidateClusterCache();

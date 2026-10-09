@@ -1,3 +1,4 @@
+import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import { PackingAllocationFields } from './PackingAllocationFields';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 import { useApp } from '../../../context/AppContext';
@@ -13,6 +14,7 @@ export const CreateRouteForm = ({
   onCreated,
   onCancel
 }) => {
+  const featurePolicy=useFeaturePolicy('DELIVERY');
   const [error,setError]=useState(''),[dataLoading,setDataLoading]=useState(true);
   const [code, setCode] = useState('');
   const {
@@ -242,7 +244,7 @@ export const CreateRouteForm = ({
         <button onClick={cancel} className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant border border-border-glass hover:bg-surface-variant transition-colors">
           Batal
         </button>
-        <button onClick={handleSubmit} disabled={submitting || overCapacity || selectedPLs.length === 0 || !selectedVehicle || !selectedDriver} className="px-5 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+        <button onClick={handleSubmit} title={featurePolicy.reason} disabled={!featurePolicy.canStart || submitting || overCapacity || selectedPLs.length === 0 || !selectedVehicle || !selectedDriver} className="px-5 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
           {submitting ? 'Menyimpan...' : 'Simpan Rute'}
         </button>
       </div>

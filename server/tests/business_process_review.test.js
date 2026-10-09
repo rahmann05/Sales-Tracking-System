@@ -164,3 +164,5 @@ test('off PJP visit validation never approves manual revenue by itself', () => {
  assert.equal(offPjpSalesResult({...off,isManualSalesApproved:true}).orderAmount,100);
  assert.equal(offPjpSalesResult({...off,status:'REJECTED',isManualSalesApproved:true}).orderAmount,0);
 });
+import {useDefaultPolicy} from './helpers/config-fixture.js';
+useDefaultPolicy();

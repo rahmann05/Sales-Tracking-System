@@ -18,24 +18,26 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
 
   if (!isOpen) return null;
 
-  return <SalesDialog title="Kunjungan luar PJP" description={'Catat kunjungan tambahan untuk diperiksa Supervisor.'} onClose={onClose} busy={form.saving} dirty={form.dirty||form.retryPending} restored={form.restored} draftError={form.draftError} freshEvidence={!form.retryPending}>
+  return <SalesDialog title="Kunjungan luar PJP" description={form.settings.OFF_PJP_REQUIRE_REVIEW?'Catat kunjungan tambahan untuk diperiksa Supervisor.':'Catat kunjungan tambahan sesuai aturan perusahaan.'} onClose={onClose} busy={form.saving} dirty={form.dirty||form.retryPending} restored={form.restored} draftError={form.draftError} freshEvidence={!form.retryPending}>
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-2.5 text-xs text-amber-800 font-medium">
           <FiAlertCircle className="text-lg flex-shrink-0 text-amber-600" />
           <span>
-            Absen luar PJP akan dicatat dengan status <strong>MENUNGGU VALIDASI</strong> hingga diverifikasi oleh Supervisor Anda.
+            {form.settings.OFF_PJP_REQUIRE_REVIEW?'Kunjungan menunggu pemeriksaan Supervisor.':'Kunjungan diterima tanpa pemeriksaan tambahan sesuai kebijakan. Bukti asli tetap disimpan.'}
           </span>
         </div>
 
         <fieldset disabled={form.saving || form.retryPending} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-on-surface block">
-            Kamera & Verifikasi GPS Presensi (Wajib):
+            Bukti kunjungan · Foto {form.settings.OFF_PJP_REQUIRE_PHOTO?'wajib':'opsional'} · GPS {form.settings.OFF_PJP_REQUIRE_GPS?'wajib':'opsional'}
           </label>
           <DeviceCameraCapture
+            photoRequired={form.settings.OFF_PJP_REQUIRE_PHOTO}
             capturedPhoto={form.capturedPhoto}
             onCapture={form.handleCapture}
             onRetake={form.handleRetake}
-            requireGps={true}
+            requireGps={form.settings.OFF_PJP_REQUIRE_GPS}
+            onLocationChange={form.settings.OFF_PJP_REQUIRE_PHOTO?undefined:form.setCapturedGps}
             targetLat={null}
             targetLng={null}
             outletName={form.outletName || 'Toko Luar PJP'}
@@ -55,12 +57,15 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
           onAddressChange={form.handleAddressChange}
           isAddressAutoFetched={form.isAddressAutoFetched}
           isGeocodingLoading={form.isGeocodingLoading}
+          lookupEnabled={form.lookupEnabled}
           userLocation={form.userLocation}
           onRefreshAddress={form.handleManualRefreshAddress}
         />
 
+        {form.lookupError&&<p role="status" className="text-sm">{form.lookupError}</p>}
+        {!form.lookupEnabled&&<p className="text-sm">Pencarian alamat tidak tersedia. Isi alamat secara manual.</p>}
         <AttendanceSalesInput value={form.salesResult} onChange={form.setSalesResult} />
-        <VisitOutcomeInput value={form.visitOutcome} onChange={form.setVisitOutcome}/>
+        <VisitOutcomeInput value={form.visitOutcome} onChange={form.setVisitOutcome} allowCollection={form.settings.FEATURE_COLLECTION_MODE==='ACTIVE'}/>
         <AbsenNotesInput
           notes={form.notes}
           onChangeNotes={form.setNotes}
@@ -71,7 +76,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
 
         {form.error && <p role="alert" className="text-red-600 text-sm">{form.error}</p>}
         {form.retryPending && !form.saving && <p role="status" className="text-sm">Hasil pengiriman belum terkonfirmasi. Kirim ulang pengajuan yang sama untuk memeriksa hasilnya. Identitas pengajuan tetap dipulihkan saat formulir dibuka kembali di sesi browser ini.</p>}
-        {form.capturedPhoto && (
+        {(form.capturedPhoto || !form.settings.OFF_PJP_REQUIRE_PHOTO) && (
           <button
             type="button"
             onClick={form.handleConfirm}

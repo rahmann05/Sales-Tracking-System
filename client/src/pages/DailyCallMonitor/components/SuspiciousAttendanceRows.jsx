@@ -30,7 +30,7 @@ export function SuspiciousAttendanceRows({
             </thead>
             <tbody>
               {filteredRows.map((r, idx) => {
-            const isShort = r.isDurationAnomaly || r.durationMinutes > 0 && r.durationMinutes < 5;
+            const isShort = Boolean(r.isDurationAnomaly);
             const isFar = r.isDistanceAnomaly || r.distanceWarning === 'WARNING';
             const isTravel = r.isTravelAnomaly;
             const isSkipped = r.isSkipped;

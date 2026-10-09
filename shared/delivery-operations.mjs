@@ -26,7 +26,7 @@ export function routeProgress(route) {
   return { resolved, delivered, total: stops.length, completionPercent: stops.length ? Math.round(resolved * 100 / stops.length) : 0, successPercent: stops.length ? Math.round(delivered * 100 / stops.length) : 0 };
 }
 
-export function routeLocation(route, now = Date.now()) {
+export function routeLocation(route, now = Date.now(),options={}) {
   const attendances = (route.stops || []).flatMap(stop => (stop.attendances || []).map(a => ({ ...a, outletName: stop.outlet?.name, source: 'ATTENDANCE', observedAt: a.timestamp })))
     .filter(a => Number.isFinite(a.latitude) && Number.isFinite(a.longitude)).sort((a, b) => new Date(b.observedAt) - new Date(a.observedAt));
   const live = route.position;
@@ -34,7 +34,7 @@ export function routeLocation(route, now = Date.now()) {
   const location = liveNewer ? { ...live, source: 'GPS' } : attendances[0];
   if (!location) return null;
   const ageSeconds = Math.max(0, Math.floor((now - new Date(location.observedAt).getTime()) / 1000));
-  return { ...location, ageSeconds, isLive: location.source === 'GPS' && ageSeconds <= 120 && !route.closedAt && !route.cancelledAt && !route.returnedAt };
+  return { ...location, ageSeconds, isLive: options.enabled!==false && location.source === 'GPS' && ageSeconds <= (options.liveSeconds||120) && !route.closedAt && !route.cancelledAt && !route.returnedAt };
 }
 
 export function scheduleWindow(route) {

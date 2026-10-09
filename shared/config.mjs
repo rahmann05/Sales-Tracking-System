@@ -1,5 +1,8 @@
 import { CODE_CONFIG_GROUPS } from './coding.mjs';
+import { OPERATIONAL_CONFIG_GROUPS } from './operational-policy.mjs';
+import {parseAuditItems} from './supervision-checklist.mjs';
 export const CONFIG_DEFINITIONS = [
+  ...OPERATIONAL_CONFIG_GROUPS,
   ...CODE_CONFIG_GROUPS,
   {groupKey:'ATTENTION_SLA',groupLabel:'SLA & Eskalasi Pekerjaan',groupDescription:'Batas waktu memakai jam kalender sejak pekerjaan masuk tahap, termasuk malam/libur. Nol berarti belum aktif. Tenggat eksplisit didahulukan. Perubahan berlaku pada pekerjaan terbuka yang belum mempunyai tenggat eksplisit; riwayat perubahan parameter dicatat.',groupIcon:'LuClock',groupColor:'blue',params:[
     {key:'SLA_ORDER_APPROVAL_HOURS',label:'SLA pemeriksaan order',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
@@ -10,14 +13,14 @@ export const CONFIG_DEFINITIONS = [
     {key:'SLA_FOLLOW_UP_REVIEW_HOURS',label:'SLA pemeriksaan hasil tindak lanjut',description:'Dihitung sejak PIC mengirim hasil terbaru, terpisah dari tenggat pengerjaan sales.',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
     {key:'SLA_ESCALATION_DELAY_HOURS',label:'Eskalasi setelah lewat tenggat',description:'Nol menonaktifkan eskalasi. Nilai positif mengirim notifikasi dalam aplikasi ke Admin aktif setelah lewat tenggat ditambah jeda ini. Pemeriksaan setiap 5 menit, satu pemberitahuan per pekerjaan/tahap/tenggat.',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
   ]},
-  {groupKey:'NOO',groupLabel:'Registrasi Outlet (NOO)',groupDescription:'Pencarian nama outlet dan kelengkapan pengajuan. Pengajuan tetap melalui supervisor dan admin.',groupIcon:'LuBuilding',groupColor:'emerald',params:[
+  {groupKey:'NOO',groupLabel:'Registrasi Outlet (NOO)',groupDescription:'Pencarian nama outlet dan kelengkapan pengajuan. Tahap pemeriksaan mengikuti aturan alur registrasi.',groupIcon:'LuBuilding',groupColor:'emerald',params:[
     {key:'CUSTOMER_REG_ENFORCE_PLACES_RADIUS',label:'Batasi pencarian nama outlet dengan radius',description:'Aktif: hasil Google dan OpenStreetMap dibatasi radius pencarian (default 100 meter). Nonaktif: nama outlet dapat dicari di luar radius; GPS fisik pengajuan tetap disimpan.',type:'boolean',defaultValue:true},
     {key:'CUSTOMER_REG_PLACES_RADIUS_METERS',label:'Radius pencarian nama outlet NOO',description:'Batas hasil pencarian dan verifikasi nama outlet saat pembatas radius aktif. Digunakan Google dan OpenStreetMap.',type:'number',unit:'meter',defaultValue:100,min:20,max:1000},
     {key:'CUSTOMER_REG_REQUIRE_PHOTO',label:'Wajib foto outlet NOO',description:'Foto fisik outlet wajib dilampirkan sebelum pengajuan dikirim.',type:'boolean',defaultValue:true},
     {key:'CUSTOMER_REG_REQUIRE_TAX_DOCUMENT',label:'Wajib dokumen KTP / NPWP',description:'NON_PKP memerlukan foto KTP dan PKP memerlukan foto NPWP.',type:'boolean',defaultValue:true},
   ]},
-  {groupKey:'SALES_ATTENDANCE',groupLabel:'Aturan Absen Kunjungan Sales',groupDescription:'Aturan absen masuk dan keluar PJP. GPS tetap wajib dan jarak serta durasi tetap dicatat.',groupIcon:'LuMapPin',groupColor:'blue',params:[
-    {key:'ATTENDANCE_REQUIRE_PHOTO',label:'Wajib foto absen masuk / keluar PJP',description:'Nonaktif: foto opsional, GPS tetap wajib untuk setiap absen sales pada PJP.',type:'boolean',defaultValue:true},
+  {groupKey:'SALES_ATTENDANCE',groupLabel:'Aturan Absen Kunjungan Sales',groupDescription:'Aturan absen masuk dan keluar PJP. Persyaratan mengikuti mode kunjungan, bukti GPS, foto, dan aturan durasi yang dipilih.',groupIcon:'LuMapPin',groupColor:'blue',params:[
+    {key:'ATTENDANCE_REQUIRE_PHOTO',label:'Aturan foto umum kunjungan Sales',description:'Berlaku jika Foto masuk/keluar memilih Ikuti aturan umum. GPS dan mode presensi diatur terpisah.',type:'boolean',defaultValue:true},
     {key:'ATTENDANCE_ENFORCE_GEOFENCE',label:'Batasi absen dengan radius outlet',description:'Nonaktif: absen masuk/keluar di luar radius diizinkan, penyimpangan GPS tetap ditandai WARNING.',type:'boolean',defaultValue:true},
     {key:'ATTENDANCE_USE_OUTLET_RADIUS',label:'Gunakan radius khusus master outlet',description:'Aktif: radius master outlet didahulukan. Nonaktif: semua absen sales menggunakan Radius Presensi Default.',type:'boolean',defaultValue:true},
     {key:'ATTENDANCE_ENFORCE_SEQUENCE',label:'Wajib mengikuti urutan PJP',description:'Nonaktif: sales bebas memilih urutan toko. Kunjungan aktif tetap harus diselesaikan sebelum membuka toko lain.',type:'boolean',defaultValue:true},
@@ -40,7 +43,7 @@ export const CONFIG_DEFINITIONS = [
     { key: 'PACKING_ALLOW_SPLIT', label: 'Izinkan pembagian ke beberapa kendaraan', description: 'Alokasi sebagian produk dan karton; sisa tetap berada di antrean gudang.', type: 'boolean', defaultValue: true },
     { key: 'PACKING_ALLOW_REVISION', label: 'Izinkan penarikan untuk revisi', description: 'Hanya dokumen yang belum dialokasikan. Riwayat perubahan disimpan.', type: 'boolean', defaultValue: true },
   ] },
-  { groupKey: "OPERATIONS", groupLabel: "Kebijakan Operasional", groupDescription: "Izin sales, absensi, supervisi, dan shift.", groupIcon: "LuShieldCheck", groupColor: "blue", params: [{"key": "SALES_ALLOW_PRODUCT_CREATE", "label": "Sales boleh menambah produk", "description": "Produk yang dibuat sales masuk katalog bersama.", "type": "boolean", "defaultValue": false},{"key": "ATTENDANCE_ALLOW_MANUAL_SALES", "label": "Input nominal dan SKU saat absen", "description": "Input hasil penjualan opsional saat absen keluar. Tidak membuat pesanan pengiriman.", "type": "boolean", "defaultValue": true},{"key": "MANUAL_SALES_REPORT_MODE", "label": "Perlakuan hasil manual di laporan", "description": "NOTES_ONLY: catatan saja tanpa nominal/SKU. REQUIRE_APPROVAL: wajib disetujui aktor berwenang.", "type": "select", "defaultValue": "NOTES_ONLY", "options": ["NOTES_ONLY", "REQUIRE_APPROVAL"]},{"key": "SALES_ALLOW_PRICE_OVERRIDE", "label": "Sales boleh mengubah harga order", "description": "Jika dimatikan, harga order wajib mengikuti katalog admin.", "type": "boolean", "defaultValue": false},{"key": "OFF_PJP_ENABLED", "label": "Izinkan kunjungan luar PJP", "description": "Sales dapat mengirim kunjungan luar jadwal untuk divalidasi.", "type": "boolean", "defaultValue": true},{"key": "SPV_JOINT_VISIT_LIMIT", "label": "Batas pendampingan per sales", "description": "Jumlah titik PJP yang tampil dalam pendampingan supervisor.", "type": "number", "defaultValue": 4, "min": 1, "max": 100},{"key": "SPV_AUDIT_LIMIT", "label": "Batas audit supervisor", "description": "Jumlah rute yang dipilih untuk audit dan inspeksi.", "type": "number", "defaultValue": 3, "min": 1, "max": 100},{"key": "SHIFT_START_TIME", "label": "Jam masuk kerja (WIB)", "description": "Waktu acuan ketepatan jam masuk shift.", "type": "text", "defaultValue": "08:00"},{"key": "DEFAULT_PAYMENT_TYPE", "label": "Pembayaran default order", "description": "Pilihan awal pada form order sales.", "type": "select", "defaultValue": "CASH", "options": ["CASH", "TOP", "TRANSFER"]}] },
+  { groupKey: "OPERATIONS", groupLabel: "Kebijakan Operasional", groupDescription: "Izin sales, absensi, supervisi, dan shift.", groupIcon: "LuShieldCheck", groupColor: "blue", params: [{"key": "SALES_ALLOW_PRODUCT_CREATE", "label": "Sales boleh menambah produk", "description": "Produk yang dibuat sales masuk katalog bersama.", "type": "boolean", "defaultValue": false},{"key": "ATTENDANCE_ALLOW_MANUAL_SALES", "label": "Input nominal dan SKU saat absen", "description": "Input hasil penjualan opsional saat absen keluar. Tidak membuat pesanan pengiriman.", "type": "boolean", "defaultValue": true},{"key": "MANUAL_SALES_REPORT_MODE", "label": "Perlakuan hasil manual di laporan", "description": "NOTES_ONLY: catatan saja tanpa nominal/SKU. REQUIRE_APPROVAL: wajib disetujui aktor berwenang.", "type": "select", "defaultValue": "NOTES_ONLY", "options": ["NOTES_ONLY", "REQUIRE_APPROVAL"]},{"key": "SALES_ALLOW_PRICE_OVERRIDE", "label": "Sales boleh mengubah harga order", "description": "Jika dimatikan, harga order wajib mengikuti katalog admin.", "type": "boolean", "defaultValue": false},{"key": "OFF_PJP_ENABLED", "label": "Izinkan kunjungan luar PJP", "description": "Sales dapat mengirim kunjungan luar jadwal untuk divalidasi.", "type": "boolean", "defaultValue": true},{"key": "SPV_JOINT_VISIT_LIMIT", "label": "Batas pendampingan SPV per hari", "description": "Batas kunjungan pendampingan per Supervisor per hari ketika pembatasan diaktifkan.", "type": "number", "defaultValue": 4, "min": 1, "max": 100},{"key": "SPV_AUDIT_LIMIT", "label": "Batas audit supervisor", "description": "Batas kunjungan audit per Supervisor per hari ketika pembatasan diaktifkan.", "type": "number", "defaultValue": 3, "min": 1, "max": 100},{"key": "SHIFT_START_TIME", "label": "Jam masuk kerja (WIB)", "description": "Waktu acuan ketepatan jam masuk shift.", "type": "text", "defaultValue": "08:00"},{"key": "DEFAULT_PAYMENT_TYPE", "label": "Pembayaran default order", "description": "Pilihan awal pada form order sales.", "type": "select", "defaultValue": "CASH", "options": ["CASH", "TOP", "TRANSFER"]}] },
   {
     groupKey: 'GEOFENCE',
     groupLabel: 'Geofence & Presensi',
@@ -144,7 +147,7 @@ export const CONFIG_DEFINITIONS = [
   {
     groupKey: 'VALIDATION',
     groupLabel: 'Validasi Outlet & Anomali GPS',
-    groupDescription: 'Ambang batas jarak dan skor keyakinan untuk audit geocoding serta verifikasi toko baru.',
+    groupDescription: 'Ambang perbandingan bukti peta untuk pemeriksaan opsional outlet. Tidak menentukan persetujuan registrasi.',
     groupIcon: 'LuTarget',
     groupColor: 'amber',
     params: [
@@ -171,42 +174,12 @@ export const CONFIG_DEFINITIONS = [
       {
         key: 'VALIDATION_NEARBY_RADIUS_METERS',
         label: 'Radius Deteksi Outlet Sekitar',
-        description: 'Jarak maksimal (meter) pencarian outlet yang ada di sekitar saat proses audit dan registrasi toko.',
+        description: 'Jarak pencarian outlet sekitar untuk pemeriksaan opsional. Duplikasi registrasi memakai aturan duplikasi tersendiri.',
         type: 'number',
         unit: 'meter',
         defaultValue: 200,
         min: 50,
         max: 1000,
-      },
-      {
-        key: 'VALIDATION_CONFIDENCE_THRESHOLD_VALID',
-        label: 'Ambang Skor Valid',
-        description: 'Batas skor kecocokan validasi (0-100) agar status outlet otomatis ditetapkan VALID.',
-        type: 'number',
-        unit: 'skor',
-        defaultValue: 75,
-        min: 50,
-        max: 100,
-      },
-      {
-        key: 'VALIDATION_CONFIDENCE_THRESHOLD_LIKELY',
-        label: 'Ambang Skor Cukup Layak (Likely)',
-        description: 'Batas skor kecocokan validasi (0-100) agar status outlet berstatus LIKELY_VALID.',
-        type: 'number',
-        unit: 'skor',
-        defaultValue: 50,
-        min: 30,
-        max: 80,
-      },
-      {
-        key: 'VALIDATION_CONFIDENCE_THRESHOLD_WARNING',
-        label: 'Ambang Skor Butuh Perhatian (Warning)',
-        description: 'Batas skor kecocokan validasi (0-100) di bawah mana toko ditandai WARNING/NEEDS_REVIEW.',
-        type: 'number',
-        unit: 'skor',
-        defaultValue: 30,
-        min: 10,
-        max: 60,
       },
     ],
   },
@@ -358,7 +331,7 @@ export const CONFIG_DEFINITIONS = [
     groupColor: 'violet',
     params: [
       {key:'DELIVERY_REQUIRE_PHOTO',label:'Wajib bukti foto pengiriman',description:'Foto wajib pada absensi supir dan hasil pengiriman.',type:'boolean',defaultValue:true},
-      {key:'DELIVERY_REQUIRE_GEOFENCE',label:'Batasi absensi supir dengan radius toko',description:'GPS tetap wajib. Jika aktif, lokasi harus sesuai radius master outlet.',type:'boolean',defaultValue:false},
+      {key:'DELIVERY_REQUIRE_GEOFENCE',label:'Batasi absensi supir dengan radius toko',description:'Berlaku saat bukti presensi tujuan diwajibkan. Memerlukan GPS; radius mengikuti master outlet.',type:'boolean',defaultValue:false},
       {key:'DELIVERY_ALLOW_REDELIVERY',label:'Izinkan pengiriman ulang barang retur',description:'Sisa barang dapat dialokasikan kembali hanya setelah gudang mengonfirmasi penerimaan retur.',type:'boolean',defaultValue:true},
       {key:'ORDER_PRICES_INCLUDE_TAX',label:'Harga produk sudah termasuk pajak',description:'Aktif: nominal order tetap harga katalog, komponen pajak dicatat. Nonaktif: pajak parameter ditambahkan ke nominal.',type:'boolean',defaultValue:true},
 
@@ -430,8 +403,8 @@ export const CONFIG_DEFINITIONS = [
       },
       {
         key: 'NOTIFICATIONS_LIMIT_PER_USER',
-        label: 'Batas Riwayat Notifikasi per User',
-        description: 'Jumlah maksimum notifikasi terbaru yang disimpan dan dimuat pada panel notifikasi pengguna.',
+        label: 'Notifikasi per halaman',
+        description: 'Jumlah notifikasi yang dimuat sekali pada panel pengguna. Tidak menghapus atau membatasi penyimpanan riwayat.',
         type: 'number',
         unit: 'pesan',
         defaultValue: 50,
@@ -454,23 +427,18 @@ export const CONFIG_DEFINITIONS = [
         type: 'text',
         defaultValue: 'F4 = Kunjungan 4 minggu, F2 = Kunjungan 2 minggu',
       },
-      {
-        key: 'DEFAULT_PRODUCT_STOCK',
-        label: 'Stok Default Produk Baru',
-        description: 'Jumlah stok awal yang ditetapkan saat membuat produk baru di database.',
-        type: 'number',
-        unit: 'unit',
-        defaultValue: 100,
-        min: 0,
-        max: 100000,
-      },
+
     ],
   },
 ];
 
+export const LEGACY_CONFIG_KEYS=['SALES_WEEKLY_TARGET_AMOUNT','SALES_MONTHLY_TARGET_AMOUNT','SALES_BASELINE_LMA_AMOUNT','DEFAULT_PRODUCT_STOCK','VALIDATION_CONFIDENCE_THRESHOLD_HIGH','VALIDATION_CONFIDENCE_THRESHOLD_MEDIUM','VALIDATION_CONFIDENCE_THRESHOLD_LOW','LIVE_TRACKING_ATTENDANCE_TIMEOUT_MINUTES','CALLPLAN_LEGEND'];
+for(const group of CONFIG_DEFINITIONS)group.params=group.params.filter(param=>!LEGACY_CONFIG_KEYS.includes(param.key));
+for(let index=CONFIG_DEFINITIONS.length-1;index>=0;index--)if(!CONFIG_DEFINITIONS[index].params.length)CONFIG_DEFINITIONS.splice(index,1);
 export const CONFIG_PARAMS = CONFIG_DEFINITIONS.flatMap(group => group.params);
 export const CONFIG_DEFAULTS = Object.fromEntries(CONFIG_PARAMS.map(param => [param.key, param.defaultValue]));
 export function parseConfigValue(param, raw) {
+  if(param.type==='checklist')return parseAuditItems(raw);
   if (param.type === 'boolean') {
     if (![true, false, 'true', 'false'].includes(raw)) throw new Error(`${param.label}: pilih aktif atau nonaktif`);
     return raw === true || raw === 'true';

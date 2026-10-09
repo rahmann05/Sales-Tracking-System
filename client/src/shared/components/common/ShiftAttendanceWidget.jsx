@@ -3,6 +3,7 @@ import { useApp } from '../../../context/AppContext';
 
 export function ShiftAttendanceWidget() {
   const { shiftAttendance: shift, shiftBusy, shiftError, handleShiftClockIn, handleShiftClockOut, settings } = useApp();
+  if(settings.FEATURE_SHIFT_MODE==='OFF'&&!shift.clockedIn)return null;
 
   return (
     <div className="rounded-2xl border border-border-glass p-3 sm:px-4 sm:py-3 bg-surface-container/50 shadow-xs flex items-center justify-between gap-4">
@@ -21,19 +22,19 @@ export function ShiftAttendanceWidget() {
             Shift Hari Ini
           </p>
           <p className="text-xs font-semibold text-on-surface truncate">
-            {shift.clockOutTime
+            {shift.finished&&!shift.clockOutTime?'Kegiatan shift selesai (tanpa bukti keluar)':shift.clockOutTime
               ? `Selesai · ${shift.clockOutTime} WIB`
               : shift.clockedIn
-              ? `Aktif · Masuk ${shift.clockInTime} WIB`
+              ? shift.clockInTime?`Aktif · Masuk ${shift.clockInTime} WIB`:'Kegiatan shift aktif (tanpa bukti masuk)'
               : `Belum Masuk · Jadwal ${settings?.SHIFT_START_TIME || '08:00'} WIB`}
           </p>
         </div>
       </div>
 
-      {!shift.clockOutTime && (
+      {!shift.finished && (
         <button
           type="button"
-          disabled={shiftBusy}
+          disabled={shiftBusy||!shift.clockedIn&&['PAUSED','OFF'].includes(settings.FEATURE_SHIFT_MODE)}
           onClick={shift.clockedIn ? handleShiftClockOut : handleShiftClockIn}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50 ${
             shift.clockedIn

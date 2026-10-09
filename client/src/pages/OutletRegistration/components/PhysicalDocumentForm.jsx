@@ -1,3 +1,4 @@
+import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import { RegistrationIdentitySection } from './RegistrationIdentitySection';
 import { RegistrationLocationSection } from './RegistrationLocationSection';
 import { RegistrationTaxSection } from './RegistrationTaxSection';
@@ -87,7 +88,7 @@ const DAYS_LIST = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
 export const PhysicalDocumentForm = ({
   formData,
   updateField,
-  isSearchingPlace,
+  isSearchingPlace,placeSearchError,
   placeSearchResults,
   verifiedPlace,
   searchGooglePlaces,
@@ -99,6 +100,7 @@ export const PhysicalDocumentForm = ({
   onReset,
   isSubmitting = false
 }) => {
+  const featurePolicy=useFeaturePolicy('REGISTRATION');
   const {
     clusters,
     divisions,
@@ -121,7 +123,7 @@ export const PhysicalDocumentForm = ({
       setIsDebouncing(true);
       debounceTimerRef.current = setTimeout(async () => {
         setIsDebouncing(false);
-        if (searchGooglePlaces) {
+        if (searchGooglePlaces && settings.FEATURE_MAPS_MODE==='ACTIVE' && settings.PLACE_LOOKUP_PROVIDER!=='OFF') {
           await searchGooglePlaces(val.trim());
           setHasSearched(true);
         }
@@ -156,7 +158,7 @@ export const PhysicalDocumentForm = ({
 
       <BusinessCodeInput entity="NOO" value={formData.registrationCode || ''} onChange={value => updateField('registrationCode', value)} disabled={isSubmitting||Boolean(formData.revisionId)} />
       {/* ─── BOX 1: IDENTITAS OUTLET ─────────────────────────────────────────── */}
-      <section id="registration-identity" className="sales-registration-group"><h3>1. Identitas outlet</h3><RegistrationIdentitySection LOCATION_OPTIONS={LOCATION_OPTIONS} formData={formData} handleNameChange={handleNameChange} handleSelectGooglePlace={handleSelectGooglePlace} handleUnlockGooglePlace={handleUnlockGooglePlace} hasSearched={hasSearched} isDebouncing={isDebouncing} isSearchingPlace={isSearchingPlace} placeSearchResults={placeSearchResults} setHasSearched={setHasSearched} settings={settings} updateField={updateField} verifiedPlace={verifiedPlace} />
+      <section id="registration-identity" className="sales-registration-group"><h3>1. Identitas outlet</h3><RegistrationIdentitySection LOCATION_OPTIONS={LOCATION_OPTIONS} formData={formData} handleNameChange={handleNameChange} handleSelectGooglePlace={handleSelectGooglePlace} handleUnlockGooglePlace={handleUnlockGooglePlace} hasSearched={hasSearched} isDebouncing={isDebouncing} isSearchingPlace={isSearchingPlace} placeSearchError={placeSearchError} placeSearchResults={placeSearchResults} setHasSearched={setHasSearched} settings={settings} updateField={updateField} verifiedPlace={verifiedPlace} />
 
       {/* ─── BOX 2: VALIDASI GOOGLE PLACE & TITIK GPS (DI BAWAH NAMA OUTLET) ─── */}
       </section><section id="registration-location" className="sales-registration-group"><h3>2. Lokasi & dokumen</h3><RegistrationLocationSection formData={formData} handleDetectGPS={handleDetectGPS} isLocating={isLocating} gpsError={gpsError} setIsOutletCameraOpen={setIsOutletCameraOpen} settings={settings} verifiedPlace={verifiedPlace} />
@@ -192,7 +194,7 @@ export const PhysicalDocumentForm = ({
           <button type="button" onClick={()=>{if(window.confirm('Kosongkan seluruh isian formulir ini?'))onReset();}} disabled={isSubmitting} className="px-4 py-2.5 rounded-xl border-2 border-slate-500 hover:bg-surface-container font-bold text-xs transition-all cursor-pointer">
             Reset Formulir
           </button>
-          <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting||!formData.revisionId&&!featurePolicy.canStart} title={!formData.revisionId?featurePolicy.reason:undefined} className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50">
             <LuSend className="text-sm" />
             <span>{isSubmitting ? 'Mengirim Pengajuan...' : 'Ajukan Registrasi Outlet'}</span>
           </button>

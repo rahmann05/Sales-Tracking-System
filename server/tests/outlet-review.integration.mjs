@@ -48,6 +48,7 @@ try {
  eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:1})).status,409);
  mode='CONFLICT';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).body.data.code,'CONFLICT');
  detail=(await api(`/outlets/reviews/${review.id}`,spv)).body.data;eq(detail.runs.length,2);eq(detail.outlet.validationStatus,'WARNING');const previousAt=detail.outlet.validatedAt;
+ eq(detail.runs[0].result.comparisonPolicy.nameMatchPercent,70);eq(detail.runs[0].result.expiresAt,null);
  mode='ERROR';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).status,503);
  detail=(await api(`/outlets/reviews/${review.id}`,spv)).body.data;eq(detail.runs.length,3);eq(detail.runs[0].result.code,'ERROR');eq(detail.outlet.validatedAt,previousAt);
  const oldAt=detail.outlet.updatedAt;
@@ -101,6 +102,13 @@ try {
  mode='EMPTY';let follow=(await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Tinjau bukti lapangan database lama'})).body.data;
  eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:follow.id,revision:follow.revision})).body.data.code,'NO_EVIDENCE');
  follow=(await api(`/outlets/reviews/${follow.id}`,spv)).body.data;
+ const latestRun=follow.runs[0];
+ await prisma.outletValidationRun.update({where:{id:latestRun.id},data:{result:{...latestRun.result,expiresAt:new Date(Date.now()-1000).toISOString()}}});
+ eq((await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'KEEP',note:'Tidak boleh memakai bukti yang kedaluwarsa'})).status,409);
+ eq((await api(`/outlets/reviews/${follow.id}`,spv)).body.data.status,'OPEN');
+ mode='ERROR';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:follow.id,revision:follow.revision})).status,503);
+ follow=(await api(`/outlets/reviews/${follow.id}`,spv)).body.data;
+ eq((await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'KEEP',note:'Percobaan gagal tidak memperbarui bukti lama'})).status,409);
  response=await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'WAITING_FIELD',note:'Sales perlu mengecek patokan di kunjungan berikutnya',evidence:'Penanggung jawab Sales wilayah pada kunjungan berikutnya'});eq(response.body.data.status,'WAITING_FIELD');
  follow=response.body.data;
  response=await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'KEEP',note:'Sales mengonfirmasi titik master sesuai kondisi fisik',evidence:'Referensi kunjungan lapangan dan foto toko'});eq(response.body.data.status,'COMPLETED');eq(response.body.data.decision.history.length,2);

@@ -92,7 +92,7 @@ export const ALL_PERMISSIONS = [
 }, {
   key: 'can_approve_order',
   label: 'Persetujuan Order (PO)',
-  desc: 'Boleh menyetujui order (Override batas kredit / piutang macet)',
+  desc: 'Memeriksa dan memutuskan order sesuai tahap serta penugasan pemeriksa',
   categoryId: 'transaction',
   icon: LuShieldCheck
 }, {
@@ -166,19 +166,22 @@ export const ALL_PERMISSIONS = [
 {
   key: 'can_manage_system_config',
   label: 'Pengaturan Sistem',
-  desc: 'Mengubah parameter global sistem (radius GPS, SLA rute, toleransi waktu)',
+  desc: 'Khusus role dasar Admin. Izin ini tidak memberi akses pengaturan kepada role lain.',
+  reserved: true,
   categoryId: 'system',
   icon: LuSettings
 }, {
   key: 'can_manage_users',
   label: 'Manajemen Pengguna',
-  desc: 'Kelola akun pengguna, reset password, dan konfigurasi profil user',
+  desc: 'Khusus role dasar Admin: akun, reset password, dan profil pengguna.',
+  reserved: true,
   categoryId: 'system',
   icon: LuUsers
 }, {
   key: 'can_manage_roles',
+  reserved: true,
   label: 'Kelola Role & Template',
-  desc: 'Menambah role kustom baru dan mengatur template hak akses default',
+  desc: 'Khusus role dasar Admin: role kustom dan template hak akses.',
   categoryId: 'system',
   icon: LuShieldCheck
 }];

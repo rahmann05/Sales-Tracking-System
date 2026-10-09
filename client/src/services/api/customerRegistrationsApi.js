@@ -16,8 +16,8 @@ export const customerRegistrationsApi = {
     const params = new URLSearchParams({
       q
     });
-    if (lat) params.append('lat', lat);
-    if (lng) params.append('lng', lng);
+    if (Number.isFinite(lat)) params.append('lat', lat);
+    if (Number.isFinite(lng)) params.append('lng', lng);
     return await request(`/customer-registrations/search-places?${params.toString()}`);
   },
   reverseGeocode: async (lat, lng) => {

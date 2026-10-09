@@ -99,6 +99,12 @@ export const MapProvider = ({ children }) => {
 
     /** Called by PersistentMapShell when the underlying google map is created */
     const setMapInstance = useCallback((map) => {
+        if(mapInstanceRef.current!==map){
+            for(const group of [markersRef,polylinesRef,polygonsRef]){for(const item of group.current.values())item.setMap(null);group.current.clear();}
+            gpsMarkerRef.current?.setMap(null);gpsMarkerRef.current=null;
+            clickListenerRef.current?.remove();clickListenerRef.current=null;
+            if(mapInstanceRef.current&&window.google?.maps?.event)window.google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+        }
         mapInstanceRef.current = map;
         setIsMapReady(!!map);
 

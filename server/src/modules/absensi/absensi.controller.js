@@ -5,14 +5,14 @@ import { successResponse } from '../../utils/response.js';
 export const checkIn = async (req, res, next) => {
   try {
     const { pjpStopId } = req.params;
-    const { latitude, longitude, photoUrl, notes } = req.body;
+    const { latitude, longitude, photoUrl, notes,accuracy,observedAt } = req.body;
     const data = await absensiService.checkIn(
       pjpStopId,
       req.user.id,
-      parseFloat(latitude),
-      parseFloat(longitude),
+      latitude == null ? null : Number(latitude),
+      longitude == null ? null : Number(longitude),
       photoUrl,
-      notes
+      notes,{accuracy,observedAt}
     );
     return successResponse(res, 201, data, 'Absen IN berhasil');
   } catch (error) {
@@ -33,14 +33,14 @@ export const checkOut = async (req, res, next) => {
       orderAmount,
       skuSold,
       productIds,
-      visitOutcome,
+      visitOutcome,accuracy,observedAt,
     } = req.body;
 
     const data = await absensiService.checkOut(
       pjpStopId,
       req.user.id,
-      parseFloat(latitude),
-      parseFloat(longitude),
+      latitude == null ? null : Number(latitude),
+      longitude == null ? null : Number(longitude),
       photoUrl,
       {
         notes,
@@ -49,7 +49,7 @@ export const checkOut = async (req, res, next) => {
         orderAmount,
         skuSold,
         productIds,
-        visitOutcome,
+        visitOutcome,accuracy,observedAt,
       }
     );
     return successResponse(res, 201, data, 'Absen OUT berhasil');

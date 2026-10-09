@@ -1,3 +1,7 @@
+import {gpsEvidence} from '../../../utils/gps-evidence.js';
+import {validateVisitResult} from './visit-session.service.js';
+import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
+import {createCollectionFollowUp} from './collection-follow-up.service.js';
 import { createHash } from 'node:crypto';
 import { resolveSalesResult } from './resolve-sales-result.service.js';
 import {visitOutcomeSchema} from '../visit-outcome.schema.js';
@@ -33,12 +37,17 @@ export const createOffPjpAttendance = async (userId, data) => {
         return existing;
       }
     }
+    if(await getDynamicConfig('FEATURE_OFF_PJP_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Kunjungan luar PJP baru dijeda oleh Admin',409);
     if (!await getDynamicConfig('OFF_PJP_ENABLED', true)) throw new AppError('Kunjungan luar PJP dinonaktifkan admin', 403);
+    if(await getDynamicConfig('OFF_PJP_REQUIRE_PHOTO',true)&&!photoUrl)throw new AppError('Foto luar PJP wajib diisi',422);
+    if(await getDynamicConfig('OFF_PJP_REQUIRE_GPS',true)&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)))throw new AppError('GPS luar PJP wajib diisi',422);
+    await validateVisitResult(data);
+    const needsReview=await getDynamicConfig('OFF_PJP_REQUIRE_REVIEW',true);
     const salesResult = await resolveSalesResult(data);
     const record = await tx.offPjpAttendance.create({
     data: {
       ...captureReportAssignment(sales, 'OFF_PJP_SUBMISSION'),
-      userId,
+      userId,gpsEvidence:await gpsEvidence(data),policySnapshot:await capturePolicySnapshot(),
       ...salesResult,
       ...(data.visitOutcome?{visitOutcome:visitOutcomeSchema.parse(data.visitOutcome)}:{}),
       outletId: outletId || null,
@@ -47,10 +56,10 @@ export const createOffPjpAttendance = async (userId, data) => {
       phone: phone || null,
       address,
       reason,
-      latitude,
-      longitude,
+      latitude:latitude??null,
+      longitude:longitude??null,
       photoUrl: photoUrl || null,
-      status: OFF_PJP_STATUS.PENDING,
+      status: needsReview?OFF_PJP_STATUS.PENDING:OFF_PJP_STATUS.APPROVED,
     },
     include: {
       user: { select: { id: true, name: true } },
@@ -58,7 +67,8 @@ export const createOffPjpAttendance = async (userId, data) => {
     },
     });
 
-  await createBulkNotificationByRoles(
+  if(!needsReview)await createCollectionFollowUp(tx,{...record,outletName},'OFF_PJP');
+  if(needsReview)await createBulkNotificationByRoles(
     [ROLES.SUPERVISOR],
     NOTIFICATION_TYPES.OFF_PJP_SUBMITTED,
     'Absen Toko Luar RJP (Menunggu Validasi)',

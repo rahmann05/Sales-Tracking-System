@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useGeofence } from '../../hooks/useGeofence';
 import { useDeviceCamera } from '../../hooks/useDeviceCamera';
 import { useLiveClock } from '../../hooks/useLiveClock';
@@ -26,6 +26,7 @@ export const DeviceCameraCapture = ({
   onRetake,
   facingModeDefault = 'user',
   requireGps = true,
+  photoRequired = true,
   enforceGeofence = true,
   targetLat = null,
   targetLng = null,
@@ -34,6 +35,7 @@ export const DeviceCameraCapture = ({
   buttonLabel = 'Jepret Foto Presensi (GPS Terverifikasi)',
 }) => {
   const canvasRef = useRef(null);
+  const [cameraRequested,setCameraRequested]=useState(false);
   const { user, settings, incidents } = useApp();
 
   // Only the current account’s administrator-configured exception permits bypass.
@@ -49,10 +51,9 @@ export const DeviceCameraCapture = ({
     facingMode,
     cameraActive,
     cameraError,
-    startCamera,
     stopCamera,
     toggleFacingMode,
-  } = useDeviceCamera(facingModeDefault, !capturedPhoto);
+  } = useDeviceCamera(facingModeDefault, !capturedPhoto&&(photoRequired||cameraRequested));
 
   // 3. Dedicated GPS & Geofence Hook
   const {
@@ -61,7 +62,7 @@ export const DeviceCameraCapture = ({
     isGpsLocked,
     refreshGpsLocation,
     isWithinGeofence,
-  } = useGeofence(targetLat, targetLng, maxRadiusMeters);
+  } = useGeofence(targetLat, targetLng, maxRadiusMeters,requireGps);
 
   useEffect(() => {
     if (onLocationChange) onLocationChange(isGpsLocked ? userLocation : null);
@@ -123,7 +124,7 @@ export const DeviceCameraCapture = ({
 
   const handleRetakePhoto = () => {
     onRetake();
-    startCamera();
+    setCameraRequested(true);
   };
 
   return (
@@ -150,7 +151,7 @@ export const DeviceCameraCapture = ({
       {/* 2. Live Camera View or Captured Photo Preview */}
       {capturedPhoto ? (
         <CapturedPhotoPreview capturedPhoto={capturedPhoto} onRetake={handleRetakePhoto} />
-      ) : (
+      ) : photoRequired||cameraRequested ? (
         <div className="relative rounded-2xl overflow-hidden aspect-video bg-slate-950 border border-border-glass shadow-inner flex items-center justify-center">
           <CameraLiveVideoFeed
             videoRef={videoRef}
@@ -174,10 +175,10 @@ export const DeviceCameraCapture = ({
             isGpsLocked={isGpsLocked}
           />
         </div>
-      )}
+      ) : <div className="rounded-xl border border-border-glass p-4 space-y-2"><p className="text-sm">Foto opsional. Anda dapat melanjutkan tanpa membuka kamera.</p><button type="button" className="config-button min-h-11" onClick={()=>setCameraRequested(true)}>Tambahkan foto</button></div>}
 
       {/* 3. Action Capture Button & Fallback */}
-      {!capturedPhoto && (
+      {!capturedPhoto && (photoRequired||cameraRequested) && (
         <div className="space-y-2">
           <CameraCaptureButton
             requireGps={requireGps}

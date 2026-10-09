@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * Custom Hook for Live Device GPS Tracking & Geofencing (Haversine Formula)
  * Supports real-time GPS tracking, accuracy threshold, and geofence distance calculation.
  */
-export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters = 50) => {
+export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters = 50, enabled = true) => {
   const [gpsStatus, setGpsStatus] = useState('SEARCHING'); // 'SEARCHING', 'LOCKED', 'ERROR', 'UNSUPPORTED'
   const [gpsError, setGpsError] = useState(null);
   const [userLocation, setUserLocation] = useState(null); // { lat, lng, accuracy, timestamp }
   const watchIdRef = useRef(null);
+  const requestRef = useRef(0);
 
   /**
    * Calculate distance between two coordinates in meters using Haversine formula
@@ -32,6 +33,7 @@ export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters 
 
   // Request & watch live device GPS
   const refreshGpsLocation = useCallback(() => {
+    const request=++requestRef.current;
     setGpsStatus('SEARCHING');
     setGpsError(null);
 
@@ -42,11 +44,13 @@ export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters 
     }
 
     const handleSuccess = (position) => {
+      if(request!==requestRef.current)return;
       const { latitude, longitude, accuracy } = position.coords;
       setUserLocation({
         lat: latitude,
         lng: longitude,
         accuracy: Math.round(accuracy),
+        observedAt:new Date(position.timestamp).toISOString(),
         timestamp: new Date(position.timestamp).toLocaleTimeString(),
       });
       setGpsStatus('LOCKED');
@@ -54,6 +58,7 @@ export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters 
     };
 
     const handleError = (error) => {
+      if(request!==requestRef.current)return;
       setGpsStatus('ERROR');
       if (error.code === error.PERMISSION_DENIED) {
         setGpsError('Izin akses lokasi (GPS) ditolak. Harap aktifkan izin lokasi di browser/HP Anda.');
@@ -74,7 +79,7 @@ export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters 
     });
 
     // Start watching position
-    if (watchIdRef.current) {
+    if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
@@ -90,13 +95,15 @@ export const useGeofence = (targetLat = null, targetLng = null, maxRadiusMeters 
   }, []);
 
   useEffect(() => {
-    refreshGpsLocation();
+    if(enabled)refreshGpsLocation();
     return () => {
-      if (watchIdRef.current && navigator.geolocation) {
+      requestRef.current++;
+      if (watchIdRef.current !== null && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current=null;
       }
     };
-  }, [refreshGpsLocation]);
+  }, [refreshGpsLocation,enabled]);
 
   /**
    * Verify if target is inside allowed radius (e.g. 50 meters)

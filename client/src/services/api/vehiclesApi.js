@@ -1,5 +1,7 @@
 import { request } from "../httpClient";
 export const vehiclesApi = {
+  setServicePolicy:(id,data)=>request(`/vehicles/${id}/service-policy`,{method:'PATCH',body:JSON.stringify(data)}),
+  getById:id=>request(`/vehicles/${id}`),
   setCondition: (id,data) => request(`/vehicles/${id}/condition`,{method:'PATCH',body:JSON.stringify(data)}),
   getAll: async () => request('/vehicles'),
   create: async data => request('/vehicles', {

@@ -1,14 +1,17 @@
+import {useFeaturePolicy} from '../../hooks/useFeaturePolicy';
 import React, { useState } from 'react';
 import {unitDefinitionError} from '../../../../../shared/product-units.mjs';
 import { productsApi } from '../../../services/api';
 import { BusinessCodeInput } from './BusinessCodeInput';
 
 export function ProductForm({ product, onSaved, onCancel }) {
+  const featurePolicy=useFeaturePolicy('PRODUCTS');
   const [form, setForm] = useState(product || { sku: '', name: '', price: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const submit = async e => {
     e.preventDefault();
+    if(!featurePolicy.canStart){setError(featurePolicy.reason);return;}
     const units={unit:form.unit,baseUnit:form.baseUnit,unitsPerUnit:Number(form.unitsPerUnit)};
     const unitError=unitDefinitionError(units);if(unitError){setError(unitError);return;}
     setBusy(true); setError('');
@@ -19,6 +22,7 @@ export function ProductForm({ product, onSaved, onCancel }) {
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
   return <form onSubmit={submit} className="rounded-xl border border-border-glass bg-surface-container p-4 space-y-4">
+    {!featurePolicy.canStart&&<p role="status" className="app-notice">{featurePolicy.reason} Isian tetap tersimpan selama formulir terbuka.</p>}
     <h4 className="font-semibold">{product ? 'Ubah produk' : 'Tambah produk'}</h4>
     <BusinessCodeInput entity="PRODUCT_SKU" value={form.sku} onChange={sku=>setForm({...form,sku})} existing={Boolean(product?.id)} />
     <BusinessCodeInput entity="PRODUCT" value={form.code} onChange={code=>setForm({...form,code})} existing={Boolean(product?.id)} optional />
@@ -34,6 +38,6 @@ export function ProductForm({ product, onSaved, onCancel }) {
       <label>Isi per satuan jual<input required type="number" min={1} max={1000000} step={1} className="form-input w-full" value={form.unitsPerUnit??''} onChange={e=>setForm({...form,unitsPerUnit:e.target.value})}/></label>
     </div><p className="text-xs">Perubahan berlaku untuk order baru. Transaksi sebelumnya mempertahankan satuan dan isi kemasannya.</p></fieldset>
     {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
-    <div className="flex flex-wrap gap-2"><button disabled={busy} className="btn btn-primary min-h-11" type="submit">{busy ? 'Menyimpan…' : 'Simpan produk'}</button><button disabled={busy} type="button" className="btn btn-secondary min-h-11" onClick={onCancel}>Batal</button></div>
+    <div className="flex flex-wrap gap-2"><button disabled={busy||!featurePolicy.canStart} className="btn btn-primary min-h-11" type="submit">{busy ? 'Menyimpan…' : 'Simpan produk'}</button><button disabled={busy} type="button" className="btn btn-secondary min-h-11" onClick={onCancel}>Batal</button></div>
   </form>;
 }

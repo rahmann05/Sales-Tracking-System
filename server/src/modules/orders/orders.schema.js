@@ -3,7 +3,7 @@ import { z } from 'zod';
 const orderItemSchema = z.object({
   productId: z.string().uuid('productId harus berformat UUID'),
   quantity: z.number().int().positive('Kuantitas harus lebih dari 0'),
-  unitPrice: z.number().positive().optional(),
+  unitPrice: z.number().finite().positive().optional(),
   unit:z.string().max(32).nullable().optional(),
   baseUnit:z.string().max(32).nullable().optional(),
   unitsPerUnit:z.number().int().positive().nullable().optional(),
@@ -12,6 +12,7 @@ const orderItemSchema = z.object({
 export const createOrderSchema = z.object({
   body: z.object({
     requestId:z.string().uuid().optional(),
+    priceOverrideReason:z.string().trim().max(2000).optional(),
     expectedTotal:z.number().nonnegative().optional(),
     expectedTermDays:z.number().int().nonnegative().optional(),
     code: z.string().trim().max(128).optional(),

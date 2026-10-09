@@ -1,0 +1,15 @@
+import React,{useState} from 'react';
+import {useApp} from '../../../context/AppContext';
+import {vehiclesApi} from '../../../services/api';
+import {VEHICLE_SERVICE_TYPES} from '../../../../../shared/vehicle-service-policy.mjs';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
+import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
+export function VehicleServicePolicyEditor({vehicle,onChanged}){
+ const {settings}=useApp(),feature=useFeaturePolicy('VEHICLES');
+ const initial=Object.fromEntries(VEHICLE_SERVICE_TYPES.map(type=>[type.key,String(vehicle.maintenancePolicy?.intervals?.[type.key]??'')]));
+ const [intervals,setIntervals]=useState(initial),[mode,setMode]=useState(vehicle.maintenancePolicy?.reminderMode||'INHERIT'),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const changed=mode!==(vehicle.maintenancePolicy?.reminderMode||'INHERIT')||VEHICLE_SERVICE_TYPES.some(type=>intervals[type.key]!==initial[type.key]);
+ useUnsavedNavigation(changed||Boolean(reason),busy);
+ const save=async event=>{event.preventDefault();if(busy||!changed||!feature.canStart)return;setBusy(true);setError('');try{await vehiclesApi.setServicePolicy(vehicle.id,{updatedAt:vehicle.updatedAt,reason,reminderMode:mode,intervals:Object.fromEntries(Object.entries(intervals).map(([key,value])=>[key,value===''?null:Number(value)]))});setReason('');await onChanged();}catch(e){setError(e.message);}finally{setBusy(false);}};
+ return <details className="admin-panel logistics-action-panel vehicle-service-policy"><summary className="font-semibold cursor-pointer min-h-11">Atur interval khusus kendaraan</summary><form className="space-y-4" onSubmit={save}><p className="admin-footnote">Interval dalam kilometer. Kosong mengikuti profil aturan yang efektif. Perubahan tidak mengubah odometer atau menganggap servis sudah dilakukan.</p><fieldset disabled={busy||!feature.canStart} className="space-y-4"><label className="app-field">Pengingat untuk kendaraan ini<select value={mode} onChange={e=>setMode(e.target.value)}><option value="INHERIT">Ikuti profil</option><option value="ON">Aktif</option><option value="OFF">Nonaktif</option></select></label><div className="vehicle-service-intervals">{VEHICLE_SERVICE_TYPES.map(type=><label className="app-field" key={type.key}>{type.label}<input type="number" min="100" max={type.max} step="1" value={intervals[type.key]} placeholder={`Ikuti profil: ${settings[type.config]??type.defaultKm} km`} onChange={e=>setIntervals(v=>({...v,[type.key]:e.target.value}))}/><small>Nilai khusus: 100–{type.max.toLocaleString('id-ID')} km</small></label>)}</div><label className="app-field">Alasan perubahan<textarea minLength={5} maxLength={2000} required value={reason} onChange={e=>setReason(e.target.value)}/></label><button className="admin-button primary" disabled={!changed||reason.trim().length<5} type="submit">{busy?'Menyimpan…':'Simpan aturan kendaraan'}</button></fieldset>{!feature.canStart&&<p className="admin-footnote">{feature.reason}</p>}{error&&<p className="app-error" role="alert">{error}</p>}</form></details>;
+}

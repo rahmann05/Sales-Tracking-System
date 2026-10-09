@@ -1,3 +1,4 @@
+import {downloadOperationalFile} from '../../../services/operationalExportService';
 import { MtdMetrics } from './MtdMetrics';
 import { mtdCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
@@ -146,12 +147,7 @@ export const MtdReportView = () => {
     const blob = new Blob(['\uFEFF' + mtdCsv(reportData)], {
       type: 'text/csv;charset=utf-8;'
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MTD_PERFORMANCE_REPORT_${reportData.period.monthName}_${year}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadOperationalFile(blob,`MTD_PERFORMANCE_REPORT_${reportData.period.monthName}_${year}.csv`,'text/csv;charset=utf-8;');
   };
   const {
     period = {},

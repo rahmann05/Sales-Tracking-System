@@ -2,8 +2,11 @@ import { wibDateKey, wibDayRange } from '../../../../../shared/visit-metrics.mjs
 import { workingDays } from '../../../../../shared/working-calendar.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
+import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
+import {withPolicy} from '../../config/services/policy-context.service.js';
 import { resolveBusinessCode, getCodePolicy } from '../../config/services/business-code.service.js';
 import { captureReportAssignment, REPORT_USER_SELECT } from '../../reports/services/report-assignment.service.js';
+import {planningCalendar} from './planning-calendar.service.js';
 
 export const getIsoWeekNumber = (date = new Date()) => {
   const d = new Date(`${wibDateKey(date)}T00:00:00Z`);
@@ -32,8 +35,10 @@ export const ensureTodayPjpForSales = async (userId, manualCode) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${userId}:${key}`}))`;
     const existing = await tx.pjp.findFirst({ where: { userId, date: wibDayRange(now), type: 'SALES' }, include: { stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } } } });
     if (existing) return existing;
+    if(await getDynamicConfig('FEATURE_PJP_MODE','ACTIVE')!=='ACTIVE')return null;
     if ((await getCodePolicy('PJP')).mode === 'MANUAL' && !manualCode?.trim()) return null;
-    if (!workingDays(days).includes(dayOfWeek)) return null;
+    const calendar=await planningCalendar(tx,key,key);
+    if(calendar.missing.length||!(calendar.workingDates?calendar.workingDates.includes(key):workingDays(days).includes(dayOfWeek)))return null;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
     const sales = await tx.user.findUnique({ where: { id: userId }, select: { ...REPORT_USER_SELECT, deletedAt: true } });
     if (!sales || sales.deletedAt || sales.role !== 'SALES' || !sales.supervisorId) return null;
@@ -55,11 +60,11 @@ export const ensureTodayPjpForSales = async (userId, manualCode) => {
   });
 };
 export const generateTodayPjpsAllSales = async (codes = {}) => {
-  const sales = await prisma.user.findMany({ where: { role: 'SALES', deletedAt: null }, select: { id: true } });
+  const sales = await prisma.user.findMany({ where: { role: 'SALES', deletedAt: null }, select: { id: true,role:true,supervisorId:true } });
   let count = 0;
   for (const user of sales) {
     const before = await prisma.pjp.findFirst({ where: { userId: user.id, type: 'SALES', date: wibDayRange() }, select: { id: true } });
-    if (!before && await ensureTodayPjpForSales(user.id,codes[user.id])) count++;
+    if (!before && await withPolicy(await effectivePolicy(user),()=>ensureTodayPjpForSales(user.id,codes[user.id]))) count++;
   }
   return count;
 };

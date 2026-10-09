@@ -1,49 +1,39 @@
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
-import { INITIAL_FORM } from "./registrationInitialForm";
+import { registrationDefaults } from "./registrationInitialForm";
 import {registrationRevisionFields} from './registrationRevision';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { customerRegistrationsApi, configApi } from '../../../services/api';
+import { customerRegistrationsApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
 import { manualCodeRequired } from '../../../../../shared/coding.mjs';
 // Manages registration drafts, explicit location capture, submission and revisions.
 export const useOutletRegistrationForm = onSuccess => {
-  const {settings} = useApp();
+  const {settings,settingsReady} = useApp();
   const searchVersion = useRef(0);
+  const lookupEnabled=settingsReady&&settings.FEATURE_MAPS_MODE==='ACTIVE'&&settings.PLACE_LOOKUP_PROVIDER!=='OFF';
+  const lookupRef=useRef(lookupEnabled);lookupRef.current=lookupEnabled;
   const gpsVersion = useRef(0);
   const submissionId=useRef(crypto.randomUUID());
   const [dirty,setDirty]=useState(false);
-  const draft=useFormDraft('outlet-registration',INITIAL_FORM,value=>({...value,latitude:null,longitude:null,photoUrl:null,taxDocumentUrl:null,placeId:null,placeDetails:null,locationEvidence:null}));
+  const draft=useFormDraft('outlet-registration',()=>registrationDefaults(settings),value=>({...value,latitude:null,longitude:null,photoUrl:null,taxDocumentUrl:null,placeId:null,placeDetails:null,locationEvidence:null}));
   const formData=draft.value,setFormData=draft.setValue;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gpsError,setGpsError]=useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
   const [placeSearchResults, setPlaceSearchResults] = useState([]);
+  const [placeSearchError,setPlaceSearchError]=useState('');
+  useEffect(()=>{if(!lookupEnabled){searchVersion.current++;setPlaceSearchResults([]);setIsSearchingPlace(false);setPlaceSearchError('');}},[lookupEnabled]);
   const [verifiedPlace, setVerifiedPlace] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(null);
   const [submitError, setSubmitError] = useState('');
   useUnsavedNavigation(dirty||draft.restored,isSubmitting);
   useEffect(()=>()=>{gpsVersion.current++;searchVersion.current++;},[]);
 
-  // 1. Load active division from database SystemConfig
+  // Apply effective defaults only to a fresh form; never overwrite a restored draft or revision.
   useEffect(() => {
-    const fetchActiveDivision = async () => {
-      try {
-        const res = await configApi.getByKey('ACTIVE_DIVISION');
-        if (res?.data) {
-          const divVal = typeof res.data === 'string' ? res.data : res.data.value || 'BELFOODS';
-          setFormData(prev => ({
-            ...prev,
-            division: divVal
-          }));
-        }
-      } catch (err) {
-        console.warn('[useOutletRegistrationForm] Failed to load ACTIVE_DIVISION config:', err);
-      }
-    };
-    fetchActiveDivision();
-  }, []);
+    if(settingsReady&&!dirty&&!draft.restored&&!formData.revisionId)setFormData(prev=>({...prev,...Object.fromEntries(['division','branch','paymentType','termOfPaymentDays','visitIntervalWeeks'].map(key=>[key,registrationDefaults(settings)[key]]))}));
+  }, [settingsReady,settings]); // Defaults refresh without replacing entered data.
 
   // 2. GPS is requested explicitly while the sales rep is at the outlet.
   const handleDetectGPS = useCallback(() => {
@@ -71,10 +61,11 @@ export const useOutletRegistrationForm = onSuccess => {
       }));
       setIsLocating(false);
 
-      // Reverse geocode to autofill subArea/kelurahan/area
+      // Reverse geocode is optional; device GPS remains usable when lookup is off.
+      if(!lookupRef.current)return;
       try {
         const geoRes = await customerRegistrationsApi.reverseGeocode(lat, lng);
-        if (geoRes?.data && version===gpsVersion.current) {
+        if (geoRes?.data && lookupRef.current && version===gpsVersion.current) {
           setFormData(prev => ({
             ...prev,
             subAreaKecamatan: prev.subAreaKecamatan || geoRes.data.subAreaKecamatan || '',
@@ -109,17 +100,17 @@ export const useOutletRegistrationForm = onSuccess => {
   // 3. Search Google Places API by keyword
   const searchGooglePlaces = async keyword => {
     const version = ++searchVersion.current;
-    if (!keyword || keyword.trim().length < 2) {
+    if (!lookupRef.current || !keyword || keyword.trim().length < 2) {
       setPlaceSearchResults([]);
       return;
     }
+    setPlaceSearchError('');
     setIsSearchingPlace(true);
     try {
       const res = await customerRegistrationsApi.searchPlaces(keyword, formData.latitude, formData.longitude);
       if (version === searchVersion.current) setPlaceSearchResults(res?.data || []);
     } catch (err) {
-      console.warn('[searchGooglePlaces error]:', err.message);
-      if (version === searchVersion.current) setPlaceSearchResults([]);
+      if (version === searchVersion.current){setPlaceSearchResults([]);setPlaceSearchError(err.message||'Layanan peta belum tersedia. Isi alamat manual.');}
     } finally {
       if (version === searchVersion.current) setIsSearchingPlace(false);
     }
@@ -209,7 +200,7 @@ export const useOutletRegistrationForm = onSuccess => {
     setDirty(false);setGpsError('');setIsLocating(false);
     searchVersion.current++;
     setIsSearchingPlace(false);
-    setFormData(prev=>({...INITIAL_FORM,division:prev.division,divisionName:prev.divisionName,divisionId:prev.divisionId}));
+    setFormData(prev=>({...registrationDefaults(settings),division:prev.division,divisionName:prev.divisionName,divisionId:prev.divisionId}));
     draft.clear();
     setVerifiedPlace(null);
     setPlaceSearchResults([]);
@@ -259,7 +250,7 @@ export const useOutletRegistrationForm = onSuccess => {
         visitDays: Array.isArray(formData.visitDays) ? formData.visitDays.join(',') : formData.visitDays,
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
-        termOfPaymentDays: Number(formData.termOfPaymentDays) || 0
+        termOfPaymentDays:formData.paymentType==='TOP'?Number(formData.termOfPaymentDays):0
       };
       const res = formData.revisionId?await customerRegistrationsApi.revise(formData.revisionId,{...payload,updatedAt:formData.revisionUpdatedAt,revisionReason:formData.revisionReason}):await customerRegistrationsApi.create(payload);
       resetForm();
@@ -281,7 +272,7 @@ export const useOutletRegistrationForm = onSuccess => {
     updateField,
     isSubmitting,
     isLocating,gpsError,
-    isSearchingPlace,
+    isSearchingPlace,placeSearchError,
     placeSearchResults,
     verifiedPlace,
     submitSuccess,

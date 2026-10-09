@@ -28,7 +28,7 @@ export const OutletRegistrationPage = () => {
     updateField,
     isSubmitting,
     isLocating,gpsError,
-    isSearchingPlace,
+    isSearchingPlace,placeSearchError,
     placeSearchResults,
     verifiedPlace,
     submitSuccess,
@@ -88,7 +88,7 @@ export const OutletRegistrationPage = () => {
               <div>
                 <strong>Pengajuan Berhasil Disubmit!</strong>
                 <p className="text-xs m-0 mt-0.5">
-                  Pengajuan pendaftaran outlet &quot;{submitSuccess.name}&quot; telah dikirimkan ke Supervisor untuk persetujuan.
+                  Pengajuan pendaftaran outlet &quot;{submitSuccess.name}&quot; telah tersimpan. Lihat tahap pemeriksaan dan aktivasi pada Riwayat.
                 </p>
               </div>
             </div>
@@ -107,6 +107,7 @@ export const OutletRegistrationPage = () => {
             formData={formData}
             updateField={updateField}
             isSearchingPlace={isSearchingPlace}
+            placeSearchError={placeSearchError}
             placeSearchResults={placeSearchResults}
             verifiedPlace={verifiedPlace}
             searchGooglePlaces={searchGooglePlaces}

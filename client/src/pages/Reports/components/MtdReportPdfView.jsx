@@ -1,3 +1,4 @@
+import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
@@ -13,7 +14,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
   const { period = {}, summary = {}, channelBreakdown = [], salesmen = [] } = reportData;
 
   const handlePrint = () => {
-    window.print();
+    printOperationalDocument('REPORTS');
   };
 
   return (

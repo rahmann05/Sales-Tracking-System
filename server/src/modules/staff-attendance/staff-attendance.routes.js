@@ -12,7 +12,7 @@ router.get('/follow-ups',async(req,res,next)=>{try{res.json({data:await listFoll
 router.patch('/follow-ups/:id',async(req,res,next)=>{try{res.json({data:await completeFollowUp(req.params.id,req.user,req.body.note,req.body.evidence)});}catch(e){next(e);}});
 router.post('/follow-ups/:id/review',authorize('ADMIN','SUPERVISOR'),async(req,res,next)=>{try{res.json({data:await reviewFollowUp(req.params.id,req.user,req.body)});}catch(e){next(e);}});
 router.get('/', async (req, res, next) => {
-  try { res.json({ data: await prisma.staffActivity.findMany({ where: { userId:req.user.id, OR:[{dateKey:wibDateKey()},{kind:'SHIFT',checkOutAt:null}] }, orderBy: { checkInAt: 'asc' } }) }); }
+  try { const rows=await prisma.staffActivity.findMany({ where: { userId:req.user.id, OR:[{dateKey:wibDateKey()},{kind:'SHIFT',checkOutAt:null}] }, orderBy: { checkInAt: 'asc' } });res.json({data:rows.filter(row=>row.dateKey===wibDateKey()||row.checklist?.state!=='FINISHED')}); }
   catch (error) { next(error); }
 });
 router.get('/report', authorize('ADMIN', 'SUPERVISOR', 'KEPALA_GUDANG'), async (req, res, next) => {

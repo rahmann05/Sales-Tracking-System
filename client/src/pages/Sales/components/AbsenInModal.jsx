@@ -1,3 +1,4 @@
+import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {SalesDialog} from './SalesDialog';
 import { useApp } from '../../../context/AppContext';
@@ -11,7 +12,10 @@ import { AbsenNotesInput } from './AbsenNotesInput';
  * Single Responsibility: Sales Rep Absen In with Live Camera, Real-Time GPS Tracking, and Keterangan Masuk.
  */
 export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
-  const { settings,user } = useApp();
+  const { settings:runtime,user } = useApp();
+  const settings={...runtime,...stop?.policySnapshot?.values};
+  const policy=visitPolicy(settings);
+  const requireEvidence=policy.mode!=='OPTIONAL';
   const draft=useFormDraft(`AbsenInModal:${stop?.id}`,{notes:'Kunjungan pelanggan'});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -49,8 +53,8 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
 
   const handleConfirm = async () => {
     if (saving) return;
-    if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
-    if (settings.ATTENDANCE_REQUIRE_PHOTO && !capturedPhoto) {
+    if (requireEvidence && settings.SALES_REQUIRE_GPS && (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng))) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
+    if (requireEvidence && policy.photoIn && !capturedPhoto) {
       setError('Ambil foto presensi menggunakan kamera terlebih dahulu.');
       return;
     }
@@ -65,14 +69,15 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return <SalesDialog title="Absen masuk" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
+  return <SalesDialog title={requireEvidence?"Absen masuk":"Mulai kegiatan kunjungan"} description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
         {/* 1. Live Device Camera & GPS Verification (Top Section) */}
-        <DeviceCameraCapture outletId={stop.outletId}
+        {requireEvidence && <DeviceCameraCapture outletId={stop.outletId}
+          photoRequired={policy.photoIn}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
-          onLocationChange={settings.ATTENDANCE_REQUIRE_PHOTO ? undefined : setGpsData}
+          onLocationChange={requireEvidence && policy.photoIn ? undefined : setGpsData}
           onRetake={handleRetake}
-          requireGps={true}
+          requireGps={settings.SALES_REQUIRE_GPS}
           enforceGeofence={settings.ATTENDANCE_ENFORCE_GEOFENCE}
           targetLat={stop.latitude}
           targetLng={stop.longitude}
@@ -80,7 +85,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen In"
-        />
+        />}
 
         {/* 2. Keterangan Kunjungan Awal (Below Camera) */}
         <AbsenNotesInput
@@ -92,8 +97,8 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {/* 3. Confirmation Button */}
-        {!settings.ATTENDANCE_REQUIRE_PHOTO && <p className="text-xs text-on-surface-variant">Foto opsional. Tunggu GPS aktif sebelum mengirim absensi.</p>}
-        {(capturedPhoto || !settings.ATTENDANCE_REQUIRE_PHOTO) && (
+        {!(requireEvidence && policy.photoIn) && <p className="text-xs text-on-surface-variant">{requireEvidence?`Foto opsional.${settings.SALES_REQUIRE_GPS?' Tunggu GPS aktif sebelum mengirim absensi.':''}`:'Kegiatan tanpa presensi wajib; foto dan GPS tidak diperlukan.'}</p>}
+        {(capturedPhoto || !(requireEvidence && policy.photoIn)) && (
           <button
             type="button"
             onClick={handleConfirm}
@@ -101,7 +106,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
             className="w-full py-3 bg-primary text-on-primary font-bold text-sm rounded-xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
           >
             <FiCheckCircle className="text-lg" />
-            <span>Konfirmasi Absen In Toko</span>
+            <span>{requireEvidence?'Konfirmasi absen masuk':'Mulai kegiatan'}</span>
           </button>
         )}
   </SalesDialog>;

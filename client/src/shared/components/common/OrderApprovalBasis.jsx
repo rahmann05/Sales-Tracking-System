@@ -1,0 +1,7 @@
+import React from 'react';
+import {POLICY_OPTION_LABELS} from '../../../../../shared/operational-policy.mjs';
+export function OrderApprovalBasis({order}){
+ const decision=order.policySnapshot?.orderApproval;
+ if(!decision)return null;
+ return <details className="mx-4 mb-4 rounded-xl border border-border-glass p-4 text-sm"><summary className="cursor-pointer min-h-11 font-semibold">Dasar alur order · {POLICY_OPTION_LABELS[decision.mode]||decision.mode}</summary><div className="space-y-2"><p>{decision.source==='PRICE_OVERRIDE'?'Persetujuan mengikuti perubahan harga katalog.':decision.source==='AMOUNT'?`Total order memenuhi batas Rp ${Number(decision.threshold).toLocaleString('id-ID')}.`:'Persetujuan mengikuti aturan dasar.'}</p>{decision.matched?.amount&&decision.matched?.priceOverride&&<p>Kedua kondisi terpenuhi; prioritas {decision.priority==='AMOUNT_FIRST'?'batas nominal':'perubahan harga'}.</p>}{decision.priceOverrides?.length>0&&<ul className="space-y-2">{decision.priceOverrides.map(row=><li key={row.productId}>{row.productName||'Produk order'}: harga katalog Rp {Number(row.catalogPrice).toLocaleString('id-ID')} → Rp {Number(row.appliedPrice).toLocaleString('id-ID')} per unit.</li>)}</ul>}{decision.reason&&<p>Alasan Sales: {decision.reason}</p>}<p className="admin-footnote">Dasar ini disimpan saat order dibuat. Perubahan parameter berikutnya tidak mengubah alurnya.</p></div></details>;
+}

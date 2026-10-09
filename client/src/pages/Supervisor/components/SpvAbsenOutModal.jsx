@@ -8,7 +8,7 @@ import { SpvModalShell } from './SpvModalShell';
  */
 export const SpvAbsenOutModal = ({ stop, onClose, onConfirm, error, saving }) => (
     <SpvModalShell error={error} saving={saving}
-        title="Absen Keluar (Selesai Kunjungan)"
+        title="Selesaikan kunjungan supervisi"
         subtitle={stop.outletName}
         onClose={onClose}
         footer={
@@ -38,7 +38,7 @@ export const SpvAbsenOutModal = ({ stop, onClose, onConfirm, error, saving }) =>
             <div>
                 <h4 className="font-bold text-on-surface text-base">Selesaikan Kunjungan Supervisi?</h4>
                 <p className="text-xs text-on-surface-variant max-w-xs mx-auto mt-1">
-                    Waktu check-out akan dicatat dan status kunjungan outlet akan berubah menjadi Selesai.
+                    Kegiatan ditutup sesuai aturan saat kunjungan dimulai. Bukti keluar hanya dicatat jika mode presensi mewajibkannya.
                 </p>
             </div>
         </div>

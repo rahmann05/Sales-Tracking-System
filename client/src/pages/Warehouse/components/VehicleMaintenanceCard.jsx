@@ -3,6 +3,7 @@ import React from 'react';
 import { LuWrench, LuPlus } from 'react-icons/lu';
 // Use fi-icons for missing lu-icons
 import { MaintenanceBar } from "./MaintenanceBar";
+import {vehicleServiceStatus} from '../../../../../shared/vehicle-service-policy.mjs';
 export const VehicleMaintenanceCard = ({
   vehicle,
   onRecord
@@ -12,9 +13,6 @@ export const VehicleMaintenanceCard = ({
   } = useApp();
   const {
     totalKm,
-    lastOilChangeKm,
-    lastOilFilterChangeKm,
-    lastBrakePadChangeKm,
     maxCartons,
     maxWeightKg
   } = vehicle;
@@ -54,9 +52,7 @@ export const VehicleMaintenanceCard = ({
 
         {/* Maintenance Bars */}
         <div className="space-y-3 pt-2 flex-1">
-          <MaintenanceBar label="Oli Mesin" currentKm={totalKm} lastChangeKm={lastOilChangeKm} threshold={settings.OIL_CHANGE_INTERVAL_KM} />
-          <MaintenanceBar label="Filter Oli" currentKm={totalKm} lastChangeKm={lastOilFilterChangeKm} threshold={settings.OIL_FILTER_CHANGE_INTERVAL_KM} />
-          <MaintenanceBar label="Kanvas Rem" currentKm={totalKm} lastChangeKm={lastBrakePadChangeKm} threshold={settings.BRAKE_CHANGE_INTERVAL_KM} />
+          {vehicleServiceStatus(vehicle,settings).map(status=><MaintenanceBar key={status.key} status={status}/>)}
         </div>
 
         <div className="pt-3 border-t border-border-glass mt-auto">

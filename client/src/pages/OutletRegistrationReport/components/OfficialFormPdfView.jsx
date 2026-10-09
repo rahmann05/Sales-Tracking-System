@@ -1,3 +1,4 @@
+import {printOperationalDocument} from '../../../services/operationalExportService';
 import { OfficialIdentitySection } from './OfficialIdentitySection';
 import { OfficialTaxSection } from './OfficialTaxSection';
 import { OfficialChannelSection } from './OfficialChannelSection';
@@ -18,7 +19,7 @@ export const OfficialFormPdfView = ({
   const isChecked = condition => condition ? '✓' : '';
   const visitDaysList = (data.visitDays || '').toUpperCase().split(',');
   const handlePrint = () => {
-    window.print();
+    printOperationalDocument('OUTLET');
   };
   return <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Top Action Bar (hidden on print) */}

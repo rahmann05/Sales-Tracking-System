@@ -1,3 +1,5 @@
+import {policyNotification} from '../../notifications/services/notification-policy.service.js';
+import {assertApprovalRole} from '../../config/services/approval-policy.service.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** rejectRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
 import { prisma } from '../../../config/prisma.js';
@@ -11,6 +13,7 @@ import { broadcastCacheInvalidation } from '../../../config/socket.js';
 export const rejectRegistration = async (id, reason, currentUser) => {
   const registration = await prisma.customerRegistration.findUnique({ where: { id } });
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
+  await assertApprovalRole(registration,'REGISTRATION_APPROVAL_MODE',currentUser.role);
 
   const isSupervisor = currentUser.role === ROLES.SUPERVISOR;
   const isAdmin = currentUser.role === ROLES.ADMIN;
@@ -24,7 +27,7 @@ export const rejectRegistration = async (id, reason, currentUser) => {
     throw new AppError('Pengajuan outlet sudah aktif di sistem master dan tidak dapat ditolak', 400);
   }
 
-  if (!['SUBMITTED','PENDING'].includes(registration.registrationStatus)) throw new AppError('Status pengajuan tidak dapat ditolak',400);
+  if (!['SUBMITTED','PENDING','SPV_APPROVED'].includes(registration.registrationStatus)) throw new AppError('Status pengajuan tidak dapat ditolak',400);
   if (!String(reason || '').trim()) throw new AppError('Alasan penolakan wajib',400);
   await assertSalesAccess(currentUser,registration.salesmanId);
   const changed = await prisma.customerRegistration.updateMany({
@@ -40,7 +43,7 @@ export const rejectRegistration = async (id, reason, currentUser) => {
 
   // Notifikasi ke Salesman
   if (registration.salesmanId) {
-    await prisma.notification.create({
+    await policyNotification(prisma,{
       data: {
         userId: registration.salesmanId,
         type: 'OUTLET_REGISTRATION_REJECTED',

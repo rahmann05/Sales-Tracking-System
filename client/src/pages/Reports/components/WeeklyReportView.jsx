@@ -1,3 +1,4 @@
+import {downloadOperationalFile} from '../../../services/operationalExportService';
 import {weeklyCsv,reportSalesOptions} from '../../../../../shared/report-semantics.mjs';
 import { WeeklyMetrics } from './WeeklyMetrics';
 import { ReportBasisNote } from './ReportBasisNote';
@@ -103,12 +104,7 @@ export const WeeklyReportView = () => {
     const blob = new Blob(['\uFEFF' + weeklyCsv(reportData)], {
       type: 'text/csv;charset=utf-8;'
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `WEEKLY_PERFORMANCE_REPORT_${startDate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadOperationalFile(blob,`WEEKLY_PERFORMANCE_REPORT_${startDate}.csv`,'text/csv;charset=utf-8;');
   };
   const {
     summary = {},

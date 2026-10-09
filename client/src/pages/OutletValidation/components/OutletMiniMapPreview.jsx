@@ -1,7 +1,10 @@
+import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import React from 'react';
 import {MapContainer,TileLayer,Circle,CircleMarker,Popup,Polyline} from 'react-leaflet';
 const valid=(lat,lng)=>lat!=null&&lng!=null&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))&&Math.abs(Number(lat))<=90&&Math.abs(Number(lng))<=180;
 export const OutletMiniMapPreview=React.memo(function({latitude,longitude,name='',radiusMeters=50,candidate,candidates}) {
+ const mapPolicy=useFeaturePolicy('MAPS');
+ if(!mapPolicy.canStart)return <p className="outlet-map-empty" role="status">{mapPolicy.reason} Koordinat dan bukti tetap dapat ditinjau.</p>;
  if(!valid(latitude,longitude))return <div className="outlet-map-empty">Koordinat belum tersedia.</div>;
  const master=[Number(latitude),Number(longitude)],comparisons=(candidates || [candidate]).filter(p=>valid(p?.latitude,p?.longitude));
  const bounds=[master,...comparisons.map(p=>[Number(p.latitude),Number(p.longitude)])];

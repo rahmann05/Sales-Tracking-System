@@ -18,7 +18,7 @@ export function OperationsWorkspace({section='routes'}={}){
   useEffect(()=>{refresh();const timer=setInterval(refresh,30000);return()=>{clearInterval(timer);flight.current++;};},[refresh]);
   const [clock,setClock]=useState(Date.now());
   useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),15000);return()=>clearInterval(timer);},[]);
-  const routes=React.useMemo(()=>(data?.routes||[]).map(r=>({...r,location:routeLocation(r,clock)})),[data,clock]),open=routes.filter(r=>!r.closedAt&&!r.cancelledAt),issues=data?.issues||[];
+  const routes=React.useMemo(()=>(data?.routes||[]).map(r=>({...r,location:routeLocation(r,clock,r.locationPolicy||{enabled:false})})),[data,clock]),open=routes.filter(r=>!r.closedAt&&!r.cancelledAt),issues=data?.issues||[];
   const show=filter==='OPEN'?open:filter==='ATTENTION'?open.filter(r=>r.alerts.length||issues.some(i=>i.routeId===r.id)):routes;
   const canManage=user.role==='ADMIN'||user.permissions?.can_manage_delivery_routes!==false;
   if(user.role==='KEPALA_GUDANG')return <WarehouseOperationsView {...{section,data,error,loading,refresh,filter,setFilter,date,setDate,routes,open,issues,canManage,setActiveTab}}/>;

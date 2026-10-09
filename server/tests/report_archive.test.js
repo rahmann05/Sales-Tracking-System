@@ -61,7 +61,7 @@ test('archive history uses stable cursor pagination without loading stored repor
 });
 test('configuration reads filter private archive payloads in SQL rather than loading report history',async t=>{
   let calls=0;invalidateConfigCache();
-  replace(t,prisma.systemConfig,'findMany',async query=>{calls++;assert.ok(query.where.key.in.includes('PJP_WORKING_DAYS'));assert.ok(query.where.key.in.every(key=>!key.startsWith('_')));return [{key:'PJP_WORKING_DAYS',value:'1,2,3,4,5'}];});
+  replace(t,prisma.systemConfig,'findMany',async query=>{if(query.where.key.startsWith){assert.equal(query.where.key.startsWith,'_POLICY_PROFILE:');return [];}calls++;assert.ok(query.where.key.in.includes('PJP_WORKING_DAYS'));assert.ok(query.where.key.in.every(key=>!key.startsWith('_')));return [{key:'PJP_WORKING_DAYS',value:'1,2,3,4,5'}];});
   assert.equal(await getDynamicConfig('PJP_WORKING_DAYS',''), '1,2,3,4,5');
   const configs=await getAllConfigs();assert.equal(configs.PJP_WORKING_DAYS,'1,2,3,4,5');assert.equal(calls,2);
 });

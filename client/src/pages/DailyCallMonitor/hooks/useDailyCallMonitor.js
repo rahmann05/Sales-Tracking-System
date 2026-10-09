@@ -1,3 +1,4 @@
+import {downloadOperationalFile} from '../../../services/operationalExportService';
 import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import { dailyCallCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
@@ -90,12 +91,7 @@ export const useDailyCallMonitor = ({enabled=true}={}) => {
     }
 
     const blob = new Blob(['\uFEFF' + dailyCallCsv(reportData)], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `DAILY_CALL_REPORT_${date}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadOperationalFile(blob,`DAILY_CALL_REPORT_${date}.csv`,'text/csv;charset=utf-8;');
   };
 
   return {

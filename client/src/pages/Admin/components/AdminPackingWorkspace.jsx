@@ -1,3 +1,4 @@
+import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import React,{useState} from 'react';
 import {LuPlus,LuRefreshCw,LuSearch,LuArrowLeft} from 'react-icons/lu';
 import {PackingDraftForm} from '../../Warehouse/components/PackingDraftForm';
@@ -8,11 +9,12 @@ import {OrderFulfillmentPanel} from '../../Warehouse/components/OrderFulfillment
 import {NativeDialog} from '../../../shared/components/common/NativeDialog';
 import {AdminPackingTable} from './AdminPackingTable';
 export function AdminPackingWorkspace(props){
+  const featurePolicy=useFeaturePolicy('PACKING');
   const {busyAction,confirmDialog,error,expandedId,form,loading,metrics,page,printDoc,refresh,result,search,setConfirmDialog,setForm,setPage,setPrintDoc,setSearch,setStatus,setSuccess,settings,status,success,toggleExpand}=props;
   const [sourceOpen,setSourceOpen]=useState(false),[sourceTab,setSourceTab]=useState('orders');
   const selected=result.items.find(item=>item.id===expandedId);
   const selectOrder=order=>{setSourceOpen(false);setForm({order});};
-  const heading=<header className="admin-page-heading"><div><p className="admin-eyebrow">Packing & pengiriman / Dokumen</p><h1>{form?form.document?'Revisi packing list':'Buat packing list':selected?selected.code:'Packing list'}</h1><p>{form?'Lengkapi barang, kemasan, dan faktur dalam satu dokumen.':selected?'Periksa rincian, kelengkapan, dan riwayat dokumen.':'Siapkan dokumen muatan sebelum diserahkan ke kepala gudang.'}</p></div>{!form&&!selected&&<div className="admin-heading-actions"><button type="button" className="admin-button" disabled={loading} onClick={refresh}><LuRefreshCw/>Perbarui</button><button type="button" className="admin-button primary" onClick={()=>setSourceOpen(true)}><LuPlus/>Buat packing list</button></div>}{selected&&!form&&<button type="button" className="admin-button" onClick={()=>toggleExpand(selected.id)}><LuArrowLeft/>Daftar packing</button>}</header>;
+  const heading=<header className="admin-page-heading"><div><p className="admin-eyebrow">Packing & pengiriman / Dokumen</p><h1>{form?form.document?'Revisi packing list':'Buat packing list':selected?selected.code:'Packing list'}</h1><p>{form?'Lengkapi barang, kemasan, dan faktur dalam satu dokumen.':selected?'Periksa rincian, kelengkapan, dan riwayat dokumen.':'Siapkan dokumen muatan sebelum diserahkan ke kepala gudang.'}</p></div>{!form&&!selected&&<div className="admin-heading-actions"><button type="button" className="admin-button" disabled={loading} onClick={refresh}><LuRefreshCw/>Perbarui</button><button type="button" className="admin-button primary" disabled={!featurePolicy.canStart} title={featurePolicy.reason} onClick={()=>setSourceOpen(true)}><LuPlus/>Buat packing list</button></div>}{selected&&!form&&<button type="button" className="admin-button" onClick={()=>toggleExpand(selected.id)}><LuArrowLeft/>Daftar packing</button>}</header>;
   if(form)return <div className="workspace-page admin-packing-editor">{heading}<PackingDraftForm key={form.document?.id||form.order?.id||'manual'} {...form} onSaved={message=>{setForm(null);setSuccess(message);refresh();}} onCancel={()=>setForm(null)}/></div>;
   return <div className="workspace-page admin-packing-workspace">{heading}
     {error&&<p className="admin-feedback error" role="alert">{error}</p>}{success&&<p className="admin-feedback success" role="status">{success}</p>}

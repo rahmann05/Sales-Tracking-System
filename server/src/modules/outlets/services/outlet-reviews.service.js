@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { actorSnapshot, lockOutlet, reviewOutlet, reviewScope, reviewInclude, sameSnapshot } from './outlet-review-policy.service.js';
+import { actorSnapshot, lockOutlet, reviewOutlet, reviewScope, reviewInclude } from './outlet-review-policy.service.js';
 import { invalidateOutletCache } from './outlets.helpers.js';
+import {outletReviewEvidenceState} from '../../../../../shared/outlet-evidence-policy.mjs';
 const opening=z.object({reason:z.string().trim().min(10).max(1000)});
 const decision=z.object({revision:z.number().int().positive(),action:z.enum(['KEEP','WAITING_FIELD','CORRECTED']),note:z.string().trim().min(10).max(2000),evidence:z.string().trim().max(2000).optional()});
 export async function openOutletReview(id,body,actor) {
@@ -37,7 +38,8 @@ export async function decideOutletReview(outletId,reviewId,raw,actor) {
       const changes=await tx.outletChange.findMany({where:{outletId,createdAt:{gte:review.createdAt},source:{in:['LOCATION','IMPORT','REVIEW','MASTER']}},orderBy:{createdAt:'desc'},take:50});
       if(!changes.some(change=>['latitude','longitude','name','address'].some(k=>change.after[k]!==undefined&&change.before[k]!==change.after[k])))throw new AppError('Simpan koreksi data terlebih dahulu sebelum menyelesaikan kasus sebagai dikoreksi.',400);
     }
-    if(body.action==='KEEP'&&review.runs[0]&&!sameSnapshot(outlet,review.runs[0].snapshot)&&(!body.evidence||body.evidence.length<10))throw new AppError('Data berubah setelah pemeriksaan. Jalankan pemeriksaan kembali atau catat bukti lapangan terbaru.',409);
+    const evidenceState=outletReviewEvidenceState(review.runs,outlet);
+    if(body.action==='KEEP'&&evidenceState.stale&&(!body.evidence||body.evidence.length<10))throw new AppError(evidenceState.unavailable?'Pemeriksaan peta belum berhasil. Jalankan pemeriksaan kembali atau catat bukti lapangan terbaru.':evidenceState.expired?'Bukti peta kedaluwarsa. Jalankan pemeriksaan kembali atau catat bukti lapangan terbaru.':'Data berubah setelah pemeriksaan. Jalankan pemeriksaan kembali atau catat bukti lapangan terbaru.',409);
     const status=body.action==='WAITING_FIELD'?'WAITING_FIELD':'COMPLETED';
     const entry={...body,actor:actorSnapshot(actor),at:new Date().toISOString()};
     const updated=await tx.outletReview.update({where:{id:reviewId},data:{status,revision:{increment:1},closedAt:status==='COMPLETED'?new Date():null,decision:{...entry,history:[...(review.decision?.history || []),entry]}},include:reviewInclude});

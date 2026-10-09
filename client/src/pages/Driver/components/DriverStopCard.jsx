@@ -15,11 +15,11 @@ const STATUS_MAP = {
  * DriverStopCard — Card for each delivery stop in the driver's route.
  * Similar to SalesStopCard but for delivery context.
  */
-export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDelivered, onMarkRejected, disabled=false }) => {
+export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDelivered, onMarkRejected, disabled=false,policy={} }) => {
   const statusCfg = STATUS_MAP[stop.status] || {label:stop.status||'Status belum tersedia',color:'#697280',bg:'#f3f5f8',Icon:LuClock};
   const StatusIcon = statusCfg.Icon;
   const isCompleted = ['DELIVERED','REJECTED','PARTIAL_REJECT'].includes(stop.status);
-  const hasArrived = !!stop.arrivedAt;
+  const hasArrived = !!stop.arrivedAt || policy.DELIVERY_ATTENDANCE_MODE==='OPTIONAL';
 
   const invoices = (stop.packingList?.invoices || []).filter(i=>!(stop.allocatedInvoices||[]).length||stop.allocatedInvoices.some(a=>a.invoiceId===i.id));
   const outletName = stop.outlet?.name || 'Toko';

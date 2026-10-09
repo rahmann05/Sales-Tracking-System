@@ -6,7 +6,7 @@ import { AppError } from '../../../utils/errors.js';
 export const getVehicleById = async (id) => {
   const vehicle = await prisma.vehicle.findUnique({
     where: { id },
-    include: { serviceRecords: { orderBy: { serviceDate: 'desc' } } },
+    include: { serviceRecords: { orderBy: [{ serviceDate: 'desc' },{createdAt:'desc'}], take:50 } },
   });
   if (!vehicle || vehicle.deletedAt) {
     throw new AppError('Kendaraan tidak ditemukan', 404);

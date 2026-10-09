@@ -52,7 +52,7 @@ export const recordMaintenance = asyncHandler(async (req, res) => {
     body: req.body,
     params: { id: req.params.id }
   });
-  const result = await vehicleService.recordMaintenance(validated.params.id, validated.body);
+  const result = await vehicleService.recordMaintenance(validated.params.id, validated.body,req.user);
   res.status(201).json({
     status: 'success',
     data: result,

@@ -8,7 +8,7 @@ import { successResponse } from '../../utils/response.js';
 export const submitOffPjpAttendance = async (req, res, next) => {
   try {
     const data = await createOffPjpAttendance(req.user.id, req.body);
-    return successResponse(res, 201, data, 'Absen toko luar RJP berhasil dicatat, menunggu validasi Supervisor');
+    return successResponse(res, 201, data, data.status==='APPROVED'?'Kunjungan diterima sesuai aturan tanpa pemeriksaan manusia':'Kunjungan tercatat, menunggu pemeriksaan Supervisor');
   } catch (err) {
     next(err);
   }

@@ -21,7 +21,8 @@ export const useSalesActions = ({
   const handleSalesAbsenIn = useCallback(async (stopId, payload = {}) => {
     try {
       // Call Backend API first
-      await absensiApi.checkIn(stopId, {
+      const response=await absensiApi.checkIn(stopId, {
+        accuracy:payload.gpsLocation?.accuracy,observedAt:payload.gpsLocation?.observedAt,
         latitude: payload.gpsLocation?.lat,
         longitude: payload.gpsLocation?.lng,
         photoUrl: payload.photoUrl || null,
@@ -36,13 +37,14 @@ export const useSalesActions = ({
             ? {
                 ...s,
                 status: 'ARRIVED',
-                inTimestamp: now.toISOString(),
-                checkInTime: timeNow,
+                policySnapshot:response.data.policySnapshot,visitSession:response.data.visitSession,
+                inTimestamp: response.data.logical?null:response.data.timestamp,
+                checkInTime: response.data.logical?null:timeNow,
                 checkInPhoto: payload.photoUrl || null,
                 checkInGps: payload.gpsLocation || null,
                 checkInNotes: payload.notes || 'Kunjungan Rutin',
               }
-            : s
+            : response.data.settledVisits?.some(v=>v.id===s.id)?{...s,status:'VISITED',visitSession:response.data.settledVisits.find(v=>v.id===s.id).visitSession}:s
         )
       );
     } catch (err) {
@@ -61,6 +63,7 @@ export const useSalesActions = ({
     try {
       // Call Backend API first
       const response = await absensiApi.checkOut(stopId, {
+        accuracy:payload.gpsLocation?.accuracy,observedAt:payload.gpsLocation?.observedAt,
         latitude: payload.gpsLocation?.lat,
         longitude: payload.gpsLocation?.lng,
         photoUrl: payload.photoUrl || null,
@@ -80,8 +83,9 @@ export const useSalesActions = ({
             ? {
                 ...s,
                 status: 'VISITED',
-                outTimestamp: now.toISOString(),
-                checkOutTime: timeNow,
+                visitSession:response.data.visitSession,
+                outTimestamp: response.data.logical?null:response.data.timestamp,
+                checkOutTime: response.data.logical?null:timeNow,
                 checkOutPhoto: payload.photoUrl || null,
                 checkOutGps: payload.gpsLocation || null,
                 checkOutNotes: payload.notes || 'Kunjungan Selesai',
@@ -105,11 +109,11 @@ export const useSalesActions = ({
   }, [setSalesStops, addNotification]);
 
   // Submit Order (Sales)
-  const handleSubmitOrder = useCallback(async ({ stopId, items, paymentType, code, requestId, expectedTotal, expectedTermDays }) => {
+  const handleSubmitOrder = useCallback(async ({ stopId, items, paymentType, code, requestId, expectedTotal, expectedTermDays,priceOverrideReason }) => {
     try {
       // Call Backend API
       const res = await ordersApi.createOrder({
-        code,requestId,expectedTotal,expectedTermDays,
+        code,requestId,expectedTotal,expectedTermDays,priceOverrideReason,
         pjpStopId: stopId,
         items: items?.map((i) => ({
           productId: i.productId || i.id,
@@ -124,7 +128,7 @@ export const useSalesActions = ({
       setOrders((prev) => [mapServerOrder(newOrder), ...prev.filter(o=>o.id!==newOrder.id)]);
 
       addNotification({
-        title: 'Order Baru Masuk (Menunggu Persetujuan)',
+        title: newOrder.status==='APPROVED'?'Order diterima sesuai aturan':'Order baru menunggu persetujuan',
         message: `Sales ${user?.name || 'Sales'} membuat pesanan baru untuk ${newOrder.pjpStop?.outlet?.name || 'Toko'} sebesar Rp ${(newOrder.totalValue || 0).toLocaleString('id-ID')}.`,
         roleTarget: ['SUPERVISOR', 'ADMIN'],
       });
@@ -224,7 +228,7 @@ export const useSalesActions = ({
         address,
         reason,
         photoUrl,
-        latitude: gpsLocation?.lat,
+        accuracy:gpsLocation?.accuracy,observedAt:gpsLocation?.observedAt,latitude: gpsLocation?.lat,
         longitude: gpsLocation?.lng,
       });
 
@@ -234,7 +238,7 @@ export const useSalesActions = ({
 
       addNotification({
         title: 'Presensi Toko Luar RJP Masuk',
-        message: `Sales ${user?.name || 'Sales'} melakukan presensi di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
+        message: `Sales ${user?.name || 'Sales'} mencatat kunjungan luar PJP: ${outletName}. ${att.status==='APPROVED'?'Diterima sesuai aturan tanpa pemeriksaan tambahan.':'Menunggu pemeriksaan Supervisor.'}`,
         roleTarget: ['SUPERVISOR'],
       });
       return att;

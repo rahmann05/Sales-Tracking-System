@@ -1,5 +1,6 @@
+import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
 import {salesScope} from '../../../utils/team-scope.js';
-import {wibDayRange} from '../../../../../shared/visit-metrics.mjs';
+import {wibDayRange,wibDateKey} from '../../../../../shared/visit-metrics.mjs';
 /** getLiveSalesLocations - single-responsibility service (extracted from users.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
@@ -20,6 +21,7 @@ export const getLiveSalesLocations = async (currentUser) => {
       id: true,
       name: true,
       email: true,
+      role:true,supervisorId:true,
       clusterId: true,
       cluster: {
         select: {
@@ -38,7 +40,7 @@ export const getLiveSalesLocations = async (currentUser) => {
             select: {
               id: true,
               sequence: true,
-              status: true,
+              status: true,visitSession:true,
               outlet: {
                 select: {
                   id: true,
@@ -65,6 +67,7 @@ export const getLiveSalesLocations = async (currentUser) => {
           latitude: true,
           longitude: true,
           timestamp: true,
+          gpsEvidence: true,
           pjpStop: {
             select: {
               outlet: {
@@ -80,18 +83,18 @@ export const getLiveSalesLocations = async (currentUser) => {
   const nowMs = Date.now();
   
   const PING_TIMEOUT = await getDynamicConfig('LIVE_TRACKING_PING_TIMEOUT_MINUTES', 15);
-  const ATTENDANCE_TIMEOUT = await getDynamicConfig('LIVE_TRACKING_ATTENDANCE_TIMEOUT_MINUTES', 60);
   const DEFAULT_LAT = await getDynamicConfig('DEFAULT_OFFICE_LATITUDE', -6.884984);
   const DEFAULT_LNG = await getDynamicConfig('DEFAULT_OFFICE_LONGITUDE', 107.489953);
 
-  return salesUsers.map((sales) => {
+  return Promise.all(salesUsers.map(async(sales) => {
+    const actorPolicy=await effectivePolicy(sales),trackingMode=actorPolicy.values.SALES_TRACKING_MODE||'LOGIN';
     const livePing = liveLocationsCache.get(sales.id);
     const lastAttendance = sales.attendances?.[0];
     const todayPjp = sales.pjps?.[0];
     const stops = todayPjp?.stops || [];
 
     const completedStops = stops.filter((s) => s.status === 'VISITED' || s.attendances?.some((a) => a.type === 'OUT')).length;
-    const currentStop = stops.find((s) => s.status === 'IN_VISIT' || s.status === 'ARRIVED') || null;
+    const currentStop = stops.find((s) => s.status === 'IN_VISIT' || s.status === 'ARRIVED' || s.visitSession?.state==='ACTIVE' || s.status==='PENDING'&&s.attendances?.some(a=>a.type==='IN')&&!s.attendances?.some(a=>a.type==='OUT')) || null;
     const nextPendingStop = stops.find((s) => s.status === 'PENDING') || null;
 
     let lat = DEFAULT_LAT;
@@ -100,20 +103,21 @@ export const getLiveSalesLocations = async (currentUser) => {
     let lastUpdated = null;
     let isOnline = false;
 
-    if (livePing && livePing.latitude) {
+    if (livePing && Number.isFinite(livePing.latitude)&&Number.isFinite(livePing.longitude)) {
       lat = livePing.latitude;
       lng = livePing.longitude;
       locationSource = 'LIVE_GPS_PING';
-      lastUpdated = livePing.updatedAt;
-      const ageMinutes = (nowMs - new Date(livePing.updatedAt).getTime()) / 60000;
-      isOnline = ageMinutes <= PING_TIMEOUT;
-    } else if (lastAttendance && lastAttendance.latitude) {
+      lastUpdated = livePing.observedAt||livePing.updatedAt;
+      const observed=Date.parse(livePing.observedAt),ageMinutes=(nowMs-observed)/60000;
+      isOnline = trackingMode!=='OFF'&&Number.isFinite(observed)&&observed<=nowMs+30000&&ageMinutes <= (actorPolicy.values.LIVE_TRACKING_PING_TIMEOUT_MINUTES??PING_TIMEOUT);
+      if(trackingMode==='VISIT'&&!currentStop)isOnline=false;
+      if(trackingMode==='SHIFT'){const shift=await prisma.staffActivity.findFirst({where:{userId:sales.id,kind:'SHIFT',checkOutAt:null,dateKey:wibDateKey()}});if(!shift||shift.checklist?.state==='FINISHED')isOnline=false;}
+    } else if (lastAttendance && Number.isFinite(lastAttendance.latitude)&&Number.isFinite(lastAttendance.longitude)) {
       lat = lastAttendance.latitude;
       lng = lastAttendance.longitude;
       locationSource = 'LAST_ATTENDANCE';
       lastUpdated = lastAttendance.timestamp.toISOString();
-      const ageMinutes = (nowMs - new Date(lastAttendance.timestamp).getTime()) / 60000;
-      isOnline = ageMinutes <= ATTENDANCE_TIMEOUT;
+      isOnline = false;
     } else if (sales.cluster?.centerLat && sales.cluster?.centerLng) {
       lat = sales.cluster.centerLat;
       lng = sales.cluster.centerLng;
@@ -151,10 +155,13 @@ export const getLiveSalesLocations = async (currentUser) => {
       salesName: sales.name,
       email: sales.email,
       clusterId: sales.clusterId,
-      clusterName: sales.cluster?.name || 'Cimahi & Padalarang',
+      clusterName: sales.cluster?.name || 'Belum ditugaskan',
       latitude: lat,
       longitude: lng,
-      accuracy: livePing?.accuracy || 10,
+      accuracy: locationSource==='LIVE_GPS_PING'?livePing?.accuracy??null:locationSource==='LAST_ATTENDANCE'?lastAttendance?.gpsEvidence?.accuracy??null:null,
+      observedAt:locationSource==='LIVE_GPS_PING'?livePing?.observedAt??null:lastAttendance?.gpsEvidence?.observedAt??null,
+      receivedAt:locationSource==='LIVE_GPS_PING'?livePing?.updatedAt??null:null,
+      trackingMode,
       speed: livePing?.speed || 0,
       isOnline,
       locationSource,
@@ -172,5 +179,5 @@ export const getLiveSalesLocations = async (currentUser) => {
       },
       breadcrumbs: livePing?.breadcrumbs || [],
     };
-  });
+  }));
 };

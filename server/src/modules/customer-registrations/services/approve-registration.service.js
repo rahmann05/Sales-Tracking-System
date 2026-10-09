@@ -1,3 +1,5 @@
+import {policyNotification} from '../../notifications/services/notification-policy.service.js';
+import {assertApprovalRole} from '../../config/services/approval-policy.service.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** approveRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
 import { prisma } from '../../../config/prisma.js';
@@ -12,6 +14,8 @@ export const approveRegistration = async (id, note, currentUser) => {
   const registration = await prisma.customerRegistration.findUnique({ where: { id } });
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
+  const approvalMode=await assertApprovalRole(registration,'REGISTRATION_APPROVAL_MODE',currentUser.role);
+  if(approvalMode==='SEQUENTIAL'&&currentUser.role!=='SUPERVISOR')throw new AppError('Tahap pemeriksaan pertama dilakukan oleh Supervisor',403);
   const isSupervisor = currentUser.role === ROLES.SUPERVISOR;
   const isAdmin = currentUser.role === ROLES.ADMIN;
 
@@ -44,7 +48,7 @@ export const approveRegistration = async (id, note, currentUser) => {
 
   // Notifikasi ke Salesman dan Admin
   if (registration.salesmanId) {
-    await prisma.notification.create({
+    await policyNotification(prisma,{
       data: {
         userId: registration.salesmanId,
         type: 'OUTLET_REGISTRATION_APPROVED',

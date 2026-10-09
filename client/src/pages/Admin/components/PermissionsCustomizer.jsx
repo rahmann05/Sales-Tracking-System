@@ -6,7 +6,7 @@ export function PermissionsCustomizer({permissions,onTogglePermission,onBulkSet,
   const [query,setQuery]=useState(''),id=useId();
   const activeCount=Object.values(permissions || {}).filter(Boolean).length;
   const groups=useMemo(()=>PERMISSION_CATEGORIES.map(category=>({category,items:ALL_PERMISSIONS.filter(permission=>permission.categoryId===category.id && `${permission.label} ${permission.desc} ${permission.key}`.toLowerCase().includes(query.trim().toLowerCase()))})).filter(group=>group.items.length),[query]);
-  const bulk=value=>onBulkSet(Object.fromEntries(ALL_PERMISSIONS.map(permission=>[permission.key,value])));
+  const bulk=value=>onBulkSet(Object.fromEntries(ALL_PERMISSIONS.map(permission=>[permission.key,permission.reserved?Boolean(permissions?.[permission.key]):value])));
   return <section className="admin-permissions" aria-label="Pengaturan izin fitur">
     <div className="admin-permissions-heading"><h3>Izin fitur</h3><span>{activeCount} dari {ALL_PERMISSIONS.length} aktif</span></div>
     <p className={isModified?'admin-permissions-modified':''}>{isModified?'Disesuaikan dari':'Mengikuti'} template {selectedRoleName}.</p>
@@ -19,7 +19,7 @@ export function PermissionsCustomizer({permissions,onTogglePermission,onBulkSet,
     <div className="admin-permission-groups">
       {groups.map(({category,items})=><details key={category.id} open={Boolean(query)||undefined}>
         <summary><span>{category.name}</span><span className="admin-permission-count">{items.filter(item=>permissions?.[item.key]).length}/{items.length}</span><LuChevronDown aria-hidden="true"/></summary>
-        <div>{items.map(permission=><label key={permission.key} className="admin-permission-row"><span><strong>{permission.label}</strong><span>{permission.desc}</span></span><input type="checkbox" checked={Boolean(permissions?.[permission.key])} onChange={()=>onTogglePermission(permission.key)} aria-label={permission.label}/></label>)}</div>
+        <div>{items.map(permission=><label key={permission.key} className="admin-permission-row"><span><strong>{permission.label}</strong><span>{permission.desc}</span></span><input type="checkbox" disabled={permission.reserved} checked={Boolean(permissions?.[permission.key])} onChange={()=>onTogglePermission(permission.key)} aria-label={permission.label}/></label>)}</div>
       </details>)}
       {!groups.length&&<p role="status">Tidak ada izin yang cocok dengan pencarian.</p>}
     </div>

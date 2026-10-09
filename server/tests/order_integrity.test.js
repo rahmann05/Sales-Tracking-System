@@ -2,6 +2,14 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {reportChannel,ratioPercent,weeklyCsv,dailyCompletion} from '../../shared/report-semantics.mjs';
 import {orderPricing} from '../../shared/order-pricing.mjs';
+import {orderTerms} from '../../shared/order-terms.mjs';
+
+test('TOP defaults apply when changing CASH to TOP and explicit zero-day TOP remains valid',()=>{
+ assert.equal(orderTerms('TOP',{paymentType:'CASH',termOfPaymentDays:0},14),14);
+ assert.equal(orderTerms('TOP',{paymentType:'TOP',termOfPaymentDays:0},14),0);
+ assert.equal(orderTerms('TOP',{paymentType:'TOP',termOfPaymentDays:7},14),7);
+ assert.equal(orderTerms('CASH',{paymentType:'TOP',termOfPaymentDays:7},14),0);
+});
 import {orderSnapshot} from '../../shared/order-snapshot.mjs';
 import {fulfillment} from '../../shared/delivery-operations.mjs';
 import {prisma} from '../src/config/prisma.js';
@@ -45,14 +53,16 @@ test('open follow-ups are filtered before pagination so finished tasks cannot hi
 });
 test('config updates store actor and before/after values in the same transaction',async t=>{
   const records=[{key:'TAX_RATE_PERCENT',value:11}],events=[];
-  const original=prisma.$transaction;prisma.$transaction=async work=>work({$executeRaw:async()=>{},systemConfig:{findMany:async()=>records,upsert:async({where,update})=>{records.find(r=>r.key===where.key).value=update.value;}},auditEvent:{create:async({data})=>events.push(data)}});t.after(()=>{prisma.$transaction=original;});
+  const original=prisma.$transaction;prisma.$transaction=async work=>work({...Object.fromEntries(['pjpStop','order','customerRegistration','deliveryRoute','packingList','staffActivity'].map(name=>[name,{findMany:async()=>[]}])), $executeRaw:async()=>{},systemConfig:{findMany:async()=>records,upsert:async({where,update})=>{records.find(r=>r.key===where.key).value=update.value;}},auditEvent:{create:async({data})=>events.push(data)}});t.after(()=>{prisma.$transaction=original;});
   assert.equal((await saveConfigs({TAX_RATE_PERCENT:12},{id:'admin',name:'Admin'})).TAX_RATE_PERCENT,12);
   assert.equal(events.length,1);assert.equal(events[0].actorId,'admin');assert.equal(events[0].before.value,11);assert.equal(events[0].after.value,12);
   await saveConfigs({TAX_RATE_PERCENT:12},{id:'admin'});assert.equal(events.length,1);
 });
 test('config history redacts API credentials and invalid relationships write nothing',async t=>{
   const records=[{key:'MAPS_API_KEY',value:'old-secret'}],events=[];let writes=0;
-  const original=prisma.$transaction;prisma.$transaction=async work=>work({$executeRaw:async()=>{},systemConfig:{findMany:async()=>records,upsert:async()=>{writes++;}},auditEvent:{create:async({data})=>events.push(data)}});t.after(()=>{prisma.$transaction=original;});
+  const original=prisma.$transaction;prisma.$transaction=async work=>work({...Object.fromEntries(['pjpStop','order','customerRegistration','deliveryRoute','packingList','staffActivity'].map(name=>[name,{findMany:async()=>[]}])), $executeRaw:async()=>{},systemConfig:{findMany:async()=>records,upsert:async()=>{writes++;}},auditEvent:{create:async({data})=>events.push(data)}});t.after(()=>{prisma.$transaction=original;});
   await saveConfigs({MAPS_API_KEY:'new-secret'},{id:'admin'});assert.equal(events[0].before.value,'[REDACTED]');assert.equal(events[0].after.value,'[REDACTED]');assert.equal(JSON.stringify(events).includes('secret'),false);
   await assert.rejects(()=>saveConfigs({VALIDATION_DISTANCE_WARNING:200,VALIDATION_DISTANCE_SUSPECT:100}),e=>e.statusCode===400);assert.equal(writes,1);
 });
+import {useDefaultPolicy} from './helpers/config-fixture.js';
+useDefaultPolicy();

@@ -1,3 +1,4 @@
+import {policyNotification} from '../notifications/services/notification-policy.service.js';
 import { Router } from 'express';
 import * as orderController from './orders.controller.js';
 import { authenticate, authorize, authorizeWithPermission } from '../../middlewares/auth.middleware.js';
@@ -33,7 +34,7 @@ router.patch('/:id/promise', authorize('ADMIN'), async(req,res,next)=>{
       const order=await tx.order.findUnique({where:{id:req.params.id}});
       if(!order||order.deletedAt||order.status==='REJECTED')throw new AppError('Order tidak aktif',409);
       const updated=await tx.order.update({where:{id:order.id},data:{promisedAt:new Date(data.promisedAt),history:[...order.history,{action:'PROMISE',actorId:req.user.id,at:new Date().toISOString(),note:data.note,before:order.promisedAt?.toISOString()||null,after:data.promisedAt}]}});
-      await tx.notification.create({data:{userId:order.createdBy,type:'ORDER_PROMISE',title:'Janji pengiriman order',message:data.note,payload:{orderId:order.id,promisedAt:data.promisedAt,previousPromisedAt:order.promisedAt?.toISOString()||null,actorId:req.user.id}}});
+      await policyNotification(tx,{data:{userId:order.createdBy,type:'ORDER_PROMISE',title:'Janji pengiriman order',message:data.note,payload:{orderId:order.id,promisedAt:data.promisedAt,previousPromisedAt:order.promisedAt?.toISOString()||null,actorId:req.user.id}}});
       return updated;
     });res.json({success:true,data:result});
   }catch(e){next(e);}

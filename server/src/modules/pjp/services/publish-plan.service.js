@@ -1,3 +1,4 @@
+import {teamPlanningPolicy} from './planning-policy.service.js';
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {getPlan,previewPlan} from './planning.service.js';
@@ -13,6 +14,8 @@ export async function publishPlan(id,raw,actor){
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp-plan:${id}`}))`;
   const plan=await getPlan(id,actor,tx);
   if(plan.status==='PUBLISHED')return {plan,count:plan.history.findLast(h=>h.action==='PUBLISH')?.count||0,replayed:true};
+  const role=(await teamPlanningPolicy(plan.supervisorId)).values.PJP_PUBLISH_ROLE;
+  if(role!=='BOTH'&&role!==actor.role)throw new AppError('Kebijakan tim ini tidak mengizinkan role Anda menerbitkan PJP',403);
   if(plan.revision!==body.revision)throw new AppError('Draft telah berubah. Tinjau ulang sebelum menerbitkan.',409);
   if(plan.startsOn<wibDateKey())throw new AppError('Penerbitan tidak boleh membuat PJP pada tanggal yang sudah lewat. Ubah periode draft.',400);
   for(const userId of [...new Set(plan.rules.map(r=>r.userId))].sort())await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
@@ -33,7 +36,7 @@ export async function publishPlan(id,raw,actor){
    const context=captureReportAssignment(person,'PJP_PLAN',new Date());
    await tx.pjp.create({data:{...context,reportingContext:{...context.reportingContext,planning:{planId:id,revision:plan.revision,rules:plan.rules.filter(r=>r.userId===day.userId&&day.outletIds.includes(r.outletId)),publishedBy:actor.id}},code:await resolveBusinessCode('PJP',code,{db:tx,date:new Date(`${day.date}T05:00:00Z`)}),userId:day.userId,date:wibDayRange(day.date).gte,type:'SALES',status:'SCHEDULED',stops:{create:day.outletIds.map((outletId,i)=>({outletId,sequence:i+1,status:'PENDING'}))}}});count++;
   }
-  const event={at:new Date().toISOString(),action:'PUBLISH',actorId:actor.id,note:body.note,count,acknowledgeWarnings:body.acknowledgeWarnings,uncovered:review.uncovered.map(o=>o.id)};
+  const event={at:new Date().toISOString(),action:'PUBLISH',actorId:actor.id,note:body.note,count,acknowledgeWarnings:body.acknowledgeWarnings,uncovered:review.uncovered.map(o=>o.id),calendar:review.calendar};
   const published=await tx.pjpPlan.update({where:{id},data:{status:'PUBLISHED',publishedAt:new Date(),updatedBy:actor.id,revision:plan.revision+1,history:[...plan.history,event]}});
   return {plan:published,count,replayed:false};
  },{timeout:60000});

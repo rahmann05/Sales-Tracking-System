@@ -23,8 +23,6 @@ export function validateConfigRelations(values) {
   }
   for (const [lower, upper] of [
     ['VALIDATION_DISTANCE_WARNING', 'VALIDATION_DISTANCE_SUSPECT'],
-    ['VALIDATION_CONFIDENCE_THRESHOLD_WARNING', 'VALIDATION_CONFIDENCE_THRESHOLD_LIKELY'],
-    ['VALIDATION_CONFIDENCE_THRESHOLD_LIKELY', 'VALIDATION_CONFIDENCE_THRESHOLD_VALID'],
     ['TRAVEL_GAP_SHORT_KM', 'TRAVEL_GAP_MED_KM'],
   ]) {
     if (Number(values[lower]) >= Number(values[upper])) throw new AppError(`${lower} harus lebih kecil dari ${upper}`, 400);

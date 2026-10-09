@@ -1,5 +1,6 @@
 import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
-import React from 'react';
+import React,{useEffect} from 'react';
+import {useApp} from '../../context/AppContext';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import { ReportTabBar } from './components/ReportTabBar';
 import { DailyCallMonitorPage } from '../DailyCallMonitor/DailyCallMonitorPage';
@@ -14,6 +15,8 @@ import { LuFileSpreadsheet } from 'react-icons/lu';
  */
 export const ReportsPage = () => {
   const [activeTab, setActiveTab] = useWorkspaceState('reportView','DAILY');
+  const {settings}=useApp();
+  useEffect(()=>{if(activeTab==='WEEKLY'&&!settings.REPORT_WEEKLY_ENABLED||activeTab==='MTD'&&!settings.REPORT_MTD_ENABLED)setActiveTab('DAILY');},[activeTab,settings.REPORT_WEEKLY_ENABLED,settings.REPORT_MTD_ENABLED,setActiveTab]);
 
   return (
     <div className="workspace-page reports-workspace space-y-6">

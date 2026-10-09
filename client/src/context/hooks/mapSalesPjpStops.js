@@ -10,7 +10,7 @@ export const resolveStopStatus = (s, inAtt, outAtt) => {
   if (outAtt || s.status === 'VISITED' || s.status === 'COMPLETED') return 'VISITED';
   if (s.status === 'SKIPPED') return 'SKIPPED';
   if (s.status === 'CLOSED_REPORTED' || s.status === 'CLOSED') return 'CLOSED';
-  if (inAtt || s.status === 'ARRIVED' || s.status === 'IN_VISIT') return 'ARRIVED';
+  if (s.visitSession?.state==='ACTIVE' || inAtt || s.status === 'ARRIVED' || s.status === 'IN_VISIT') return 'ARRIVED';
   return 'PENDING';
 };
 
@@ -29,6 +29,7 @@ const cluster = pjpData.user?.cluster;
 
             return {
               id: s.id,
+              policySnapshot:s.policySnapshot,visitSession:s.visitSession,
               pjpId: pjpData.id,
               sequence: s.sequence || idx + 1,
               customerName: s.outlet?.name || '',
@@ -63,7 +64,7 @@ const cluster = pjpData.user?.cluster;
               checkOutPhoto: outAtt?.photoUrl || null,
               checkInNotes: inAtt?.notes || null,
               checkOutNotes: outAtt?.notes || null,
-              visitOutcome:outAtt?.visitOutcome||null,
+              visitOutcome:outAtt?.visitOutcome||s.visitSession?.result?.visitOutcome||null,
               durationMinutes: outAtt?.durationMinutes || null,
               deviationMeters: inAtt?.deviationMeters ?? null,
             };

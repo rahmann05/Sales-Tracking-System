@@ -48,3 +48,5 @@ test('follow-up review notification uses the current supervisor and falls back t
   await notifyFollowUp(db, record, 'RETURNED', 'spv'); assert.deepEqual(delivered.map(n => n.userId), ['sales']);
   assert.equal(delivered[0].type, 'FOLLOW_UP_RETURNED'); assert.equal(delivered[0].payload.staffActivityId, 'activity');
 });
+import {useDefaultPolicy} from './helpers/config-fixture.js';
+useDefaultPolicy();

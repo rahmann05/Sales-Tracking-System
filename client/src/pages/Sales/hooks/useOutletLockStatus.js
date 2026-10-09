@@ -1,3 +1,4 @@
+import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {useApp} from '../../../context/AppContext';
 import { useMemo } from 'react';
 
@@ -17,7 +18,8 @@ export const useOutletLockStatus = (currentStop, allStops = []) => {
       (s) => ['ARRIVED', 'IN_VISIT', 'ORDERED'].includes(s.status) && s.id !== currentStop.id
     );
 
-    if (activeVisitingStop) {
+    const previousPolicy=visitPolicy({...settings,...activeVisitingStop?.policySnapshot?.values});
+    if (activeVisitingStop && !previousPolicy.allowContinue) {
       return {
         isLocked: currentStop.status === 'PENDING',
         activeVisitingStop,
@@ -28,7 +30,7 @@ export const useOutletLockStatus = (currentStop, allStops = []) => {
     const hasException=(incidents||[]).some(r=>r.outletId===currentStop.outletId&&r.requestedBy===user?.id&&r.status==='APPROVED'&&new Date(r.expiresAt)>new Date());
     if(['LOCKED','UNLOCK_REQUESTED'].includes(currentStop.lockStatus)&&!hasException) return {isLocked:true,activeVisitingStop:null,lockReason:'Outlet terkunci. Ajukan pengecualian kepada supervisor.'};
     const earlier=allStops.find(s=>s.sequence<currentStop.sequence&&(['PENDING','ARRIVED','ORDERED'].includes(s.status)||(!settings.ALLOW_CONTINUE_PENDING_CLOSED&&s.status==='CLOSED_REPORTED')));
-    if(settings.ATTENDANCE_ENFORCE_SEQUENCE&&earlier&&currentStop.status==='PENDING') return {isLocked:true,activeVisitingStop:null,lockReason:`Selesaikan toko urutan ${earlier.sequence} terlebih dahulu.`};
+    if(settings.ATTENDANCE_ENFORCE_SEQUENCE&&earlier&&!(earlier===activeVisitingStop&&previousPolicy.allowContinue)&&currentStop.status==='PENDING') return {isLocked:true,activeVisitingStop:null,lockReason:`Selesaikan toko urutan ${earlier.sequence} terlebih dahulu.`};
     return {
       isLocked: false,
       activeVisitingStop: null,

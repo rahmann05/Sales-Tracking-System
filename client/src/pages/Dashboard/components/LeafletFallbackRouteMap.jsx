@@ -1,3 +1,4 @@
+import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import { MapEffect } from "./RouteMapEffect";
 import { MapEventsHandler } from "./RouteMapEvents";
 import { createSalesLivePinIcon, createCustomPinIcon } from "./leafletRouteIcons";
@@ -38,6 +39,8 @@ export const LeafletFallbackRouteMap = ({
   routeProvider = 'osrm',
   clusterBaseColor = '#2563eb'
 }) => {
+ const mapPolicy=useFeaturePolicy('MAPS');
+  if(!mapPolicy.canStart)return <p className="app-notice" role="status">{mapPolicy.reason}</p>;
   const centerLat = Number(center?.lat || salesLocation?.lat || -6.8849);
   const centerLng = Number(center?.lng || salesLocation?.lng || 107.4899);
 

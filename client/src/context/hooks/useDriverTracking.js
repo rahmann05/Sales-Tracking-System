@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { deliveryApi, collectPages } from '../../services/api';
 
-export function useDriverTracking(user) {
+export function useDriverTracking(user,settings={}) {
   const [state,setState]=useState({status:'IDLE'});
   useEffect(()=>{
-    if(user?.role!=='SUPIR'){setState({status:'IDLE'});return;}
+    if(user?.role!=='SUPIR'||settings.DRIVER_TRACKING_MODE==='OFF'){setState({status:'IDLE'});return;}
     setState({status:'IDLE'});
     let disposed=false, route=null, watch=null, lastSent=0, sending=false, restartRequested=false, generation=0;
     const set=value=>{if(!disposed)setState(previous=>({...previous,...value}));};
@@ -14,8 +14,8 @@ export function useDriverTracking(user) {
       if(!navigator.geolocation){set({status:'UNAVAILABLE',message:'Ponsel/browser tidak menyediakan GPS. Titik absensi tetap digunakan.'});return;}
       set({status:'WAITING',message:'Menunggu izin dan posisi GPS ponsel…'});
       watch=navigator.geolocation.watchPosition(async pos=>{
-        if(disposed||generation!==watchedGeneration||!route||route.id!==watchedRouteId||sending||Date.now()-lastSent<30000)return;
-        if(Date.now()-pos.timestamp>120000){set({status:'STALE',message:'Posisi GPS sudah lama; menunggu posisi baru.'});return;}
+        if(disposed||generation!==watchedGeneration||!route||route.id!==watchedRouteId||sending||Date.now()-lastSent<(settings.TRACKING_SEND_INTERVAL_SECONDS||30)*1000)return;
+        if(Date.now()-pos.timestamp>(settings.DRIVER_TRACKING_LIVE_SECONDS||120)*1000){set({status:'STALE',message:'Posisi GPS sudah lama; menunggu posisi baru.'});return;}
         sending=true;const target=route;
         try{
           const res=await deliveryApi.reportLocation(target.id,{latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy,observedAt:new Date(pos.timestamp).toISOString()});
@@ -37,13 +37,13 @@ export function useDriverTracking(user) {
         if(!next){stop();route=null;set({status:'IDLE',message:candidates.length>1?'Ada beberapa trip aktif. Gudang perlu menyelesaikan bentrok sebelum pelacakan.':'GPS trip aktif setelah berangkat hingga kembali gudang.'});}
       }catch(error){stop();route=null;set({status:'ERROR',message:`Tidak dapat memeriksa trip: ${error.message}`});}finally{querying=false;}
     };
-    const freshness=()=>setState(previous=>['LIVE','BACKGROUND'].includes(previous.status)&&Date.now()-previous.at>120000?{...previous,status:'STALE',message:'GPS belum memperbarui posisi selama lebih dari 2 menit. Gudang melihat posisi terakhir.'}:previous);
+    const freshness=()=>setState(previous=>['LIVE','BACKGROUND'].includes(previous.status)&&Date.now()-previous.at>(settings.DRIVER_TRACKING_LIVE_SECONDS||120)*1000?{...previous,status:'STALE',message:`GPS belum memperbarui posisi selama lebih dari ${settings.DRIVER_TRACKING_LIVE_SECONDS||120} detik. Gudang melihat posisi terakhir.`}:previous);
     const resume=()=>{freshness();restartRequested=true;sync();};
     const visibility=()=>{if(document.visibilityState==='visible')resume();else if(route)setState(previous=>['LIVE','BACKGROUND'].includes(previous.status)?{...previous,status:'BACKGROUND',message:'Halaman berada di latar belakang. Browser dapat menghentikan GPS; periksa posisi terakhir saat kembali.'}:previous);};
     const offline=()=>{stop();restartRequested=true;set({status:'OFFLINE',message:'Perangkat offline. Lokasi baru belum dapat dikirim; gudang melihat posisi terakhir.'});};
     const freshnessTimer=setInterval(freshness,15000);
     sync();const timer=setInterval(sync,30000);window.addEventListener('delivery:changed',sync);window.addEventListener('online',resume);window.addEventListener('offline',offline);window.addEventListener('focus',resume);document.addEventListener('visibilitychange',visibility);
     return()=>{disposed=true;stop();clearInterval(timer);clearInterval(freshnessTimer);window.removeEventListener('delivery:changed',sync);window.removeEventListener('online',resume);window.removeEventListener('offline',offline);window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',visibility);};
-  },[user?.id,user?.role]);
+  },[user?.id,user?.role,settings.DRIVER_TRACKING_MODE,settings.TRACKING_SEND_INTERVAL_SECONDS,settings.DRIVER_TRACKING_LIVE_SECONDS]);
   return state;
 }

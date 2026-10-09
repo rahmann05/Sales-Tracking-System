@@ -1,7 +1,7 @@
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
-import {getDynamicConfig} from '../../config/config.service.js';
+import {processValue} from '../../config/services/process-policy.service.js';
 import {saveOutletPhoto} from '../customer-photo.service.js';
 import {createRegistrationSchema} from '../customer-registrations.schema.js';
 import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service.js';
@@ -13,14 +13,15 @@ export async function reviseRegistration(id,raw,actor) {
  const previous=await prisma.customerRegistration.findFirst({where:{id,deletedAt:null}});
  if(!previous)throw new AppError('Pengajuan tidak ditemukan',404);
  await assertSalesAccess(actor,previous.salesmanId);
+ if(!await processValue(previous,'REGISTRATION_ALLOW_REVISION',true))throw new AppError('Perbaikan pengajuan dinonaktifkan dalam aturan pengajuan',403);
  const {updatedAt,revisionReason,requestId,duplicateReason}=raw;
  const keys=[...Object.keys(createRegistrationSchema.shape.body.shape),'divisionId','divisionName'].filter(k=>!['requestId','registrationCode','duplicateReason'].includes(k));
  const input=sanitizeRegistrationPayload(Object.fromEntries(keys.filter(k=>raw[k]!==undefined).map(k=>[k,raw[k]])));
  const retry=(previous.revisionHistory || []).find(h=>h.requestId===requestId);
  if(retry)return assertRequestReplay(previous,input,actor,retry.actor.id);
  if(previous.registrationStatus!=='REJECTED')throw new AppError('Hanya pengajuan yang ditolak dapat diperbaiki dan diajukan ulang.',409);
- if(await getDynamicConfig('CUSTOMER_REG_REQUIRE_PHOTO',true)&&!input.photoUrl?.trim())throw new AppError('Foto fisik outlet wajib dilampirkan',422);
- if(await getDynamicConfig('CUSTOMER_REG_REQUIRE_TAX_DOCUMENT',true)&&!input.taxDocumentUrl?.trim())throw new AppError('Foto dokumen identitas wajib dilampirkan',422);
+ if(await processValue(previous,'CUSTOMER_REG_REQUIRE_PHOTO',true)&&!input.photoUrl?.trim())throw new AppError('Foto fisik outlet wajib dilampirkan',422);
+ if(await processValue(previous,'CUSTOMER_REG_REQUIRE_TAX_DOCUMENT',true)&&!input.taxDocumentUrl?.trim())throw new AppError('Foto dokumen identitas wajib dilampirkan',422);
  assertOutletLegal(input,previous);
  assertOutletTrade(input,previous);
  if(input.photoUrl&&input.photoUrl!==previous.photoUrl)Object.assign(input,await saveOutletPhoto(input.photoUrl,'PHOTO-REG'));

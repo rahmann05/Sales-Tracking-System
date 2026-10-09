@@ -2,9 +2,9 @@ import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {writeDraft} from '../../../../../shared/form-draft.mjs';
 import { useApp } from '../../../context/AppContext';
 import {visitOutcomeError} from '../../../../../shared/visit-outcome.mjs';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useGeofence } from '../../../shared/hooks/useGeofence';
-import { getDetailedAddressFromGps } from '../../../services/reverseGeocodeService';
+import {useAddressLookup} from '../../../shared/hooks/useAddressLookup';
 
 /**
  * useOffPjpCheckIn Hook
@@ -20,81 +20,18 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
     const customerName=draft.value.customerName,setCustomerName=draft.field('customerName');
     const phone=draft.value.phone,setPhone=draft.field('phone');
     const address=draft.value.address,setAddress=draft.field('address');
-    const [isAddressAutoFetched, setIsAddressAutoFetched] = useState(false);
-    const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
     const notes=draft.value.notes,setNotes=draft.field('notes');
     const [capturedPhoto, setCapturedPhoto] = useState(draft.value.pending?.photoUrl||null);
     const [capturedGps, setCapturedGps] = useState(null);
 
-    const { userLocation, refreshGpsLocation } = useGeofence(null, null);
-    const manualAddress=useRef(Boolean(address)),addressFlight=useRef(0);
-    const lastGeocodedCoords = useRef({ lat: null, lng: null });
-
-    const fetchAddressFromCoords = useCallback(async (lat, lng, force = false) => {
-        if (!lat || !lng) return;
-        if (!force && lastGeocodedCoords.current.lat === lat && lastGeocodedCoords.current.lng === lng) return;
-
-        lastGeocodedCoords.current = { lat, lng };
-        const version=++addressFlight.current;setIsGeocodingLoading(true);
-        try {
-            const detailedAddress = await getDetailedAddressFromGps(lat, lng);
-            if (detailedAddress&&version===addressFlight.current&&!manualAddress.current) {
-                setAddress(detailedAddress);
-                setIsAddressAutoFetched(true);
-            }
-        } catch (err) {
-            console.warn('Detailed geocode error:', err);
-        } finally {
-            if(version===addressFlight.current)setIsGeocodingLoading(false);
-        }
-    }, []);
-
-    // Auto-fetch alamat saat modal dibuka
-    useEffect(() => {
-        if (!isOpen || !navigator.geolocation || manualAddress.current) return;
-        navigator.geolocation.getCurrentPosition(
-            (pos) => fetchAddressFromCoords(pos.coords.latitude, pos.coords.longitude),
-            () => {
-                if (userLocation?.lat && userLocation?.lng) {
-                    fetchAddressFromCoords(userLocation.lat, userLocation.lng);
-                }
-            },
-            { enableHighAccuracy: true, timeout: 5000 }
-        );
-    }, [isOpen, fetchAddressFromCoords]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Ikuti perubahan userLocation dari geofence hook
-    useEffect(() => {
-        if (userLocation?.lat && userLocation?.lng && (!address || isAddressAutoFetched)) {
-            fetchAddressFromCoords(userLocation.lat, userLocation.lng);
-        }
-    }, [userLocation, address, isAddressAutoFetched, fetchAddressFromCoords]);
-
-    const handleCapture = (photoUrl, location) => {
-        setCapturedPhoto(photoUrl);
-        const effectiveLocation = location || userLocation;
-        setCapturedGps(effectiveLocation);
-        if (effectiveLocation?.lat && effectiveLocation?.lng && (!address || isAddressAutoFetched)) {
-            fetchAddressFromCoords(effectiveLocation.lat, effectiveLocation.lng, true);
-        }
+    const { userLocation } = useGeofence(null, null,50,isOpen&&settings.OFF_PJP_REQUIRE_GPS!==false);
+    const {lookupEnabled,lookupError,isAddressAutoFetched,isGeocodingLoading,fetchAddressFromCoords,handleAddressChange,refresh}=useAddressLookup({address,onChange:setAddress,autoLocation:userLocation,autoEnabled:isOpen});
+    const handleCapture=(photoUrl,location)=>{
+        setCapturedPhoto(photoUrl);const gps=location||userLocation;setCapturedGps(gps);
+        if(gps)fetchAddressFromCoords(gps.lat,gps.lng);
     };
-
-    const handleRetake = () => setCapturedPhoto(null);
-
-    const handleManualRefreshAddress = () => {
-        manualAddress.current=false;
-        if (userLocation?.lat && userLocation?.lng) {
-            fetchAddressFromCoords(userLocation.lat, userLocation.lng, true);
-        } else {
-            refreshGpsLocation();
-        }
-    };
-
-    const handleAddressChange = (value) => {
-        manualAddress.current=true;addressFlight.current++;setIsGeocodingLoading(false);
-        setAddress(value);
-        setIsAddressAutoFetched(false);
-    };
+    const handleRetake=()=>{setCapturedPhoto(null);setCapturedGps(null);};
+    const handleManualRefreshAddress=()=>refresh(userLocation);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -115,11 +52,11 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
         const outcomeError=visitOutcome.purpose&&visitOutcomeError(visitOutcome);
         if(outcomeError){setError(outcomeError);return;}
         const gps = capturedGps || userLocation;
-        if (!gps || !Number.isFinite(gps.lat) || !Number.isFinite(gps.lng)) { setError('GPS belum tersedia. Ambil ulang foto.'); return; }
+        if (settings.OFF_PJP_REQUIRE_GPS&&(!gps || !Number.isFinite(gps.lat) || !Number.isFinite(gps.lng))) { setError('GPS belum tersedia. Ambil ulang foto.'); return; }
         if (!outletName.trim()) {setError('Isi nama toko terlebih dahulu.');return;}
         if (!customerName.trim()) {setError('Isi nama pelanggan / pemilik toko terlebih dahulu.');return;}
         if (address.trim().length < 5) { setError('Isi alamat toko minimal 5 karakter.'); return; }
-        if (!capturedPhoto) {setError('Ambil foto presensi dari kamera aktif.');return;}
+        if (settings.OFF_PJP_REQUIRE_PHOTO&&!capturedPhoto) {setError('Ambil foto presensi dari kamera aktif.');return;}
 
         sending.current = true; setSaving(true); setError('');
         const payload = {
@@ -152,9 +89,9 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
         customerName, setCustomerName,
         phone, setPhone,
         address, handleAddressChange,
-        isAddressAutoFetched, isGeocodingLoading,
+        isAddressAutoFetched, isGeocodingLoading,lookupEnabled,lookupError,
         notes, setNotes,
-        capturedPhoto, userLocation,
+        capturedPhoto, userLocation,settings,setCapturedGps,
         handleCapture, handleRetake,
         handleManualRefreshAddress, handleConfirm,
     };

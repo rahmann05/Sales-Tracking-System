@@ -1,3 +1,6 @@
+import {gpsEvidence} from '../../../utils/gps-evidence.js';
+import {visitSettings,validateVisitResult} from './visit-session.service.js';
+import {withProcessPolicy} from '../../config/services/process-policy.service.js';
 import {reconcilePjp} from '../../route-changes/services/route-decision.service.js';
 import {visitOutcomeSchema} from '../visit-outcome.schema.js';
 import {createCollectionFollowUp} from './collection-follow-up.service.js';
@@ -29,28 +32,46 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
     throw new AppError('Anda tidak berhak melakukan absensi pada PJP ini', 403);
   }
 
+  const visit=await visitSettings(stop);
+  await validateVisitResult(payload);
   const existingIn = stop.attendances.find((a) => a.userId === userId && a.type === ATTENDANCE_TYPE.IN);
-  if (!existingIn) throw new AppError('Absen OUT gagal. Anda belum melakukan Absen IN pada outlet ini', 400);
+  if (!existingIn && visit.requireIn) throw new AppError('Absen OUT gagal. Anda belum melakukan Absen IN pada outlet ini', 400);
 
   const existingOut = stop.attendances.find((a) => a.userId === userId && a.type === ATTENDANCE_TYPE.OUT);
   if (existingOut) throw new AppError('Anda sudah melakukan Absen OUT pada outlet ini', 409);
-  if (await getDynamicConfig('ATTENDANCE_REQUIRE_PHOTO', true) && !photoUrl?.trim()) throw new AppError('Foto absen keluar wajib dilampirkan', 422);
-
+  if(!visit.requireOut){
+    if(!stop.visitSession?.startedAt&&!existingIn)throw new AppError('Mulai kegiatan kunjungan sebelum mencatat hasil',409);
+    if(stop.visitSession?.finishedAt)throw new AppError('Kegiatan sudah selesai',409);
+    const result=await resolveSalesResult(payload);
+    const visitOutcome=payload.visitOutcome?visitOutcomeSchema.parse(payload.visitOutcome):undefined;
+    const session={...stop.visitSession,state:'FINISHED',finishedAt:new Date().toISOString(),attendanceMode:visit.mode,result:{...result,notes:notes||null,...(visitOutcome?{visitOutcome}:{})}};
+    await db.pjpStop.update({where:{id:pjpStopId},data:{status:VISIT_STATUS.VISITED,visitSession:session,policySnapshot:visit.snapshot}});
+    if(result.manualSalesStatus==='PENDING'){
+      const user=await db.user.findUnique({where:{id:userId},select:{supervisorId:true}});
+      await db.operationalException.upsert({where:{dedupeKey:`MANUAL_RESULT:${pjpStopId}`},update:{},create:{dedupeKey:`MANUAL_RESULT:${pjpStopId}`,kind:'MANUAL_RESULT',entityId:pjpStopId,userId,supervisorId:user.supervisorId,details:{outletName:stop.outlet.name,orderAmount:result.orderAmount,skuSold:result.skuSold}}});
+    }
+    await createCollectionFollowUp(db,{id:pjpStopId,userId,outletName:stop.outlet.name,visitOutcome},'PJP_RESULT');
+    await reconcilePjp(db,stop.pjpId);
+    return {logical:true,visitSession:session,...result,visitOutcome:visitOutcome||null,durationMinutes:null};
+  }
+  if (visit.photoOut && !photoUrl?.trim()) throw new AppError('Foto absen keluar wajib dilampirkan',422);
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
   const bypassEmailsRaw = await getDynamicConfig('BYPASS_GEOFENCE_EMAILS', '');
   const bypassEmails = String(bypassEmailsRaw).split(',').map((e) => e.trim().toLowerCase());
   const isBypassUser = Boolean(user?.email && bypassEmails.includes(user.email.toLowerCase()));
 
   // Geolocation validation
-  const distance = calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude);
-  const deviationMeters = Math.round(distance);
+  const hasGps=Number.isFinite(latitude)&&Number.isFinite(longitude);
+  if(visit.snapshot.values.SALES_REQUIRE_GPS!==false&&!hasGps)throw new AppError('GPS presensi keluar wajib diisi',422);
+  const distance = hasGps?calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude):null;
+  const deviationMeters = distance==null?null:Math.round(distance);
 
   // Read dynamic radius from SystemConfig cache
   const globalRadius = await getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50);
 
   const useOutletRadius = await getDynamicConfig('ATTENDANCE_USE_OUTLET_RADIUS', true);
   const maxRadius = useOutletRadius ? (stop.outlet.radiusMeters || globalRadius) : globalRadius;
-  const distanceWarning = distance > maxRadius ? 'WARNING' : 'OK';
+  const distanceWarning = distance==null?'UNAVAILABLE':distance > maxRadius ? 'WARNING' : 'OK';
 
   // Enforce Geofence: Block checkout if outside radius, except for an explicitly configured exception
   const hasException = await attendanceException(stop.outlet.id,userId,db);
@@ -85,15 +106,16 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   const visitOutcome=payload.visitOutcome?visitOutcomeSchema.parse(payload.visitOutcome):undefined;
   const effective = result.isEffectiveCall;
 
+  const evidence=await gpsEvidence({latitude,longitude,accuracy:payload.accuracy,observedAt:payload.observedAt});
   const attendance = await db.attendance.create({
       data: {
         pjpStopId,
         userId,
         type: ATTENDANCE_TYPE.OUT,
-        latitude,
-        longitude,
+        latitude:latitude??null,
+        longitude:longitude??null,
         photoUrl,
-        notes: notes || 'Kunjungan Selesai',
+        gpsEvidence:evidence,notes: notes || 'Kunjungan Selesai',
         durationMinutes,
         deviationMeters,
         distanceWarning,
@@ -104,11 +126,11 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
       },
     });
     await createCollectionFollowUp(db,{...attendance,outletName:stop.outlet.name},'PJP');
-    await db.pjpStop.update({where:{id:pjpStopId},data:{status:VISIT_STATUS.VISITED}});
+    await db.pjpStop.update({where:{id:pjpStopId},data:{status:VISIT_STATUS.VISITED,visitSession:{...stop.visitSession,state:'FINISHED',finishedAt:new Date().toISOString(),attendanceMode:visit.mode}}});
 
   await reconcilePjp(db,stop.pjpId);
 
   return attendance;
 };
 
-export const checkOut=(pjpStopId, userId, latitude, longitude, photoUrl = null, payload = {})=>withUserTransaction(userId,db=>perform(db,pjpStopId,userId,latitude,longitude,photoUrl,payload));
+export const checkOut=(pjpStopId, userId, latitude, longitude, photoUrl = null, payload = {})=>withUserTransaction(userId,async db=>withProcessPolicy(await db.pjpStop.findUnique({where:{id:pjpStopId}}),()=>perform(db,pjpStopId,userId,latitude,longitude,photoUrl,payload)));

@@ -3,8 +3,9 @@ import React,{useState} from 'react';
 import {useApp} from '../../../context/AppContext';
 import {useUnsavedNavigation} from '../../hooks/useUnsavedNavigation';
 import {staffAttendanceApi} from '../../../services/api';
-export function FollowUpActions({id,followUp:f,onChanged}) {
- const {user}=useApp();
+export function FollowUpActions({id,followUp:f,policySnapshot,onChanged}) {
+ const {user,settings}=useApp();
+ const values=policySnapshot?.values||settings;
  const draft=useFormDraft(`followup:${id}:${f.submission?.id||'open'}:${f.status}`,{note:'',evidence:''});
  const {note,evidence}=draft.value,setNote=draft.field('note'),setEvidence=draft.field('evidence');
  const [decision,setDecision]=useState('ACCEPT'),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -26,9 +27,9 @@ export function FollowUpActions({id,followUp:f,onChanged}) {
   {(submit||review)&&<form className="space-y-3" onSubmit={save}><fieldset disabled={busy} className="space-y-3">
    {review&&<label className="block">Keputusan<select className="form-input block w-full" value={decision} onChange={e=>setDecision(e.target.value)}><option value="ACCEPT">Terima hasil dan selesaikan tugas</option><option value="RETURN">Minta perbaikan dari PIC</option></select></label>}
    <label className="block">{review?'Catatan pemeriksaan / alasan perbaikan':'Hasil tindak lanjut'}<textarea className="form-input block w-full" required maxLength={review?2000:4000} value={note} onChange={e=>setNote(e.target.value)}/></label>
-   {submit&&<label className="block">Bukti atau referensi hasil<textarea className="form-input block w-full" required maxLength={2000} value={evidence} onChange={e=>setEvidence(e.target.value)} placeholder="Contoh: waktu komunikasi, pihak yang ditemui, atau referensi dokumen pendukung"/></label>}
+   {submit&&<label className="block">Bukti atau referensi hasil {values.FOLLOW_UP_REQUIRE_EVIDENCE?'(wajib)':'(opsional)'}<textarea className="form-input block w-full" required={values.FOLLOW_UP_REQUIRE_EVIDENCE} maxLength={2000} value={evidence} onChange={e=>setEvidence(e.target.value)} placeholder="Contoh: waktu komunikasi, pihak yang ditemui, atau referensi dokumen pendukung"/></label>}
    <p className="text-xs">Pemeriksaan ini menyelesaikan tindak lanjut kunjungan, bukan memverifikasi pelunasan.</p>
-   <button className="btn btn-secondary min-h-11">{busy?'Menyimpan…':review?'Simpan pemeriksaan':'Kirim hasil untuk diperiksa'}</button>
+   <button className="btn btn-secondary min-h-11">{busy?'Menyimpan…':review?'Simpan pemeriksaan':values.FOLLOW_UP_REQUIRE_REVIEW?'Kirim hasil untuk diperiksa':'Simpan hasil & selesaikan tugas'}</button>
   </fieldset></form>}
   {error&&<p role="alert" className="text-red-600">{error}</p>}
   <details><summary className="cursor-pointer min-h-11">Riwayat tindak lanjut ({f.history?.length||0})</summary>{f.history?.map((h,i)=><p className="text-sm py-1" key={i}>{new Date(h.at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} · {h.action} · {h.note||h.after?.note} {h.evidence?`· Bukti / referensi: ${h.evidence}`:''}</p>)}</details>

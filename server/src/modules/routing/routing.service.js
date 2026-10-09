@@ -1,3 +1,4 @@
+import {AppError} from '../../utils/errors.js';
 /**
  * Routing Service (Backend)
  * Single Responsibility: Orchestrate route resolution dengan fallback strategy.
@@ -16,23 +17,27 @@ import { getDynamicConfig } from '../config/config.service.js';
  * @returns {Promise<{legs: Array, provider: 'google'|'osrm'}>}
  */
 export const resolveRoadRoute = async (waypoints) => {
+    const provider=await getDynamicConfig('ROUTING_PROVIDER','AUTO'),fallback=await getDynamicConfig('ROUTING_ALLOW_FALLBACK',true);
+    if(provider==='OFF'||await getDynamicConfig('FEATURE_MAPS_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Layanan rute jalan dinonaktifkan Admin',403);
     let apiKey = config.googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY;
     try {
         const dynamicKey = await getDynamicConfig('MAPS_API_KEY', apiKey);
         if (dynamicKey) apiKey = dynamicKey;
     } catch {}
 
-    if (apiKey) {
+    if (apiKey && provider!=='OSRM') {
         try {
             const legs = await fetchGoogleLegs(waypoints, apiKey);
             return { legs, provider: 'google' };
         } catch (err) {
+            if(provider==='GOOGLE'&&!fallback||!fallback)throw err;
             console.warn('[routingService] Google Directions/Routes API gagal, fallback OSRM:', err.message);
         }
     } else {
         console.info('[routingService] GOOGLE_MAPS_API_KEY tidak diset — langsung pakai OSRM.');
     }
 
+    if(provider==='GOOGLE'&&!fallback)throw new AppError('Google Maps belum tersedia dan rute cadangan dinonaktifkan',503);
     try {
         const legs = await fetchOsrmLegs(waypoints);
         return { legs, provider: 'osrm' };

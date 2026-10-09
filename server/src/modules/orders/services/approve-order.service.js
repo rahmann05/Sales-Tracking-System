@@ -1,3 +1,5 @@
+import {policyNotification} from '../../notifications/services/notification-policy.service.js';
+import {processValue} from '../../config/services/process-policy.service.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 import {assertOrderReviewDecision,orderReviewConflict} from './order-review-assignment.service.js';
 import { draftFromApprovedOrder } from '../../delivery/services/packing-workflow.service.js';
@@ -26,10 +28,15 @@ export const approveOrder = async (orderId, adminId, options={}) => {
     const current=await tx.order.findUnique({where:{id:orderId}});
     if(!current||current.deletedAt||current.status!==ORDER_STATUS.PENDING_APPROVAL)throw new AppError('Order sudah diproses atau tidak aktif',409);
     const decision=await assertOrderReviewDecision(tx,current,await tx.user.findUnique({where:{id:adminId}}),options);
+    if(await processValue(current,'ORDER_APPROVAL_MODE','BOTH')==='SEQUENTIAL'){
+      const reviewed=(current.history||[]).some(h=>h.action==='SUPERVISOR_REVIEW');
+      if(reviewer.role==='SUPERVISOR'){if(reviewed)throw new AppError('Order sudah ditinjau SPV; menunggu Admin',409);return tx.order.update({where:{id:orderId},data:{history:[...(current.history||[]),{action:'SUPERVISOR_REVIEW',actorId:adminId,at:new Date().toISOString(),...decision}]}});}
+      if(!reviewed)throw new AppError('Order harus ditinjau SPV terlebih dahulu',409);
+    }
     const changed = await tx.order.updateMany({ where: { id: orderId, status: ORDER_STATUS.PENDING_APPROVAL }, data: { status: ORDER_STATUS.APPROVED, approvedBy: adminId, approvedAt: new Date(),history:[...(current.history||[]),{action:'APPROVE',actorId:adminId,at:new Date().toISOString(),...decision}] } });
     if (!changed.count) throw new AppError('Order sudah diproses', 409);
     await draftFromApprovedOrder(tx, orderId, adminId);
-    await tx.notification.create({data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_APPROVED,title:'Order Disetujui',message:`Order Anda di outlet "${order.pjpStop.outlet.name}" telah disetujui`,payload:{orderId:order.id}}});
+    await policyNotification(tx,{data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_APPROVED,title:'Order Disetujui',message:`Order Anda di outlet "${order.pjpStop.outlet.name}" telah disetujui`,payload:{orderId:order.id}}});
     return tx.order.findUnique({
     where: { id: orderId },
     include: { 
@@ -46,6 +53,7 @@ export const approveOrder = async (orderId, adminId, options={}) => {
 };
 
 export const batchApproveOrders = async (orderIds = [], adminId) => {
+  if(!await processValue(null,'ORDER_ALLOW_BATCH_APPROVAL',true))throw new AppError('Persetujuan massal dinonaktifkan',403);
   if (!Array.isArray(orderIds) || orderIds.length === 0) {
     throw new AppError('Daftar ID order wajib diisi', 400);
   }

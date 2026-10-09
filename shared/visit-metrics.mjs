@@ -1,10 +1,12 @@
 // One status definition for cards, PJP counters, and attendance reports.
 export function visitState(stop) {
+  if(stop.visitSession?.state==='INCOMPLETE')return 'EXCEPTION';
+  if(stop.visitSession?.state==='FINISHED')return 'COMPLETED';
   const out = stop.attendances?.some(a => a.type === 'OUT');
   const entered = stop.attendances?.some(a => a.type === 'IN');
   if (out || stop.outTimestamp || stop.checkOutTime || ['VISITED', 'COMPLETED'].includes(stop.status)) return 'COMPLETED';
   if (['SKIPPED', 'CLOSED', 'CLOSED_REPORTED'].includes(stop.status)) return 'EXCEPTION';
-  if (entered || stop.inTimestamp || stop.checkInTime || ['ARRIVED', 'IN_VISIT', 'ORDERED'].includes(stop.status)) return 'IN_PROGRESS';
+  if (stop.visitSession?.state==='ACTIVE' || entered || stop.inTimestamp || stop.checkInTime || ['ARRIVED', 'IN_VISIT', 'ORDERED'].includes(stop.status)) return 'IN_PROGRESS';
   return 'PENDING';
 }
 
@@ -23,22 +25,23 @@ export function visitSalesResult(stop, options = {}) {
   const { manualSalesMode = 'NOTES_ONLY' } = options;
   const checkIn = stop.attendances?.find(a => a.type === 'IN');
   const checkOut = stop.attendances?.find(a => a.type === 'OUT');
+  const salesEvidence=checkOut||stop.visitSession?.result;
   // Aturan bisnis: Hanya order yang sudah disetujui (APPROVED) yang masuk nominal dan SKU laporan.
   const hasRecordedOrder = (stop.orders || []).some(o => !o.deletedAt);
   const approvedOrders = (stop.orders || []).filter(o => o.status === 'APPROVED' && !o.deletedAt);
   
   // Hasil manual absensi: NOTES_ONLY (default) hanya sebagai catatan; REQUIRE_APPROVAL wajib disetujui.
   const allowManual = !hasRecordedOrder && (
-    (checkOut?.manualSalesMode ?? manualSalesMode) === 'REQUIRE_APPROVAL' && Boolean(checkOut?.isManualSalesApproved)
+    (salesEvidence?.manualSalesMode ?? manualSalesMode) === 'REQUIRE_APPROVAL' && Boolean(salesEvidence?.isManualSalesApproved)
   );
 
   const orderAmount = approvedOrders.length > 0
     ? approvedOrders.reduce((sum, o) => sum + Number(o.totalValue), 0)
-    : (allowManual ? Number(checkOut?.orderAmount || 0) : 0);
+    : (allowManual ? Number(salesEvidence?.orderAmount || 0) : 0);
 
   const skuSold = approvedOrders.length > 0
     ? new Set(approvedOrders.flatMap(o => (o.items || []).map(i => i.productId))).size
-    : (allowManual ? Number(checkOut?.skuSold || 0) : 0);
+    : (allowManual ? Number(salesEvidence?.skuSold || 0) : 0);
 
   const actual = Boolean(checkIn || checkOut) || visitState(stop) === 'COMPLETED';
   return {

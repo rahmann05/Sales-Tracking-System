@@ -1,3 +1,4 @@
+import {downloadOperationalFile} from '../../../services/operationalExportService';
 import { SuspiciousAttendanceSummary } from './SuspiciousAttendanceSummary';
 import { SuspiciousAttendanceRows } from './SuspiciousAttendanceRows';
 import React, { useState } from 'react';
@@ -18,8 +19,8 @@ export const SuspiciousAttendanceTable = ({
 
   // Filter only rows that are abnormal/suspicious
   const suspiciousRows = rows.filter(r => {
-    const isDuration = r.isDurationAnomaly || r.durationMinutes > 0 && r.durationMinutes < 5;
-    const isDistance = r.isDistanceAnomaly || r.distanceWarning === 'WARNING' || r.deviationMeters > 50;
+    const isDuration = Boolean(r.isDurationAnomaly);
+    const isDistance = r.isDistanceAnomaly || r.distanceWarning === 'WARNING';
     const isTravel = r.isTravelAnomaly;
     const isSkipped = r.isSkipped;
     const isSuspicious = isDuration || isDistance || isTravel || isSkipped || Boolean(r.earlyReason);
@@ -39,17 +40,12 @@ export const SuspiciousAttendanceTable = ({
       return;
     }
     const headers = ['No', 'Tanggal', 'Salesman', 'Klaster', 'Kode Toko', 'Nama Toko', 'Jam In', 'Jam Out', 'Durasi (Menit)', 'Status Durasi', 'Deviasi GPS (Meter)', 'Peringatan Jarak', 'Jarak dari Toko Sebelumnya (Km)', 'Waktu Tempuh Perjalanan (Menit)', 'Peringatan Jeda Travel', 'Jenis Anomali', 'Alasan Checkout Dini / Travel', 'Catatan / Keterangan Toko', 'Effective Call', 'Nilai Order (Rp)'];
-    const csvData = filteredRows.map((r, idx) => [idx + 1, r.date, `"${(r.salesmanName || '').replace(/"/g, '""')}"`, `"${(r.clusterName || '').replace(/"/g, '""')}"`, `"${r.customerId}"`, `"${(r.customerName || '').replace(/"/g, '""')}"`, r.timeIn || '-', r.timeOut || '-', r.durationMinutes || 0, r.durationMinutes < 5 ? '< 5 Menit (Janggal)' : 'Normal', r.deviationMeters || 0, r.distanceWarning === 'WARNING' ? 'Di Luar Radius (>50m)' : 'OK', r.travelDistanceKm || 0, r.travelDurationMinutes || 0, r.isTravelAnomaly ? 'Jeda Travel Janggal' : 'Normal', `"${[r.isDurationAnomaly ? 'Durasi <5m' : '', r.isDistanceAnomaly ? 'Deviasi GPS >50m' : '', r.isTravelAnomaly ? 'Jeda Travel Janggal' : '', r.isSkipped ? 'Belum Dikunjungi/Kelewat' : ''].filter(Boolean).join(', ')}"`, `"${(r.travelAnomalyReason || r.earlyReason || '-').replace(/"/g, '""')}"`, `"${(r.reason || r.remark || '-').replace(/"/g, '""')}"`, r.effectiveCall === 'Y' ? 'EC' : 'Non-EC', r.orderAmount || 0]);
+    const csvData = filteredRows.map((r, idx) => [idx + 1, r.date, `"${(r.salesmanName || '').replace(/"/g, '""')}"`, `"${(r.clusterName || '').replace(/"/g, '""')}"`, `"${r.customerId}"`, `"${(r.customerName || '').replace(/"/g, '""')}"`, r.timeIn || '-', r.timeOut || '-', r.durationMinutes || 0, r.isDurationAnomaly ? 'Di bawah batas aturan' : r.durationMinutes==null?'Tidak tersedia':'Normal', r.deviationMeters || 0, r.distanceWarning === 'WARNING' ? 'Di luar radius aturan' : 'OK', r.travelDistanceKm || 0, r.travelDurationMinutes || 0, r.isTravelAnomaly ? 'Jeda Travel Janggal' : 'Normal', `"${[r.isDurationAnomaly ? 'Durasi di bawah batas aturan' : '', r.isDistanceAnomaly ? 'Deviasi GPS melebihi radius' : '', r.isTravelAnomaly ? 'Jeda Travel Janggal' : '', r.isSkipped ? 'Belum Dikunjungi/Kelewat' : ''].filter(Boolean).join(', ')}"`, `"${(r.travelAnomalyReason || r.earlyReason || '-').replace(/"/g, '""')}"`, `"${(r.reason || r.remark || '-').replace(/"/g, '""')}"`, r.effectiveCall === 'Y' ? 'EC' : 'Non-EC', r.orderAmount || 0]);
     const csvContent = '\uFEFF' + [headers.join(','), ...csvData.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], {
       type: 'text/csv;charset=utf-8;'
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `AUDIT_ABSENSI_JANGGAL_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadOperationalFile(blob,`AUDIT_ABSENSI_JANGGAL_${new Date().toISOString().split('T')[0]}.csv`,'text/csv;charset=utf-8;');
   };
   return <div className="space-y-4">
       {/* 1. Header Banner & Audit Warning */}

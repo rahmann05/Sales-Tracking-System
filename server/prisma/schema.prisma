@@ -420,6 +420,8 @@ model Pjp {
 }
 
 model PjpStop {
+  visitSession Json?
+  policySnapshot Json?
   id       String      @id @default(uuid())
   pjpId    String
   pjp      Pjp         @relation(fields: [pjpId], references: [id], onDelete: Cascade)
@@ -441,6 +443,7 @@ model PjpStop {
 }
 
 model Attendance {
+  gpsEvidence Json?
   visitOutcome Json?
   manualSalesMode String @default("NOTES_ONLY")
   manualSalesStatus String @default("NOTES_ONLY")
@@ -455,8 +458,8 @@ model Attendance {
   userId          String
   user            User           @relation(fields: [userId], references: [id])
   type            AttendanceType
-  latitude        Float
-  longitude       Float
+  latitude        Float?
+  longitude       Float?
   photoUrl        String?        @db.Text
   notes           String?
   durationMinutes Float?
@@ -482,6 +485,8 @@ model Attendance {
 }
 
 model OffPjpAttendance {
+  gpsEvidence Json?
+  policySnapshot Json?
   reportingContext Json?
   reportSupervisorId String?
   reportClusterId String?
@@ -506,8 +511,8 @@ model OffPjpAttendance {
   customerName String?
   phone        String?
   address      String
-  latitude     Float
-  longitude    Float
+  latitude     Float?
+  longitude    Float?
   photoUrl     String?
   reason       String
   status       OffPjpStatus @default(PENDING)
@@ -584,9 +589,23 @@ model Notification {
   payload   Json?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+  delivery NotificationOutbox?
 
   @@index([userId, isRead])
   @@index([userId])
+}
+
+model NotificationOutbox {
+  id String @id @default(uuid())
+  notificationId String @unique
+  notification Notification @relation(fields:[notificationId],references:[id],onDelete:Cascade)
+  state String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  processedAt DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  @@index([state,nextAttemptAt])
 }
 
 model PjpTemplate {
@@ -640,6 +659,7 @@ model PjpTemplateStop {
 }
 
 model Vehicle {
+  maintenancePolicy Json?
   id                String    @id @default(uuid())
   code              String    @unique
   name              String
@@ -670,6 +690,8 @@ enum VehicleCondition {
 }
 
 model VehicleServiceRecord {
+  requestId String? @unique
+  policySnapshot Json?
   id                String   @id @default(uuid())
   vehicleId         String
   vehicle           Vehicle  @relation(fields: [vehicleId], references: [id])
@@ -677,7 +699,7 @@ model VehicleServiceRecord {
   workshopName      String
   serviceType       String
   cost              Float
-  odometerAtService Int
+  odometerAtService Float
   notes             String?  @db.Text
   
   createdAt         DateTime @default(now())
@@ -710,6 +732,7 @@ model Division {
 }
 
 model CustomerRegistration {
+  policySnapshot Json?
   revisionHistory Json?
   visitIntervalWeeks Int?
   locationEvidence Json?
@@ -881,6 +904,7 @@ model Product {
 }
 
 model Order {
+  policySnapshot Json?
   requestId String? @unique
   requestHash String?
   taxIncluded Boolean?
@@ -943,6 +967,7 @@ model OrderItem {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model PackingList {
+  policySnapshot Json?
   commercialReconciliation Json?
   status String @default("DRAFT")
   source String @default("MANUAL")
@@ -996,6 +1021,7 @@ model Invoice {
 }
 
 model DeliveryRoute {
+  policySnapshot Json?
   plannedStartAt DateTime?
   plannedEndAt DateTime?
   departedAt DateTime?
@@ -1115,14 +1141,15 @@ model DeliveryIssue {
 }
 
 model DeliveryAttendance {
+  gpsEvidence Json?
   id             String         @id @default(uuid())
   deliveryStopId String
   deliveryStop   DeliveryStop   @relation(fields: [deliveryStopId], references: [id], onDelete: Cascade)
   driverId       String
   driver         User           @relation("DeliveryAttendanceDriver", fields: [driverId], references: [id])
   type           AttendanceType
-  latitude       Float
-  longitude      Float
+  latitude       Float?
+  longitude      Float?
   photoUrl       String?        @db.Text
   notes          String?
   timestamp      DateTime       @default(now())
@@ -1152,6 +1179,8 @@ model AuditEvent {
 }
 
 model StaffActivity {
+  gpsEvidence Json?
+  policySnapshot Json?
   visitMode String?
   followUp Json?
 
@@ -1172,4 +1201,20 @@ model StaffActivity {
   lateMinutes Int @default(0)
   @@unique([userId, dateKey, activityKey])
   @@index([dateKey, kind])
+}
+
+model OperationalException {
+  id String @id @default(uuid())
+  dedupeKey String @unique
+  kind String
+  entityId String
+  userId String
+  supervisorId String?
+  status String @default("OPEN")
+  details Json
+  decision Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([supervisorId, status])
+  @@index([userId, status])
 }

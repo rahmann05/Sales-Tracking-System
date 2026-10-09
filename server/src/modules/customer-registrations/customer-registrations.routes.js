@@ -20,10 +20,10 @@ router.post(
 );
 
 // Search places via Google Places
-router.get('/search-places', controller.searchPlaces);
+router.get('/search-places', authorizeWithPermission([ROLES.SALES,ROLES.SUPERVISOR,ROLES.ADMIN],'can_register_outlet'), controller.searchPlaces);
 
 // Reverse geocode lat/lng to subArea/kelurahan/area
-router.get('/reverse-geocode', controller.reverseGeocode);
+router.get('/reverse-geocode', authorizeWithPermission([ROLES.SALES,ROLES.SUPERVISOR,ROLES.ADMIN],'can_register_outlet'), controller.reverseGeocode);
 
 // 2. Get paginated registrations with filters
 router.get(

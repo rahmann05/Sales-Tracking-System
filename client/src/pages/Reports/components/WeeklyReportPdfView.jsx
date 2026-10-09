@@ -1,3 +1,4 @@
+import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { calendarDayLabel } from '../../../../../shared/report-calendar.mjs';
@@ -14,7 +15,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
   const { period = {}, summary = {}, daysSummary = [], salesmen = [] } = reportData;
 
   const handlePrint = () => {
-    window.print();
+    printOperationalDocument('REPORTS');
   };
 
   const startFormatted = period.startDate

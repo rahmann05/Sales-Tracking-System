@@ -5,7 +5,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
 import { createNotification } from '../../notifications/notifications.service.js';
 export async function reconcilePjp(tx,id) {
   const stops=await tx.pjpStop.findMany({where:{pjpId:id},include:{attendances:true,routeChanges:true}});
-  const done=stops.every(s=>s.status==='SKIPPED'||s.attendances.some(a=>a.type==='OUT')||(s.status==='CLOSED_REPORTED'&&s.routeChanges.some(r=>['APPROVED','ACKNOWLEDGED'].includes(r.status))));
+  const done=stops.every(s=>['FINISHED','INCOMPLETE'].includes(s.visitSession?.state)||s.status==='SKIPPED'||s.attendances.some(a=>a.type==='OUT')||(s.status==='CLOSED_REPORTED'&&s.routeChanges.some(r=>['APPROVED','ACKNOWLEDGED'].includes(r.status))));
   await tx.pjp.update({where:{id},data:{status:done?'COMPLETED':'IN_PROGRESS'}});
 }
 export async function decideRoute(actorId,requestId,action,replacementOutletId) {

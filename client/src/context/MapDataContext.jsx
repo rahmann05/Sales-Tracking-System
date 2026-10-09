@@ -42,7 +42,9 @@ export const MapDataProvider = ({ children }) => {
   useEffect(()=>{
     if(!user?.id)return;
     const socket=io({auth:{token:localStorage.getItem('token')},transports:['polling','websocket'],reconnectionAttempts:2,reconnectionDelay:8000,timeout:10000});
-    socket.on('cache:invalidate',()=>{if(hasFetchedRef.current)fetchAllData();});
+    socket.on('cache:invalidate',event=>{if(event.dataType==='policies')window.dispatchEvent(new Event('policy:changed'));else if(hasFetchedRef.current)fetchAllData();});
+    socket.on('notification',()=>window.dispatchEvent(new Event('notifications:changed')));
+    socket.on('connect',()=>window.dispatchEvent(new Event('notifications:changed')));
     socket.io.on('reconnect_attempt',()=>{socket.auth={token:localStorage.getItem('token')};});
     return()=>{socket.io.removeAllListeners('reconnect_attempt');socket.removeAllListeners();socket.disconnect();};
   },[user?.id,fetchAllData]);

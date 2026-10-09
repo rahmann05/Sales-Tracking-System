@@ -8,8 +8,8 @@ export const createRegistrationSchema = z.object({
     locationEvidence:locationEvidenceSchema.optional(),
     duplicateReason:z.string().trim().min(10).max(1000).optional(),
     registrationCode: z.string().trim().max(128).optional(),
-    division: z.enum(['UNICHARM', 'BELFOODS', 'GENERAL']).default('UNICHARM'),
-    branch: z.string().default('PADALARANG'),
+    division: z.enum(['UNICHARM', 'BELFOODS', 'GENERAL']).optional(),
+    branch: z.string().optional(),
     name: z.string().min(2, 'Nama outlet minimal 2 karakter'),
     ownerName: z.string().optional().nullable(),
     address: z.string().min(3, 'Alamat outlet minimal 3 karakter'),
@@ -59,9 +59,9 @@ export const createRegistrationSchema = z.object({
     channelTier: z.enum(['BRONZE_A', 'BRONZE_B', 'BRONZE_C', 'SILVER', 'GOLD']).default('BRONZE_C'),
 
     // Syarat Pembayaran
-    paymentType: z.enum(['CASH', 'TOP', 'TRANSFER']).default('CASH'),
+    paymentType: z.enum(['CASH', 'TOP', 'TRANSFER']).optional(),
     cashMethod: z.enum(['TUNAI', 'GIRO', 'CEK']).optional().nullable().default('TUNAI'),
-    termOfPaymentDays: z.coerce.number().int().nonnegative().default(0),
+    termOfPaymentDays: z.coerce.number().int().min(0).max(365).optional(),
     bankAccountInfo: z.string().optional().nullable(),
 
     // Rencana Kunjungan

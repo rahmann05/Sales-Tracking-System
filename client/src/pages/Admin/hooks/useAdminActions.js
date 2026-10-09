@@ -25,7 +25,7 @@ export const useAdminActions = ({
         const res = await ordersApi.approveOrder(orderId,{assignmentRevision,overrideReason});
         const updated = res?.data ? mapServerOrder(res.data) : null;
         setOrders((prev) =>
-          prev.map((o) => (String(o.id) === String(orderId) ? { ...o, ...(updated || {}), status: 'APPROVED' } : o))
+          prev.map((o) => (String(o.id) === String(orderId) ? { ...o, ...(updated || {}) } : o))
         );
 
         addNotification({

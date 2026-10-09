@@ -161,19 +161,19 @@ export const ALL_PERMISSIONS = [
   {
     key: 'can_manage_system_config',
     label: 'Pengaturan Sistem',
-    desc: 'Mengubah parameter global sistem (radius GPS, SLA rute, toleransi waktu)',
+    desc: 'Khusus role dasar Admin. Izin ini tidak memberi akses pengaturan kepada role lain.',
     category: 'Sistem & Administrasi',
   },
   {
     key: 'can_manage_users',
     label: 'Manajemen Pengguna',
-    desc: 'Kelola akun pengguna, reset password, dan konfigurasi profil user',
+    desc: 'Khusus role dasar Admin: akun, reset password, dan profil pengguna.',
     category: 'Sistem & Administrasi',
   },
   {
     key: 'can_manage_roles',
     label: 'Kelola Role & Template',
-    desc: 'Menambah role kustom baru dan mengatur template hak akses default',
+    desc: 'Khusus role dasar Admin: role kustom dan template hak akses.',
     category: 'Sistem & Administrasi',
   },
 ];

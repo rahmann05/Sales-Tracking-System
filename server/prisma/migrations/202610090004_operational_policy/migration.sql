@@ -1,0 +1,15 @@
+ALTER TABLE "PjpStop" ADD COLUMN "policySnapshot" JSONB;
+ALTER TABLE "Order" ADD COLUMN "policySnapshot" JSONB;
+ALTER TABLE "CustomerRegistration" ADD COLUMN "policySnapshot" JSONB;
+ALTER TABLE "PackingList" ADD COLUMN "policySnapshot" JSONB;
+ALTER TABLE "DeliveryRoute" ADD COLUMN "policySnapshot" JSONB;
+ALTER TABLE "StaffActivity" ADD COLUMN "policySnapshot" JSONB;
+ALTER TABLE "OffPjpAttendance" ADD COLUMN "policySnapshot" JSONB;
+ALTER TABLE "PjpStop" ADD COLUMN "visitSession" JSONB;
+ALTER TABLE "Attendance" ALTER COLUMN "latitude" DROP NOT NULL, ALTER COLUMN "longitude" DROP NOT NULL;
+ALTER TABLE "OffPjpAttendance" ALTER COLUMN "latitude" DROP NOT NULL, ALTER COLUMN "longitude" DROP NOT NULL;
+ALTER TABLE "DeliveryAttendance" ALTER COLUMN "latitude" DROP NOT NULL, ALTER COLUMN "longitude" DROP NOT NULL;
+CREATE TABLE "OperationalException" ("id" TEXT NOT NULL, "dedupeKey" TEXT NOT NULL, "kind" TEXT NOT NULL, "entityId" TEXT NOT NULL, "userId" TEXT NOT NULL, "supervisorId" TEXT, "status" TEXT NOT NULL DEFAULT 'OPEN', "details" JSONB NOT NULL, "decision" JSONB, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "OperationalException_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "OperationalException_dedupeKey_key" ON "OperationalException"("dedupeKey");
+CREATE INDEX "OperationalException_supervisorId_status_idx" ON "OperationalException"("supervisorId", "status");
+CREATE INDEX "OperationalException_userId_status_idx" ON "OperationalException"("userId", "status");

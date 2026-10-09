@@ -6,11 +6,12 @@ import { mtdCsv, weeklyCsv } from '../../../../../shared/report-semantics.mjs';
 import { targetPeriodError } from '../../../../../shared/sales-targets.mjs';
 import { MtdReportPdfView } from './MtdReportPdfView';
 import { WeeklyReportPdfView } from './WeeklyReportPdfView';
+import {downloadOperationalFile} from '../../../services/operationalExportService';
 
 const timestamp=value=>new Date(value).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'});
-function download(content,type,name){const url=URL.createObjectURL(new Blob([content],{type}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+const download=(content,type,name)=>downloadOperationalFile(content,name,type);
 export function ReportArchivePanel({kind,period}){
-  const {user}=useApp();const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const {user,settings}=useApp();const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [items,setItems]=useState([]),[cursor,setCursor]=useState(null),[reason,setReason]=useState(''),[selected,setSelected]=useState(null),[print,setPrint]=useState(false);
   const pending=useRef(null),revision=useRef(0);
   const allowed=user?.role==='ADMIN'&&user.permissions?.can_view_reports!==false;
@@ -49,7 +50,8 @@ export function ReportArchivePanel({kind,period}){
         {busy&&<p role="status">Memproses arsip…</p>}
         <form onSubmit={save} className="space-y-2">
           <label className="block">Alasan penyimpanan / koreksi arsip sebelumnya<textarea required minLength={5} maxLength={1000} className="app-input w-full" value={reason} disabled={busy||!!pending.current} onChange={event=>setReason(event.target.value)}/></label>
-          <button className="app-button" type="submit" disabled={busy}>{pending.current?'Coba lagi permintaan arsip':'Simpan arsip baru seluruh perusahaan'}</button>
+          <button className="app-button" type="submit" disabled={busy||settings?.REPORT_ARCHIVE_ENABLED===false}>{pending.current?'Coba lagi permintaan arsip':'Simpan arsip baru seluruh perusahaan'}</button>
+          {settings?.REPORT_ARCHIVE_ENABLED===false&&<p className="text-xs">Pembuatan arsip baru dinonaktifkan. Arsip sebelumnya tetap dapat dibuka.</p>}
         </form>
         <p className="text-xs">Koreksi disimpan sebagai arsip baru dengan alasan; arsip sebelumnya tetap tersedia.</p>
         <ul className="space-y-2">{items.map(item=><li key={item.id} className="border-b py-2 text-sm"><button type="button" className="app-button" disabled={busy} onClick={()=>view(item.id)}>Buka</button> {timestamp(item.createdAt)} WIB · {item.createdByName||'Admin'} · {item.reason}</li>)}</ul>

@@ -42,3 +42,5 @@ test('submitted tasks remain visible in the review queue without showing as unfi
  const result=paginateAttention([{key:'task',category:'VISIT',status:'SUBMITTED',dueDate:'2026-10-01',since:'2026-10-01',ownerId:'sales'}],{filter:'REVIEW'},Date.parse('2026-10-08T10:00:00Z'));
  assert.equal(result.total,1);assert.equal(result.summary.awaitingReview,1);assert.equal(result.summary.overdue,0);
 });
+import {useDefaultPolicy} from './helpers/config-fixture.js';
+useDefaultPolicy();

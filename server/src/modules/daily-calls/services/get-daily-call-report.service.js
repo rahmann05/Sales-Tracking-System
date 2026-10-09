@@ -95,22 +95,24 @@ export const getDailyCallReport = async (query = {}) => {
       const attendances = stop.attendances || [];
       const checkIn = attendances.find((a) => a.type === ATTENDANCE_TYPE.IN);
       const checkOut = attendances.find((a) => a.type === ATTENDANCE_TYPE.OUT);
+      const policy=stop.policySnapshot?.values||{},attendanceMode=policy.SALES_ATTENDANCE_MODE||'IN_OUT';
+      const businessResult=checkOut||stop.visitSession?.result;
 
       const outlet = stop.outlet || {};
-      const outletLat = outlet.latitude || 0;
-      const outletLng = outlet.longitude || 0;
+      const outletLat = outlet.latitude ?? null;
+      const outletLng = outlet.longitude ?? null;
 
-      let devMeters = 0;
-      if (checkIn?.latitude && outletLat) {
+      let devMeters = null;
+      if (Number.isFinite(checkIn?.latitude) && Number.isFinite(outletLat)) {
         devMeters = Math.round(
           calculateDistanceMeters(checkIn.latitude, checkIn.longitude, outletLat, outletLng)
         );
-      } else if (checkIn?.deviationMeters) {
+      } else if (checkIn?.deviationMeters!=null) {
         devMeters = Math.round(checkIn.deviationMeters);
       }
 
-      const maxAllowedRadius = outlet.radiusMeters || GLOBAL_RADIUS;
-      const distWarning = devMeters > maxAllowedRadius ? 'WARNING' : 'OK';
+      const maxAllowedRadius = policy.ATTENDANCE_USE_OUTLET_RADIUS===false?(policy.ATTENDANCE_RADIUS_METERS??GLOBAL_RADIUS):(outlet.radiusMeters||policy.ATTENDANCE_RADIUS_METERS||GLOBAL_RADIUS);
+      const distWarning = devMeters==null?'UNAVAILABLE':devMeters > maxAllowedRadius ? 'WARNING' : 'OK';
 
       let durationMins = checkOut?.durationMinutes;
       if (durationMins === undefined || durationMins === null) {
@@ -125,11 +127,13 @@ export const getDailyCallReport = async (query = {}) => {
           durationMins = 0;
         }
       }
+      if(attendanceMode!=='IN_OUT'||stop.visitSession?.state==='INCOMPLETE')durationMins=null;
 
       const result = visitSalesResult(stop, { manualSalesMode });
       const { actual: isActual, orderAmount, skuSold, effective: isEc } = result;
 
-      const isDurationAnomaly = isActual && checkOut && durationMins > 0 && durationMins < MIN_VISIT_DURATION;
+      const minimumDuration=policy.MINIMUM_VISIT_DURATION_MINUTES??MIN_VISIT_DURATION;
+      const isDurationAnomaly = Boolean(attendanceMode==='IN_OUT'&&policy.ATTENDANCE_ENFORCE_MIN_DURATION!==false&&isActual&&checkOut&&durationMins>0&&durationMins<minimumDuration);
       const isDistanceAnomaly = isActual && distWarning === 'WARNING';
       const isSkipped = ['SKIPPED','CLOSED','CLOSED_REPORTED'].includes(stop.status) && !isActual;
 
@@ -146,7 +150,8 @@ export const getDailyCallReport = async (query = {}) => {
         rawTimeIn: checkIn?.timestamp ? new Date(checkIn.timestamp).toISOString() : null,
         rawTimeOut: checkOut?.timestamp ? new Date(checkOut.timestamp).toISOString() : null,
         durationMinutes: durationMins,
-        durationFormatted: formatDurationHhMm(durationMins),
+        durationFormatted: durationMins==null?'Tidak tersedia':formatDurationHhMm(durationMins),
+        attendanceMode,minimumDuration,visitSession:stop.visitSession,policyVersions:stop.policySnapshot?.versions||[],
         customerId: outlet.outletCode || 'Belum memiliki kode',
         customerName: outlet.name || 'Outlet',
         customerAddress: outlet.address || '-',
@@ -159,17 +164,17 @@ export const getDailyCallReport = async (query = {}) => {
         extraCall: 'N',
         skuSold,
         orderAmount,
-        reason: checkOut?.reason || checkOut?.earlyReason || (!isEc && isActual ? 'Tidak Ada Order' : isSkipped ? 'Belum Dikunjungi / Terlewat' : ''),
+        reason: businessResult?.reason || checkOut?.earlyReason || (!isEc && isActual ? 'Tidak Ada Order' : isSkipped ? 'Belum Dikunjungi / Terlewat' : ''),
         earlyReason: checkOut?.earlyReason || null,
-        visitOutcome:checkOut?.visitOutcome||null,
-        remark: [checkOut?.notes || checkIn?.notes,visitOutcomeText(checkOut?.visitOutcome)].filter(Boolean).join(' · '),
+        visitOutcome:businessResult?.visitOutcome||null,
+        remark: [businessResult?.notes || checkIn?.notes,visitOutcomeText(businessResult?.visitOutcome),stop.visitSession?.state==='INCOMPLETE'?'OUT terlewat · pengecualian SPV':attendanceMode!=='IN_OUT'?'Hasil kegiatan tanpa kewajiban OUT':''].filter(Boolean).join(' · '),
         deviationMeters: devMeters,
         targetAmount: 0,
         photoIn: checkIn?.photoUrl || null,
         photoOut: checkOut?.photoUrl || null,
         customerLat: outletLat,
         customerLng: outletLng,
-        radiusMeters: outlet.radiusMeters || GLOBAL_RADIUS,
+        radiusMeters: maxAllowedRadius,
         distanceWarning: distWarning,
         isDurationAnomaly,
         isDistanceAnomaly,
@@ -205,10 +210,11 @@ export const getDailyCallReport = async (query = {}) => {
       assignmentHistorical: identity.historical,
       date: dateStr,
       timeIn: formatTimeOnly(off.createdAt),
-      timeOut: formatTimeOnly(off.createdAt),
+      timeOut: '-',
       rawTimeIn: new Date(off.createdAt).toISOString(),
-      rawTimeOut: new Date(off.createdAt).toISOString(),
-      durationMinutes: 0,
+      rawTimeOut: null,
+      attendanceMode:'SINGLE_POINT',
+      durationMinutes: null,
       durationFormatted: '-',
       customerId: off.outlet?.outletCode || 'EXTRA-CALL',
       customerName: off.outletName || 'Outlet Extra',

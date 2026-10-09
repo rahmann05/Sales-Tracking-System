@@ -33,6 +33,7 @@ export const INITIAL_FORM = {
   visitDays: ['SENIN'],
   outletKnownBy: ''
 };
+export const registrationDefaults=values=>({...INITIAL_FORM,division:values.ACTIVE_DIVISION||INITIAL_FORM.division,branch:values.DEFAULT_BRANCH??INITIAL_FORM.branch,paymentType:values.DEFAULT_PAYMENT_TYPE||'CASH',termOfPaymentDays:values.DEFAULT_TERM_OF_PAYMENT_DAYS??30,visitIntervalWeeks:Number(values.PJP_DEFAULT_INTERVAL||1)});
 
 /**
  * useOutletRegistrationForm Hook

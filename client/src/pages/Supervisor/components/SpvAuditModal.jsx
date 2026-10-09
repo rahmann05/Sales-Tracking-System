@@ -1,14 +1,17 @@
 import React from 'react';
 import { LuCheck } from 'react-icons/lu';
 import { SpvModalShell } from './SpvModalShell';
-import { SPV_AUDIT_CHECKLIST_ITEMS } from '../../../constants/supervisor';
+import {auditItems} from '../../../../../shared/supervision-checklist.mjs';
+import {useApp} from '../../../context/AppContext';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 
 /**
  * SpvAuditModal Component
  * Single Responsibility: Modal checklist audit kepatuhan toko & evaluasi sales.
  */
-export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving, followUp, onChangeFollowUp, salesOptions=[] }) => (
+export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving, followUp, onChangeFollowUp, salesOptions=[] }) => {
+    const {settings}=useApp(),items=auditItems({...settings,...stop.policySnapshot?.values});
+    return (
     <SpvModalShell error={error} saving={saving}
         title="Form Audit & Evaluasi Supervisi"
         subtitle={stop.outletName}
@@ -41,18 +44,15 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                     Checklist Kepatuhan Toko & Evaluasi Sales:
                 </h4>
                 <div className="space-y-2">
-                    {SPV_AUDIT_CHECKLIST_ITEMS.map((item) => (
+                    {items.map((item) => (
                         <label
                             key={item.key}
-                            className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-variant/30 border border-border-glass cursor-pointer hover:bg-surface-variant/50 text-xs"
+                            className="grid gap-2.5 p-3 rounded-xl bg-surface-variant/30 border border-border-glass cursor-pointer hover:bg-surface-variant/50 text-xs"
                         >
-                            <input
-                                type="checkbox"
-                                checked={checklist[item.key]}
-                                onChange={(e) => onChangeChecklist({ ...checklist, [item.key]: e.target.checked })}
-                                className="rounded accent-primary w-4 h-4"
-                            />
-                            <span className="font-semibold text-on-surface">{item.label}</span>
+                            <span className="font-semibold text-on-surface">{item.label}{item.required?' · wajib':''}</span>
+                            <select className="config-input min-h-11" value={checklist[item.key]==null?'':String(checklist[item.key])} onChange={e=>onChangeChecklist({...checklist,[item.key]:e.target.value===''?null:e.target.value==='true'})}>
+                                <option value="">Belum diisi</option><option value="true">Ya</option><option value="false">Tidak</option>
+                            </select>
                         </label>
                     ))}
                 </div>
@@ -70,8 +70,9 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                     className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
             </div>
-            {followUp && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||followUp.completed}>
+            {followUp && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||followUp.completed||(settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE')}>
                 <legend className="font-bold text-sm">Tindak lanjut sales</legend>
+                {settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE'&&<p>Tugas baru dijeda oleh Admin. Checklist tetap dapat disimpan; tugas terdahulu diselesaikan melalui menu Tindak lanjut.</p>}
                 {followUp.completed?<p>Tugas sudah selesai atau sedang menunggu pemeriksaan. Buka Tindak lanjut untuk melihat tahap terbaru.</p>:<>
                     <label className="flex gap-2 text-sm"><input type="checkbox" checked={followUp.enabled} onChange={e=>onChangeFollowUp({...followUp,enabled:e.target.checked})}/>Tugaskan tindak lanjut</label>
                     {followUp.enabled&&<>
@@ -85,3 +86,4 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
         </div>
     </SpvModalShell>
 );
+};

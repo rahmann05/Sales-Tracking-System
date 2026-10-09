@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/errors.js';
+import {effectivePolicy} from '../modules/config/services/policy-resolver.service.js';
+import {withPolicy} from '../modules/config/services/policy-context.service.js';
+import {featureDecision} from '../../../shared/feature-policy.mjs';
 
 export const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -14,11 +17,16 @@ export const authenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
     if(typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())throw new AppError('Token tidak valid',401);
-    const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, name: true, email: true, role: true, roleCode: true, clusterId: true, permissions: true, deletedAt: true, tokenVersion:true } });
+    const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, name: true, email: true, role: true, roleCode: true, clusterId: true, supervisorId:true, permissions: true, deletedAt: true, tokenVersion:true } });
     if (!user || user.deletedAt) return next(new AppError('Akun tidak aktif', 401));
     if((decoded.tokenVersion||0)!==(user.tokenVersion||0))return next(new AppError('Sesi telah dicabut. Masuk kembali.',401));
     req.user = await resolveIdentity(user);
-    next();
+    req.policy=await effectivePolicy(req.user,Date.now(),{fresh:true});
+    const availability=featureDecision(req.policy.values,req.originalUrl,req.method,req.body);
+    // These services validate idempotent replays before rejecting new work.
+    const replayAware=req.method==='POST'&&['/api/v1/orders','/api/v1/absensi/off-pjp','/api/v1/customer-registrations'].includes(req.originalUrl.split('?')[0].replace(/\/$/,''));
+    if(!availability.allowed&&!replayAware)throw new AppError('Fitur sedang dijeda atau dinonaktifkan oleh Admin. Histori dan penyelesaian pekerjaan terbuka tetap tersedia.',409);
+    withPolicy(req.policy,next);
   } catch (error) {
     if(['JsonWebTokenError','TokenExpiredError','NotBeforeError'].includes(error.name))return next(new AppError('Token tidak valid atau telah kadaluwarsa', 401));
     return next(error);

@@ -1,3 +1,4 @@
+import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 import {assertOrderReviewDecision,orderReviewConflict} from './order-review-assignment.service.js';
 /** rejectOrder - single-responsibility service (extracted from orders.service.js). */
@@ -30,7 +31,7 @@ export const rejectOrder = async (orderId, adminId, reason = null, options={}) =
     if(released)throw new AppError('Order sudah dilepas untuk pengiriman. Selesaikan atau tarik kembali packing sebelum menolak order.',409);
     const result=await tx.order.updateMany({where:{id:orderId,status:'PENDING_APPROVAL'},data:{status:'REJECTED',approvedBy:adminId,approvedAt:new Date(),rejectionReason:reason.trim(),history:[...(current.history||[]),{action:'REJECT',actorId:adminId,at:new Date().toISOString(),note:reason.trim(),...decision}]}});
     if(!result.count)throw new AppError('Order sudah diproses',409);
-    await tx.notification.create({data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_REJECTED,title:'Order Ditolak',message:`Order Anda ditolak. Alasan: ${reason.trim()}`,payload:{orderId:order.id}}});
+    await policyNotification(tx,{data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_REJECTED,title:'Order Ditolak',message:`Order Anda ditolak. Alasan: ${reason.trim()}`,payload:{orderId:order.id}}});
     return result;
   },{isolationLevel:'Serializable'}).catch(orderReviewConflict);
   if(!changed.count)throw new AppError('Order sudah diproses',409);

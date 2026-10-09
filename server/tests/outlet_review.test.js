@@ -5,6 +5,11 @@ import {createOutletSchema,updateOutletSchema} from '../src/modules/outlets/outl
 import {createRegistrationSchema,finalizeRegistrationSchema} from '../src/modules/customer-registrations/customer-registrations.schema.js';
 import {outletOperationalImpact} from '../src/modules/outlets/services/outlet-operational-impact.service.js';
 import {assertOutletTrade} from '../src/modules/outlets/services/outlet-data-policy.service.js';
+import {outletEvidenceState,outletReviewEvidenceState} from '../../shared/outlet-evidence-policy.mjs';
+import {policyConflicts} from '../../shared/operational-policy.mjs';
+import {calculateNameSimilarity} from '../src/modules/outlets/services/calculate-name-similarity.service.js';
+import {runReverseGeocode,runFindPlace} from '../src/modules/outlets/services/outlet-validation.helpers.js';
+import {outletMapJson} from '../src/modules/outlets/services/outlet-map-request.service.js';
 const outlet={name:'Toko Sumber Berkah',address:'Jl Melati Bandung',latitude:-6.9,longitude:107.6};
 const none={success:false,error:'ZERO_RESULTS'};
 const reverse={success:true,formattedAddress:outlet.address};
@@ -24,6 +29,47 @@ describe('Optional outlet map comparison decisions',()=>{
  it('distinguishes provider failure from no evidence',()=>assert.equal(compareOutletEvidence(outlet,{...raw,reverseGeocode:{success:false,error:'REQUEST_DENIED'}}).code,'ERROR'));
  it('does not recommend moving master while another source materially conflicts',()=>{const r=compareOutletEvidence(outlet,{...raw,forwardGeocode:{...forward,lat:-6.1},findPlace:{...place,lat:-6.8996}});assert.equal(r.code,'CONFLICT');assert.equal(r.suggestion,null);});
  it('keeps a distant candidate conflict even when the place is marked closed',()=>assert.equal(compareOutletEvidence(outlet,{...raw,findPlace:{...place,lat:-6.1,businessStatus:'CLOSED_PERMANENTLY'}}).code,'CONFLICT'));
+ it('uses configurable name and address thresholds without creating a combined certainty score',()=>{
+  const candidate={...place,placeName:'Berkah Sumber Makmur'},score=calculateNameSimilarity(outlet.name,candidate.placeName)*100;
+  const lower=compareOutletEvidence(outlet,{...raw,findPlace:candidate},{nameMatchPercent:Math.floor(score)});
+  const higher=compareOutletEvidence(outlet,{...raw,findPlace:candidate},{nameMatchPercent:Math.ceil(score)+1});
+  assert.equal(lower.signals.findPlace.state,'MATCH');assert.equal(higher.signals.findPlace.state,'AMBIGUOUS');assert.equal(lower.confidence,undefined);
+  const modified={...raw,reverseGeocode:{...reverse,formattedAddress:'Jl Melati Sukajadi Bandung'}};
+  const similarity=compareOutletEvidence(outlet,modified).signals.reverseGeocode.addressSimilarity;
+  assert.ok(similarity>0&&similarity<1);
+  assert.equal(compareOutletEvidence(outlet,modified,{addressMatchPercent:Math.floor(similarity*100)}).signals.reverseGeocode.state,'MATCH');
+  assert.equal(compareOutletEvidence(outlet,modified,{addressConflictPercent:Math.ceil(similarity*100)+1,addressMatchPercent:100}).signals.reverseGeocode.state,'CONFLICT');
+ });
+ it('zero ambiguity gap still detects equally similar nearby alternatives',()=>{
+  const result=compareOutletEvidence(outlet,{...raw,findPlace:{...place,candidates:[{placeName:outlet.name,placeId:'two',lat:-6.8999,lng:107.6}]}},{ambiguityGapPercent:0});
+  assert.equal(result.code,'AMBIGUOUS');assert.equal(result.suggestion,null);
+ });
+ it('freezes evidence expiry and thresholds in each run without expiring older unbounded evidence',()=>{
+  const result=compareOutletEvidence(outlet,raw,{evidenceDays:2,nameMatchPercent:80}),run={snapshot:{...outlet},result};
+  assert.equal(Date.parse(result.expiresAt)-Date.parse(result.checkedAt),2*86400000);assert.equal(result.comparisonPolicy.nameMatchPercent,80);
+  assert.equal(outletEvidenceState(run,outlet,Date.parse(result.expiresAt)-1).expired,false);
+  assert.equal(outletEvidenceState(run,outlet,Date.parse(result.expiresAt)).expired,true);
+  assert.equal(outletEvidenceState({snapshot:{...outlet},result:{}},outlet,Date.now()+3650*86400000).stale,false);
+  assert.equal(outletEvidenceState(run,{...outlet,address:'Alamat berubah'},Date.parse(result.checkedAt)).changed,true);
+  const failed={snapshot:{...outlet},result:{code:'ERROR',checkedAt:result.expiresAt}};
+  assert.equal(outletReviewEvidenceState([failed,run],outlet,Date.parse(result.expiresAt)).expired,true);
+  assert.equal(outletReviewEvidenceState([failed],outlet).unavailable,true);
+ });
+ it('rejects contradictory thresholds before publication',()=>{
+  for(const values of [{OUTLET_REVIEW_ADDRESS_CONFLICT_PERCENT:70},{OUTLET_REVIEW_NAME_MATCH_PERCENT:90},{OUTLET_REVIEW_ALTERNATIVE_NAME_PERCENT:90}])assert.ok(policyConflicts(values).length);
+  assert.equal(policyConflicts({OUTLET_REVIEW_NAME_MATCH_PERCENT:90,OUTLET_REVIEW_SUGGESTION_NAME_PERCENT:95}).length,0);
+ });
+});
+it('map requests honor configured radius/timeout and sanitize failure messages containing API keys',async t=>{
+ const requests=[],timeouts=[];
+ t.mock.method(AbortSignal,'timeout',ms=>{timeouts.push(ms);return new AbortController().signal;});
+ t.mock.method(globalThis,'fetch',async url=>{requests.push(String(url));return {ok:true,json:async()=>({status:'ZERO_RESULTS'})};});
+ await runFindPlace('Toko','Alamat','secret-key',0,0,null,{searchRadiusMeters:800,timeoutSeconds:3});
+ assert.equal(new URL(requests[0]).searchParams.get('radius'),'800');assert.ok(requests.every(url=>url.includes('0,0')||url.includes('0%2C0')));assert.deepEqual(timeouts,[3000,3000]);
+ t.mock.method(globalThis,'fetch',async()=>{throw new Error('https://maps.googleapis.com/?key=secret-key');});
+ assert.equal((await runReverseGeocode(0,0,'secret-key')).error,'MAP_PROVIDER_ERROR');
+ t.mock.method(globalThis,'fetch',async()=>({ok:false,json:async()=>({status:'ZERO_RESULTS'})}));
+ await assert.rejects(()=>outletMapJson('https://fixture.invalid'),/MAP_HTTP_ERROR/);
 });
 it('operational impact ignores fulfilled order history and completed packing but retains outstanding work',async()=>{
  const done={id:'done',status:'APPROVED',items:[{id:'line',quantity:1}]},open={id:'open',status:'APPROVED',items:[{id:'open-line',quantity:2}]};

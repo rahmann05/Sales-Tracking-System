@@ -1,266 +1,50 @@
-import { categories, tools, stringify, initialValues, buttonStyle } from "./AdminConfigNavigation";
-import { displayValue } from "./AdminConfigPage.shared";
-import { ParameterGroup } from "./ConfigParameterGroup";
-import {ConfigHistory} from './ConfigHistory';
-import {useUnsavedNavigation} from '../../shared/hooks/useUnsavedNavigation';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { configApi } from '../../services/api';
-import { useApp } from '../../context/AppContext';
-import { TAB_IDS } from '../../constants/navigation';
+import React,{useState,useEffect} from 'react';
+import {LuArrowLeft,LuChevronRight,LuSearch,LuSettings,LuRefreshCw} from 'react-icons/lu';
+import {useApp} from '../../context/AppContext';
+import {TAB_IDS} from '../../constants/navigation';
+import {CONFIG_DEFINITIONS} from '../../../../shared/config.mjs';
+import {POLICY_ROLES,POLICY_SECRET_KEYS} from '../../../../shared/operational-policy.mjs';
+import {categories,stringify,tools} from './AdminConfigNavigation';
+import {ParameterGroup} from './ConfigParameterGroup';
+import {usePolicyEditor} from './usePolicyEditor';
+import {PolicyPublishPanel} from './PolicyPublishPanel';
+import {PolicyVersionHistory} from './PolicyVersionHistory';
+import {PolicySimulator} from './PolicySimulator';
+import {PolicyTransfer} from './PolicyTransfer';
+import {NotificationDeliveryPanel} from './NotificationDeliveryPanel';
+import {PolicyConfigurationScope} from './PolicyConfigurationScope';
+import {configApi} from '../../services/api';
+import {parameterRoles} from '../../../../shared/policy-guidance.mjs';
 import '../../styles/pages/AdminConfig.css';
-
-
-
-
-import { CONFIG_DEFINITIONS, parseConfigValue } from '../../../../shared/config.mjs';
-import { codePolicy, validateCodePolicy } from '../../../../shared/coding.mjs';
-import { LuSave, LuRefreshCw, LuArrowLeft, LuCheck, LuSearch, LuX, LuClipboardList, LuChevronRight, LuTriangleAlert } from 'react-icons/lu';
-export const AdminConfigPage = () => {
-  const {
-    setActiveTab,
-    refreshSettings
-  } = useApp();
-  const [configs, setConfigs] = useState({});
-  const [editedValues, setEditedValues] = useState({});
-  const [category, setCategory] = useState('outlet');
-  const [groupKey, setGroupKey] = useState('NOO');
-  const [lastGroups, setLastGroups] = useState({});
-  const [search, setSearch] = useState('');
-  const [review, setReview] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
-  const contentRef = useRef(null);
-  const savedValues = initialValues(configs);
-  const changes = loading || loadFailed ? [] : CONFIG_DEFINITIONS.flatMap(group => group.params.filter(p => editedValues[p.key] !== savedValues[p.key]).map(param => ({
-    group,
-    param
-  })));
-  const currentCategory = categories.find(c => c.key === category);
-  const selectedGroup = CONFIG_DEFINITIONS.find(g => g.groupKey === groupKey);
-  const query = search.trim().toLocaleLowerCase('id');
-  const searchGroups = CONFIG_DEFINITIONS.map(group => ({
-    ...group,
-    params: group.params.filter(p => `${group.groupLabel} ${p.label} ${p.key} ${p.description}`.toLocaleLowerCase('id').includes(query))
-  })).filter(g => g.params.length);
-  const visibleGroups = query ? searchGroups : [selectedGroup];
-  const loadConfigs = useCallback(async () => {
-    setLoading(true);
-    setLoadFailed(false);
-    setError('');
-    setMessage('');
-    setFieldErrors({});
-    try {
-      const res = await configApi.getAll();
-      setConfigs(res?.data || {});
-      setEditedValues(initialValues(res?.data || {}));
-    } catch (err) {
-      setLoadFailed(true);
-      setError(`Pengaturan belum dapat dimuat. Coba muat ulang. ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    loadConfigs();
-  }, [loadConfigs]);
-  useUnsavedNavigation(changes.length>0,saving);
-  const navigate = next => {
-    setLastGroups(prev => ({
-      ...prev,
-      [category]: groupKey
-    }));
-    setCategory(next.key);
-    setGroupKey(lastGroups[next.key] || next.groups[0] || groupKey);
-    setSearch('');
-    setReview(false);
-  };
-  const openReview = () => {
-    setReview(true);
-    setSearch('');
-    requestAnimationFrame(() => contentRef.current?.scrollIntoView({
-      block: 'start',
-      behavior: 'instant'
-    }));
-  };
-  const openParameter = (group, key) => {
-    const parent = categories.find(c => c.groups.includes(group.groupKey));
-    setCategory(parent.key);
-    setGroupKey(group.groupKey);
-    setSearch('');
-    setReview(false);
-    requestAnimationFrame(() => {
-      const input = document.getElementById(key);
-      input?.scrollIntoView({
-        block: 'center',
-        behavior: 'instant'
-      });
-      input?.focus();
-    });
-  };
-  const change = (key, value) => {
-    setEditedValues(prev => ({
-      ...prev,
-      [key]: value
-    }));
-    setMessage('');
-    setError('');
-    setFieldErrors(prev => ({
-      ...prev,
-      [key]: undefined
-    }));
-  };
-  const discard = () => {
-    if (window.confirm(`Batalkan ${changes.length} perubahan yang belum disimpan?`)) {
-      setEditedValues(savedValues);
-      setFieldErrors({});
-      setError('');
-      setMessage('Perubahan dibatalkan.');
-      setReview(false);
-    }
-  };
-  const save = async () => {
-    if (loading || saving || loadFailed || !changes.length) return;
-    const errors = {},
-      updates = {};
-    for (const {
-      param
-    } of changes) {
-      try {
-        updates[param.key] = parseConfigValue(param, editedValues[param.key]);
-      } catch (err) {
-        errors[param.key] = err.message;
-      }
-    }
-    for (const group of CONFIG_DEFINITIONS.filter(g => g.groupKey.startsWith('CODING_') && changes.some(c => c.group.groupKey === g.groupKey))) {
-      try {
-        validateCodePolicy(codePolicy(group.groupKey.slice(7), editedValues));
-      } catch (err) {
-        errors[group.params[0].key] = err.message;
-      }
-    }
-    setFieldErrors(errors);
-    setMessage('');
-    if (Object.keys(errors).length) {
-      setError('Ada parameter yang perlu diperbaiki. Pilih pesan di bawah untuk membuka pengaturannya.');
-      openReview();
-      return;
-    }
-    setSaving(true);
-    setError('');
-    try {
-      const res = await configApi.bulkUpdate(updates);
-      const next = {
-        ...configs,
-        ...updates,
-        ...res?.data
-      };
-      setConfigs(next);
-      setEditedValues(initialValues(next));
-      setReview(false);
-      setMessage(`${changes.length} parameter berhasil disimpan.`);
-      try {
-        await refreshSettings();
-      } catch {
-        setError('Parameter sudah disimpan. Muat ulang halaman agar nilai terbaru tampil di seluruh menu.');
-      }
-    } catch (err) {
-      setError(`Gagal menyimpan: ${err.message}. Perubahan Anda masih tersedia.`);
-    } finally {
-      setSaving(false);
-    }
-  };
-  return <div className="config-page">
-    <header className="config-heading">
-      <div><h1>Parameter sistem</h1><p>Atur aturan operasional dan penomoran data.</p></div>
-      <button type="button" className={buttonStyle} disabled={saving} onClick={() => {
-        if (!changes.length || window.confirm('Perubahan belum disimpan. Tetap kembali ke menu admin?')) setActiveTab(TAB_IDS.ROLE_WORKSPACE);
-      }}><LuArrowLeft /> Menu admin</button>
-    </header>
-    <ConfigHistory/>
-    <div className="config-actionbar">
-      <div role="status" className="config-save-status">{loading ? 'Memuat parameter…' : loadFailed ? 'Parameter belum dimuat' : changes.length ? `${changes.length} perubahan belum disimpan` : 'Tidak ada perubahan'}</div>
-      <div className="config-actions"><button type="button" className={buttonStyle} disabled={!changes.length || saving} onClick={discard}>Batalkan</button><button type="button" className={buttonStyle} disabled={!changes.length || saving} onClick={openReview}>Tinjau ({changes.length})</button><button type="button" className={`${buttonStyle} config-button-primary`} disabled={loading || loadFailed || saving || !changes.length} onClick={save}><LuSave />{saving ? 'Menyimpan…' : 'Simpan'}</button></div>
-    </div>
-    <div className="bg-surface border border-border-glass rounded-2xl p-3 sm:p-4 flex flex-wrap gap-3 items-center">
-      <div className="flex items-center gap-2 flex-1 min-w-0 basis-64">
-        <LuSearch aria-hidden="true" className="shrink-0 text-on-surface-variant" />
-        <input aria-label="Cari seluruh parameter sistem" type="search" value={search} onChange={e => {
-          setSearch(e.target.value);
-          setReview(false);
-        }} placeholder="Cari radius NOO, absen, kode…" className="config-input" />
-        {search && <button type="button" aria-label="Hapus pencarian" className="shrink-0 w-11 h-11 flex items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:ring-primary" onClick={() => setSearch('')}><LuX /></button>}
-      </div>
-      <button type="button" className={buttonStyle} disabled={loading || saving} onClick={() => {
-        if (!changes.length || window.confirm('Muat ulang akan membatalkan perubahan yang belum disimpan. Lanjutkan?')) loadConfigs();
-      }}><LuRefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /> Muat ulang</button>
-    </div>
-    {error && <div role="alert" className="p-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 text-sm flex gap-2"><LuTriangleAlert className="shrink-0 mt-0.5" />{error}</div>}
-    {message && <div role="status" className="p-4 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-900 text-sm flex gap-2"><LuCheck className="shrink-0 mt-0.5" />{message}</div>}
-    <div className="config-mobile-navigation">
-      <label htmlFor="config-category">Kategori</label>
-      <select id="config-category" className="config-input" value={review ? 'review' : category} onChange={e => {
-        if (e.target.value === 'review') openReview();else navigate(categories.find(c => c.key === e.target.value));
-      }}>
-        {categories.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}<option value="review">Tinjau perubahan ({changes.length})</option>
-      </select>
-    </div>
-    <div className="config-layout">
-      <nav aria-label="Kategori parameter sistem" className="config-sidebar bg-surface border border-border-glass rounded-2xl p-3">
-        <p className="text-xs font-semibold text-on-surface-variant px-3 pb-2">KATEGORI PENGATURAN</p>
-        <div className="grid grid-cols-2 gap-1 lg:grid-cols-1">
-          {categories.map(c => {
-            const Icon = c.icon,
-              count = changes.filter(x => c.groups.includes(x.group.groupKey)).length;
-            const active = category === c.key && !query && !review;
-            return <button type="button" key={c.key} aria-current={active ? 'page' : undefined} onClick={() => navigate(c)} className={`${buttonStyle} config-nav-button ${active ? 'config-nav-active' : ''}`}><Icon className="shrink-0" /><span className="flex-1">{c.label}</span>{count > 0 && <span aria-label={`${count} perubahan`} className="text-xs rounded-full bg-amber-100 text-amber-900 px-2 py-0.5">{count}</span>}</button>;
-          })}
-        </div>
-        <div className="border-t border-border-glass mt-3 pt-3">
-          <button type="button" aria-current={review ? 'page' : undefined} className={`${buttonStyle} config-nav-button ${review ? 'config-nav-active' : ''}`} onClick={openReview}><LuClipboardList /><span className="flex-1 text-left">Tinjau perubahan</span><span>{changes.length}</span></button>
-          <p className="text-xs text-on-surface-variant px-3 pt-3 leading-relaxed">Perubahan tetap tersimpan sebagai draf saat berpindah kategori.</p>
-        </div>
-      </nav>
-      <div ref={contentRef} role="region" aria-label="Isi pengaturan" aria-busy={loading || saving} className="config-content min-w-0 space-y-4">
-        {loading ? <div role="status" className="bg-surface rounded-2xl border border-border-glass p-12 text-center text-on-surface-variant"><LuRefreshCw className="animate-spin motion-reduce:animate-none mx-auto mb-3" />Memuat parameter sistem…</div> : loadFailed ? <div className="bg-surface p-6 rounded-2xl border border-border-glass"><h2 className="font-bold mb-2">Pengaturan belum tersedia</h2><p className="text-sm text-on-surface-variant mb-4">Muat ulang untuk mengambil nilai yang tersimpan sebelum mengubah parameter.</p><button className={buttonStyle} type="button" onClick={loadConfigs}>Coba lagi</button></div> : review ? <section className="bg-surface border border-border-glass rounded-2xl p-5 space-y-4">
-          <div><h2 className="text-lg font-bold">Tinjau perubahan</h2><p className="text-sm text-on-surface-variant mt-1">{changes.length ? `${changes.length} parameter akan diterapkan setelah Anda menyimpan.` : 'Belum ada perubahan. Pilih kategori untuk mulai mengatur sistem.'}</p></div>
-          {Object.entries(fieldErrors).filter(([, value]) => value).map(([key, value]) => {
-            const group = CONFIG_DEFINITIONS.find(g => g.params.some(p => p.key === key));
-            return <button key={key} type="button" className="block w-full text-left text-sm text-rose-900 bg-rose-50 border border-rose-300 rounded-xl p-3 underline" onClick={() => openParameter(group, key)}>{group.groupLabel}: {value}</button>;
-          })}
-          {changes.map(({
-            group,
-            param
-          }) => <div key={param.key} className="border border-border-glass rounded-xl p-4 space-y-2">
-            <button type="button" className="text-left font-semibold text-sm flex gap-2 items-center min-h-11 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded" onClick={() => openParameter(group, param.key)}>{param.label}<LuChevronRight /></button>
-            <p className="text-xs text-on-surface-variant">{group.groupLabel}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm"><div className="bg-surface-container rounded-lg p-3 break-all"><span className="text-xs text-on-surface-variant block mb-1">Tersimpan</span>{displayValue(param, savedValues[param.key])}</div><div className="bg-primary/5 rounded-lg p-3 break-all"><span className="text-xs text-on-surface-variant block mb-1">Perubahan baru</span>{displayValue(param, editedValues[param.key])}</div></div>
-            <button type="button" disabled={saving} className="text-xs underline min-h-11 text-on-surface-variant" onClick={() => change(param.key, savedValues[param.key])}>Batalkan perubahan ini</button>
-          </div>)}
-        </section> : category === 'tools' && !query ? <>
-          <div><h2 className="text-lg font-bold">Alat operasional</h2><p className="text-sm text-on-surface-variant mt-1">Kelola data dan jalankan kegiatan harian. Setiap alat memiliki tombol simpan atau proses sendiri.</p>{changes.length > 0 && <p role="status" className="text-sm mt-3 border border-amber-300 bg-amber-50 text-amber-900 rounded-xl p-3">Alat ini memakai parameter yang sudah tersimpan. Simpan perubahan parameter terlebih dahulu jika ingin menggunakannya di sini.</p>}</div>
-          <div className="admin-settings-tools">{tools.map(tool=><button type="button" key={tool.key} className="admin-button" onClick={()=>setActiveTab(tool.tab)}>{tool.label}<LuChevronRight/></button>)}</div>
-
-        </> : <>
-          <div><h2 className="text-lg font-bold">{query ? 'Hasil pencarian' : currentCategory.label}</h2><p className="text-sm text-on-surface-variant mt-1">{query ? `${searchGroups.reduce((sum, g) => sum + g.params.length, 0)} parameter ditemukan di seluruh kategori.` : 'Pilih kelompok pengaturan di bawah. Nilai yang diubah ditandai hingga disimpan.'}</p></div>
-          {!query && <div className="config-group-picker"><label htmlFor="config-group">Kelompok pengaturan</label><select id="config-group" className="config-input" value={groupKey} onChange={e => setGroupKey(e.target.value)}>{currentCategory.groups.map(key => {
-                const g = CONFIG_DEFINITIONS.find(item => item.groupKey === key);
-                return <option key={key} value={key}>{g.groupLabel.replace('Pengkodean: ', '')}</option>;
-              })}</select></div>}
-          {query && !searchGroups.length && <div className="bg-surface border border-border-glass rounded-2xl p-8 text-center"><LuSearch className="mx-auto mb-3 text-on-surface-variant" /><h3 className="font-semibold">Parameter tidak ditemukan</h3><p className="text-sm text-on-surface-variant mt-2">Coba kata seperti radius, NOO, kode, atau absensi.</p><button type="button" className={`${buttonStyle} mt-4`} onClick={() => setSearch('')}>Hapus pencarian</button></div>}
-          {visibleGroups.map(group => <ParameterGroup key={group.groupKey} group={group} values={editedValues} savedValues={savedValues} change={change} errors={fieldErrors} disabled={saving} search={Boolean(query)} onReset={() => {
-            setEditedValues(prev => ({
-              ...prev,
-              ...Object.fromEntries(group.params.map(p => [p.key, stringify(p.defaultValue)]))
-            }));
-            setMessage('Nilai bawaan kelompok ini dimasukkan ke draf. Tinjau lalu simpan untuk menerapkannya.');
-            setFieldErrors({});
-          }} />)}
-        </>}
-      </div>
-    </div>
-  </div>;
+const roleLabels={ADMIN:'Admin',SUPERVISOR:'Supervisor',SALES:'Sales',KEPALA_GUDANG:'Kepala gudang',SUPIR:'Driver'};
+export const AdminConfigPage=()=>{
+ const {setActiveTab,refreshSettings}=useApp(),editor=usePolicyEditor(refreshSettings);
+ const [teams,setTeams]=useState([]),[roleFilter,setRoleFilter]=useState('ALL');
+ useEffect(()=>{let active=true;configApi.policyOptions().then(res=>{if(active)setTeams(res.data.supervisors);}).catch(()=>{});return()=>{active=false;};},[]);
+ const [category,setCategory]=useState(''),[groupKey,setGroupKey]=useState(''),[search,setSearch]=useState(''),[view,setView]=useState('edit');
+ const {data,values,busy,dirty,error,message,errors}=editor;
+ const selected=categories.find(c=>c.key===category);
+ const query=search.trim().toLowerCase();
+ const filtered=CONFIG_DEFINITIONS.map(g=>({...g,params:g.params.filter(p=>roleFilter==='ALL'||parameterRoles(p.key).includes(roleFilter))}));
+ const groups=query?filtered.map(g=>({...g,params:g.params.filter(p=>`${g.groupLabel} ${p.label} ${p.description} ${p.key}`.toLowerCase().includes(query))})).filter(g=>g.params.length):filtered.filter(g=>g.groupKey===groupKey&&g.params.length);
+ const changeCount=data?Object.keys(data.profile.draft).length:0;
+ const open=c=>{setCategory(c.key);setGroupKey(c.groups[0]);setSearch('');setView('edit');};
+ return <div className="config-page policy-workspace">
+ <header className="config-heading"><div><span className="policy-eyebrow">PUSAT PENGATURAN</span><h1>Aturan operasional</h1><p>Sesuaikan cara kerja tiap proses, dari kunjungan hingga pengiriman.</p></div><button className="config-button" onClick={()=>setActiveTab(TAB_IDS.ROLE_WORKSPACE)}><LuArrowLeft/> Menu admin</button></header>
+ <section className="policy-profile"><div><LuSettings/><label htmlFor="policy-scope">Profil aturan<select id="policy-scope" className="config-input" value={editor.scope} disabled={busy} onChange={e=>editor.changeScope(e.target.value)}><option value="GLOBAL">Seluruh perusahaan</option>{POLICY_ROLES.map(role=><option key={role} value={`ROLE:${role}`}>Role: {roleLabels[role]}</option>)}{teams.map(p=><option key={p.id} value={`TEAM:${p.id}`}>Tim: {p.name}</option>)}</select></label></div><p>{editor.scope==='GLOBAL'?'Aturan dasar untuk semua pengguna.':'Hanya nilai yang diubah menjadi aturan khusus profil ini. Nilai lainnya mengikuti profil di atasnya.'}<br/><span>Urutan: perusahaan → role → tim.</span></p></section>
+ {data&&<div className="policy-version-status"><span>Revisi profil {data.profile.revision}</span><span>{data.effective.versions.length?data.effective.versions.map(v=>`${v.scope} · v${v.revision}`).join(' / '):'Mengikuti aturan perusahaan sebelumnya'}</span>{editor.scope.startsWith('TEAM:')&&<span>Nilai efektif ditampilkan sebagai Sales dalam tim. Periksa role lain melalui simulasi.</span>}</div>}
+ <div className="policy-toolbar"><label className="policy-search"><LuSearch/><input type="search" placeholder="Cari aturan, mis. checkout, persetujuan, GPS…" aria-label="Cari seluruh pengaturan" value={search} onChange={e=>{setSearch(e.target.value);setView('edit');}}/></label><label className="policy-role-filter">Terdampak role<select className="config-input" value={roleFilter} onChange={e=>setRoleFilter(e.target.value)}><option value="ALL">Semua role</option>{POLICY_ROLES.map(r=><option key={r} value={r}>{roleLabels[r]}</option>)}</select></label><nav aria-label="Tahap pengaturan"><button className="config-button" aria-pressed={view==='edit'} onClick={()=>setView('edit')}>Pengaturan</button><button className="config-button" aria-pressed={view==='review'} onClick={()=>setView('review')}>Tinjau draf ({changeCount})</button><button className="config-button" aria-pressed={view==='history'} onClick={()=>setView('history')}>Riwayat</button></nav></div>
+ {error&&<div role="alert" className="policy-error">{error}</div>}{message&&<div role="status" className="policy-success">{message}</div>}
+ {!data?<section className="policy-panel policy-panel-body" role="status"><p>{busy?'Memuat aturan efektif…':'Pengaturan gagal dimuat.'}</p><button className="config-button" disabled={busy} onClick={editor.load}><LuRefreshCw/> Coba lagi</button></section>:view==='review'?<><PolicyPublishPanel editor={editor}/><PolicySimulator key={`${editor.scope}:${data.profile.revision}`} editor={editor}/></>:view==='history'?<><PolicyVersionHistory editor={editor}/><PolicyTransfer editor={editor}/>{changeCount>0&&<button className="config-button" disabled={busy||dirty} onClick={editor.clearDraft}>Batalkan seluruh draf tersimpan</button>}</>:<>
+ {!query&&!selected?<><div className="policy-intro"><h2>Pilih proses yang ingin diatur</h2><p>Setiap kelompok memuat aturan alur, persyaratan bukti, serta batas operasional.</p></div><div className="policy-category-grid">{categories.map(c=>{const Icon=c.icon;const count=CONFIG_DEFINITIONS.filter(g=>c.groups.includes(g.groupKey)).reduce((sum,g)=>sum+g.params.length,0);return <button key={c.key} className="policy-category" onClick={()=>open(c)}><span className="policy-category-icon"><Icon/></span><div><h3>{c.label}</h3><p>{c.description}</p><small>{count} aturan</small></div><LuChevronRight/></button>;})}</div><section className="policy-tools"><h2>Pengaturan dengan editor khusus</h2><p>Target, kalender laporan, master, dan penugasan dikelola di halaman proses terkait.</p><div>{tools.map(t=><button className="config-button" key={t.key} onClick={()=>setActiveTab(t.tab)}>{t.label}<LuChevronRight/></button>)}</div></section><PolicyConfigurationScope/></>:<>
+ <div className="policy-breadcrumb"><button onClick={()=>{setCategory('');setGroupKey('');setSearch('');}}>Semua proses</button><LuChevronRight/><strong>{query?'Hasil pencarian':selected?.label}</strong></div>
+ {!query&&<nav className="policy-group-tabs" aria-label="Kelompok aturan">{selected?.groups.map(key=><button key={key} aria-pressed={groupKey===key} onClick={()=>setGroupKey(key)}>{CONFIG_DEFINITIONS.find(g=>g.groupKey===key)?.groupLabel.replace('Pengkodean: ','')}</button>)}</nav>}
+ {query&&<p className="policy-note">{groups.reduce((sum,g)=>sum+g.params.length,0)} aturan ditemukan. Pencarian mencakup seluruh proses.</p>}
+ {!groups.length&&<section className="policy-panel policy-panel-body">Tidak ada aturan yang cocok. Coba kata lain.</section>}
+ {groups.map(g=><ParameterGroup key={g.groupKey} group={g} values={values} savedValues={Object.fromEntries(Object.entries(data.effective.values).map(([k,v])=>[k,stringify(v)]))} sources={data.effective.sources} scope={editor.scope} onInherit={editor.inherit} change={editor.change} errors={errors} disabled={busy} search={Boolean(query)} onReset={()=>g.params.filter(p=>editor.scope==='GLOBAL'||!POLICY_SECRET_KEYS.includes(p.key)&&!p.key.startsWith('CODE_')).forEach(p=>editor.change(p.key,stringify(p.defaultValue)))}/>)}
+ {groups.some(g=>g.groupKey==='REPORTING_POLICY')&&<NotificationDeliveryPanel/>}
+ </>}
+ </>}
+ {data&&(dirty||changeCount>0||view==='history')&&<footer className="policy-draft-bar"><div><strong>{dirty?'Ada perubahan lokal':changeCount?`${changeCount} aturan dalam draf`:'Aturan sudah dimuat'}</strong><span>Draf tidak mengubah proses sampai diterbitkan.</span></div><label className="policy-field">Alasan perubahan<input className="config-input" value={editor.reason} disabled={busy} onChange={e=>editor.setReason(e.target.value)} placeholder="Contoh: presensi masuk saja untuk Sales"/></label><div><button className="config-button" disabled={busy||!dirty} onClick={editor.discard}>Batalkan lokal</button><button className="config-button config-button-primary" disabled={busy||(!dirty&&!changeCount)||editor.reason.trim().length<5} onClick={editor.save}>{busy?'Memproses…':'Simpan draf'}</button></div></footer>}
+ </div>;
 };

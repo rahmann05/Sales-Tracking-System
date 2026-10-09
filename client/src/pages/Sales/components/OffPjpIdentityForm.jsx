@@ -17,6 +17,7 @@ export const OffPjpIdentityForm = ({
   onAddressChange,
   isAddressAutoFetched,
   isGeocodingLoading,
+  lookupEnabled=true,
   userLocation,
   onRefreshAddress
 }) => <div className="space-y-3 bg-surface-variant/20 p-4 rounded-2xl border border-border-glass">
@@ -59,7 +60,7 @@ export const OffPjpIdentityForm = ({
                             <LuSparkles className="text-[11px]" />
                             Alamat dari GPS · periksa kembali
                         </span>}
-                    <button type="button" onClick={onRefreshAddress} disabled={!userLocation||isGeocodingLoading} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 cursor-pointer" title="Deteksi ulang alamat dari GPS">
+                    <button type="button" onClick={onRefreshAddress} disabled={!lookupEnabled||isGeocodingLoading} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 cursor-pointer" title="Deteksi ulang alamat dari GPS">
                         <LuRefreshCw className={`text-[10px] ${isGeocodingLoading ? 'animate-spin' : ''}`} />
                         <span>Perbarui Alamat</span>
                     </button>

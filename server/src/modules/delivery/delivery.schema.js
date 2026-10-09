@@ -76,8 +76,10 @@ export const submitDriverAttendanceSchema = z.object({
   body: z.object({
     type: z.enum(['IN', 'OUT']),
     result: stopResult.optional(),
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
+    accuracy:z.number().nonnegative().max(100000).nullable().optional(),
+    observedAt:z.string().datetime().nullable().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
     photoUrl: z.string().optional(),
     notes: z.string().optional(),
   }),
@@ -110,5 +112,5 @@ export const routeActionSchema = z.object({ body: z.object({
 }) });
 export const locationSchema = z.object({ body:z.object({latitude:z.number().min(-90).max(90),longitude:z.number().min(-180).max(180),accuracy:z.number().nonnegative().max(100000),observedAt:z.string().datetime()}) });
 export const returnSchema = z.object({body:z.object({ note:z.string().trim().min(1).max(2000),receivedCartons:z.number().int().nonnegative(),reusableCartons:z.number().int().nonnegative(),items:z.array(z.object({lineId:z.string().min(1),received:z.number().int().nonnegative(),reusable:z.number().int().nonnegative()})),reusableInvoices:z.array(invoiceAllocation).default([]) })});
-export const issueSchema = z.object({body:z.object({title:z.string().trim().min(1).max(200),reason:z.string().trim().min(1).max(2000),ownerId:z.string().min(1),dueAt:z.string().datetime(),routeId:z.string().min(1).optional(),packingListId:z.string().min(1).optional(),orderId:z.string().min(1).optional()}).refine(b=>b.routeId||b.packingListId||b.orderId,'Pilih referensi pekerjaan')});
+export const issueSchema = z.object({body:z.object({title:z.string().trim().min(1).max(200),reason:z.string().trim().min(1).max(2000),ownerId:z.string().min(1),dueAt:z.string().datetime().optional(),routeId:z.string().min(1).optional(),packingListId:z.string().min(1).optional(),orderId:z.string().min(1).optional()}).refine(b=>b.routeId||b.packingListId||b.orderId,'Pilih referensi pekerjaan')});
 export const resolutionSchema = z.object({body:z.object({resolution:z.string().trim().min(1).max(2000)})});

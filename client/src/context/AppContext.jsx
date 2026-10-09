@@ -27,13 +27,13 @@ export const AppProvider = ({ children }) => {
   const domain = useDomainState();
 
   // 2. Auth session (resets domain state on logout/expiry)
-  const { user, setUser, setUserFromAuth, sessionLoading, sessionError } = useAuthSession(domain.resetDomainState);
+  const { user:sessionUser, setUser, setUserFromAuth, sessionLoading, sessionError } = useAuthSession(domain.resetDomainState);
 
-  const { settings, refreshSettings } = useOperationalSettings(user);
+  const { settings, settingsReady, refreshSettings } = useOperationalSettings(sessionUser);
 
+  const user=useMemo(()=>sessionUser?{...sessionUser,settings}:null,[sessionUser,settings]);
   // 3. Live GPS tracking while logged in
-  const currentLocation = useLiveGeolocation(user);
-  const driverTracking = useDriverTracking(user);
+
 
   // 4. Global Tab Navigation State
   const [activeTab, setActiveTab] = useBrowserNavigation(user,sessionLoading);
@@ -43,6 +43,10 @@ export const AppProvider = ({ children }) => {
 
   // 6. Shift attendance slice
   const { shiftAttendance, handleShiftClockIn, handleShiftClockOut, shiftBusy, shiftError } = useShiftAttendance(user);
+
+  const activeSalesVisit=domain.salesStops.some(stop=>['ARRIVED','ORDERED','IN_VISIT'].includes(stop.status));
+  const currentLocation=useLiveGeolocation(settingsReady?user:null,settings,shiftAttendance.clockedIn,activeSalesVisit);
+  const driverTracking=useDriverTracking(settingsReady?user:null,settings);
 
   // 7. Notification center slice
   const notificationState = useNotifications(user);
@@ -95,7 +99,7 @@ export const AppProvider = ({ children }) => {
 
   const value = useMemo(() => ({
     driverTracking, syncStatus, ...notificationState,
-    settings, refreshSettings, sessionLoading, sessionError,
+    settings, settingsReady, refreshSettings, sessionLoading, sessionError,
     // Current User Session
     user,
     setUser,
@@ -153,7 +157,7 @@ export const AppProvider = ({ children }) => {
     ...supervisorActions,
     ...adminActions,
   }), [
-    syncStatus, notificationState, settings, refreshSettings, sessionLoading, sessionError,
+    syncStatus, notificationState, settings, settingsReady, refreshSettings, sessionLoading, sessionError,
     user,
     setUser,
     setUserFromAuth,

@@ -4,6 +4,9 @@ import {planningBody} from './planning-schema.js';
 import {assertPlanManager,planningContext} from './planning-context.service.js';
 import {buildPlanCalendar} from '../../../../../shared/pjp-planning.mjs';
 import {wibDayRange,wibDateKey} from '../../../../../shared/visit-metrics.mjs';
+import {planningCalendar} from './planning-calendar.service.js';
+import {teamPlanningPolicy} from './planning-policy.service.js';
+import {workingDays} from '../../../../../shared/working-calendar.mjs';
 export async function getPlan(id,actor,db=prisma){
  const plan=await db.pjpPlan.findUnique({where:{id}});
  if(!plan)throw new AppError('Rencana tidak ditemukan',404);
@@ -15,7 +18,11 @@ export async function listPlans(actor){
 }
 export async function previewPlan(raw,actor,db=prisma){
  const plan=planningBody.parse(raw),context=await planningContext(db,actor,plan.supervisorId);
- const review=buildPlanCalendar(plan,context.sales,context.outlets,context.workingDays);
+ const policy=await teamPlanningPolicy(plan.supervisorId),values=policy.values,calendar=await planningCalendar(db,plan.startsOn,plan.endsOn,values);
+ context.workingDays=workingDays(values.PJP_WORKING_DAYS);context.policy=policy;
+ const review=buildPlanCalendar(plan,context.sales,context.outlets,context.workingDays,{...values,...(calendar.workingDates?{workingDates:calendar.workingDates}:{})});
+ review.calendar=calendar;
+ for(const month of calendar.missing)review.problems.push({code:'CALENDAR_MISSING',message:`Kalender Admin ${month} belum ditetapkan. Isi kalender sebelum penerbitan.`});
  const existing=await db.pjp.findMany({where:{type:'SALES',userId:{in:context.sales.map(s=>s.id)},date:{gte:wibDayRange(plan.startsOn).gte,lte:wibDayRange(plan.endsOn).lte}},select:{id:true,userId:true,date:true,code:true}});
  const scheduled=new Set(review.days.flatMap(day=>day.outletIds.map(id=>`${id}:${day.date}`)));
  const assigned=await db.pjpStop.findMany({where:{outletId:{in:[...new Set(plan.rules.map(r=>r.outletId))]},pjp:{type:'SALES',date:{gte:wibDayRange(plan.startsOn).gte,lte:wibDayRange(plan.endsOn).lte}}},select:{outletId:true,outlet:{select:{name:true}},pjp:{select:{date:true}}}});

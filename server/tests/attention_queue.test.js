@@ -29,6 +29,6 @@ test('fulfilled or cancelled demand is excluded but unresolved order history rem
  const mock=(model,result)=>{const original=prisma[model].findMany;originals.push(()=>{prisma[model].findMany=original;});prisma[model].findMany=async()=>result;};
  t.after(()=>{originals.forEach(restore=>restore());invalidateConfigCache();});
  const order=(id,cancelledQuantity)=>({id,status:'APPROVED',items:[{id:`i:${id}`,quantity:1,cancelledQuantity}],createdAt:new Date(),pjpStop:{outlet:{name:'Toko'}}});
- mock('order',[order('cancelled',1),order('open',0)]);for(const model of ['packingList','deliveryRoute','deliveryIssue','staffActivity','user','systemConfig','attendance','offPjpAttendance','outletUnlockRequest','routeChangeRequest'])mock(model,[]);invalidateConfigCache();
+ mock('order',[order('cancelled',1),order('open',0)]);for(const model of ['packingList','deliveryRoute','deliveryIssue','staffActivity','user','systemConfig','attendance','offPjpAttendance','outletUnlockRequest','routeChangeRequest','operationalException'])mock(model,[]);invalidateConfigCache();
  const result=await getAttention({id:'admin',role:'ADMIN'});assert.deepEqual(result.rows.map(r=>r.key),['order:open']);
 });

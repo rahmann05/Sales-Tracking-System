@@ -1,12 +1,15 @@
 import { CONFIG_DEFAULTS } from '../../../../../shared/config.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
+import {currentPolicy} from './policy-context.service.js';
+import {effectivePolicy} from './policy-resolver.service.js';
 
 let cache = {};
 let lastFetch = 0;
 let generation=0;
 let pending=null;
 const CACHE_TTL = 60000; // 1 minute (60000 ms)
+export const configGeneration = () => generation;
 
 /**
  * Fetches a configuration value dynamically from the database, falling back to cache or environment config.
@@ -14,7 +17,10 @@ const CACHE_TTL = 60000; // 1 minute (60000 ms)
  * @param {any} defaultValue - Default value if not found.
  * @returns {Promise<any>}
  */
-export const getDynamicConfig = async (key, defaultValue) => {
+export const getDynamicConfig = async (key, defaultValue, {base=false}={}) => {
+  const policy=base?null:currentPolicy();
+  if(policy?.values?.[key]!==undefined)return policy.values[key];
+  if(!policy&&!base&&Object.hasOwn(CONFIG_DEFAULTS,key))return (await effectivePolicy()).values[key];
   if (Date.now()-lastFetch>CACHE_TTL) {
     const revision=generation;
     if(!pending) {
@@ -25,7 +31,7 @@ export const getDynamicConfig = async (key, defaultValue) => {
       flight.finally(()=>{if(pending===holder)pending=null;}).catch(()=>{});
     }
     await pending.flight;
-    if(revision!==generation)return getDynamicConfig(key,defaultValue);
+    if(revision!==generation)return getDynamicConfig(key,defaultValue,{base});
   }
 
   if (cache[key] !== undefined) {

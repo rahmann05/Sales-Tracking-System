@@ -1,3 +1,4 @@
+import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {SalesDialog} from './SalesDialog';
 import { AttendanceSalesInput } from './AttendanceSalesInput';
@@ -23,7 +24,10 @@ const EARLY_REASON_OPTIONS = [
  * Duration Anti-Fraud Check, and Result Notes.
  */
 export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
-  const { settings,user } = useApp();
+  const { settings:runtime,user } = useApp();
+  const settings={...runtime,...stop?.policySnapshot?.values};
+  const policy=visitPolicy(settings);
+  const requireEvidence=policy.requireOut;
   const draft=useFormDraft(`AbsenOutModal:${stop?.id}`,{notes:'',visitOutcome:{purpose:''},salesResult:{orderAmount:'',productIds:[]},earlyReason:''});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -61,7 +65,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
 
   const minMinutes = settings.MINIMUM_VISIT_DURATION_MINUTES;
   const minDurationSecs = minMinutes * 60;
-  const isEarlyCheckout = settings.ATTENDANCE_ENFORCE_MIN_DURATION && elapsedSecs < minDurationSecs;
+  const isEarlyCheckout = requireEvidence && settings.ATTENDANCE_ENFORCE_MIN_DURATION && elapsedSecs < minDurationSecs;
   const earlyBlocked = isEarlyCheckout && (!settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT || !earlyReason);
   const remainingSecs = Math.max(0, minDurationSecs - elapsedSecs);
 
@@ -93,9 +97,10 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   const handleConfirm = async () => {
     if (saving) return;
     const outcomeError=visitOutcome.purpose&&visitOutcomeError(visitOutcome);
+    if(settings.SALES_REQUIRE_VISIT_RESULT&&!visitOutcome.purpose){setError('Pilih tujuan dan hasil kunjungan.');return;}
     if(outcomeError){setError(outcomeError);return;}
-    if (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng)) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
-    if (settings.ATTENDANCE_REQUIRE_PHOTO && !capturedPhoto) {
+    if (requireEvidence && settings.SALES_REQUIRE_GPS && (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng))) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
+    if (requireEvidence && policy.photoOut && !capturedPhoto) {
       setError('Ambil foto presensi keluar menggunakan kamera terlebih dahulu.');
       return;
     }
@@ -121,9 +126,9 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return <SalesDialog title="Hasil kunjungan & absen keluar" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
+  return <SalesDialog title={requireEvidence?"Hasil kunjungan & absen keluar":"Catat hasil & selesaikan kegiatan"} description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
         {/* Duration Status Bar */}
-        <div className="p-3 bg-surface-container rounded-2xl border border-border-glass flex items-center justify-between text-xs">
+        {requireEvidence && <div className="p-3 bg-surface-container rounded-2xl border border-border-glass flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 font-bold text-on-surface">
             <FiClock className="text-primary" />
             <span>Durasi Kunjungan:</span>
@@ -146,7 +151,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
               </>
             )}
           </span>
-        </div>
+        </div>}
 
         {/* Early Checkout Warning & Reason Selector */}
         {isEarlyCheckout && (
@@ -177,12 +182,13 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
         )}
 
         {/* 1. Live Device Camera & GPS Verification */}
-        <DeviceCameraCapture outletId={stop.outletId}
+        {requireEvidence && <DeviceCameraCapture outletId={stop.outletId}
+          photoRequired={policy.photoOut}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
-          onLocationChange={settings.ATTENDANCE_REQUIRE_PHOTO ? undefined : setGpsData}
+          onLocationChange={requireEvidence && policy.photoOut ? undefined : setGpsData}
           onRetake={handleRetake}
-          requireGps={true}
+          requireGps={settings.SALES_REQUIRE_GPS}
           enforceGeofence={settings.ATTENDANCE_ENFORCE_GEOFENCE}
           targetLat={stop.latitude}
           targetLng={stop.longitude}
@@ -190,10 +196,10 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           outletName={stop.outletName}
           facingModeDefault="user"
           buttonLabel="Jepret Foto Selfie Absen Out"
-        />
+        />}
 
         <AttendanceSalesInput value={salesResult} onChange={setSalesResult} />
-        <VisitOutcomeInput value={visitOutcome} onChange={setVisitOutcome}/>
+        <VisitOutcomeInput value={visitOutcome} onChange={setVisitOutcome} allowCollection={settings.FEATURE_COLLECTION_MODE==='ACTIVE'} required={settings.SALES_REQUIRE_VISIT_RESULT}/>
         {/* 2. Keterangan Hasil Kunjungan */}
         <AbsenNotesInput
           notes={notes}
@@ -204,8 +210,8 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {/* 3. Confirmation Button */}
-        {!settings.ATTENDANCE_REQUIRE_PHOTO && <p className="text-xs text-on-surface-variant">Foto opsional. Tunggu GPS aktif sebelum mengirim absensi.</p>}
-        {(capturedPhoto || !settings.ATTENDANCE_REQUIRE_PHOTO) && (
+        {requireEvidence && !policy.photoOut && <p className="text-xs text-on-surface-variant">Foto opsional.{settings.SALES_REQUIRE_GPS?' Tunggu GPS aktif sebelum mengirim absensi.':''}</p>}
+        {(capturedPhoto || !(requireEvidence && policy.photoOut)) && (
           <button
             type="button"
             onClick={handleConfirm}
@@ -217,7 +223,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
             }`}
           >
             <FiCheckCircle className="text-lg" />
-            <span>Selesaikan Kunjungan & Absen Out</span>
+            <span>{requireEvidence?"Selesaikan kunjungan & absen keluar":"Simpan hasil & selesaikan kegiatan"}</span>
           </button>
         )}
   </SalesDialog>;

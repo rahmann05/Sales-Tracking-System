@@ -1,3 +1,4 @@
+import {capturePolicySnapshot,processValue} from '../../config/services/process-policy.service.js';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -12,12 +13,10 @@ const event = (action, userId, snapshot = {}) => ({ action, userId, at: new Date
 export const packingReady = p => p.totalCartons > 0 && p.items.length > 0 && p.invoices.length > 0 && p.invoices.reduce((n, i) => n + i.totalCartons, 0) === p.totalCartons;
 
 export async function savePacking(data, userId, id) {
-  const mode = await getDynamicConfig('PACKING_SOURCE_MODE', 'MANUAL');
-  const autoRelease = await getDynamicConfig('PACKING_AUTO_RELEASE', false);
-  const pendingAllowed = await getDynamicConfig('PACKING_ALLOW_PENDING_ORDER', false);
   return prisma.$transaction(async tx => {
     const old = id ? await tx.packingList.findUnique({ where: { id }, include: packingInclude }) : null;
     if (id && !old) throw new AppError('Packing list tidak ditemukan', 404);
+    const mode=await processValue(old,'PACKING_SOURCE_MODE','MANUAL'),autoRelease=await processValue(old,'PACKING_AUTO_RELEASE',false),pendingAllowed=await processValue(old,'PACKING_ALLOW_PENDING_ORDER',false);
     if (old && (old.status !== 'DRAFT' || old.deliveryStops.length || old.revision !== data.revision)) throw new AppError('Dokumen berubah atau bukan draft. Muat ulang sebelum mengedit.', 409);
     const outlet = await tx.outlet.findFirst({ where: { id: data.outletId, deletedAt: null } });
     if (!outlet) throw new AppError('Toko tidak ditemukan', 404);
@@ -62,7 +61,7 @@ export async function savePacking(data, userId, id) {
     const status = autoRelease && ready ? 'RELEASED' : 'DRAFT';
     const packingCode=old?.code || await resolveBusinessCode('PACKING_LIST',data.code,{db:tx});
     const history = [...(old?.history || []), event(old ? 'EDIT' : 'CREATE', userId, { before: old ? { items: old.items, totalCartons: old.totalCartons, notes: old.notes, invoices: old.invoices, sourceOrderId: old.sourceOrderId } : null, after: { ...data, items, code:packingCode, invoices:invoiceRows }, status })];
-    const payload = { outletId: data.outletId, sourceOrderId: data.sourceOrderId || null, source: order ? (mode === 'MANUAL' ? 'MANUAL_REFERENCE' : 'ORDER') : 'MANUAL', items, totalCartons: data.totalCartons, totalWeight: data.totalWeight || 0, notes: data.notes, overrideReason: data.overrideReason || null, status, releasedAt: status === 'RELEASED' ? new Date() : null, history, revision: (old?.revision || 0) + 1 };
+    const payload = { policySnapshot:old?.policySnapshot||await capturePolicySnapshot(),outletId: data.outletId, sourceOrderId: data.sourceOrderId || null, source: order ? (mode === 'MANUAL' ? 'MANUAL_REFERENCE' : 'ORDER') : 'MANUAL', items, totalCartons: data.totalCartons, totalWeight: data.totalWeight || 0, notes: data.notes, overrideReason: data.overrideReason || null, status, releasedAt: status === 'RELEASED' ? new Date() : null, history, revision: (old?.revision || 0) + 1 };
     if (old) await tx.invoice.deleteMany({ where: { packingListId: id } });
     const invoices = { create: invoiceRows.map(i => ({ ...i, outletId: data.outletId })) };
     return old ? tx.packingList.update({ where: { id }, data: { ...payload, invoices }, include: packingInclude }) : tx.packingList.create({ data: { ...payload, code: packingCode, createdById: userId, invoices }, include: packingInclude });
@@ -70,16 +69,16 @@ export async function savePacking(data, userId, id) {
 }
 
 export async function transitionPacking(id, action, userId) {
-  const revisionAllowed = await getDynamicConfig('PACKING_ALLOW_REVISION', true);
   if (!['RELEASE', 'RECALL'].includes(action)) throw new AppError('Aksi tidak valid', 400);
   return prisma.$transaction(async tx => {
     const pl = await tx.packingList.findUnique({ where: { id }, include: packingInclude });
     if (!pl) throw new AppError('Packing list tidak ditemukan', 404);
+    const revisionAllowed=await processValue(pl,'PACKING_ALLOW_REVISION',true);
     if (pl.deliveryStops.length) throw new AppError('Muatan sudah dialokasikan; batalkan rute draft dahulu', 409);
     if (action === 'RELEASE' && pl.sourceOrderId) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${pl.sourceOrderId}`}))`;
       const order = await tx.order.findUnique({ where: { id: pl.sourceOrderId } });
-      const allowPending = await getDynamicConfig('PACKING_ALLOW_PENDING_ORDER', false);
+      const allowPending = await processValue(pl,'PACKING_ALLOW_PENDING_ORDER',false);
       if (!order || order.deletedAt || order.status === 'REJECTED' || (order.status !== 'APPROVED' && (!allowPending || !pl.overrideReason?.trim()))) throw new AppError('Referensi order tidak lagi memenuhi kebijakan pelepasan', 409);
     }
     if (action === 'RELEASE' && (pl.status !== 'DRAFT' || !packingReady(pl))) throw new AppError('Lengkapi barang, karton dan faktur; total karton faktur harus sama dengan packing list', 400);
@@ -92,6 +91,7 @@ export async function transitionPacking(id, action, userId) {
 // Called inside the order approval transaction. Quantity is never assumed to be cartons.
 export async function draftFromApprovedOrder(tx, orderId, userId) {
   const mode = await getDynamicConfig('PACKING_SOURCE_MODE', 'MANUAL');
+  if(await getDynamicConfig('FEATURE_PACKING_MODE','ACTIVE')!=='ACTIVE')return;
   if (mode === 'MANUAL' || !await getDynamicConfig('PACKING_AUTO_FROM_APPROVED_ORDER', false)) return;
   const order = await tx.order.findUnique({ where: { id: orderId }, include: { pjpStop: true, items: { include: { product: true } } } });
   if (order.status !== 'APPROVED') return;
@@ -99,5 +99,5 @@ export async function draftFromApprovedOrder(tx, orderId, userId) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
   if (await tx.packingList.findFirst({where:{sourceOrderId:orderId}})) return;
   const items = order.items.map(i => ({ lineId: i.id, sourceOrderItemId:i.id, name: i.productName??i.product.name, sku: i.productSku??i.product.sku, quantity: i.quantity-(i.cancelledQuantity||0),...unitSnapshot(i) })).filter(i=>i.quantity>0);
-  await tx.packingList.create({ data: { sourceOrderId: orderId, source: 'ORDER', status: 'DRAFT', outletId: order.pjpStop.outletId, code: await resolveBusinessCode('PACKING_LIST',null,{db:tx}), createdById: userId, items, totalCartons: 0, history: [event('AUTO_DRAFT', userId, { orderId })] } });
+  await tx.packingList.create({ data: { policySnapshot:await capturePolicySnapshot(),sourceOrderId: orderId, source: 'ORDER', status: 'DRAFT', outletId: order.pjpStop.outletId, code: await resolveBusinessCode('PACKING_LIST',null,{db:tx}), createdById: userId, items, totalCartons: 0, history: [event('AUTO_DRAFT', userId, { orderId })] } });
 }

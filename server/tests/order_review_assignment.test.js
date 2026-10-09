@@ -58,3 +58,5 @@ test('sales retain operational decision history without internal assignment or t
   const history=[{action:'ASSIGN_REVIEWER',after:{reason:'Internal assignment'}},{action:'RELEASE_REVIEWER'},{action:'REJECT',note:'Rincian order belum lengkap',actorId:'admin',assignmentRevision:3,assignedOwnerId:'reviewer',overrideReason:'Internal takeover'}];
   assert.deepEqual(salesOrderHistory(history),[{action:'REJECT',note:'Rincian order belum lengkap',actorId:'admin'}]);assert.equal(history[2].assignmentRevision,3);
 });
+import {useDefaultPolicy} from './helpers/config-fixture.js';
+useDefaultPolicy();

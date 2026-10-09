@@ -95,3 +95,5 @@ test('invoice reconciliation marks only the invoice actually delivered on split 
   await reconcilePackingInvoices({packingList:{findUnique:async()=>packing},invoice:{update:async q=>writes.push(q)}},'p');
   assert.equal(writes[0].data.isDelivered,true);assert.equal(writes[1].data.isDelivered,false);
 });
+import {useDefaultPolicy} from './helpers/config-fixture.js';
+useDefaultPolicy();

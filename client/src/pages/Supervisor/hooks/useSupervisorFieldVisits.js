@@ -1,3 +1,4 @@
+import {auditItems} from '../../../../../shared/supervision-checklist.mjs';
 import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import { useApp } from '../../../context/AppContext';
 import { staffAttendanceApi } from '../../../services/api';
@@ -5,15 +6,14 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { notifySuccess } from '../../../services/notificationService';
 import {
     SPV_MODES,
-    DEFAULT_SPV_CHECKLIST,
 } from '../../../constants/supervisor';
 
 const timeWib = value => value ? new Date(value).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) + ' WIB' : null;
-const mapRecord = r => ({ ...r, status: r.checkOutAt ? 'COMPLETED' : 'IN_VISIT', checkInTime: timeWib(r.checkInAt), checkOutTime: timeWib(r.checkOutAt) });
+const mapRecord = r => ({ ...r, status: r.checkOutAt||r.checklist?.state==='FINISHED' ? 'COMPLETED' : 'IN_VISIT', checkInTime: r.checklist?.startKind==='BUSINESS_START'?null:timeWib(r.checkInAt), checkOutTime: timeWib(r.checkOutAt) });
 
 const mapStop=(s,p,i,mode)=>({id:s.id,latitude:s.outlet?.latitude,longitude:s.outlet?.longitude,sequence:i+1,outletName:s.outlet?.name||'—',owner:s.outlet?.ownerName||'—',phone:s.outlet?.phone||'—',address:s.outlet?.address||'—',radiusMeters:s.outlet?.radiusMeters||50,currentDistance:null,spvVisitType:mode==='JOINT_VISIT'?'Pendampingan sales':mode==='PRIORITY_AUDIT'?'Audit toko pilihan':'Inspeksi toko pilihan',assignedSales:p.user?.name||'—',salesId:p.userId});
 export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = [], refreshKey = 0) => {
-    const { user } = useApp();
+    const { user,settings } = useApp();
     const submitting = useRef(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -33,7 +33,7 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = [], refr
     const [activeModal, setActiveModal] = useState(null); // 'ABSEN_IN' | 'AUDIT' | 'ABSEN_OUT' | 'OFF_PJP'
     const [selectedStop, setSelectedStop] = useState(null);
     const [inputNotes, setInputNotes] = useState('');
-    const [checklist, setChecklist] = useState(DEFAULT_SPV_CHECKLIST);
+    const [checklist, setChecklist] = useState({});
     const [followUp, setFollowUp] = useState({ enabled:false, ownerId:'', dueDate:'', note:'' });
     const [offPjpForm, setOffPjpForm] = useState({ outletName: '', address: '', owner: '', reason: '' });
 
@@ -75,22 +75,23 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = [], refr
     const confirmAbsenIn = payload => selectedStop && submit({ action: 'VISIT_IN', visitMode:spvMode, stopId: selectedStop.id, notes: inputNotes, ...payload });
 
     const openAudit = (stop) => {
-        setSelectedStop(stop);
         const existing = spvVisitRecords[stop.id];
+        setSelectedStop({...stop,policySnapshot:existing?.policySnapshot});
         setInputNotes(existing?.notes || '');
 
-        setChecklist(existing?.checklist || DEFAULT_SPV_CHECKLIST);
+        setChecklist(Object.fromEntries(auditItems({...settings,...existing?.policySnapshot?.values}).map(item=>[item.key,typeof existing?.checklist?.[item.key]==='boolean'?existing.checklist[item.key]:null])));
         setFollowUp({enabled:['OPEN','SUBMITTED','DONE'].includes(existing?.followUp?.status),ownerId:existing?.followUp?.ownerId||stop.salesId||'',dueDate:existing?.followUp?.dueDate||'',note:existing?.followUp?.note||'',completed:['DONE','SUBMITTED'].includes(existing?.followUp?.status)});
         setActiveModal('AUDIT');
     };
 
     const saveAudit = () => {
         if (!selectedStop) return;
-        if (followUp.enabled && !followUp.completed && (!followUp.ownerId || !followUp.dueDate || !followUp.note.trim())) {
+        const assignable=!settings.FEATURE_FOLLOW_UP_MODE||settings.FEATURE_FOLLOW_UP_MODE==='ACTIVE';
+        if (assignable && followUp.enabled && !followUp.completed && (!followUp.ownerId || !followUp.note.trim())) {
             setError('Sales penanggung jawab, tenggat dan instruksi tindak lanjut wajib diisi.'); return;
         }
         return submit({ action:'AUDIT', stopId:selectedStop.id, notes:inputNotes, checklist,
-            ...(followUp.enabled&&!followUp.completed?{followUp:{ownerId:followUp.ownerId,dueDate:followUp.dueDate,note:followUp.note.trim()}}:{}) });
+            ...(assignable&&followUp.enabled&&!followUp.completed?{followUp:{ownerId:followUp.ownerId,...(followUp.dueDate?{dueDate:followUp.dueDate}:{}),note:followUp.note.trim()}}:{}) });
     };
 
     const openAbsenOut = (stop) => {
@@ -120,7 +121,7 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = [], refr
         action: 'OFF_PJP',
         outletName: outlet,
         notes,
-        latitude: data.latitude,
+        accuracy:data.accuracy,observedAt:data.observedAt,latitude: data.latitude,
         longitude: data.longitude,
         photoUrl: data.photoUrl,
         visitMode: data.visitMode || spvMode,

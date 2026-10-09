@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { SPV_MODE_OPTIONS } from '../../../constants/supervisor';
 import { LuCheck, LuCamera, LuMapPin, LuRotateCw, LuInfo } from 'react-icons/lu';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
-import { getDetailedAddressFromGps } from '../../../services/reverseGeocodeService';
+import {useAddressLookup} from '../../../shared/hooks/useAddressLookup';
 import { SpvModalShell } from './SpvModalShell';
+import {useApp} from '../../../context/AppContext';
 
 /**
  * SpvOffPjpModal Component
@@ -21,71 +22,16 @@ export const SpvOffPjpModal = ({
   saving,
 }) => {
   const [capture, setCapture] = useState(null);
-  const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
-  const [isAddressAutoFetched, setIsAddressAutoFetched] = useState(false);
-  const [localError, setLocalError] = useState('');
-
-  const lastCoords = useRef({ lat: null, lng: null });
-
-  const fetchAddressFromCoords = useCallback(async (lat, lng, force = false) => {
-    if (!lat || !lng) return;
-    if (!force && lastCoords.current.lat === lat && lastCoords.current.lng === lng) return;
-
-    lastCoords.current = { lat, lng };
-    setIsGeocodingLoading(true);
-    try {
-      const detailedAddress = await getDetailedAddressFromGps(lat, lng);
-      if (detailedAddress) {
-        onChangeForm({ ...form, address: detailedAddress });
-        setIsAddressAutoFetched(true);
-      }
-    } catch (err) {
-      console.warn('Geocoding error:', err);
-    } finally {
-      setIsGeocodingLoading(false);
-    }
-  }, [form, onChangeForm]);
-
-  // Auto-fetch GPS address on modal open
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        if (!form?.address || isAddressAutoFetched) {
-          fetchAddressFromCoords(pos.coords.latitude, pos.coords.longitude);
-        }
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 5000 }
-    );
-  }, [fetchAddressFromCoords]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleCapture = (photoUrl, location) => {
-    setCapture({ photoUrl, gps: location });
-    setLocalError('');
-    if (location?.lat && location?.lng && (!form?.address || isAddressAutoFetched)) {
-      fetchAddressFromCoords(location.lat, location.lng, true);
-    }
-  };
-
-  const handleRetake = () => {
-    setCapture(null);
-  };
-
-  const handleRefreshAddress = () => {
-    if (capture?.gps?.lat && capture?.gps?.lng) {
-      fetchAddressFromCoords(capture.gps.lat, capture.gps.lng, true);
-    } else if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => fetchAddressFromCoords(pos.coords.latitude, pos.coords.longitude, true),
-        (err) => setLocalError('Gagal mendeteksi lokasi GPS: ' + err.message),
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    }
-  };
+  const {settings}=useApp();
+  const optional=settings.SPV_ATTENDANCE_MODE==='OPTIONAL',photoRequired=!optional&&settings.SPV_REQUIRE_PHOTO,gpsRequired=!optional&&settings.SPV_REQUIRE_GPS;
+  const [localError,setLocalError]=useState('');
+  const {lookupEnabled,lookupError,isGeocodingLoading,fetchAddressFromCoords,handleAddressChange,refresh}=useAddressLookup({address:form?.address,onChange:address=>onChangeForm({...form,address})});
+  const handleCapture=(photoUrl,gps)=>{setCapture({photoUrl,gps});setLocalError('');if(gps)fetchAddressFromCoords(gps.lat,gps.lng);};
+  const handleRetake=()=>setCapture(null);
+  const handleRefreshAddress=()=>refresh(capture?.gps);
 
   const handleSubmit = () => {
-    if (!capture?.photoUrl || !capture?.gps) {
+    if (photoRequired&&!capture?.photoUrl || gpsRequired&&!capture?.gps) {
       setLocalError('Wajib menjepret foto presensi di lokasi toko dengan GPS aktif.');
       return;
     }
@@ -105,22 +51,22 @@ export const SpvOffPjpModal = ({
     setLocalError('');
     onConfirm({
       ...form,
-      photoUrl: capture.photoUrl,
-      latitude: capture.gps.lat,
-      longitude: capture.gps.lng,
+      photoUrl: capture?.photoUrl,
+      accuracy:capture?.gps?.accuracy,observedAt:capture?.gps?.observedAt,latitude: capture?.gps?.lat,
+      longitude: capture?.gps?.lng,
       visitMode: spvMode,
     });
   };
 
   const displayError = error || localError;
-  const isSubmitDisabled = saving || !capture?.photoUrl || !capture?.gps;
+  const isSubmitDisabled = saving || photoRequired&&!capture?.photoUrl || gpsRequired&&!capture?.gps;
 
   return (
     <SpvModalShell
       error={displayError}
       saving={saving}
       title="Kunjungan Supervisi Luar RJP"
-      subtitle="Presensi kunjungan toko dengan verifikasi foto kamera & titik GPS langsung"
+      subtitle={optional?'Catat kegiatan supervisi tanpa presensi wajib':'Catat kegiatan dan bukti sesuai aturan aktif'}
       maxWidth="max-w-xl md:max-w-2xl"
       onClose={onClose}
       footer={
@@ -154,7 +100,7 @@ export const SpvOffPjpModal = ({
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300 font-medium">
           <LuInfo className="text-base shrink-0 mt-0.5 text-amber-600" />
           <span>
-            Presensi supervisi di luar jadwal memerlukan <strong>foto langsung di lokasi toko</strong> dan <strong>verifikasi GPS aktif</strong> persis seperti langkah presensi sales.
+            Kegiatan supervisi dicatat terpisah dari kunjungan Sales. Foto {photoRequired?'wajib':'opsional'} · GPS {gpsRequired?'wajib':'opsional'} sesuai aturan aktif.
           </span>
         </div>
 
@@ -163,7 +109,7 @@ export const SpvOffPjpModal = ({
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
               <LuCamera className="text-sm text-primary" />
-              <span>Foto Bukti Kunjungan & GPS (Wajib):</span>
+              <span>Foto {photoRequired?'wajib':'opsional'} · GPS {gpsRequired?'wajib':'opsional'}</span>
             </label>
             {capture?.gps && (
               <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -174,10 +120,12 @@ export const SpvOffPjpModal = ({
           </div>
 
           <DeviceCameraCapture
+            photoRequired={photoRequired}
             capturedPhoto={capture?.photoUrl}
             onCapture={handleCapture}
             onRetake={handleRetake}
-            requireGps={true}
+            requireGps={gpsRequired}
+            onLocationChange={photoRequired?undefined:gps=>setCapture(c=>({...c,gps}))}
             targetLat={null}
             targetLng={null}
             outletName={form?.outletName || 'Toko Supervisi Luar RJP'}
@@ -241,7 +189,7 @@ export const SpvOffPjpModal = ({
             <button
               type="button"
               onClick={handleRefreshAddress}
-              disabled={isGeocodingLoading}
+              disabled={isGeocodingLoading||!lookupEnabled}
               className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
             >
               <LuRotateCw className={`text-xs ${isGeocodingLoading ? 'animate-spin' : ''}`} />
@@ -251,15 +199,14 @@ export const SpvOffPjpModal = ({
           <input
             type="text"
             value={form?.address || ''}
-            onChange={(e) => {
-              onChangeForm({ ...form, address: e.target.value });
-              setIsAddressAutoFetched(false);
-            }}
+            onChange={e=>handleAddressChange(e.target.value)}
             placeholder="Misal: Jl. Raya Cimahi No. 100, Bandung Barat"
             className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
 
+        {lookupError&&<p role="status" className="text-sm">{lookupError}</p>}
+        {!lookupEnabled&&<p className="text-sm">Pencarian alamat tidak tersedia. Isi alamat secara manual.</p>}
         {/* 5. Alasan Kunjungan */}
         <div className="space-y-1">
           <label className="text-xs font-bold text-on-surface block">

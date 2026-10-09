@@ -1,3 +1,4 @@
+import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { LuPrinter } from 'react-icons/lu';
@@ -6,7 +7,7 @@ export function PackingListPrintModal({ document: doc, onClose }) {
   if (!doc) return null;
 
   const handlePrint = () => {
-    window.print();
+    printOperationalDocument('PACKING');
   };
 
   const formattedDate = doc.createdAt

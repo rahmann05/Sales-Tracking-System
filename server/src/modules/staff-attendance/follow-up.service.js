@@ -1,3 +1,4 @@
+import {processValue} from '../config/services/process-policy.service.js';
 import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
 import {randomUUID} from 'node:crypto';
@@ -15,7 +16,7 @@ export async function followUpScope(user, db = prisma) {
 export const listFollowUps=async(user,{status='ALL',page=1,limit=50}={})=>{
   if(!['ALL','OPEN','SUBMITTED','DONE'].includes(status))throw new AppError('Status tindak lanjut tidak valid',400);
   const current=Math.max(1,Math.floor(Number(page)||1)),size=Math.min(200,Math.max(1,Math.floor(Number(limit)||50)));
-  return prisma.staffActivity.findMany({where:{AND:[await followUpScope(user),...(status==='ALL'?[]:[{followUp:{path:['status'],equals:status}}])]},select:{id:true,outletName:true,followUp:true,user:{select:{name:true}}},orderBy:[{checkInAt:'asc'},{id:'asc'}],skip:(current-1)*size,take:size});
+  return prisma.staffActivity.findMany({where:{AND:[await followUpScope(user),...(status==='ALL'?[]:[{followUp:{path:['status'],equals:status}}])]},select:{id:true,outletName:true,followUp:true,policySnapshot:true,user:{select:{name:true}}},orderBy:[{checkInAt:'asc'},{id:'asc'}],skip:(current-1)*size,take:size});
 };
 export const completeFollowUp=(id,user,note,evidence)=>prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${id}`}))`;
@@ -24,11 +25,12 @@ export const completeFollowUp=(id,user,note,evidence)=>prisma.$transaction(async
   if(record.followUp.status!=='OPEN')throw new AppError('Tugas sudah dikirim atau selesai',409);
   if(record.followUp.ownerId!==user.id)throw new AppError('Hanya PIC yang dapat mengirim hasil tugas',403);
   if(typeof note!=='string'||!note.trim()||note.trim().length>4000)throw new AppError('Catatan penyelesaian wajib, maksimal 4000 karakter',400);
-  if(typeof evidence!=='string'||!evidence.trim()||evidence.trim().length>2000)throw new AppError('Bukti atau referensi hasil wajib diisi, maksimal 2000 karakter',400);
-  const submission={id:randomUUID(),at:new Date().toISOString(),actorId:user.id,note:note.trim(),evidence:evidence.trim()};
-  const followUp={...record.followUp,status:'SUBMITTED',submission,history:[...(record.followUp.history||[]),{action:'SUBMITTED',...submission}]};
+  if(await processValue(record,'FOLLOW_UP_REQUIRE_EVIDENCE',true)&&(typeof evidence!=='string'||!evidence.trim()||evidence.trim().length>2000))throw new AppError('Bukti atau referensi hasil wajib diisi, maksimal 2000 karakter',400);
+  const submission={id:randomUUID(),at:new Date().toISOString(),actorId:user.id,note:note.trim(),evidence:typeof evidence==='string'?evidence.trim():''};
+  const needsReview=await processValue(record,'FOLLOW_UP_REQUIRE_REVIEW',true);
+  const followUp={...record.followUp,status:needsReview?'SUBMITTED':'DONE',...(!needsReview?{completedAt:submission.at,completedBy:user.id,completionNote:submission.note,completionSource:'POLICY_NO_REVIEW'}:{}),submission,history:[...(record.followUp.history||[]),{action:'SUBMITTED',...submission}]};
   const updated = await tx.staffActivity.update({where:{id},data:{followUp}});
-  await notifyFollowUp(tx, updated, 'SUBMITTED', user.id);
+  await notifyFollowUp(tx, updated, needsReview?'SUBMITTED':'COMPLETED_BY_POLICY', user.id);
   return updated;
 });
 

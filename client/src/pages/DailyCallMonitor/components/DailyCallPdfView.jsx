@@ -1,3 +1,4 @@
+import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
 import { ReportBasisNote } from '../../Reports/components/ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
@@ -20,7 +21,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
   });
 
   const handlePrint = () => {
-    window.print();
+    printOperationalDocument('REPORTS');
   };
 
   return (

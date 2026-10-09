@@ -3,8 +3,8 @@ import { successResponse } from '../../utils/response.js';
 
 export const create = async (req, res, next) => {
   try {
-    const { pjpStopId, items, paymentType, code, requestId, expectedTotal, expectedTermDays } = req.body;
-    const data = await orderService.createOrder(req.user.id, pjpStopId, items, paymentType, code,{requestId,expectedTotal,expectedTermDays});
+    const { pjpStopId, items, paymentType, code, requestId, expectedTotal, expectedTermDays,priceOverrideReason } = req.body;
+    const data = await orderService.createOrder(req.user.id, pjpStopId, items, paymentType, code,{requestId,expectedTotal,expectedTermDays,priceOverrideReason});
     return successResponse(res, 201, data, 'Order berhasil dibuat');
   } catch (error) {
     next(error);

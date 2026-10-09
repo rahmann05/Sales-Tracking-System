@@ -1,3 +1,5 @@
+import {policyNotification} from '../../notifications/services/notification-policy.service.js';
+import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
 /** createRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
 import { AppError } from '../../../utils/errors.js';
 import { prisma } from '../../../config/prisma.js';
@@ -10,6 +12,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
 import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 import {assertRequestReplay,assertOutletLegal,assertOutletTrade} from '../../outlets/services/outlet-data-policy.service.js';
 import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service.js';
+import {allowedVisitIntervals} from '../../../../../shared/pjp-planning.mjs';
 
 /**
  * 1. Create Outlet Registration (Salesman)
@@ -23,6 +26,11 @@ export const createRegistration = async (data, currentUser) => {
       return assertRequestReplay(existing,data,currentUser,existing.salesmanId);
     }
   }
+  if(await getDynamicConfig('FEATURE_REGISTRATION_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Pendaftaran outlet baru dijeda oleh Admin',409);
+  const allowed=allowedVisitIntervals({PJP_ALLOWED_INTERVALS:await getDynamicConfig('PJP_ALLOWED_INTERVALS','1,2,4')});
+  const interval=data.visitIntervalWeeks??Number(await getDynamicConfig('PJP_DEFAULT_INTERVAL','1'));
+  if(!allowed.includes(interval))throw new AppError('Interval kunjungan tidak diizinkan oleh Admin',422);
+  const paymentType=data.paymentType??await getDynamicConfig('DEFAULT_PAYMENT_TYPE','CASH');
   if (await getDynamicConfig('CUSTOMER_REG_REQUIRE_PHOTO', true) && !data.photoUrl?.trim()) throw new AppError('Foto fisik outlet wajib dilampirkan', 422);
   if (await getDynamicConfig('CUSTOMER_REG_REQUIRE_TAX_DOCUMENT', true) && !data.taxDocumentUrl?.trim()) throw new AppError(`Foto dokumen ${data.taxType === 'PKP' ? 'NPWP' : 'KTP'} wajib dilampirkan`, 422);
   if(data.clusterId && !await prisma.cluster.findFirst({where:{id:data.clusterId,deletedAt:null,...(currentUser.role==='SUPERVISOR'?{supervisorId:currentUser.id}:currentUser.role==='SALES'?{OR:[{assignedSalesId:currentUser.id},{users:{some:{id:currentUser.id}}}]}:{})},select:{id:true}}))throw new AppError('Klaster berada di luar penugasan',403);
@@ -41,6 +49,10 @@ export const createRegistration = async (data, currentUser) => {
 
   const cleanData = sanitizeRegistrationPayload({
     ...data,
+    division:data.division??await getDynamicConfig('ACTIVE_DIVISION','BELFOODS'),
+    branch:data.branch||await getDynamicConfig('DEFAULT_BRANCH',''),
+    paymentType,termOfPaymentDays:paymentType==='TOP'?(data.termOfPaymentDays??await getDynamicConfig('DEFAULT_TERM_OF_PAYMENT_DAYS',30)):0,
+    visitIntervalWeeks:interval,
     photoId,
     photoUrl,
     placeId: data.placeId || null,
@@ -58,7 +70,7 @@ export const createRegistration = async (data, currentUser) => {
     if(data.requestId) {const retry=await tx.customerRegistration.findUnique({where:{requestId:data.requestId}});if(retry)return assertRequestReplay(retry,data,currentUser,retry.salesmanId);}
     await assertNoUnreviewedDuplicate(tx,data,currentUser,data.duplicateReason);
     cleanData.registrationCode=await resolveBusinessCode('NOO',data.registrationCode,{db:tx});
-    return tx.customerRegistration.create({data:cleanData});
+    return tx.customerRegistration.create({data:{...cleanData,policySnapshot:await capturePolicySnapshot()}});
   });
 
   // Kirim notifikasi ke SPV dan Admin
@@ -73,7 +85,7 @@ export const createRegistration = async (data, currentUser) => {
     });
 
     for (const mgr of managers) {
-      await prisma.notification.create({
+      await policyNotification(prisma,{
         data: {
           userId: mgr.id,
           type: 'OUTLET_REGISTRATION_SUBMITTED',

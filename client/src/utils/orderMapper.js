@@ -15,7 +15,7 @@ export const mapServerOrderItem = (item = {}) => ({
 });
 
 export const mapServerOrder = (o = {}) => ({
-  id: o.id,
+  id: o.id,policySnapshot:o.policySnapshot||null,
   code: o.code || null,
   dailyStopId: o.pjpStopId,
   outletName: o.customerSnapshot?.name || o.pjpStop?.outlet?.name || o.outletName || '',

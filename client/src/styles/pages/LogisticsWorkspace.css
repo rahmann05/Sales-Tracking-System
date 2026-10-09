@@ -41,3 +41,7 @@
 @media(max-width:767px){.warehouse-home .admin-home-modules,.driver-home .admin-home-modules{grid-template-columns:minmax(0,1fr)}}
 
 .app-discard-confirm{padding:24px;display:grid;gap:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.app-discard-confirm h3{font-size:18px;font-weight:600;margin:0}.app-discard-confirm p{font-size:14px;line-height:1.7;color:#697280;margin:0}.app-discard-confirm>div{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.app-discard-confirm button{min-height:44px;padding:10px 16px;border:1px solid #dbe1e9;border-radius:8px;color:#242931;background:#fff;font:inherit;cursor:pointer}.app-discard-confirm button.app-button-primary{background:#0869cf;border-color:#0869cf;color:#fff}.app-discard-confirm+[hidden]{display:none!important}
+
+.vehicle-service-policy{display:block}.vehicle-service-policy summary{display:list-item;min-height:44px;line-height:1.6;padding:10px 0;cursor:pointer;font-weight:600}.vehicle-service-policy form{padding-top:8px}.vehicle-service-policy p,.vehicle-service-history p{margin:0}.vehicle-service-intervals{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}.vehicle-service-intervals small{font-size:11px;font-weight:400;line-height:1.5;color:#697280}.vehicle-service-history{gap:12px}
+
+.vehicle-service-policy form,.vehicle-service-policy fieldset{display:grid;gap:16px}.vehicle-service-policy :is(form,fieldset)>*{margin:0}

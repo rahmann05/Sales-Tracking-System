@@ -36,6 +36,9 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
     });
 
     it('should load current account rather than stale JWT privileges', async t => {
+      const originalConfigs = prisma.systemConfig.findMany;
+      prisma.systemConfig.findMany = async () => [];
+      t.after(() => { prisma.systemConfig.findMany = originalConfigs; });
       const originalConfig = prisma.systemConfig.findUnique;
       prisma.systemConfig.findUnique = async () => null;
       t.after(() => {prisma.systemConfig.findUnique=originalConfig;});

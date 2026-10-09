@@ -2,6 +2,7 @@ import {userAssignment} from '../../roles/role-assignment.service.js';
 /** updatePermissions - single-responsibility service to update user feature permissions. */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
+import {getIo} from '../../../config/socket.js';
 
 export const updatePermissions = async (id, permissions) => {
   await userAssignment({permissions});
@@ -13,9 +14,10 @@ export const updatePermissions = async (id, permissions) => {
   
   const user = await prisma.user.update({
     where: { id },
-    data: { permissions },
+    data: { permissions,tokenVersion:{increment:1} },
     select: { id: true, name: true, email: true, role: true, permissions: true },
   });
 
+  getIo()?.in(`user:${id}`).disconnectSockets(true);
   return user;
 };

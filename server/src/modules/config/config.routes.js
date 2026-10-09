@@ -7,10 +7,20 @@ import * as configController from './config.controller.js';
 import * as configSchema from './config.schema.js';
 import {prisma} from '../../config/prisma.js';
 import {parsePagination,buildPaginatedResponse} from '../../utils/pagination.js';
+import policyRoutes from './policy.routes.js';
 
 const router = express.Router();
 
 router.use(authenticate);
+router.use('/policies',policyRoutes);
+router.get('/access/export',async(req,res,next)=>{
+ try{
+  const report=req.query.domain==='REPORTS';
+  if(await getDynamicConfig('FEATURE_EXPORT_MODE','ACTIVE')!=='ACTIVE'||report&&!await getDynamicConfig('REPORT_EXPORT_ENABLED',true))return res.status(403).json({message:'Ekspor dan cetak dinonaktifkan dalam aturan operasional.'});
+  if(report&&req.user.permissions?.can_export_reports===false)return res.status(403).json({message:'Akun tidak memiliki izin ekspor laporan.'});
+  res.set('Cache-Control','no-store').json({data:{allowed:true}});
+ }catch(error){next(error);}
+});
 
 // Get ALL configs (Admin only)
 router.get('/', authorize('ADMIN'), configController.getAllConfigs);
@@ -25,6 +35,7 @@ router.get('/runtime', async (req, res, next) => {
     const data = Object.fromEntries(await Promise.all(params.map(async p => [p.key, await getDynamicConfig(p.key, p.defaultValue)])));
     const bypass = String(await getDynamicConfig('BYPASS_GEOFENCE_EMAILS','')).split(',').map(e=>e.trim().toLowerCase());
     data.ATTENDANCE_GEOFENCE_BYPASS_ALLOWED = bypass.includes(req.user.email?.toLowerCase());
+    data.POLICY_VERSIONS=req.policy.versions;
     res.set('Cache-Control', 'no-store').json({ data });
   } catch (error) { next(error); }
 });

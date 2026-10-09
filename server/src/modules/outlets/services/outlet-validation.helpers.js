@@ -1,13 +1,15 @@
 import { cleanAddressForSearch } from './clean-address-for-search.service.js';
 import { calculateNameSimilarity } from './calculate-name-similarity.service.js';
+import {outletMapJson,outletMapError} from './outlet-map-request.service.js';
+import {OUTLET_COMPARISON_DEFAULTS} from '../../../../../shared/outlet-evidence-policy.mjs';
 /** Shared helpers for outlet-validation services (internal). */
 import { cacheInvalidate } from '../../../utils/cacheHelper.js';
 import { CACHE_KEYS } from '../../../config/cache.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 
 /**
- * Outlet Validation Service (4-Signal Weighted Scoring with Locality Anchoring)
- * Single Responsibility: Validate outlet data against Google APIs using
+ * Outlet map evidence readers and text normalization.
+ * Fetch raw evidence from Google APIs using
  * Reverse Geocode, Forward Geocode, Find Place, and Nearby Search signals.
  * 1 File = 1 Service
  */
@@ -182,11 +184,10 @@ export const extractAddressTokens = (addr) => {
 /**
  * Signal 1: Reverse Geocode (lat/lng → address)
  */
-export const runReverseGeocode = async (lat, lng, apiKey) => {
+export const runReverseGeocode = async (lat, lng, apiKey,options={}) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=id`;
-    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
-    const data = await res.json();
+    const data = await outletMapJson(url,options);
 
     if (data.status === 'OK' && data.results?.length > 0) {
       const result = data.results[0];
@@ -202,21 +203,19 @@ export const runReverseGeocode = async (lat, lng, apiKey) => {
 
     return { success: false, error: data.status || 'NO_RESULTS' };
   } catch (err) {
-    console.warn('[Validation] Reverse Geocode error:', err.message);
-    return { success: false, error: err.message };
+    return { success: false, error: outletMapError(err) };
   }
 };
 
 /**
  * Signal 2: Forward Geocode (address → lat/lng with optional regional context)
  */
-export const runForwardGeocode = async (address, apiKey, adminAnchor = null) => {
+export const runForwardGeocode = async (address, apiKey, adminAnchor = null,options={}) => {
   try {
     const queryAddress = cleanAddressForSearch(address);
 
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(queryAddress)}&key=${apiKey}&language=id&region=id`;
-    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
-    const data = await res.json();
+    const data = await outletMapJson(url,options);
 
     if (data.status === 'OK' && data.results?.length > 0) {
       const result = data.results[0];
@@ -235,25 +234,23 @@ export const runForwardGeocode = async (address, apiKey, adminAnchor = null) => 
 
     return { success: false, error: data.status || 'NO_RESULTS' };
   } catch (err) {
-    console.warn('[Validation] Forward Geocode error:', err.message);
-    return { success: false, error: err.message };
+    return { success: false, error: outletMapError(err) };
   }
 };
 
 /**
  * Signal 3: Find Place with Proximity-First Keyword Search & Clean Text Query Fallback
  */
-export const runFindPlace = async (name, address, apiKey, lat = null, lng = null, adminAnchor = null) => {
+export const runFindPlace = async (name, address, apiKey, lat = null, lng = null, adminAnchor = null,options={}) => {
   try {
     const cleanName = (name || '').trim();
 
-    // Strategy 1: High-Confidence Proximity Search (Nearby Search with keyword) within 500m
-    // ONLY accept if name match is HIGH (>= 0.75), e.g. "Al-Fath 2" vs "Toko Al - Fath 2"
+    const policy={...OUTLET_COMPARISON_DEFAULTS,...options};
+    // Proximity selection uses the same name threshold as a location suggestion.
     if (lat != null && lng != null) {
       const cleanKeyword = cleanName.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-      const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=500&keyword=${encodeURIComponent(cleanKeyword)}&key=${apiKey}&language=id`;
-      const nearbyRes = await fetch(nearbyUrl,{signal:AbortSignal.timeout(10000)});
-      const nearbyData = await nearbyRes.json();
+      const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${policy.searchRadiusMeters}&keyword=${encodeURIComponent(cleanKeyword)}&key=${apiKey}&language=id`;
+      const nearbyData = await outletMapJson(nearbyUrl,policy);
 
       if (nearbyData.status === 'OK' && nearbyData.results?.length > 0) {
         let bestPlace = null;
@@ -267,8 +264,7 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
           }
         }
 
-        // Must be a strong match (>= 0.75) to accept proximity match over text search
-        if (bestPlace && highestSim >= 0.75) {
+        if (bestPlace && highestSim >= policy.suggestionNamePercent/100) {
           return {
             success: true,
             placeName: bestPlace.name || '',
@@ -297,11 +293,10 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
     let cleanQuery = [cleanName, cleanAddr].filter(Boolean).join(' ');
 
     const fields = 'name,geometry,formatted_address,place_id,business_status,types';
-    let biasParam = lat != null && lng != null ? `circle:10000@${lat},${lng}` : 'circle:50000@-6.9,107.6';
+    const biasParam = lat != null && lng != null ? `&locationbias=circle:10000@${lat},${lng}` : '';
 
-    const url = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(cleanQuery)}&inputtype=textquery&fields=${fields}&key=${apiKey}&language=id&locationbias=${biasParam}`;
-    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
-    const data = await res.json();
+    const url = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(cleanQuery)}&inputtype=textquery&fields=${fields}&key=${apiKey}&language=id${biasParam}`;
+    const data = await outletMapJson(url,policy);
 
     if (data.status === 'OK' && data.candidates?.length > 0) {
       const ranked=[...data.candidates].sort((a,b)=>calculateNameSimilarity(cleanName,b.name)-calculateNameSimilarity(cleanName,a.name));
@@ -322,19 +317,17 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
 
     return { success: false, error: data.status || 'NO_CANDIDATES' };
   } catch (err) {
-    console.warn('[Validation] Find Place error:', err.message);
-    return { success: false, error: err.message };
+    return { success: false, error: outletMapError(err) };
   }
 };
 
 /**
  * Signal 4: Nearby Search (lat/lng + radius → nearby places)
  */
-export const runNearbySearch = async (lat, lng, apiKey, radius = 200) => {
+export const runNearbySearch = async (lat, lng, apiKey, radius = 200,options={}) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${apiKey}&language=id`;
-    const res = await fetch(url,{signal:AbortSignal.timeout(10000)});
-    const data = await res.json();
+    const data = await outletMapJson(url,options);
 
     if (data.status === 'OK' && data.results?.length > 0) {
       return {
@@ -352,8 +345,7 @@ export const runNearbySearch = async (lat, lng, apiKey, radius = 200) => {
 
     return { success: false, error: data.status || 'NO_RESULTS', places: [] };
   } catch (err) {
-    console.warn('[Validation] Nearby Search error:', err.message);
-    return { success: false, error: err.message, places: [] };
+    return { success: false, error: outletMapError(err), places: [] };
   }
 };
 

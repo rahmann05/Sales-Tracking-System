@@ -19,14 +19,14 @@ test('Database failure during authenticate/refresh is not mislabeled as an expir
  const previous=console.error;console.error=()=>{};try{errorHandler(databaseError,{},res,()=>{});}finally{console.error=previous;}
  assert.equal(status,503);assert.match(body.message,/Database/);
 });
-test('Runtime configuration cold start shares one query and preserves zero/false',async t=>{
- let queries=0;replace(t,prisma.systemConfig,'findMany',async()=>{queries++;await new Promise(resolve=>setTimeout(resolve,5));return [{key:'SALES_WEEKLY_TARGET_AMOUNT',value:0},{key:'OFF_PJP_ENABLED',value:false}];});
+test('Runtime configuration cold start shares one base query and one profile query and preserves zero/false',async t=>{
+ let queries=0;replace(t,prisma.systemConfig,'findMany',async query=>{queries++;await new Promise(resolve=>setTimeout(resolve,5));return query.where.key.startsWith?[]:[{key:'TAX_RATE_PERCENT',value:0},{key:'OFF_PJP_ENABLED',value:false}];});
  invalidateConfigCache();
- const values=await Promise.all(Array.from({length:100},(_,i)=>getDynamicConfig(i%2?'OFF_PJP_ENABLED':'SALES_WEEKLY_TARGET_AMOUNT',i%2?true:100)));
- assert.equal(queries,1);assert.equal(values[0],0);assert.equal(values[1],false);
+ const values=await Promise.all(Array.from({length:100},(_,i)=>getDynamicConfig(i%2?'OFF_PJP_ENABLED':'TAX_RATE_PERCENT',i%2?true:100)));
+ assert.equal(queries,2);assert.equal(values[0],0);assert.equal(values[1],false);
 });
 test('Configuration invalidation rejects an obsolete in-flight snapshot',async t=>{
- let release,queries=0;replace(t,prisma.systemConfig,'findMany',()=>{queries++;if(queries===1)return new Promise(resolve=>{release=resolve;});return Promise.resolve([{key:'OFF_PJP_ENABLED',value:false}]);});
+ let release,queries=0;replace(t,prisma.systemConfig,'findMany',query=>{if(query.where.key.startsWith)return Promise.resolve([]);queries++;if(queries===1)return new Promise(resolve=>{release=resolve;});return Promise.resolve([{key:'OFF_PJP_ENABLED',value:false}]);});
  invalidateConfigCache();const old=getDynamicConfig('OFF_PJP_ENABLED',true);invalidateConfigCache();
  assert.equal(await getDynamicConfig('OFF_PJP_ENABLED',true),false);release([{key:'OFF_PJP_ENABLED',value:true}]);assert.equal(await old,false);assert.equal(queries,2);
 });
