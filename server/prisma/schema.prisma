@@ -592,6 +592,27 @@ model PjpTemplate {
   @@index([userId])
 }
 
+// Published plans keep their rule snapshot; operational PJP records remain immutable.
+model PjpPlan {
+  id String @id @default(uuid())
+  requestId String @unique
+  name String
+  supervisorId String
+  startsOn String
+  endsOn String
+  rules Json
+  revision Int @default(1)
+  status String @default("DRAFT")
+  history Json @default("[]")
+  createdBy String
+  updatedBy String
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supervisorId, startsOn])
+}
+
 model PjpTemplateStop {
   id            String      @id @default(uuid())
   pjpTemplateId String

@@ -51,8 +51,8 @@ export const remove = async (req, res, next) => {
 
 export const getNearestOutlets = async (req, res, next) => {
   try {
-    const { lat, lng, count, type } = req.body;
-    const data = await clusterService.getNearestOutlets(lat, lng, count, type, req.user);
+    const { lat, lng, count, type,supervisorId } = req.body;
+    const data = await clusterService.getNearestOutlets(lat, lng, count, type, req.user,supervisorId);
     return successResponse(res, 200, data);
   } catch (error) {
     next(error);
@@ -82,7 +82,7 @@ export const createFull = async (req, res, next) => {
 export const updateOutlets = async (req, res, next) => {
   try {
     const { outletIds } = req.body;
-    const data = await clusterService.updateClusterOutlets(req.params.id, outletIds, req.user);
+    const data = await clusterService.updateClusterOutlets(req.params.id, outletIds, req.user,req.body.impactToken);
     return successResponse(res, 200, data, 'Outlet cluster berhasil diperbarui');
   } catch (error) {
     next(error);

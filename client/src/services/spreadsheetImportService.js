@@ -23,11 +23,18 @@ export const parseSpreadsheetCsv = (csvText = '') => {
   }
   if(quoted)throw new Error('CSV mengandung tanda kutip yang belum ditutup');
   current.push(cell.trim());if(current.some(Boolean))records.push(current);
-  const parsedRecords=records.slice(1).map((cols,i)=>{
-    if(cols.length<7)throw new Error(`Baris ${i+2}: kolom belum lengkap`);
+  const headers=records[0]||[],required=['ClusterName','OutletCode','CustomerName','Address','Area','Lat','Lng'];
+  const positions=Object.fromEntries(headers.map((h,i)=>[h.replace(/^\uFEFF/,'').trim(),i]));
+  if(required.some(h=>positions[h]===undefined))throw new Error('Header CSV wajib: '+required.join(', '));
+  if(new Set(headers).size!==headers.length)throw new Error('Header CSV duplikat');
+  const parsedRecords=records.slice(1).map((source,i)=>{
+    const cols=[...required,'Frequency'].map(h=>source[positions[h]]??'');
+    if(required.some(h=>source[positions[h]]===undefined))throw new Error(`Baris ${i+2}: kolom belum lengkap`);
     const latitude=cols[5]===''?null:Number(cols[5]);const longitude=cols[6]===''?null:Number(cols[6]);
     if(latitude===null||longitude===null||!Number.isFinite(latitude)||!Number.isFinite(longitude))throw new Error(`Baris ${i+2}: koordinat wajib berupa angka`);
-    return {clusterName:cols[0],outletCode:cols[1],customerName:cols[2],outletName:cols[2],address:cols[3],area:cols[4],latitude,longitude,callFrequency:cols[7]?cols[7].toUpperCase():'F1'};
+    if(latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180)throw new Error(`Baris ${i+2}: koordinat di luar rentang`);
+    if(cols[7]&&!['F1','F2','F4'].includes(cols[7].toUpperCase()))throw new Error(`Baris ${i+2}: frekuensi harus F1/F2/F4`);
+    return {clusterCode:positions.ClusterCode===undefined?undefined:source[positions.ClusterCode],clusterName:cols[0],outletCode:cols[1],customerName:cols[2],outletName:cols[2],address:cols[3],area:cols[4],latitude,longitude,callFrequency:cols[7]?cols[7].toUpperCase():undefined};
   });
   return parsedRecords;
 };
@@ -36,10 +43,10 @@ export const parseSpreadsheetCsv = (csvText = '') => {
  * Generates sample CSV template content for download.
  */
 export const generateCsvTemplateContent = () => {
-  const header = 'ClusterName,OutletCode,CustomerName,Address,Area,Lat,Lng,Frequency\n';
+  const header = 'ClusterCode,ClusterName,OutletCode,CustomerName,Address,Area,Lat,Lng,Frequency\n';
   const sampleRows = [
-    'Klaster Cimahi,OUT-001,Toko Sumber Rezeki,Jl. Raya Cibeureum No. 12,Cimahi Selatan,-6.8921,107.5352,F4',
-    'Klaster Cimahi,OUT-002,Minimarket Maju Jaya,Jl. Raya Amir Machmud No. 88,Cimahi Tengah,-6.8722,107.5423,F2',
+    ',Klaster Cimahi,OUT-001,Toko Sumber Rezeki,Jl. Raya Cibeureum No. 12,Cimahi Selatan,-6.8921,107.5352,F4',
+    ',Klaster Cimahi,OUT-002,Minimarket Maju Jaya,Jl. Raya Amir Machmud No. 88,Cimahi Tengah,-6.8722,107.5423,F2',
   ].join('\n');
 
   return header + sampleRows;

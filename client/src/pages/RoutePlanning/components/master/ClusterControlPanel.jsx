@@ -1,54 +1,17 @@
-import React, { useState } from 'react';
-import { OutletListPanel } from './OutletListPanel';
-import { RouteReferenceCard } from './RouteReferenceCard';
-import { BusinessCodeInput } from '../../../../shared/components/common/BusinessCodeInput';
-const steps=['Wilayah','Outlet dan rute','Penanggung jawab','Ringkasan'];
-
-export function ClusterControlPanel({builder:b,user,allOutlets,dataLoading,dataError,onRetry,onCancel}) {
-  const [query,setQuery]=useState('');
-  const selectedIds=b.selectedOutlets.map(outlet=>outlet.id);
-  const pool=[...new Map([...allOutlets,...b.selectedOutlets].map(outlet=>[outlet.id,outlet])).values()];
-  const candidates=pool.filter(outlet=>outlet.type===b.draft.tradeType).filter(outlet=>`${outlet.name} ${outlet.outletCode || ''} ${outlet.address || ''}`.toLocaleLowerCase('id').includes(query.toLocaleLowerCase('id')));
-  const disabled=b.busy||b.saving;
-  return <section className="cluster-control-panel" aria-label="Buat kluster">
-    <header className="cluster-panel-header"><h1>Buat kluster</h1><p>Langkah {b.step} dari 4 · {steps[b.step-1]}</p><ol className="cluster-steps" aria-label="Tahap pembuatan">{steps.map((label,index)=><li key={label} aria-current={b.step===index+1?'step':undefined}><span>{index+1}</span>{label}</li>)}</ol></header>
-    <div className="cluster-panel-body app-form">
-      {b.error&&<p role="alert" className="app-error">{b.error}</p>}
-      {dataError&&<div role="alert" className="app-error">{dataError}<button type="button" className="app-button" onClick={onRetry}>Muat ulang outlet</button></div>}
-      {b.step===1&&<>
-        <p>Isi wilayah operasional. Nama kluster dapat disesuaikan sebelum disimpan.</p>
-        <BusinessCodeInput entity="CLUSTER" value={b.draft.code || ''} onChange={value=>b.field('code',value)} disabled={disabled} />
-        <label className="app-field">Jenis kluster<select value={b.draft.tradeType} onChange={e=>b.field('tradeType',e.target.value)}><option value="GENERAL_TRADE">General Trade</option><option value="MODERN_TRADE">Modern Trade</option></select></label>
-        <label className="app-field">Region / wilayah<input required minLength={2} maxLength={100} value={b.draft.region} onChange={e=>b.field('region',e.target.value)} placeholder="Contoh: Bandung Barat"/></label>
-        <label className="app-field">Warna penanda peta<input type="color" value={b.draft.colorHex} onChange={e=>b.field('colorHex',e.target.value)}/></label>
-      </>}
-      {b.step===2&&<>
-        <label className="app-field">Jumlah outlet terdekat<input type="number" min={1} max={100} value={b.outletCount} onChange={e=>b.setOutletCount(Number(e.target.value))} disabled={b.saving}/></label>
-        <p>Klik titik peta untuk memilih outlet terdekat, atau pilih satu per satu di bawah. Perubahan jumlah otomatis memperbarui outlet dan rute dari titik pusat terakhir.</p>
-        <label className="app-field">Cari outlet<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nama, kode, atau alamat outlet"/></label>
-        {dataLoading&&<p role="status">Memuat outlet…</p>}
-        {b.busy&&<p role="status" aria-live="polite">Memperbarui pilihan outlet dan rute…</p>}
-        <OutletListPanel outlets={candidates} selectedIds={selectedIds} disabled={disabled} onToggle={id=>b.toggleOutlet(pool.find(outlet=>outlet.id===id))}/>
-        <p><strong>{selectedIds.length} outlet dipilih</strong>. Outlet yang sudah memiliki wilayah akan dipindahkan ketika kluster disimpan.</p>
-        <button type="button" className="app-button" onClick={()=>b.generate()} disabled={disabled||!selectedIds.length}>{b.busy?'Menghitung rute…':'Hitung ulang rekomendasi rute'}</button>
-        {!b.routes.length&&!b.busy&&<p>Rute referensi bersifat opsional. Susun jadwal kunjungan berikutnya melalui Master RJP.</p>}
-        <div className="space-y-2">{b.routes.map((route,index)=><RouteReferenceCard key={index} route={route} index={index} isActive={index===b.activeRouteIndex} onClick={()=>b.setActiveRouteIndex(index)} outlets={pool}/>)}</div>
-        <p className="text-xs text-on-surface-variant">Jarak rekomendasi merupakan estimasi antartitik. Garis peta mengikuti jalan bila layanan rute tersedia.</p>
-      </>}
-      {b.step===3&&<>
-        <p>Pilih supervisor terlebih dahulu, kemudian sales dari timnya. Kluster dapat disimpan tanpa sales.</p>
-        {b.teamError&&<div role="alert" className="app-error">{b.teamError}<button type="button" className="app-button" onClick={b.loadTeam}>Muat ulang tim</button></div>}
-        {user.role==='ADMIN'&&<label className="app-field">Supervisor<select value={b.draft.supervisorId} onChange={e=>b.field('supervisorId',e.target.value)} disabled={b.teamLoading||user.role==='SUPERVISOR'}><option value="">Belum ditugaskan</option>{b.team.supervisors.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
-        {user.role==='SUPERVISOR'&&<p>Penanggung jawab: <strong>{user.name}</strong></p>}
-        <label className="app-field">Sales bertugas<select value={b.draft.assignedSalesId} onChange={e=>b.field('assignedSalesId',e.target.value)} disabled={b.teamLoading||!b.draft.supervisorId}><option value="">Belum ditugaskan</option>{b.team.sales.filter(person=>person.supervisorId===b.draft.supervisorId).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
-        {b.teamLoading&&<p role="status">Memuat tim…</p>}
-      </>}
-      {b.step===4&&<>
-        <label className="app-field">Nama kluster<input required minLength={2} maxLength={150} value={b.draft.name} onChange={e=>b.field('name',e.target.value)} disabled={b.saving}/></label>
-        <dl className="cluster-summary"><dt>Jenis</dt><dd>{b.draft.tradeType==='MODERN_TRADE'?'Modern Trade':'General Trade'}</dd><dt>Region</dt><dd>{b.draft.region}</dd><dt>Outlet</dt><dd>{selectedIds.length} outlet</dd><dt>Rute referensi</dt><dd>{b.routes.length?`Rute ${b.activeRouteIndex+1}`:'Belum ditetapkan'}</dd><dt>Supervisor</dt><dd>{b.team.supervisors.find(person=>person.id===b.draft.supervisorId)?.name||'Belum ditugaskan'}</dd><dt>Sales</dt><dd>{b.team.sales.find(person=>person.id===b.draft.assignedSalesId)?.name||'Belum ditugaskan'}</dd></dl>
-        <p>Perubahan wilayah berlaku untuk perencanaan selanjutnya. PJP dan absensi yang sudah tercatat tetap tersimpan.</p>
-      </>}
-    </div>
-    <footer className="cluster-panel-footer"><button type="button" className="app-button" disabled={disabled} onClick={b.step===1?onCancel:()=>b.setStep(value=>value-1)}>{b.step===1?'Kembali ke daftar':'Kembali'}</button>{b.step<4?<button type="button" className="app-button app-button-primary" disabled={disabled||(b.step===3&&(b.teamLoading||Boolean(b.teamError)))} onClick={b.next}>Lanjut</button>:<button type="button" className="app-button app-button-primary" disabled={disabled} onClick={b.save}>{b.saving?'Menyimpan…':'Simpan kluster'}</button>}</footer>
-  </section>;
+import React,{useState} from 'react';
+import {OutletListPanel} from './OutletListPanel';
+import {RouteReferenceCard} from './RouteReferenceCard';
+import {BusinessCodeInput} from '../../../../shared/components/common/BusinessCodeInput';
+import {ClusterImpactReview} from './ClusterImpactReview';
+const steps=['Tim & wilayah','Pilih outlet','Urutan referensi','Tinjau & simpan'];
+export function ClusterControlPanel({builder:b,user,allOutlets,dataLoading,dataError,onRetry,onCancel}){
+ const [query,setQuery]=useState(''),pool=[...new Map([...allOutlets,...b.selectedOutlets].map(o=>[o.id,o])).values()],selectedIds=b.selectedOutlets.map(o=>o.id),disabled=b.busy||b.saving;
+ const candidates=pool.filter(o=>o.type===b.draft.tradeType&&(o.cluster?.supervisorId===b.draft.supervisorId||o.cluster?.name==='Belum Ditugaskan'||selectedIds.includes(o.id))).filter(o=>`${o.name} ${o.outletCode||''} ${o.address||''}`.toLowerCase().includes(query.toLowerCase()));
+ return <section className="cluster-control-panel" aria-label="Buat cluster"><header className="cluster-panel-header"><h1>Buat cluster wilayah</h1><p>Langkah {b.step} dari 4 · {steps[b.step-1]}</p><ol className="cluster-steps" aria-label="Tahap pembuatan">{steps.map((label,i)=><li key={label} aria-current={b.step===i+1?'step':undefined}><span>{i+1}</span>{label}</li>)}</ol></header><div className="cluster-panel-body app-form">
+  {b.error&&<p role="alert" className="app-error">{b.error}</p>}{b.restored&&<p className="app-notice">Draft cluster dipulihkan. Anggota dan dampaknya diperiksa kembali sebelum penyimpanan.</p>}{b.storageError&&<p role="alert" className="app-error">{b.storageError}</p>}{dataError&&<p role="alert" className="app-error">{dataError}<button className="app-button" onClick={onRetry}>Muat ulang outlet</button></p>}
+  <fieldset disabled={disabled} className="app-form">{b.step===1&&<><p>Pilih tim dan tanggung jawab wilayah terlebih dahulu. Cluster dapat memiliki banyak outlet; jadwal kunjungannya disusun pada Planner.</p>{b.teamError&&<p role="alert" className="app-error">{b.teamError}<button type="button" onClick={b.loadTeam}>Muat ulang tim</button></p>}{user.role==='ADMIN'?<label className="app-field">Tim Supervisor<select value={b.draft.supervisorId} onChange={e=>b.field('supervisorId',e.target.value)} disabled={b.teamLoading||!!selectedIds.length}><option value="">Pilih tim</option>{b.team.supervisors.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>:<p>Tim: <strong>{user.name}</strong></p>}<label className="app-field">Sales penanggung jawab<select value={b.draft.assignedSalesId} onChange={e=>b.field('assignedSalesId',e.target.value)} disabled={!b.draft.supervisorId||b.teamLoading}><option value="">Belum ditugaskan</option>{b.team.sales.filter(s=>s.supervisorId===b.draft.supervisorId).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><BusinessCodeInput entity="CLUSTER" value={b.draft.code||''} onChange={v=>b.field('code',v)} disabled={disabled}/><label className="app-field">Nama cluster<input maxLength={150} value={b.draft.name} onChange={e=>b.field('name',e.target.value)}/></label><label className="app-field">Region / wilayah<input maxLength={100} value={b.draft.region} onChange={e=>b.field('region',e.target.value)}/></label><label className="app-field">Jenis perdagangan<select value={b.draft.tradeType} disabled={!!selectedIds.length} onChange={e=>b.field('tradeType',e.target.value)}><option value="GENERAL_TRADE">General Trade</option><option value="MODERN_TRADE">Modern Trade</option></select></label><label className="app-field">Warna penanda<input type="color" value={b.draft.colorHex} onChange={e=>b.field('colorHex',e.target.value)}/></label>{selectedIds.length>0&&<p className="admin-footnote">Lepaskan pilihan outlet pada langkah berikutnya untuk mengganti tim atau jenis.</p>}</>}
+  {b.step===2&&<><p>Klik marker untuk menambah atau melepas satu outlet. Klik area peta untuk menetapkan pusat saran; pilihan Anda tetap tersimpan.</p><label className="app-field">Cari outlet<input type="search" value={query} onChange={e=>setQuery(e.target.value)}/></label>{dataLoading&&<p role="status">Memuat outlet…</p>}<OutletListPanel outlets={candidates} selectedIds={selectedIds} disabled={disabled} onToggle={id=>b.toggleOutlet(pool.find(o=>o.id===id))}/><strong>{selectedIds.length} outlet dipilih</strong><details><summary className="cluster-suggestion-title">Saran outlet terdekat</summary><div className="app-form"><label className="app-field">Jumlah saran<input type="number" min="1" max="100" value={b.outletCount} onChange={e=>b.setOutletCount(Number(e.target.value))}/></label><button type="button" className="app-button" onClick={b.suggest} disabled={!b.centerPoint||disabled}>Cari dari titik pusat</button>{!b.centerPoint&&<p>Pilih titik pusat pada area peta terlebih dahulu.</p>}{b.suggestions.length>0&&<><p>{b.suggestions.length} outlet disarankan: {b.suggestions.map(o=>o.name).join(', ')}</p><button type="button" className="app-button" onClick={b.applySuggestions}>Tambahkan saran ke pilihan</button></>}</div></details></>}
+  {b.step===3&&<><h2>Urutan referensi wilayah</h2><p>Opsional. Gunakan sebagai referensi geografis; tanggal dan urutan pelaksanaan tetap disusun dalam Planner.</p><button type="button" className="app-button" disabled={!selectedIds.length||disabled} onClick={b.generate}>{b.busy?'Menghitung…':'Hitung rekomendasi urutan'}</button>{b.routes.map((r,i)=><RouteReferenceCard key={i} route={r} index={i} isActive={i===b.activeRouteIndex} onClick={()=>b.setActiveRouteIndex(i)} outlets={pool}/>)}<p className="admin-footnote">Jarak adalah estimasi antartitik. Garis mengikuti jalan jika layanan rute tersedia.</p></>}
+  {b.step===4&&<><h2>{b.draft.name}</h2><dl className="cluster-summary"><dt>Region</dt><dd>{b.draft.region}</dd><dt>Tim</dt><dd>{b.team.supervisors.find(s=>s.id===b.draft.supervisorId)?.name||user.name}</dd><dt>Sales</dt><dd>{b.team.sales.find(s=>s.id===b.draft.assignedSalesId)?.name||'Belum ditugaskan'}</dd><dt>Anggota</dt><dd>{selectedIds.length} outlet</dd></dl><ClusterImpactReview review={b.review}/>{!b.review&&<button type="button" className="app-button" onClick={b.next}>Periksa ulang dampak</button>}<p>Setelah wilayah disimpan, susun rencana tanggal kunjungan melalui Planner.</p></>}
+  </fieldset></div><footer className="cluster-panel-footer"><button type="button" className="app-button" disabled={disabled} onClick={b.step===1?onCancel:()=>b.setStep(v=>v-1)}>{b.step===1?'Kembali ke wilayah':'Kembali'}</button>{b.step<4?<button type="button" className="app-button app-button-primary" disabled={disabled||b.teamLoading||!!b.teamError} onClick={b.next}>Lanjut</button>:<button type="button" className="app-button app-button-primary" disabled={disabled||!b.review} onClick={b.save}>{b.saving?'Menyimpan…':'Simpan wilayah'}</button>}</footer></section>;
 }

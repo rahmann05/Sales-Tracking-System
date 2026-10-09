@@ -17,6 +17,7 @@ export const createCluster = async (data, actor) => {
   if (finalSpvId) createPayload.supervisorId = finalSpvId;
 
   const result = await prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     await validateAssignments(tx,data,actor);
     createPayload.code = await resolveBusinessCode('CLUSTER',data.code,{db:tx});
     const result = await tx.cluster.create({
@@ -29,7 +30,7 @@ export const createCluster = async (data, actor) => {
       users: { select: { id: true, name: true, role: true } }
     },
   });
-    if (assignedSalesId) await tx.user.update({where:{id:assignedSalesId},data:{clusterId:result.id}});
+    if (assignedSalesId) await tx.user.updateMany({where:{id:assignedSalesId,clusterId:null},data:{clusterId:result.id}});
     return result;
   });
   invalidateClusterCache();

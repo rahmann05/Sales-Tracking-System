@@ -23,13 +23,13 @@ export const SpreadsheetPreviewTable = ({ previewRows = [] }) => {
           </tr>
         </thead>
         <tbody>
-          {previewRows.slice(0, 5).map((row, idx) => (
+          {previewRows.map((row, idx) => (
             <tr key={idx}>
               <td data-label="Klaster" className="spreadsheet-preview-td font-semibold">{row.clusterName}</td>
               <td data-label="Kode" className="spreadsheet-preview-td font-mono">{row.outletCode}</td>
               <td data-label="Nama Outlet" className="spreadsheet-preview-td">{row.customerName}</td>
               <td data-label="Alamat" className="spreadsheet-preview-td text-xs text-on-surface-variant">{row.address}</td>
-              <td data-label="Frekuensi" className="spreadsheet-preview-td font-bold text-primary">{row.callFrequency}</td>
+              <td data-label="Frekuensi" className="spreadsheet-preview-td font-bold text-primary">{row.callFrequency||'Pertahankan / belum diisi'}</td>
             </tr>
           ))}
         </tbody>

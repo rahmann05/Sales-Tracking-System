@@ -25,6 +25,7 @@ const cluster = pjpData.user?.cluster;
             const inAtt = s.attendances?.find((a) => a.type === 'IN');
             const outAtt = s.attendances?.find((a) => a.type === 'OUT');
             const stopStatus = resolveStopStatus(s, inAtt, outAtt);
+            const intervalWeeks=pjpData.reportingContext?.planning?.rules?.find(rule=>rule.outletId===(s.outletId||s.outlet?.id))?.intervalWeeks;
 
             return {
               id: s.id,
@@ -43,11 +44,11 @@ const cluster = pjpData.user?.cluster;
               radiusMeters: s.outlet?.radiusMeters ?? null,
               outstanding: s.outlet?.outstanding || 0,
               callplanName: pjpData.name || '',
-              callFrequency: s.callFrequency || (pjpData.weekType === 'ALL' ? 'F4' : 'F2'),
+              callFrequency: intervalWeeks?`F${intervalWeeks}`:s.callFrequency || s.outlet?.itineraryCode || null,
               clusterName: stopCluster?.name || pjpData.clusterName || '',
               regionName: stopCluster?.region || pjpData.regionName || area,
               subDistrict: area,
-              supervisorName: spv?.name || '',
+              supervisorName: stopCluster?.supervisor?.name || spv?.name || '',
               dayOfWeek: pjpData.dayOfWeek || '',
               assignedSalesName: user?.name || '',
               customerId: s.outlet?.outletCode || '',

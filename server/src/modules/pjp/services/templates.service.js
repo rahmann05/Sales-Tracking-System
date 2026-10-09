@@ -9,10 +9,11 @@ const template = z.object({ userId: z.string().min(1), dayOfWeek: z.number().int
   weekType: z.enum(['ALL','WEEK_1','WEEK_2']), outletIds: z.array(z.string().min(1)).max(200) });
 export async function listTemplates(user) {
   const sales = await prisma.user.findMany({ where: { role: 'SALES', deletedAt: null, ...salesScope(user) },
-    select: { id: true, name: true, supervisorId:true, supervisor:{select:{name:true}}, cluster: { select: { name: true, supervisor: { select: { name: true } } } }, pjpTemplates: { include: { stops: { include: { outlet: {select:{id:true,name:true}} }, orderBy: { sequence: 'asc' } } } } }, orderBy: { name: 'asc' } });
-  const outlets = await prisma.outlet.findMany({ where: { deletedAt: null, ...(user.role === 'SUPERVISOR' ? { cluster: { supervisorId: user.id } } : user.role === 'SALES' ? { cluster: { OR: [{users:{some:{id:user.id}}},{assignedSalesId:user.id}] } } : {}) }, select: { id:true, name:true, clusterId:true, cluster:{select:{supervisorId:true,name:true}} }, orderBy: { name:'asc' } });
+    select: { id: true, name: true, supervisorId:true, supervisor:{select:{name:true}}, assignedClusters:{where:{deletedAt:null},select:{id:true,name:true}}, cluster: { select: { name: true, supervisor: { select: { name: true } } } }, pjpTemplates: { include: { stops: { include: { outlet: {select:{id:true,name:true}} }, orderBy: { sequence: 'asc' } } } } }, orderBy: { name: 'asc' } });
+  const outlets = await prisma.outlet.findMany({ where: { deletedAt: null,cluster:{deletedAt:null,...(user.role === 'SUPERVISOR' ? {supervisorId:user.id} : user.role === 'SALES' ? {OR:[{users:{some:{id:user.id}}},{assignedSalesId:user.id}]} : {})}}, select: { id:true, name:true,outletCode:true,address:true,itineraryCode:true,latitude:true,longitude:true, clusterId:true, cluster:{select:{id:true,supervisorId:true,assignedSalesId:true,name:true}} }, orderBy: { name:'asc' } });
   const weekMode=await getDynamicConfig('PJP_WEEK_MODE','ISO_PARITY');
-  return { sales, outlets, weekMode, currentWeekType:getCurrentWeekType(new Date(),weekMode), workingDays: workingDays(await getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6')) };
+  const supervisors=await prisma.user.findMany({where:{role:'SUPERVISOR',deletedAt:null,...(user.role==='ADMIN'?{}:{id:user.role==='SUPERVISOR'?user.id:sales[0]?.supervisorId||'__none__'})},select:{id:true,name:true},orderBy:{name:'asc'}});
+  return { sales, outlets,supervisors,weekMode, currentWeekType:getCurrentWeekType(new Date(),weekMode), workingDays: workingDays(await getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6')) };
 }
 export async function saveTemplates(raw, user) {
   const entries = z.array(template).min(1).max(500).parse(raw);

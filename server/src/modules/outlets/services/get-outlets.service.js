@@ -9,10 +9,11 @@ export const getOutlets = async (query = {},user=null) => {
   const { clusterId, search } = query;
   
   if(user&&['SUPERVISOR','SALES'].includes(user.role)){
-    const where={deletedAt:null,cluster:await outletClusterScope(user)};
+    const planningPool=user.role==='SUPERVISOR'&&query.planningPool==='true'&&user.permissions?.can_manage_clusters!==false;
+    const where={deletedAt:null,cluster:planningPool?{deletedAt:null,OR:[{supervisorId:user.id},{name:'Belum Ditugaskan'}]}:await outletClusterScope(user)};
     if(clusterId)where.clusterId=clusterId;
     if(search)where.OR=[{name:{contains:search,mode:'insensitive'}},{address:{contains:search,mode:'insensitive'}}];
-    return prisma.outlet.findMany({where,include:{cluster:{select:{id:true,name:true,region:true,deletedAt:true}}},orderBy:{name:'asc'}});
+    return prisma.outlet.findMany({where,include:{cluster:{select:{id:true,name:true,region:true,deletedAt:true,supervisorId:true,assignedSalesId:true}}},orderBy:{name:'asc'}});
   }
   // If there's a search query or specific clusterId, don't use the global cache
   if (clusterId || search) {
@@ -26,7 +27,7 @@ export const getOutlets = async (query = {},user=null) => {
     }
     return await prisma.outlet.findMany({
       where,
-      include: { cluster: { select: { id: true, name: true, region: true, deletedAt: true } } },
+      include: { cluster: { select: { id: true, name: true, region: true, deletedAt: true,supervisorId:true,assignedSalesId:true } } },
       orderBy: { name: 'asc' },
     });
   }
@@ -37,7 +38,7 @@ export const getOutlets = async (query = {},user=null) => {
     async () => {
       return await prisma.outlet.findMany({
         where: { deletedAt: null },
-        include: { cluster: { select: { id: true, name: true, region: true, deletedAt: true } } },
+        include: { cluster: { select: { id: true, name: true, region: true, deletedAt: true,supervisorId:true,assignedSalesId:true } } },
         orderBy: { name: 'asc' },
       });
     },

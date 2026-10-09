@@ -121,10 +121,10 @@ export const useRjpManagement = () => {
     } finally {setDeletingId(null);}
   };
 
-  const handleImportSpreadsheet=async csvText=>{
+  const handleImportSpreadsheet=async (csvText,impactToken)=>{
     const rows=parseSpreadsheetCsv(csvText);
     if(!rows.length)throw new Error('CSV tidak berisi data');
-    const res=await clustersApi.importRjp(rows);await load();setIsImportModalOpen(false);return res.data;
+    const res=await clustersApi.importRjp(rows,impactToken);await load();setIsImportModalOpen(false);return res.data;
   };
 
   return {reload:load,error,loading,deletingId,

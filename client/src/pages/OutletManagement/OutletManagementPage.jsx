@@ -111,31 +111,13 @@ export const OutletManagementPage = () => {
   };
   const handleSaveEdit = async e => {
     e.preventDefault();
-    if (!editingOutlet) return;
-    const chosen = clusterList.find(c => c.id === formData.clusterId || c.name === formData.clusterName) || clusterList[0];
-    setOutlets(prev => prev.map(o => o.id === editingOutlet.id ? {
-      ...o,
-      name: formData.name,
-      address: formData.address,
-      latitude: Number(formData.latitude),
-      longitude: Number(formData.longitude),
-      ownerName: formData.ownerName,
-      phone: formData.phone,
-      clusterId: chosen?.id,
-      cluster: {
-        id: chosen?.id,
-        name: chosen?.name
-      }
-    } : o));
-    const updatedId = editingOutlet.id;
-    setEditingOutlet(null);
-    notifySuccess(`Data outlet berhasil diperbarui.`);
-    outletsApi.update(updatedId, {
-      ...formData,
-      clusterId: chosen?.id
-    }).catch(err => {
-      console.warn('[API] Update outlet error:', err.message);
-    });
+    if (!editingOutlet || saving) return;
+    setSaving(true);setSaveError('');
+    try {
+      await outletsApi.update(editingOutlet.id, {...formData,clusterId:editingOutlet.clusterId,latitude:Number(formData.latitude),longitude:Number(formData.longitude)});
+      await fetchOutlets();setEditingOutlet(null);
+      notifySuccess('Data outlet berhasil diperbarui.');
+    } catch(err) {setSaveError(err.message);} finally {setSaving(false);}
   };
   const handleDelete = async outlet => {
     if (window.confirm(`Hapus/nonaktifkan outlet "${outlet.name}" dari master data?`)) {
@@ -147,6 +129,7 @@ export const OutletManagementPage = () => {
     }
   };
   const openEditModal = o => {
+    setSaveError('');
     setEditingOutlet(o);
     setFormData({
       name: o.name || '',
@@ -154,7 +137,8 @@ export const OutletManagementPage = () => {
       address: o.address || '',
       latitude: o.latitude || -6.8722,
       longitude: o.longitude || 107.5423,
-      clusterName: o.cluster?.name || 'Klaster Belfoods Bandung Raya',
+      clusterId: o.clusterId || o.cluster?.id || '',
+      clusterName: o.cluster?.name || '',
       ownerName: o.ownerName || '',
       phone: o.phone || ''
     });
@@ -205,7 +189,7 @@ export const OutletManagementPage = () => {
       {isAddModalOpen && <OutletFormModal mode="create" clusterList={clusterList} formData={formData} onSubmit={handleSaveAdd} error={saveError} saving={saving} setFormData={setFormData} onClose={() => setIsAddModalOpen(false)} />}
 
       {/* Modal Edit Outlet */}
-      {editingOutlet && <OutletFormModal mode="edit" clusterList={clusterList} formData={formData} onSubmit={handleSaveEdit} setFormData={setFormData} onClose={() => setEditingOutlet(null)} />}
+      {editingOutlet && <OutletFormModal mode="edit" clusterList={clusterList} formData={formData} onSubmit={handleSaveEdit} error={saveError} saving={saving} setFormData={setFormData} onClose={() => !saving && setEditingOutlet(null)} />}
 
       {/* Modal Kelola & Input NIK */}
       <NikManagementModal isOpen={isNikModalOpen} onClose={() => setIsNikModalOpen(false)} customerList={outlets} onDataUpdated={fetchOutlets} />

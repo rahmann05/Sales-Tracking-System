@@ -6,15 +6,18 @@ import { cacheInvalidate } from '../../../utils/cacheHelper.js';
 import { CACHE_KEYS } from '../../../config/cache.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { invalidateClusterCache } from './clusters.helpers.js';
+import {requireClusterImpact} from './cluster-impact.service.js';
 
 
-export const updateClusterOutlets = async (id, outletIds, actor) => {
+export const updateClusterOutlets = async (id, outletIds, actor, impactToken) => {
   // Ini memerlukan un-assign outlet lama dan assign outlet baru.
   // Untuk kesederhanaan saat manual edit, kita tidak otomatis re-generate rute di server.
   // Rute harus di-re-generate client dan dikirim via updateRoutes.
   
   const affected=new Set([id]);
   await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
+    await requireClusterImpact(tx,{clusterId:id,outletIds},actor,impactToken);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`cluster-trade:${id}`}))`;
     const target=await tx.cluster.findFirst({where:{id,deletedAt:null},select:{id:true}});
     if(!target)throw new AppError('Kluster tidak ditemukan',404);
@@ -22,7 +25,7 @@ export const updateClusterOutlets = async (id, outletIds, actor) => {
     let unassignedCluster;
     // Cari outlet yang sebelumnya di cluster ini tapi sekarang tidak ada
     const removedOutlets = await tx.outlet.findMany({
-      where: { clusterId: id, id: { notIn: outletIds } },
+      where: { clusterId: id, deletedAt:null,id: { notIn: outletIds } },
       select: { id: true, type:true },
     });
 

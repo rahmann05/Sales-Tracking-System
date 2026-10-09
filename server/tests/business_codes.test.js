@@ -8,6 +8,7 @@ import {resolveBusinessCode,validateCodeUpdate} from '../src/modules/config/serv
 import {validateConfigRelations} from '../src/modules/config/services/validate-config.service.js';
 import {savePacking,draftFromApprovedOrder} from '../src/modules/delivery/services/packing-workflow.service.js';
 import {importRjp} from '../src/modules/clusters/services/import-rjp.service.js';
+import {previewRjpImport} from '../src/modules/clusters/services/rjp-import-preview.service.js';
 import {ensureTodayPjpForSales} from '../src/modules/pjp/services/pjp.helpers.js';
 
 function mock(t,target,key,value){const original=target[key];target[key]=value;t.after(()=>{target[key]=original;invalidateConfigCache();});}
@@ -110,7 +111,12 @@ test('repeated RJP import preserves external outlet codes while new clusters use
   db.$executeRaw=async()=>1;
   db.cluster.findFirst=async({where})=>where.code ? null : cluster;
   db.cluster.create=async({data})=>{cluster={id:'cluster',...data};return cluster;};
-  db.outlet.findMany=async()=>[];
+  db.cluster.findMany=async()=>cluster?[cluster]:[];
+  db.outlet.findMany=async()=>outlet?[outlet]:[];
+  db.outlet.count=async()=>outlet?1:0;
+  db.cluster.update=async({data})=>{cluster={...cluster,...data};return cluster;};
+  db.clusterRoute={deleteMany:async()=>({count:0})};
+  db.pjpTemplateStop={findMany:async()=>[]};db.pjpPlan={findMany:async()=>[]};db.pjpStop={findMany:async()=>[]};
   db.outlet.findUnique=async()=>outlet;
   db.outlet.findFirst=async()=>null;
   db.outlet.create=async({data})=>{created++;outlet={id:'outlet',type:'GENERAL_TRADE',cluster,...data};return outlet;};
@@ -118,7 +124,8 @@ test('repeated RJP import preserves external outlet codes while new clusters use
   mock(t,prisma,'$transaction',async fn=>fn(db));
   const rows=[{clusterName:'Area',outletCode:'EXTERNAL-99',customerName:'Toko',address:'Alamat',area:'Bandung',latitude:-6,longitude:107}];
   await importRjp(rows,{id:'admin',role:'ADMIN'});
-  await importRjp(rows,{id:'admin',role:'ADMIN'});
+  const review=await previewRjpImport(rows,{id:'admin',role:'ADMIN'},db);
+  await importRjp(rows,{id:'admin',role:'ADMIN'},review.token);
   assert.equal(created,1);
   assert.equal(outlet.outletCode,'EXTERNAL-99');
   assert.equal(cluster.code,'CLS-00001');

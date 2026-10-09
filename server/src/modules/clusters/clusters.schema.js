@@ -21,6 +21,7 @@ export const updateClusterSchema = z.object({
     supervisorId: z.string().nullable().optional(),
     assignedSpvId: z.string().nullable().optional(),
     assignedSpvName: z.string().nullable().optional(),
+    impactToken:z.string().optional(),
   }),
   params: z.object({
     id: z.string().min(1, 'ID tidak valid'),
@@ -33,6 +34,7 @@ export const getNearestOutletsSchema = z.object({
     lng: z.number().min(-180).max(180),
     count: z.number().int().min(1).max(100),
     type: z.enum(['GENERAL_TRADE', 'MODERN_TRADE']).optional(),
+    supervisorId:z.string().trim().min(1).max(128).optional(),
   }),
 });
 
@@ -64,6 +66,7 @@ export const createFullClusterSchema = z.object({
       overviewPath: z.any().optional(), // Json
       startOutletId: z.string().nullable().optional(),
     })).optional(),
+    impactToken:z.string().optional(),
   }),
 });
 
@@ -71,6 +74,7 @@ export const updateOutletsSchema = z.object({
   params: z.object({ id: z.string().trim().min(1).max(128) }),
   body: z.object({
     outletIds: z.array(z.string().trim().min(1).max(128)),
+    impactToken:z.string().optional(),
   }),
 });
 

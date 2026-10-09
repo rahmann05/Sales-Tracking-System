@@ -44,9 +44,9 @@ export const OutletListPanel = ({ outlets = [], selectedIds = [], onToggle, maxH
                                 {outlet.address || outlet.outletCode || ''}
                             </p>
                         </div>
-                        {outlet.clusterId && (
+                        {outlet.clusterId && outlet.cluster?.name!=='Belum Ditugaskan' && (
                             <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">
-                                Sudah berwilayah
+                                {outlet.cluster?.name||'Sudah berwilayah'}
                             </span>
                         )}
                     </button>

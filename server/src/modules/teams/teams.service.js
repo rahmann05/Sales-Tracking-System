@@ -17,6 +17,7 @@ export async function assignTeam(salesId, raw, actor) {
   if (actor.role !== 'ADMIN' && actor.role !== 'SUPERVISOR') throw new AppError('Tidak berwenang mengatur tim',403);
   const canClaim = await getDynamicConfig('TEAM_SPV_CAN_CLAIM_UNASSIGNED',true);
   const result = await prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${salesId}`}))`;
     const sales = await tx.user.findFirst({where:{id:salesId,role:'SALES',deletedAt:null},select:{id:true,supervisorId:true,updatedAt:true}});
     if (!sales) throw new AppError('Sales aktif tidak ditemukan',404);

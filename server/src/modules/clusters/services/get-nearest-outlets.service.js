@@ -3,9 +3,10 @@ import { prisma } from '../../../config/prisma.js';
 import { haversineKm } from '../cluster-generator.service.js';
 
 // --- NEW FULL PAGE BUILDER LOGIC ---
-export const getNearestOutlets = async (lat, lng, count, type = null, actor) => {
+export const getNearestOutlets = async (lat, lng, count, type = null, actor,supervisorId) => {
+  const owner=actor?.role==='SUPERVISOR'?actor.id:supervisorId;
   const allOutlets = await prisma.outlet.findMany({
-    where: {deletedAt:null,...(actor?.role === 'SUPERVISOR' ? {cluster:{OR:[{supervisorId:actor.id},{name:'Belum Ditugaskan'}]}} : {})},
+    where: {deletedAt:null,cluster:{deletedAt:null,...(owner?{OR:[{supervisorId:owner},{name:'Belum Ditugaskan'}]}:{})}},
     include: {cluster:{select:{id:true,name:true,region:true,supervisorId:true}}},
   });
 

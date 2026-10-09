@@ -19,6 +19,7 @@
     "verify:off-pjp-retry-client": "node scripts/verify-off-pjp-retry-client.mjs",
     "verify:monitoring-client": "node scripts/verify-monitoring-client.mjs",
     "verify:operational": "node scripts/verify-operational-workflows.mjs",
+    "verify:pjp-planning": "node tests/pjp-planning.integration.mjs",
     "verify:packing": "node scripts/verify-packing-workflow.mjs",
     "verify:delivery-control": "node scripts/verify-delivery-control.mjs",
     "verify:order-integrity": "node scripts/verify-order-integrity.mjs",

@@ -3,6 +3,7 @@ import { validateAssignments } from './cluster-assignment-policy.service.js';
 import { AppError } from '../../../utils/errors.js';
 import { prisma } from '../../../config/prisma.js';
 import { invalidateClusterCache } from './clusters.helpers.js';
+import {requireClusterImpact} from './cluster-impact.service.js';
 
 
 export const updateCluster = async (id, data, actor) => {
@@ -19,9 +20,12 @@ export const updateCluster = async (id, data, actor) => {
   if (finalSpvId !== undefined) updatePayload.supervisorId = finalSpvId || null;
 
   const result = await prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     const previous = await tx.cluster.findUnique({where:{id},select:{name:true,deletedAt:true,assignedSalesId:true,supervisorId:true}});
     if(!previous||previous.deletedAt)throw new AppError('Kluster tidak ditemukan',404);
     if(previous.name==='Belum Ditugaskan')throw new AppError('Wilayah penampung outlet tidak dapat diubah',409);
+    const members=await tx.outlet.findMany({where:{clusterId:id,deletedAt:null},select:{id:true}});
+    await requireClusterImpact(tx,{clusterId:id,outletIds:members.map(o=>o.id),supervisorId:updatePayload.supervisorId,assignedSalesId:updatePayload.assignedSalesId},actor,data.impactToken);
     await validateAssignments(tx,{...previous,...updatePayload},actor);
     if (assignedSalesId !== undefined && previous?.assignedSalesId !== (assignedSalesId || null)) {
       await tx.user.updateMany({where:{clusterId:id},data:{clusterId:null}});
@@ -37,7 +41,7 @@ export const updateCluster = async (id, data, actor) => {
       users: { select: { id: true, name: true, role: true } }
     },
   });
-    if (assignedSalesId) await tx.user.update({where:{id:assignedSalesId},data:{clusterId:id}});
+    if (assignedSalesId) await tx.user.updateMany({where:{id:assignedSalesId,clusterId:null},data:{clusterId:id}});
     return result;
   });
   invalidateClusterCache(id);

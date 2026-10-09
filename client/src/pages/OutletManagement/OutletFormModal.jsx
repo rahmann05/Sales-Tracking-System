@@ -37,11 +37,12 @@ export function OutletFormModal({ mode, clusterList, formData, setFormData, onSu
             <select value={formData.clusterId || ''} onChange={event => {
               const cluster = clusterList.find(item => item.id === event.target.value);
               setFormData(previous => ({ ...previous, clusterId: event.target.value, clusterName: cluster?.name || '' }));
-            }} className="form-select">
+            }} disabled={!creating || saving} className="form-select">
               <option value="" disabled>Pilih klaster wilayah</option>
               {clusterList.map(cluster => <option key={cluster.id} value={cluster.id}>{cluster.name} ({cluster.region})</option>)}
             </select>
           </label>
+          {!creating && <p>Perpindahan wilayah dilakukan melalui Master RJP → Wilayah &amp; outlet → Kelola anggota outlet, agar dampak jadwal ditinjau terlebih dahulu.</p>}
           <div className="flex justify-end gap-3 border-t border-border-glass pt-4">
             <button type="button" onClick={onClose} className="border rounded-lg px-4 py-2">Batal</button>
             <button type="submit" disabled={saving} className="bg-primary text-on-primary rounded-lg px-4 py-2">{saving ? 'Menyimpan…' : 'Simpan outlet'}</button>

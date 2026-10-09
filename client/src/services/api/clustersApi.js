@@ -1,10 +1,13 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const clustersApi = {
-  importRjp: rows => request('/clusters/import-rjp', {
+  teamOptions:()=>request('/clusters/team-options'),
+  impact:data=>request('/clusters/impact',{method:'POST',body:JSON.stringify(data)}),
+  previewImport:rows=>request('/clusters/import-preview',{method:'POST',body:JSON.stringify({rows})}),
+  importRjp: (rows,impactToken) => request('/clusters/import-rjp', {
     method: 'POST',
     body: JSON.stringify({
-      rows
+      rows,impactToken
     })
   }),
   getAll: async (params = {}) => {
@@ -31,13 +34,14 @@ export const clustersApi = {
       method: 'DELETE'
     });
   },
-  getNearestOutlets: async (lat, lng, count, type) => {
+  getNearestOutlets: async (lat, lng, count, type,supervisorId) => {
     const body = {
       lat,
       lng,
       count
     };
     if (type) body.type = type;
+    if (supervisorId) body.supervisorId = supervisorId;
     return await request('/clusters/nearest-outlets', {
       method: 'POST',
       body: JSON.stringify(body)
@@ -57,12 +61,10 @@ export const clustersApi = {
       body: JSON.stringify(data)
     });
   },
-  updateOutlets: async (id, outletIds) => {
+  updateOutlets: async (id, outletIds,impactToken) => {
     return await request(`/clusters/${id}/outlets`, {
       method: 'PATCH',
-      body: JSON.stringify({
-        outletIds
-      })
+      body: JSON.stringify({outletIds,impactToken})
     });
   },
   updateRoutes: async (id, routes) => {

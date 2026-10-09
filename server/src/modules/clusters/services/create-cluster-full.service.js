@@ -6,10 +6,11 @@ import { CACHE_KEYS } from '../../../config/cache.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { invalidateClusterCache } from './clusters.helpers.js';
 import { resolveBusinessCode } from '../../config/services/business-code.service.js';
+import {requireClusterImpact} from './cluster-impact.service.js';
 
 
 export const createClusterFull = async (data, actor) => {
-  const { outletIds, routes, assignedSalesId, assignedSpvId, supervisorId, color, colorHex, ...rest } = data;
+  const { outletIds, routes, assignedSalesId, assignedSpvId, supervisorId, color, colorHex, impactToken, ...rest } = data;
 
   const validSalesId = assignedSalesId && assignedSalesId.trim() !== '' ? assignedSalesId : null;
   const finalSpvId = supervisorId || assignedSpvId || null;
@@ -17,6 +18,8 @@ export const createClusterFull = async (data, actor) => {
 
   const affected=new Set();
   const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
+    await requireClusterImpact(tx,{outletIds,supervisorId:finalSpvId,assignedSalesId:validSalesId},actor,impactToken);
     await validateAssignments(tx,data,actor);
     const outlets = await validateOutletAssignments(tx,outletIds || [],actor);
     outlets.forEach(outlet=>affected.add(outlet.clusterId));
@@ -47,7 +50,7 @@ export const createClusterFull = async (data, actor) => {
       await tx.clusterRoute.createMany({ data: routesData });
     }
 
-    if (validSalesId) await tx.user.update({where:{id:validSalesId},data:{clusterId:cluster.id}});
+    if (validSalesId) await tx.user.updateMany({where:{id:validSalesId,clusterId:null},data:{clusterId:cluster.id}});
     await synchronizeOutletCounts(tx,[cluster.id,...outlets.map(o=>o.clusterId)]);
     return cluster;
   });

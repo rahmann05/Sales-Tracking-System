@@ -1,91 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { clustersApi, teamsApi } from '../../../services/api';
-
-// Owns the draft and API operations; map rendering is handled separately.
-export function useClusterBuilder({user,onSaved}) {
-  const [step,setStep]=useState(1);
-  const [draft,setDraft]=useState({name:'',region:'',tradeType:'GENERAL_TRADE',colorHex:'#3b82f6',supervisorId:user.role==='SUPERVISOR'?user.id:'',assignedSalesId:''});
-  const [team,setTeam]=useState({sales:[],supervisors:[]});
-  const [teamLoading,setTeamLoading]=useState(true);
-  const [teamError,setTeamError]=useState('');
-  const [outletCount,setOutletCountState]=useState(10);
-  const [selectedOutlets,setSelectedOutlets]=useState([]);
-  const [centerPoint,setCenterPoint]=useState(null);
-  const [routes,setRoutes]=useState([]);
-  const [activeRouteIndex,setActiveRouteIndex]=useState(0);
-  const [busy,setBusy]=useState(false);
-  const [saving,setSaving]=useState(false);
-  const [error,setError]=useState('');
-  const countTimer=useRef(null);
-  const operation=useRef(0),alive=useRef(true),savingRef=useRef(false);
-  useEffect(()=>{alive.current=true;return()=>{alive.current=false;operation.current++;clearTimeout(countTimer.current);};},[]);
-  const loadTeam=useCallback(async()=>{
-    setTeamLoading(true);setTeamError('');
-    try{const result=await teamsApi.getAll();if(alive.current)setTeam(result.data);}
-    catch(err){if(alive.current)setTeamError(err.message);}
-    finally{if(alive.current)setTeamLoading(false);}
-  },[]);
-  useEffect(()=>{loadTeam();},[loadTeam]);
-  const field=(key,value)=>{if(key==='tradeType'){clearTimeout(countTimer.current);operation.current++;setBusy(false);setSelectedOutlets([]);setRoutes([]);setCenterPoint(null);}setDraft(previous=>({...previous,[key]:value,...(key==='supervisorId'?{assignedSalesId:''}:{})}));};
-  const replaceSelection=useCallback(outlets=>{
-    clearTimeout(countTimer.current);operation.current++;setBusy(false);setSelectedOutlets(outlets);setRoutes([]);setActiveRouteIndex(0);setError('');
-  },[]);
-  const toggleOutlet=useCallback(outlet=>{
-    if(outlet.type!==draft.tradeType){setError('Pilih outlet dengan jenis perdagangan yang sama.');return;}
-    if(!selectedOutlets.some(item=>item.id===outlet.id)&&selectedOutlets.length>=100){setError('Maksimal 100 outlet per kluster baru.');return;}
-    replaceSelection(selectedOutlets.some(item=>item.id===outlet.id)?selectedOutlets.filter(item=>item.id!==outlet.id):[...selectedOutlets,outlet]);
-  },[replaceSelection,selectedOutlets,draft.tradeType]);
-  const generate=useCallback(async(outlets=selectedOutlets)=>{
-    if(!outlets.length){setError('Pilih minimal satu outlet sebelum membuat rute.');return;}
-    const current=++operation.current;setBusy(true);setError('');setRoutes([]);
-    try{const result=await clustersApi.generateRoutes(outlets.map(item=>item.id));if(alive.current&&current===operation.current){setRoutes(result.data || []);setActiveRouteIndex(0);if(!result.data?.length)setError('Rute belum tersedia. Coba hitung ulang.');}}
-    catch(err){if(alive.current&&current===operation.current)setError(err.message);}
-    finally{if(alive.current&&current===operation.current)setBusy(false);}
-  },[selectedOutlets]);
-  const selectCenter=useCallback(async(coords,requestedCount=outletCount)=>{
-    if(savingRef.current)return;
-    clearTimeout(countTimer.current);
-    if(!Number.isInteger(requestedCount)||requestedCount<1||requestedCount>100){setError('Jumlah outlet harus antara 1 dan 100.');return;}
-    const current=++operation.current;setCenterPoint(coords);setBusy(true);setError('');setRoutes([]);setSelectedOutlets([]);
-    try{
-      const result=await clustersApi.getNearestOutlets(coords.lat,coords.lng,requestedCount,draft.tradeType);
-      if(!alive.current||current!==operation.current)return;
-      const outlets=result.data || [];setSelectedOutlets(outlets);
-      if(!outlets.length){setError('Tidak ada outlet dalam akses Anda. Pilih outlet dari daftar atau periksa wilayah tim.');return;}
-      await generate(outlets);
-    }catch(err){if(alive.current&&current===operation.current)setError(err.message);}
-    finally{if(alive.current&&current===operation.current)setBusy(false);}
-  },[outletCount,generate,draft.tradeType]);
-  const setOutletCount=useCallback(value=>{
-    if(savingRef.current)return;
-    setOutletCountState(value);clearTimeout(countTimer.current);
-    if(!centerPoint)return;
-    operation.current++;setRoutes([]);setSelectedOutlets([]);setActiveRouteIndex(0);
-    if(!Number.isInteger(value)||value<1||value>100){setBusy(false);setError('Jumlah outlet harus antara 1 dan 100.');return;}
-    setBusy(true);setError('');
-    // Small delay groups rapid keystrokes; only the latest amount may populate the draft.
-    countTimer.current=setTimeout(()=>selectCenter(centerPoint,value),250);
-  },[centerPoint,selectCenter]);
-  const next=()=>{
-    if(busy||saving)return;
-    if(step===1&&draft.region.trim().length<2){setError('Isi region minimal dua karakter.');return;}
-    if(step===2&&!selectedOutlets.length){setError('Pilih minimal satu outlet.');return;}
-    setError('');
-    if(step===3&&!draft.name.trim())field('name',`Kluster ${draft.region.trim()}`);
-    setStep(value=>Math.min(value+1,4));
-  };
-  const save=async()=>{
-    if(savingRef.current||busy)return;
-    if(draft.name.trim().length<2||draft.region.trim().length<2||!selectedOutlets.length){setError('Lengkapi nama, region, dan minimal satu outlet.');return;}
-    if(teamLoading||teamError){setError('Muat kembali daftar penanggung jawab sebelum menyimpan.');return;}
-    savingRef.current=true;setSaving(true);setError('');
-    try{
-      const {tradeType,...payload}=draft;
-      if(selectedOutlets.some(outlet=>outlet.type!==tradeType))throw new Error('Kluster tidak boleh mencampur jenis toko.');
-      await clustersApi.createFull({...payload,name:draft.name.trim(),region:draft.region.trim(),supervisorId:draft.supervisorId||null,assignedSalesId:draft.assignedSalesId||null,centerLat:centerPoint?.lat??null,centerLng:centerPoint?.lng??null,outletIds:selectedOutlets.map(item=>item.id),routes:routes.map((route,index)=>({...route,routeIndex:index,isActive:index===activeRouteIndex}))});
-      if(alive.current)onSaved();
-    }catch(err){if(alive.current)setError(err.message);}
-    finally{savingRef.current=false;if(alive.current)setSaving(false);}
-  };
-  return {step,setStep,draft,field,team,teamLoading,teamError,loadTeam,outletCount,setOutletCount,selectedOutlets,centerPoint,routes,activeRouteIndex,setActiveRouteIndex,busy,saving,error,toggleOutlet,selectCenter,generate,next,save};
+import {useCallback,useEffect,useRef,useState} from 'react';
+import {clustersApi,outletsApi,collectPages} from '../../../services/api';
+import {useFormDraft} from '../../../shared/hooks/useFormDraft';
+import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
+export function useClusterBuilder({user,onSaved}){
+ const stored=useFormDraft('cluster-builder',()=>({step:1,draft:{name:'',region:'',tradeType:'GENERAL_TRADE',colorHex:'#3b82f6',supervisorId:user.role==='SUPERVISOR'?user.id:'',assignedSalesId:''},selectedOutlets:[],centerPoint:null}));
+ const {step,draft,selectedOutlets,centerPoint}=stored.value;
+ const [team,setTeam]=useState({sales:[],supervisors:[]}),[teamLoading,setTeamLoading]=useState(true),[teamError,setTeamError]=useState(''),[outletCount,setOutletCount]=useState(10),[routes,setRoutes]=useState([]),[activeRouteIndex,setActiveRouteIndex]=useState(0),[busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState(''),[review,setReview]=useState(null),[suggestions,setSuggestions]=useState([]),[done,setDone]=useState(false);
+ const operation=useRef(0),alive=useRef(true),flight=useRef(false);
+ const [availableOutlets,setAvailableOutlets]=useState(null);
+ useUnsavedNavigation(!done&&stored.dirty&&!saving,saving&&!done);
+ useEffect(()=>()=>{alive.current=false;operation.current++;},[]);
+ const loadTeam=useCallback(async()=>{setTeamLoading(true);setTeamError('');try{const [r,o]=await Promise.all([clustersApi.teamOptions(),collectPages(outletsApi.getAll,{planningPool:true})]);if(alive.current){setTeam(r.data);setAvailableOutlets(o.data);}}catch(e){if(alive.current)setTeamError(e.message);}finally{if(alive.current)setTeamLoading(false);}},[]);
+ useEffect(()=>{alive.current=true;loadTeam();},[loadTeam]);
+ const field=(key,value)=>{if((key==='tradeType'||key==='supervisorId')&&selectedOutlets.length){setError('Lepaskan pilihan outlet sebelum mengganti tim atau jenis perdagangan.');return;}setReview(null);stored.setValue(v=>({...v,draft:{...v.draft,[key]:value,...(key==='supervisorId'?{assignedSalesId:''}:{})}}));};
+ const replaceSelection=useCallback(outlets=>{operation.current++;stored.setValue(v=>({...v,selectedOutlets:outlets}));setRoutes([]);setReview(null);setActiveRouteIndex(0);setError('');},[stored.setValue]);
+ const toggleOutlet=useCallback(outlet=>{if(!outlet||outlet.type!==draft.tradeType)return;if(!selectedOutlets.some(o=>o.id===outlet.id)&&selectedOutlets.length>=100){setError('Maksimal 100 outlet.');return;}replaceSelection(selectedOutlets.some(o=>o.id===outlet.id)?selectedOutlets.filter(o=>o.id!==outlet.id):[...selectedOutlets,outlet]);},[draft.tradeType,selectedOutlets,replaceSelection]);
+ const selectCenter=useCallback(coords=>{stored.setValue(v=>({...v,centerPoint:coords}));setSuggestions([]);},[stored.setValue]);
+ const suggest=async()=>{if(flight.current||!centerPoint)return;if(!Number.isInteger(outletCount)||outletCount<1||outletCount>100){setError('Jumlah saran harus 1–100.');return;}flight.current=true;setBusy(true);setError('');try{const r=await clustersApi.getNearestOutlets(centerPoint.lat,centerPoint.lng,outletCount,draft.tradeType,draft.supervisorId);setSuggestions(r.data.filter(o=>o.cluster?.supervisorId===draft.supervisorId||o.cluster?.name==='Belum Ditugaskan'));}catch(e){setError(e.message);}finally{flight.current=false;setBusy(false);}};
+ const applySuggestions=()=>{const merged=[...new Map([...selectedOutlets,...suggestions].map(o=>[o.id,o])).values()];if(merged.length>100){setError('Gabungan pilihan melebihi 100 outlet. Kurangi jumlah saran.');return;}replaceSelection(merged);setSuggestions([]);};
+ const generate=async()=>{if(flight.current||!selectedOutlets.length)return;flight.current=true;setBusy(true);setError('');try{const r=await clustersApi.generateRoutes(selectedOutlets.map(o=>o.id));setRoutes(r.data||[]);setActiveRouteIndex(0);}catch(e){setError(e.message);}finally{flight.current=false;setBusy(false);}};
+ const next=async()=>{if(busy||saving)return;setError('');if(step===1&&(!draft.supervisorId||draft.region.trim().length<2||draft.name.trim().length<2)){setError('Pilih tim, isi nama cluster dan region minimal dua karakter.');return;}if(step===2&&!selectedOutlets.length){setError('Pilih minimal satu outlet.');return;}if(step>=3){setBusy(true);try{setReview((await clustersApi.impact({outletIds:selectedOutlets.map(o=>o.id),supervisorId:draft.supervisorId,assignedSalesId:draft.assignedSalesId||null})).data);}catch(e){setError(e.message);return;}finally{setBusy(false);}}stored.setValue(v=>({...v,step:Math.min(4,v.step+1)}));};
+ const save=async()=>{if(flight.current||!review)return;flight.current=true;setSaving(true);setError('');try{const {tradeType,...payload}=draft;if(selectedOutlets.some(o=>o.type!==tradeType))throw new Error('Jenis outlet harus sama.');await clustersApi.createFull({...payload,impactToken:review.token,centerLat:centerPoint?.lat??null,centerLng:centerPoint?.lng??null,outletIds:selectedOutlets.map(o=>o.id),routes:routes.map((r,i)=>({...r,routeIndex:i,isActive:i===activeRouteIndex}))});stored.clear();setDone(true);}catch(e){setReview(null);setError(e.message);}finally{flight.current=false;setSaving(false);}};
+ useEffect(()=>{if(done)onSaved();},[done,onSaved]);
+ return {step,setStep:fn=>stored.setValue(v=>({...v,step:typeof fn==='function'?fn(v.step):fn})),draft,field,team,teamLoading,teamError,loadTeam,availableOutlets,outletCount,setOutletCount,selectedOutlets,centerPoint,routes,activeRouteIndex,setActiveRouteIndex,busy,saving,error,review,suggestions,suggest,applySuggestions,toggleOutlet,selectCenter,generate,next,save,restored:stored.restored,storageError:stored.storageError};
 }

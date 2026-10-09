@@ -1,6 +1,9 @@
 import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
 import {importRjp} from './services/import-rjp.service.js';
+import {clusterImpact} from './services/cluster-impact.service.js';
+import {previewRjpImport} from './services/rjp-import-preview.service.js';
+import {clusterTeamOptions} from './services/cluster-team-options.service.js';
 import { Router } from 'express';
 import * as clusterController from './clusters.controller.js';
 import { authenticate, authorizeWithPermission } from '../../middlewares/auth.middleware.js';
@@ -30,7 +33,10 @@ router.param('id',async(req,res,next,id)=>{
 
 // Existing CRUD with in-memory caching
 router.get('/', memoryCacheMiddleware(60), clusterController.getAll);
-router.post('/import-rjp',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_rjp'),async(req,res,next)=>{try{res.json({success:true,data:await importRjp(req.body.rows,req.user)});}catch(e){next(e);}});
+router.get('/team-options',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_clusters'),async(req,res,next)=>{try{res.json({success:true,data:await clusterTeamOptions(req.user)});}catch(e){next(e);}});
+router.post('/impact',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_clusters'),async(req,res,next)=>{try{res.json({success:true,data:await clusterImpact(req.body,req.user)});}catch(e){next(e);}});
+router.post('/import-preview',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_clusters'),async(req,res,next)=>{try{res.json({success:true,data:await previewRjpImport(req.body.rows,req.user)});}catch(e){next(e);}});
+router.post('/import-rjp',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_clusters'),async(req,res,next)=>{try{res.json({success:true,data:await importRjp(req.body.rows,req.user,req.body.impactToken)});}catch(e){next(e);}});
 router.get('/:id', memoryCacheMiddleware(60), clusterController.getById);
 router.post('/', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_clusters'), validate(createClusterSchema), clusterController.create);
 router.patch('/:id', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_clusters'), validate(updateClusterSchema), clusterController.update);

@@ -32,15 +32,4 @@ export const getPjpById = async (req, res, next) => {
   }
 };
 
-export const generatePjps = async (req, res, next) => {
-  try {
-    const codes = req.body?.codes;
-    if (codes != null && (typeof codes !== 'object' || Array.isArray(codes) || Object.values(codes).some(value=>typeof value !== 'string' || value.length>128))) return res.status(400).json({message:'Daftar kode PJP tidak valid'});
-    const manualCodes=Object.values(codes || {}).map(value=>value.trim()).filter(Boolean);
-    if(new Set(manualCodes).size!==manualCodes.length) return res.status(400).json({message:'Nomor PJP manual duplikat dalam pengajuan'});
-    const result = await pjpService.generateDailyPjps(codes);
-    return successResponse(res, 200, result, result.message);
-  } catch (error) {
-    next(error);
-  }
-};
+export const generatePjps = async (req,res) => res.status(410).json({success:false,message:'Penerbitan PJP dilakukan melalui Planner kunjungan. Susun draft, tinjau kalender, lalu terbitkan.'});

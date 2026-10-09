@@ -7,6 +7,7 @@ import {updateClusterOutlets} from '../src/modules/clusters/services/update-clus
 import {createOutlet} from '../src/modules/outlets/services/create-outlet.service.js';
 import {deleteCluster} from '../src/modules/clusters/services/delete-cluster.service.js';
 import {getClusterById} from '../src/modules/clusters/services/get-cluster-by-id.service.js';
+import {clusterImpact} from '../src/modules/clusters/services/cluster-impact.service.js';
 import {createFullClusterSchema,getNearestOutletsSchema} from '../src/modules/clusters/clusters.schema.js';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
 const clusterIds=[],outletIds=[];const tag='cluster-test-'+randomUUID();const admin={role:'ADMIN'};
@@ -19,7 +20,8 @@ try{
  await prisma.clusterRoute.create({data:{clusterId:source.id,...route}});
  await getClusterById(source.id);
  await assert.rejects(()=>deleteCluster(source.id),error=>error.statusCode===409);
- const target=await createClusterFull({name:tag+' target',region:'Test',outletIds:[outlet.id],routes:[route]},admin);clusterIds.push(target.id);
+ const impact=await clusterImpact({outletIds:[outlet.id]},admin);
+ const target=await createClusterFull({name:tag+' target',region:'Test',outletIds:[outlet.id],routes:[route],impactToken:impact.token},admin);clusterIds.push(target.id);
  await assert.rejects(()=>createOutlet({name:tag+' wrong',address:'Test',latitude:-6.9,longitude:107.6,clusterId:target.id,type:'MODERN_TRADE'}),error=>error.statusCode===400);
  assert.equal(await prisma.clusterRoute.count({where:{clusterId:source.id}}),0);
  assert.equal((await getClusterById(source.id)).outlets.length,1);
@@ -29,7 +31,8 @@ try{
  await assert.rejects(()=>updateClusterOutlets(source.id,[outlet.id],foreign),error=>error.statusCode===403);
  await assert.rejects(()=>updateClusterOutlets(target.id,[outlet.id,modern.id],admin),error=>error.statusCode===400);
  await prisma.outlet.delete({where:{id:modern.id}});
- await updateClusterOutlets(source.id,[outlet.id],admin);
+ const move=await clusterImpact({clusterId:source.id,outletIds:[outlet.id]},admin);
+ await updateClusterOutlets(source.id,[outlet.id],admin,move.token);
  assert.equal((await getClusterById(target.id)).outlets.length,0);
  assert.equal(await prisma.clusterRoute.count({where:{clusterId:target.id}}),0);
  assert.equal((await prisma.cluster.findUnique({where:{id:source.id}})).outletCount,1);
