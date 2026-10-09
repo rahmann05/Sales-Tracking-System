@@ -1,6 +1,6 @@
 import React,{useRef,useState} from 'react';
 import {CONFIG_PARAMS,parseConfigValue} from '../../../../shared/config.mjs';
-import {POLICY_SECRET_KEYS} from '../../../../shared/operational-policy.mjs';
+import {POLICY_SECRET_KEYS,policyGlobalOnly} from '../../../../shared/operational-policy.mjs';
 export function PolicyTransfer({editor}){
  const input=useRef(null),[error,setError]=useState('');
  const exportValues=()=>{
@@ -20,7 +20,7 @@ export function PolicyTransfer({editor}){
     const param=CONFIG_PARAMS.find(p=>p.key===key);if(!param||POLICY_SECRET_KEYS.includes(key))throw new Error(`Parameter tidak dapat diimpor: ${key}`);
     return [key,parseConfigValue(param,value)];
    });
-   for(const [key,value] of updates)if(editor.scope==='GLOBAL'||!key.startsWith('CODE_'))editor.change(key,typeof value==='object'?JSON.stringify(value):String(value));
+   for(const [key,value] of updates)if(editor.scope==='GLOBAL'||!policyGlobalOnly(key))editor.change(key,typeof value==='object'?JSON.stringify(value):String(value));
   }catch(e){setError(e.message);}finally{event.target.value='';}
  };
  return <section className="policy-transfer"><button className="config-button" disabled={editor.busy} onClick={exportValues}>Ekspor aturan efektif</button><button className="config-button" disabled={editor.busy} onClick={()=>input.current.click()}>Impor ke perubahan lokal</button><input ref={input} type="file" accept=".json,application/json" hidden onChange={importValues}/><p>File tidak memuat rahasia integrasi. Impor tetap harus disimpan, ditinjau, dan diterbitkan.</p>{error&&<p role="alert" className="policy-error">{error}</p>}</section>;

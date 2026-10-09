@@ -1,0 +1,48 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {prisma} from '../src/config/prisma.js';
+import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
+import {remindVehicleServices} from '../src/modules/vehicles/services/service-reminders.service.js';
+import {assignReturnInspection} from '../src/modules/delivery/services/return-assignment.service.js';
+import {receiveReturn} from '../src/modules/delivery/services/receive-return.service.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
+const tag='return-service-'+randomUUID(),users=[],vehicles=[],routes=[],packingIds=[],outletIds=[],clusterIds=[];
+let checks=0;
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
+const reject=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
+try{
+ const user=async role=>{const u=await prisma.user.create({data:{name:tag,email:randomUUID()+'@example.invalid',password:'unused',role}});users.push(u.id);return u;};
+ const admin=await user('ADMIN'),warehouse=await user('KEPALA_GUDANG'),other=await user('KEPALA_GUDANG'),driver=await user('SUPIR');
+ const vehicle=await prisma.vehicle.create({data:{code:tag,name:tag,maxCartons:40,maxWeightKg:500,fuelKmPerLiter:10,fuelType:'SOLAR',fuelPricePerLiter:0,totalKm:4999}});vehicles.push(vehicle.id);
+ const db={user:{findMany:()=>prisma.user.findMany({where:{id:admin.id}})},vehicle:{findMany:()=>prisma.vehicle.findMany({where:{id:vehicle.id}})},$transaction:prisma.$transaction.bind(prisma)};
+ const values={...CONFIG_DEFAULTS,VEHICLE_SERVICE_SCHEDULED_REMINDERS:true,VEHICLE_SERVICE_REPEAT_HOURS:0};
+ const options={db,now:new Date(),policyFor:async()=>({values})};
+ const concurrent=await Promise.all([remindVehicleServices(options),remindVehicleServices(options)]);eq(concurrent.reduce((n,r)=>n+r.notified,0),1);
+ eq(await prisma.notification.count({where:{userId:admin.id,type:'VEHICLE_SERVICE_DUE'}}),1);
+ eq((await remindVehicleServices(options)).notified,0);
+ await prisma.vehicle.update({where:{id:vehicle.id},data:{totalKm:5000}});eq((await remindVehicleServices(options)).notified,1);
+ eq((await remindVehicleServices({...options,policyFor:async()=>({values:{...values,VEHICLE_SERVICE_SCHEDULED_REMINDERS:false}})})).notified,0);
+ await prisma.vehicle.update({where:{id:vehicle.id},data:{lastOilChangeKm:5000}});eq((await remindVehicleServices(options)).notified,0);
+ const cluster=await prisma.cluster.create({data:{name:tag,region:'Bandung'}});clusterIds.push(cluster.id);
+ const outlet=await prisma.outlet.create({data:{name:tag,address:'Alamat uji',outletCode:tag,clusterId:cluster.id,latitude:-6.9,longitude:107.6}});outletIds.push(outlet.id);
+ const lineId=randomUUID(),packing=await prisma.packingList.create({data:{code:tag,outletId:outlet.id,createdById:admin.id,status:'RELEASED',totalCartons:2,items:[{lineId,name:'Produk uji',quantity:4}]}});packingIds.push(packing.id);
+ const route=await prisma.deliveryRoute.create({data:{code:tag,date:new Date(),vehicleId:vehicle.id,driverId:driver.id,createdById:warehouse.id,status:'PARTIAL',totalCartons:2,returnedAt:new Date()}});routes.push(route.id);
+ const stop=await prisma.deliveryStop.create({data:{deliveryRouteId:route.id,packingListId:packing.id,outletId:outlet.id,sequence:1,status:'PARTIAL_REJECT',allocatedCartons:2,allocatedItems:[{lineId,quantity:4}],rejectedCartons:1,rejectedItems:[{lineId,quantity:2}]}});
+ const assignment={revision:0,ownerId:warehouse.id,dueAt:new Date(Date.now()+86400000).toISOString(),reason:'Pemeriksaan retur oleh petugas uji'};
+ await reject(()=>assignReturnInspection(stop.id,{...assignment,ownerId:driver.id},admin),400);
+ const first=await assignReturnInspection(stop.id,assignment,admin);eq(first.revision,1);
+ await reject(()=>assignReturnInspection(stop.id,assignment,admin),409);
+ const receipt={note:'Retur diterima dan diperiksa secara fisik (uji)',receivedCartons:1,reusableCartons:1,items:[{lineId,received:2,reusable:2}],reusableInvoices:[]};
+ await reject(()=>receiveReturn(stop.id,other.id,receipt),403);
+ const assigned=await assignReturnInspection(stop.id,{...assignment,revision:1,ownerId:other.id},admin);eq(assigned.revision,2);
+ const inspected=await receiveReturn(stop.id,other.id,receipt);eq(inspected.returnReceivedBy,other.id);eq(inspected.reusableCartons,1);
+ await reject(()=>assignReturnInspection(stop.id,{...assignment,revision:2},admin),409);
+ await reject(()=>receiveReturn(stop.id,other.id,receipt),409);
+ console.log(`C14 integration passed: ${checks} assertions; concurrent reminders deduplicated, disabled policy honored, return delegation and inspection enforced.`);
+}finally{
+ await prisma.notification.deleteMany({where:{userId:{in:users}}});
+ await prisma.auditEvent.deleteMany({where:{OR:[{actorId:{in:users}},...vehicles.map(id=>({after:{path:['vehicleId'],equals:id}}))]}});
+ await prisma.deliveryIssue.deleteMany({where:{routeId:{in:routes}}});await prisma.deliveryStop.deleteMany({where:{deliveryRouteId:{in:routes}}});await prisma.deliveryRoute.deleteMany({where:{id:{in:routes}}});
+ await prisma.packingList.deleteMany({where:{id:{in:packingIds}}});await prisma.outlet.deleteMany({where:{id:{in:outletIds}}});await prisma.cluster.deleteMany({where:{id:{in:clusterIds}}});await prisma.vehicle.deleteMany({where:{id:{in:vehicles}}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
+}

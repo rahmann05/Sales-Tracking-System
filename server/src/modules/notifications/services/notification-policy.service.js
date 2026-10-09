@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 export async function notificationEnabled(type='',values){
  const read=(key,fallback)=>values?values[key]??fallback:getDynamicConfig(key,fallback);
  if(await read('FEATURE_NOTIFICATIONS_MODE','ACTIVE')!=='ACTIVE')return false;
- const key=/ORDER/.test(type)?'NOTIFY_ORDER_EVENTS':/OUTLET|REGISTRATION/.test(type)?'NOTIFY_REGISTRATION_EVENTS':/FOLLOW_UP/.test(type)?'NOTIFY_FOLLOW_UP_EVENTS':/DELIVERY/.test(type)?'NOTIFY_DELIVERY_EVENTS':/EXCEPTION/.test(type)?'NOTIFY_EXCEPTION_EVENTS':null;
+ const key=/VEHICLE_SERVICE/.test(type)?'NOTIFY_VEHICLE_SERVICE_EVENTS':/ORDER/.test(type)?'NOTIFY_ORDER_EVENTS':/OUTLET|REGISTRATION/.test(type)?'NOTIFY_REGISTRATION_EVENTS':/FOLLOW_UP/.test(type)?'NOTIFY_FOLLOW_UP_EVENTS':/DELIVERY/.test(type)?'NOTIFY_DELIVERY_EVENTS':/EXCEPTION/.test(type)?'NOTIFY_EXCEPTION_EVENTS':null;
  return !key||await read(key,true);
 }
 export async function recipientValues(db,id){

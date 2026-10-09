@@ -20,6 +20,7 @@ import {duplicateOutlets} from './services/outlet-duplicates.service.js';
 import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
 
+import {assignOutletReview} from './services/outlet-review-assignment.service.js';
 const router = Router();
 
 router.use(authenticate);
@@ -60,6 +61,7 @@ router.post('/', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outl
 
 router.patch('/:id/coordinates',directoryAccess,async(req,res,next)=>{try{res.json({data:await correctCoordinates(req.params.id,req.body,req.user)});}catch(e){next(e);}});
 router.get('/:id/profile',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'),action(req=>outletProfile(req.params.id,req.user)));
+router.patch('/:id/reviews/:reviewId/assignment',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>assignOutletReview(req.params.id,req.params.reviewId,req.body,req.user)));
 router.post('/:id/reviews',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>openOutletReview(req.params.id,req.body,req.user)));
 router.patch('/:id/reviews/:reviewId',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>decideOutletReview(req.params.id,req.params.reviewId,req.body,req.user)));
 router.post('/:id/reactivate',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'),action(req=>changeOutletActivation(req.params.id,req.body,req.user,true)));

@@ -1,8 +1,18 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
+import { resolveIdentity } from '../../roles/role-assignment.service.js';
 export const receiveReturn = (stopId, userId, data) => prisma.$transaction(async tx => {
+  const reference=await tx.deliveryStop.findUnique({where:{id:stopId},select:{deliveryRouteId:true}});
+  if(!reference)throw new AppError('Pengiriman tidak ditemukan',404);
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`route:${reference.deliveryRouteId}`}))`;
   const stop = await tx.deliveryStop.findUnique({ where: { id: stopId }, include: { deliveryRoute: true } });
+  const task=stop?.deliveryRoute?.preparation?.returnTasks?.[stopId];
+  if(task?.ownerId&&task.ownerId!==userId){
+    const actor=await tx.user.findUnique({where:{id:userId},select:{role:true,roleCode:true,permissions:true}});
+    const identity=actor&&await resolveIdentity(actor);
+    if(identity?.role!=='ADMIN')throw new AppError('Pemeriksaan retur ditugaskan kepada petugas lain. Alihkan penugasan terlebih dahulu.',403);
+  }
   if (!stop) throw new AppError('Pengiriman tidak ditemukan', 404);
   if (!['REJECTED','PARTIAL_REJECT'].includes(stop.status) || !(stop.rejectedCartons > 0)) throw new AppError('Tidak ada retur', 409);
   if (stop.returnInspection) throw new AppError('Retur sudah diperiksa', 409);

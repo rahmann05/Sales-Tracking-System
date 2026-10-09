@@ -2,7 +2,7 @@ import React from 'react';
 import { codePolicy, formatCode } from '../../../../shared/coding.mjs';
 import { displayValue, optionLabel } from "./AdminConfigPage.shared";
 import {parameterGuidance,policyTiming,parameterHelp} from '../../../../shared/policy-guidance.mjs';
-import {POLICY_SECRET_KEYS} from '../../../../shared/operational-policy.mjs';
+import {POLICY_SECRET_KEYS,policyGlobalOnly} from '../../../../shared/operational-policy.mjs';
 import {PolicyChecklistEditor} from './PolicyChecklistEditor';
 export function ParameterGroup({
   group,
@@ -37,7 +37,7 @@ export function ParameterGroup({
       {displayedParams.map(param => {
         const modified = values[param.key] !== savedValues[param.key];
         const guidance=parameterGuidance(param.key,values);
-        const scopeBlocked=scope!=='GLOBAL'&&(coding||POLICY_SECRET_KEYS.includes(param.key));
+        const scopeBlocked=scope!=='GLOBAL'&&(policyGlobalOnly(param.key));
         const inactive = scopeBlocked || Boolean(guidance) || coding && !param.key.endsWith('_MODE') && (mode === 'MANUAL' || param.key.endsWith('_PATTERN') && mode !== 'PATTERN');
         const inputClass = 'config-input';
         const common = {

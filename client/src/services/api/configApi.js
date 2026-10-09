@@ -1,5 +1,12 @@
 import { request } from "../httpClient";
 export const configApi = {
+  migrationCandidates:kind=>request('/config/policies/migration?'+new URLSearchParams({kind})),
+  previewMigration:body=>request('/config/policies/migration/preview',{method:'POST',body:JSON.stringify(body)}),
+  migrateProcesses:body=>request('/config/policies/migration',{method:'POST',body:JSON.stringify(body)}),
+  systemAudit:query=>request('/config/policies/audit?'+new URLSearchParams(query)),
+  policyLibrary:()=>request('/config/policies/library'),
+  savePolicyLibrary:body=>request('/config/policies/library',{method:'PUT',body:JSON.stringify(body)}),
+  copyPolicyLibrary:body=>request('/config/policies/library/copy',{method:'POST',body:JSON.stringify(body)}),
   notificationDelivery:()=>request('/config/policies/notification-delivery'),
   retryNotificationDelivery:body=>request('/config/policies/notification-delivery/retry',{method:'POST',body:JSON.stringify(body)}),
   cancelSchedule:(scope,body)=>request('/config/policies/cancel-schedule',{method:'POST',body:JSON.stringify({scope,...body})}),

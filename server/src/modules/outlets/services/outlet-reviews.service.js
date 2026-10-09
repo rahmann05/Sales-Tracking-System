@@ -1,3 +1,4 @@
+import {initialReviewAssignment,outletReviewOwners} from './outlet-review-assignment.service.js';
 import { z } from 'zod';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -9,9 +10,11 @@ const decision=z.object({revision:z.number().int().positive(),action:z.enum(['KE
 export async function openOutletReview(id,body,actor) {
   const {reason}=opening.parse(body);
   const result=await prisma.$transaction(async tx=>{
-    await lockOutlet(tx,id);await reviewOutlet(tx,actor,id);
+    await lockOutlet(tx,id);const outlet=await reviewOutlet(tx,actor,id);
     const existing=await tx.outletReview.findFirst({where:{outletId:id,status:{in:['OPEN','WAITING_FIELD']}},include:reviewInclude});
-    return existing || tx.outletReview.create({data:{outletId:id,reason,requestedBy:actorSnapshot(actor)},include:reviewInclude});
+    if(existing)return existing;
+    const assignment=await initialReviewAssignment(tx,outlet,actor);
+    return tx.outletReview.create({data:{outletId:id,reason,requestedBy:actorSnapshot(actor),...assignment},include:reviewInclude});
   });
   invalidateOutletCache();return result;
 }
@@ -26,7 +29,7 @@ export async function getOutletReviews(query,actor) {
 export async function getOutletReview(id,actor) {
   const review=await prisma.outletReview.findFirst({where:{id,outlet:await reviewScope(actor,prisma)},include:{...reviewInclude,outlet:{include:{cluster:true,changes:{orderBy:{createdAt:'desc'},take:50}}}}});
   if(!review)throw new AppError('Kasus tidak ditemukan dalam cakupan Anda',404);
-  return review;
+  return {...review,availableOwners:await outletReviewOwners(prisma,review.outlet)};
 }
 export async function decideOutletReview(outletId,reviewId,raw,actor) {
   const body=decision.parse(raw);

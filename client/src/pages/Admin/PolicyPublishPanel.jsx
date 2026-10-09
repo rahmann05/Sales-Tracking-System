@@ -7,7 +7,7 @@ export function PolicyPublishPanel({editor}){
  return <section className="policy-panel"><header><h2>Tinjau & terapkan</h2><p>Publikasi membentuk versi baru. Draf dapat diperbaiki tanpa memengaruhi kegiatan berjalan.</p></header>
  {!preview?<div className="policy-panel-body"><p>Simpan draf, lalu periksa dampak sebelum menerbitkan aturan.</p><button className="config-button" disabled={busy||dirty||!editor.data||!Object.keys(editor.data.profile.draft).length} onClick={editor.review}>Periksa dampak draf</button></div>:<div className="policy-panel-body">
  <div className="policy-impact-grid">{Object.entries(preview.counts).map(([key,value])=><div key={key}><strong>{value}</strong><span>{countLabels[key]}</span></div>)}</div>
- <p className="policy-note">{preview.note}</p>
+ <p className="policy-note">{preview.note}</p><details><summary>Form dan halaman terdampak ({preview.surfaces?.length||0})</summary><ul>{preview.surfaces?.map(surface=><li key={surface.id}>{surface.label} · {surface.keys.length} aturan</li>)}</ul></details>
  {preview.conflicts.length>0&&<div role="alert" className="policy-error"><strong>Konflik yang harus diperbaiki</strong><ul>{preview.conflicts.map(issue=><li key={issue}>{issue}</li>)}</ul></div>}
  <div className="policy-change-list">{preview.changes.map(c=>{const p=CONFIG_PARAMS.find(p=>p.key===c.key);return <div key={c.key}><strong>{p?.label||c.key}</strong><span>{displayValue(p,c.before)} → {displayValue(p,c.after)}</span></div>;})}</div>
  {!preview.changes.length&&<p>Tidak ada nilai efektif yang berubah.</p>}

@@ -17,7 +17,7 @@ router.get('/escalations',authorize('ADMIN'),async(req,res,next)=>{try{
  res.json({data:await listAttentionEscalations(req.user,query)});
 }catch(error){next(error);}});
 router.get('/',async(req,res,next)=>{try{
- const query=z.object({page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(100).default(25),filter:z.enum(['ALL','MINE','OVERDUE','UNASSIGNED','UNSCHEDULED','REVIEW']).default('ALL'),category:z.enum(['ALL','ORDER','PACKING','TRIP','PREPARATION','ISSUE','VISIT','EXCEPTION']).default('ALL')}).parse(req.query);
+ const query=z.object({page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(100).default(25),filter:z.enum(['ALL','MINE','OVERDUE','UNASSIGNED','UNSCHEDULED','REVIEW']).default('ALL'),category:z.enum(['ALL','ORDER','PACKING','TRIP','PREPARATION','ISSUE','VISIT','EXCEPTION','OUTLET_REVIEW','RETURN']).default('ALL')}).parse(req.query);
  res.json({data:await getAttention(req.user,query)});
 }catch(e){next(e);}});
 export default router;

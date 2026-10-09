@@ -4,7 +4,7 @@ import {parseAuditItems} from './supervision-checklist.mjs';
 export const CONFIG_DEFINITIONS = [
   ...OPERATIONAL_CONFIG_GROUPS,
   ...CODE_CONFIG_GROUPS,
-  {groupKey:'ATTENTION_SLA',groupLabel:'SLA & Eskalasi Pekerjaan',groupDescription:'Batas waktu memakai jam kalender sejak pekerjaan masuk tahap, termasuk malam/libur. Nol berarti belum aktif. Tenggat eksplisit didahulukan. Perubahan berlaku pada pekerjaan terbuka yang belum mempunyai tenggat eksplisit; riwayat perubahan parameter dicatat.',groupIcon:'LuClock',groupColor:'blue',params:[
+  {groupKey:'ATTENTION_SLA',groupLabel:'SLA & Eskalasi Pekerjaan',groupDescription:'Batas waktu memakai kalender atau jam kerja WIB sesuai pengaturan SLA sejak pekerjaan masuk tahap. Nol berarti belum aktif. Tenggat eksplisit didahulukan. Perubahan berlaku pada pekerjaan terbuka yang belum mempunyai tenggat eksplisit; riwayat perubahan parameter dicatat.',groupIcon:'LuClock',groupColor:'blue',params:[
     {key:'SLA_ORDER_APPROVAL_HOURS',label:'SLA pemeriksaan order',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
     {key:'SLA_PACKING_DRAFT_HOURS',label:'SLA kelengkapan draft packing',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
     {key:'SLA_PACKING_ALLOCATION_HOURS',label:'SLA alokasi packing siap kirim',type:'number',unit:'jam',defaultValue:0,min:0,max:720},
@@ -451,8 +451,9 @@ export function parseConfigValue(param, raw) {
   }
   if (typeof raw !== 'string' || raw.length > 2000) throw new Error(`${param.label}: teks tidak valid`);
   if (param.options && !param.options.includes(raw)) throw new Error(`${param.label}: pilihan tidak valid`);
-  if (param.key === 'PJP_WORKING_DAYS' && !/^[0-6](,[0-6])*$/.test(raw)) throw new Error('Hari kerja harus daftar 0–6 dipisahkan koma');
-  if (param.key === 'SHIFT_START_TIME' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) throw new Error('Jam masuk harus HH:mm');
+  if (['PJP_WORKING_DAYS','SLA_WORKING_DAYS'].includes(param.key) && !/^[0-6](,[0-6])*$/.test(raw)) throw new Error('Hari kerja harus daftar 0–6 dipisahkan koma');
+  if (['SHIFT_START_TIME','SLA_WORK_START','SLA_WORK_END'].includes(param.key) && !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) throw new Error('Jam masuk harus HH:mm');
+  if(param.key==='SLA_HOLIDAYS'&&raw.split(',').filter(Boolean).some(day=>!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day))throw new Error('Tanggal libur harus YYYY-MM-DD valid dipisahkan koma');
   if (param.key.startsWith('JWT_') && !/^[1-9]\d*[smhd]$/.test(raw)) throw new Error('Durasi token harus seperti 12h atau 7d');
   return raw;
 }

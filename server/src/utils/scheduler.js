@@ -1,3 +1,5 @@
+import {remindVehicleServices} from '../modules/vehicles/services/service-reminders.service.js';
+import {retainSystemHistory} from '../modules/notifications/services/history-retention.service.js';
 import {scanMissingOut} from '../modules/attention/operational-exceptions.service.js';
 import cron from 'node-cron';
 import { generateDailyPjps } from '../modules/pjp/pjp.service.js';
@@ -7,6 +9,10 @@ import {dispatchNotifications} from '../modules/notifications/services/notificat
 import {purgeExpiredLocations} from '../modules/users/services/location-retention.service.js';
 
 export const initScheduler = () => {
+  schedulerMonitor.register('HISTORY_RETENTION','Retensi notifikasi dan arsip audit',Date.now()+3600000,3600000);
+  cron.schedule('0 * * * *',()=>{schedulerMonitor.run('HISTORY_RETENTION',retainSystemHistory,now=>now+3600000).catch(()=>console.error('[Scheduler]: History retention scan failed.'));},{timezone:'Asia/Jakarta'});
+  schedulerMonitor.register('VEHICLE_SERVICE','Pengingat servis berkala',Date.now()+3600000,3600000);
+  cron.schedule('0 * * * *',()=>{schedulerMonitor.run('VEHICLE_SERVICE',remindVehicleServices,now=>now+3600000).catch(()=>console.error('[Scheduler]: Vehicle service reminder scan failed.'));},{timezone:'Asia/Jakarta'});
   schedulerMonitor.register('GPS_RETENTION','Masa simpan telemetri GPS',Date.now()+3600000,3600000);
   cron.schedule('0 * * * *',()=>{schedulerMonitor.run('GPS_RETENTION',purgeExpiredLocations,now=>now+3600000).catch(()=>console.error('[Scheduler]: GPS telemetry retention scan failed.'));},{timezone:'Asia/Jakarta'});
   schedulerMonitor.register('NOTIFICATIONS','Siaran notifikasi setelah transaksi',Date.now()+5000,15000);

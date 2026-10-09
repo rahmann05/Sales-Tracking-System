@@ -31,7 +31,7 @@ export const rejectRegistration = async (id, reason, currentUser) => {
   if (!String(reason || '').trim()) throw new AppError('Alasan penolakan wajib',400);
   await assertSalesAccess(currentUser,registration.salesmanId);
   const changed = await prisma.customerRegistration.updateMany({
-    where: { id, registrationStatus: registration.registrationStatus },
+    where: { id, registrationStatus: registration.registrationStatus, updatedAt: registration.updatedAt },
     data: {
       registrationStatus: 'REJECTED',
       rejectionNote: reason,

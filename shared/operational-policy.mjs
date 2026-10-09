@@ -91,6 +91,12 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('OUTLET_REVIEW_SEARCH_RADIUS_METERS','Radius pencarian kandidat dekat',comparison.searchRadiusMeters,50,5000,'meter'),
   num('OUTLET_REVIEW_TIMEOUT_SECONDS','Batas tunggu setiap permintaan pemeriksaan peta',comparison.timeoutSeconds,2,60,'detik'),
   num('OUTLET_REVIEW_EVIDENCE_DAYS','Masa berlaku hasil perbandingan peta',comparison.evidenceDays,0,3650,'hari','Nol tanpa kedaluwarsa berdasarkan umur. Nilai positif melekat pada pemeriksaan baru. Bukti kedaluwarsa perlu pemeriksaan ulang atau referensi lapangan terbaru saat mempertahankan master.'),
+  num('OUTLET_REVIEW_DAILY_CALL_LIMIT','Batas panggilan pemeriksaan per hari WIB',0,0,100000,'panggilan','Nol tanpa batas aplikasi. Setiap HTTP provider dihitung, termasuk retry dan hasil gagal.'),
+  num('OUTLET_REVIEW_CALLS_PER_MINUTE','Batas panggilan pemeriksaan per menit',0,0,10000,'panggilan','Nol tanpa batas aplikasi. Batas dibagi seluruh koneksi server memakai PostgreSQL.'),
+  num('OUTLET_REVIEW_DAILY_BUDGET_RUPIAH','Batas perkiraan biaya pemeriksaan per hari',0,0,1000000000,'Rp','Nol tanpa batas perkiraan. Bukan tagihan aktual provider.'),
+  num('OUTLET_REVIEW_ESTIMATED_CALL_RUPIAH','Asumsi biaya setiap panggilan pemeriksaan',0,0,1000000,'Rp','Diisi Admin menurut kontrak provider; tidak memprediksi harga layanan secara otomatis.'),
+  select('OUTLET_REVIEW_DEFAULT_OWNER','PIC awal kasus pemeriksaan','ADMIN_QUEUE',['ADMIN_QUEUE','REQUESTER','TEAM_SUPERVISOR']),
+  num('OUTLET_REVIEW_SLA_HOURS','Tenggat awal pemeriksaan outlet',0,0,720,'jam','Nol tanpa tenggat otomatis. Kalender SLA dibekukan pada kasus baru.'),
   num('OUTLET_REVIEW_BATCH_LIMIT','Batas outlet sekali pemeriksaan',30,1,100,'outlet'),
  ]),
  group('WAREHOUSE_WORKFLOW','Tahapan gudang dan penutupan trip','Tahap yang dilewati dicatat sebagai tidak diwajibkan, bukan bukti pemeriksaan petugas.',[
@@ -122,6 +128,9 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('PLACE_LOOKUP_TIMEOUT_SECONDS','Batas tunggu setiap layanan alamat',10,2,60,'detik','Pencarian gagal menampilkan pesan untuk mencoba lagi atau melengkapi alamat manual.'),
  ]),
  group('VEHICLE_SERVICE_POLICY','Pemantauan dan pencatatan servis','Interval umum mengikuti profil yang efektif; interval khusus dikelola pada kendaraan. Mematikan pengingat tidak mengubah kelayakan kendaraan.',[
+  bool('VEHICLE_SERVICE_SCHEDULED_REMINDERS','Kirim pengingat servis berkala',false,'Diperiksa setiap jam. Status kilometer tetap ditampilkan walaupun pemberitahuan berkala dimatikan.'),
+  num('VEHICLE_SERVICE_REPEAT_HOURS','Jeda pengulangan pengingat servis',24,0,720,'jam','Nol mengirim sekali per kendaraan, jenis servis dan tingkat peringatan sampai dasar servis berubah.'),
+  bool('NOTIFY_VEHICLE_SERVICE_EVENTS','Notifikasi servis kendaraan'),
   bool('VEHICLE_SERVICE_REMINDERS_ENABLED','Tampilkan pengingat servis berdasarkan kilometer'),
   num('VEHICLE_SERVICE_WARNING_PERCENT','Peringatan saat interval servis terpakai',80,1,99,'%'),
   bool('VEHICLE_SERVICE_REQUIRE_WORKSHOP','Wajib nama bengkel saat mencatat servis',false),
@@ -129,7 +138,16 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('VEHICLE_SERVICE_ALLOW_BACKDATE','Izinkan tanggal servis sebelum hari ini',true,'Tanggal kejadian aktual boleh dicatat kemudian. Tanggal masa depan tetap tidak sah.'),
   num('VEHICLE_SERVICE_MAX_BACKDATE_DAYS','Batas umur kejadian servis yang boleh dicatat',0,0,3650,'hari','Nol tanpa batas umur. Dihitung menurut tanggal WIB; catatan lama tidak diubah.'),
  ]),
+ group('SLA_CALENDAR','Kalender SLA','Jam kalender atau jam kerja WIB untuk pekerjaan tanpa tenggat eksplisit.',[
+  select('SLA_CLOCK_MODE','Dasar durasi SLA','CALENDAR',['CALENDAR','BUSINESS']),
+  {key:'SLA_WORKING_DAYS',label:'Hari kerja SLA',type:'text',defaultValue:'1,2,3,4,5,6',description:'0 Minggu sampai 6 Sabtu, dipisahkan koma.'},
+  {key:'SLA_WORK_START',label:'Awal jam kerja SLA (WIB)',type:'text',defaultValue:'08:00'},
+  {key:'SLA_WORK_END',label:'Akhir jam kerja SLA (WIB)',type:'text',defaultValue:'17:00'},
+  {key:'SLA_HOLIDAYS',label:'Tanggal libur SLA',type:'text',defaultValue:'',description:'Tanggal YYYY-MM-DD dipisahkan koma. Tenggat eksplisit tidak digeser.'},
+ ]),
  group('REPORTING_POLICY','Laporan dan notifikasi','Ketersediaan keluaran, pemantauan, dan ukuran halaman.',[
+  num('NOTIFY_READ_RETENTION_DAYS','Masa simpan notifikasi yang sudah dibaca',0,0,3650,'hari','Nol menyimpan tanpa batas. Hanya pesan dibaca dengan outbox selesai (terkirim/dilewati) yang dihapus; pesan belum dibaca, antrean gagal dan pekerjaan bisnis tetap ada.'),
+  num('AUDIT_ACTIVE_RETENTION_DAYS','Masa riwayat audit aktif',0,0,3650,'hari','Khusus perusahaan. Nol tanpa pengarsipan otomatis. Riwayat lebih lama ditandai sebagai arsip dan tetap dapat ditelusuri; bukti keputusan serta pencegah duplikasi tidak dihapus.'),
   bool('NOTIFY_REALTIME_ENABLED','Siarkan notifikasi langsung setelah transaksi berhasil',true,'Nonaktif tetap menyimpan pesan yang diizinkan pada kotak masuk. Siaran socket bukan tanda pesan sudah dibaca.'),
   num('NOTIFY_RETRY_MAX_ATTEMPTS','Batas percobaan siaran notifikasi',5,1,20,'kali','Pesan gagal tetap tersimpan. Admin dapat memeriksa dan mengulang antrean gagal.'),
   num('NOTIFY_RETRY_BASE_SECONDS','Jeda awal percobaan ulang notifikasi',10,5,3600,'detik','Jeda bertambah pada kegagalan berulang, maksimal satu jam. Mengikuti profil penerima.'),
@@ -140,6 +158,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
 ];
 export const POLICY_OPTION_LABELS={ACTIVE:'Aktif',PAUSED:'Jeda pekerjaan baru',OFF:'Nonaktif',IN_OUT:'Masuk dan keluar',IN_ONLY:'Masuk saja',OPTIONAL:'Tanpa presensi wajib',INHERIT:'Ikuti aturan umum',REQUIRED:'Wajib',ADMIN:'Admin',SUPERVISOR:'Supervisor',BOTH:'Admin atau Supervisor',SEQUENTIAL:'Supervisor lalu Admin',NONE:'Tanpa persetujuan manusia',BLOCK:'Blokir',REASON:'Izinkan dengan alasan',WARN:'Izinkan dengan peringatan',LOGIN:'Selama masuk aplikasi',SHIFT:'Saat shift aktif',VISIT:'Saat kunjungan aktif',TRIP:'Saat trip berjalan',AUTO:'Otomatis: Google lalu OSRM',GOOGLE:'Google',OSRM:'OpenStreetMap / OSRM'};
 export const POLICY_SECRET_KEYS=['MAPS_API_KEY','BYPASS_GEOFENCE_EMAILS','JWT_EXPIRES_IN','JWT_REFRESH_EXPIRES_IN'];
+export const policyGlobalOnly=key=>POLICY_SECRET_KEYS.includes(key)||key.startsWith('CODE_')||key==='AUDIT_ACTIVE_RETENTION_DAYS';
 export const featureAvailable=(values,id)=>!['OFF','PAUSED'].includes(values?.[`FEATURE_${id}_MODE`]);
 export const featureReadable=(values,id)=>values?.[`FEATURE_${id}_MODE`]!=='OFF';
 export function visitPolicy(values={}){
@@ -150,6 +169,8 @@ export function visitPolicy(values={}){
 }
 export function policyConflicts(values){
  const issues=[];
+ if(Number(values.OUTLET_REVIEW_DAILY_BUDGET_RUPIAH)>0&&!(Number(values.OUTLET_REVIEW_ESTIMATED_CALL_RUPIAH)>0))issues.push('Batas perkiraan biaya pemeriksaan memerlukan asumsi biaya per panggilan lebih dari nol.');
+ if(values.SLA_CLOCK_MODE==='BUSINESS'&&String(values.SLA_WORK_END||'17:00')<=String(values.SLA_WORK_START||'08:00'))issues.push('Akhir jam kerja SLA harus setelah awal pada hari yang sama.');
  if(Number(values.OUTLET_REVIEW_ADDRESS_CONFLICT_PERCENT??20)>=Number(values.OUTLET_REVIEW_ADDRESS_MATCH_PERCENT??60))issues.push('Ambang konflik alamat harus lebih kecil dari ambang alamat selaras.');
  if(Number(values.OUTLET_REVIEW_SUGGESTION_NAME_PERCENT??75)<Number(values.OUTLET_REVIEW_NAME_MATCH_PERCENT??70))issues.push('Ambang usulan titik minimal sama dengan ambang kecocokan nama kandidat.');
  if(Number(values.OUTLET_REVIEW_ALTERNATIVE_NAME_PERCENT??65)>Number(values.OUTLET_REVIEW_NAME_MATCH_PERCENT??70))issues.push('Ambang kandidat alternatif tidak boleh melebihi ambang kecocokan nama.');

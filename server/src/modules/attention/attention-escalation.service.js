@@ -7,10 +7,10 @@ import { loadAttentionPolicy } from './attention-sla.service.js';
 import {AppError} from '../../utils/errors.js';
 
 // Internal worker entry point; never takes rows or recipients from an HTTP request.
-export async function escalateAttentionRows(rows,admins,{delayHours,now=Date.now()}={}){
+export async function escalateAttentionRows(rows,admins,{delayHours,now=Date.now(),policy={}}={}){
   if(!admins.length||!Number.isInteger(delayHours)||delayHours<=0)return {notified:0};
   let notified=0;
-  for(const row of rows.filter(value=>escalationReady(value,delayHours,now))){
+  for(const row of rows.filter(value=>escalationReady(value,delayHours,now,policy))){
     const deadline=new Date(attentionDeadline(row)).toISOString();
     const key=createHash('sha256').update(JSON.stringify([row.key,row.stage||row.category,deadline])).digest('hex');
     const sent=await prisma.$transaction(async tx=>{
@@ -31,7 +31,7 @@ export async function runAttentionEscalation(){
   const admins=await prisma.user.findMany({where:{role:'ADMIN',deletedAt:null},select:{id:true,name:true}});
   if(!admins.length)return {notified:0};
   const {rows}=await collectAttentionRows({...admins[0],role:'ADMIN'},policy);
-  return escalateAttentionRows(rows,admins,{delayHours});
+  return escalateAttentionRows(rows,admins,{delayHours,policy});
 }
 export async function listAttentionEscalations(actor,{page=1,limit=20,unread=true}={}){
   if(actor?.role!=='ADMIN')throw new AppError('Eskalasi hanya tersedia untuk Admin penerima',403);

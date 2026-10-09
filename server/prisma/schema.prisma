@@ -860,6 +860,10 @@ model CustomerRegistration {
 }
 
 model OutletReview {
+  ownerId String?
+  dueAt DateTime?
+  assignment Json @default("{}")
+  policySnapshot Json?
   id String @id @default(uuid())
   outletId String
   outlet Outlet @relation(fields: [outletId], references: [id])
@@ -874,6 +878,7 @@ model OutletReview {
   closedAt DateTime?
   @@index([outletId, createdAt])
   @@index([status, updatedAt])
+  @@index([ownerId, status])
 }
 
 model OutletValidationRun {
@@ -1182,6 +1187,7 @@ model DeliveryAttendance {
 
 // Shift and supervision are separate from sales PJP attendance.
 model AuditEvent {
+  archivedAt DateTime?
   id String @id @default(uuid())
   actorId String?
   actorName String?
@@ -1193,6 +1199,7 @@ model AuditEvent {
   createdAt DateTime @default(now())
   @@index([entityType, createdAt])
   @@index([actorId, createdAt])
+  @@index([archivedAt, createdAt])
 }
 
 model StaffActivity {

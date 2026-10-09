@@ -34,7 +34,7 @@ export async function savePolicyDraft(scope,raw,actor){
  if(scope==='GLOBAL'&&reset.length)throw new AppError('Nilai global tidak dapat diwariskan dari profil lain',400);
  const values={...validateConfigMap(Object.fromEntries(Object.entries(raw.values||{}).filter(([,v])=>v!==null))),...Object.fromEntries(reset.map(key=>[key,null]))};
  if(Object.keys(values).some(key=>!CONFIG_PARAMS.some(p=>p.key===key)))throw new AppError('Parameter profil tidak terdaftar',400);
- if(scope!=='GLOBAL'&&Object.keys(values).some(k=>POLICY_SECRET_KEYS.includes(k)||k.startsWith('CODE_')))throw new AppError('Integrasi rahasia dan penomoran hanya dapat diatur global',400);
+ if(scope!=='GLOBAL'&&Object.keys(values).some(k=>POLICY_SECRET_KEYS.includes(k)||k.startsWith('CODE_')||k==='AUDIT_ACTIVE_RETENTION_DAYS'))throw new AppError('Integrasi rahasia, penomoran dan arsip audit hanya dapat diatur global',400);
  return prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('config:settings'))`;
   const key=profileKey(scope),current=(await tx.systemConfig.findUnique({where:{key}}))?.value||initial(scope);

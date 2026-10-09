@@ -1,6 +1,7 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const deliveryApi = {
+  assignReturn:(id,body)=>request(`/delivery/stops/${id}/return-assignment`,{method:'PATCH',body:JSON.stringify(body)}),
   correctInvoiceCommercial:(id,data)=>request(`/delivery/packing-lists/${id}/invoices`,{method:'PATCH',body:JSON.stringify(data)}),
   reconcileInvoiceReceipt:(id,data)=>request(`/delivery/packing-lists/${id}/reconciliation`,{method:'POST',body:JSON.stringify(data)}),
   getOperations: (params={}) => request(`/delivery/operations?${queryString(params)}`),

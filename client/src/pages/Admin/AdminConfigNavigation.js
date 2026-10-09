@@ -17,7 +17,7 @@ export const categories = [
  {key:'outlet',label:'Outlet & registrasi',icon:LuMapPin,description:'Pengajuan outlet, persetujuan, master, dan pemeriksaan opsional.',groups:['REGISTRATION_WORKFLOW','NOO','OUTLET_REVIEW_POLICY','VALIDATION','DIVISI']},
  {key:'orders',label:'Order & penagihan',icon:LuTruck,description:'Persetujuan order, harga, dan catatan pembayaran eksternal.',groups:['ORDER_WORKFLOW','TRANSAKSI']},
  {key:'logistics',label:'Gudang & pengiriman',icon:LuTruck,description:'Packing, persiapan, bukti tujuan, servis, dan penutupan trip.',groups:['WAREHOUSE_WORKFLOW','PACKING_WORKFLOW','VEHICLE_SERVICE_POLICY','LOGISTIK']},
- {key:'monitoring',label:'Pemantauan & laporan',icon:LuShieldCheck,description:'Berbagi lokasi, laporan, notifikasi, dan batas waktu pekerjaan.',groups:['TRACKING_POLICY','REPORTING_POLICY','DAILY_CALLS','ATTENTION_SLA']},
+ {key:'monitoring',label:'Pemantauan & laporan',icon:LuShieldCheck,description:'Berbagi lokasi, laporan, notifikasi, dan batas waktu pekerjaan.',groups:['TRACKING_POLICY','REPORTING_POLICY','DAILY_CALLS','ATTENTION_SLA','SLA_CALENDAR']},
  {key:'coding',label:'Kode & penomoran',icon:LuKey,description:'Format identitas dokumen dan master. Urutan yang sudah dipakai tetap terjaga.',groups:CONFIG_DEFINITIONS.filter(g=>g.groupKey.startsWith('CODING_')).map(g=>g.groupKey)},
  {key:'system',label:'Integrasi & keamanan',icon:LuShieldCheck,description:'Layanan peta dan sesi pengguna.',groups:['MAPS_INTEGRATION','SESI']},
 ];

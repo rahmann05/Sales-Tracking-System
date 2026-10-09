@@ -1,5 +1,6 @@
 import { request } from "../httpClient";
 export const outletValidationApi = {
+  assign:(outletId,id,body)=>request(`/outlets/${outletId}/reviews/${id}/assignment`,{method:'PATCH',body:JSON.stringify(body)}),
   review:id=>request(`/outlets/reviews/${id}`),
   reviews:params=>request(`/outlets/reviews?${new URLSearchParams(params)}`),
   openReview:(id,body)=>request(`/outlets/${id}/reviews`,{method:'POST',body:JSON.stringify(body)}),

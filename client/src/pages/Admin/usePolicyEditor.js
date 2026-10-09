@@ -1,7 +1,7 @@
 import {useState,useEffect,useCallback} from 'react';
 import {configApi} from '../../services/api';
 import {CONFIG_PARAMS,parseConfigValue} from '../../../../shared/config.mjs';
-import {POLICY_SECRET_KEYS} from '../../../../shared/operational-policy.mjs';
+import {policyGlobalOnly} from '../../../../shared/operational-policy.mjs';
 import {initialValues} from './AdminConfigNavigation';
 import {useUnsavedNavigation} from '../../shared/hooks/useUnsavedNavigation';
 export function usePolicyEditor(refreshSettings){
@@ -23,7 +23,7 @@ export function usePolicyEditor(refreshSettings){
  const save=async()=>{
   setBusy(true);setError('');setMessage('');const fieldErrors={},updates={};
   for(const param of CONFIG_PARAMS){
-   if(scope!=='GLOBAL'&&(POLICY_SECRET_KEYS.includes(param.key)||param.key.startsWith('CODE_')))continue;
+   if(scope!=='GLOBAL'&&(policyGlobalOnly(param.key)))continue;
    if(inherited.includes(param.key)){updates[param.key]=null;continue;}
    try{const value=parseConfigValue(param,values[param.key]);if(JSON.stringify(value)!==JSON.stringify(data.effective.values[param.key])||Object.hasOwn(data.profile.draft,param.key))updates[param.key]=value;}
    catch(e){fieldErrors[param.key]=e.message;}

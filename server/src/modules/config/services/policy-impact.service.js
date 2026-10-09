@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {prisma} from '../../../config/prisma.js';
+import {affectedSurfaces} from '../../../../../shared/policy-surfaces.mjs';
 export async function policyImpact(values,db=prisma,scope='GLOBAL'){
  const people=await db.user.findMany({where:{deletedAt:null,...(scope==='GLOBAL'?{}:scope.startsWith('ROLE:')?{role:scope.slice(5)}:{OR:[{supervisorId:scope.slice(5)},{id:scope.slice(5)}]})},select:{id:true,role:true,roleCode:true,supervisorId:true,updatedAt:true},orderBy:{id:'asc'}});
  const ids=scope==='GLOBAL'?null:people.map(p=>p.id),owner=key=>ids?{[key]:{in:ids}}:{};
@@ -16,6 +17,6 @@ export async function policyImpact(values,db=prisma,scope='GLOBAL'){
  records.unshift(['users',people]);
  const counts=Object.fromEntries(records.map(([key,rows])=>[key,rows.length]));
  const fingerprint=createHash('sha256').update(JSON.stringify({scope,records,values:Object.entries(values).sort(([a],[b])=>a.localeCompare(b))})).digest('hex');
- return {counts,fingerprint,note:`Pekerjaan terbuka dalam profil ${scope==='GLOBAL'?'perusahaan':scope.startsWith('ROLE:')?'role terpilih':'tim terpilih'}. Alur baru berlaku pada pekerjaan baru. Pekerjaan berjalan mempertahankan aturan awal; akses dan penghentian berbagi GPS mengikuti aturan yang sedang efektif.`};
+ return {counts,fingerprint,surfaces:affectedSurfaces(values),note:`Pekerjaan terbuka dalam profil ${scope==='GLOBAL'?'perusahaan':scope.startsWith('ROLE:')?'role terpilih':'tim terpilih'}. Alur baru berlaku pada pekerjaan baru. Pekerjaan berjalan mempertahankan aturan awal; akses dan penghentian berbagi GPS mengikuti aturan yang sedang efektif.`};
 }
 

@@ -3,6 +3,7 @@ import React,{useState} from 'react';
 import {outletValidationApi} from '../../../services/api';
 import {confirmWorkspaceNavigation} from '../../../shared/utils/confirmWorkspaceNavigation';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
+import {OutletReviewAssignment} from './OutletReviewAssignment';
 import {OutletMiniMapPreview} from './OutletMiniMapPreview';
 import {OutletCoordinateForm} from './OutletCoordinateForm';
 import {ValidationSearchPanel} from './ValidationSearchPanel';
@@ -19,6 +20,7 @@ export function OutletValidationDetail({review:r,onRefresh,onClose}) {
  const saveDecision=e=>{e.preventDefault();act(async()=>{await outletValidationApi.decide(o.id,r.id,{revision:r.revision,action:decision,note,evidence});setNote('');setEvidence('');});};
  return <section className="outlet-panel outlet-review-detail"><header className="outlet-detail-heading"><div><p className="outlet-eyebrow">{o.outletCode || 'Kode belum tersedia'} · {reviewLabels[r.status]}</p><h2>{o.name}</h2><p>{r.reason}</p><small>Diajukan oleh {r.requestedBy.name} · {stamp(r.createdAt)}</small></div><button type="button" className="app-button" onClick={onClose} disabled={busy}>Kembali</button></header><div className="outlet-detail-content">
   {error&&<p className="app-error" role="alert">{error}</p>}
+  <OutletReviewAssignment key={r.revision} review={r} onRefresh={onRefresh} disabled={busy}/>
   <div className="outlet-comparison-heading"><div><h3>{changed?'Data berubah setelah pemeriksaan':expired?'Bukti perbandingan peta kedaluwarsa':resultLabels[result?.code] || 'Peta belum diperiksa'}</h3><p className="outlet-muted">{run?`${stamp(run.createdAt)} · ${run.actor.name}`:'Pemeriksaan peta dapat dijalankan bila diperlukan.'}</p>{expiresAt&&<p className="outlet-muted">Bukti pembanding berlaku hingga {stamp(expiresAt)}. Hasil lama tetap tersimpan dalam riwayat.</p>}{stale&&!closed&&<p className="outlet-muted">Periksa ulang atau isi referensi bukti lapangan terbaru sebelum mempertahankan data master.</p>}</div>{!closed&&<button type="button" className="app-button app-button-primary" disabled={busy||!mapPolicy.canStart||mapPolicy.settings.OUTLET_MAP_COMPARISON_ENABLED===false} title={!mapPolicy.canStart?mapPolicy.reason:mapPolicy.settings.OUTLET_MAP_COMPARISON_ENABLED===false?'Perbandingan peta dinonaktifkan Admin.':undefined} onClick={()=>act(()=>outletValidationApi.validateSingle(o.id,{reviewId:r.id,revision:r.revision}))}>{busy?'Memproses…':'Periksa dengan peta'}</button>}</div>
   <div className="outlet-master-snapshot"><strong>Data master saat ini</strong><p>{o.address}</p><small>{point(o)} · radius {o.radiusMeters} m · {o.cluster?.name}</small></div>
   <OutletMiniMapPreview latitude={o.latitude} longitude={o.longitude} name={o.name} radiusMeters={o.radiusMeters} candidates={comparisons}/>

@@ -1,3 +1,4 @@
+import {assignReturnInspection} from './services/return-assignment.service.js';
 import { receiveReturn } from './services/receive-return.service.js';
 import { operationsDashboard, routeAction, createIssue, resolveIssue } from './services/operations.service.js';
 import { reportDriverLocation } from './services/driver-location.service.js';
@@ -139,6 +140,7 @@ router.post('/routes/:id/actions', (req,res,next)=>req.user.role==='SUPIR'?next(
 router.post('/routes/:id/location', authorize('SUPIR'), validate(locationSchema), execute(req=>reportDriverLocation(req.params.id,locationSchema.parse({body:req.body}).body,req.user.id)));
 router.post('/issues', monitor, validate(issueSchema), execute(req=>createIssue(issueSchema.parse({body:req.body}).body,req.user)));
 router.patch('/issues/:id/resolve', (req,res,next)=>req.user.role==='SUPIR'?next():monitor(req,res,next), validate(resolutionSchema), execute(req=>resolveIssue(req.params.id,req.body.resolution,req.user)));
+router.patch('/stops/:id/return-assignment', monitor, execute(req=>assignReturnInspection(req.params.id,req.body,req.user)));
 router.post('/stops/:id/return', monitor, validate(returnSchema), execute(req=>receiveReturn(req.params.id,req.user.id,returnSchema.parse({body:req.body}).body)));
 router.put('/packing-lists/:id', authorize('ADMIN'), validate(updatePackingListSchema), ctrl.updatePackingList);
 router.patch('/packing-lists/:id/status', authorize('ADMIN'), ctrl.changePackingStatus);

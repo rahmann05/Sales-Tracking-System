@@ -42,7 +42,7 @@ export const approveRegistration = async (id, note, currentUser) => {
   };
 
   await assertSalesAccess(currentUser,registration.salesmanId);
-  const changed = await prisma.customerRegistration.updateMany({where:{id,registrationStatus:registration.registrationStatus},data:updateData});
+  const changed = await prisma.customerRegistration.updateMany({where:{id,registrationStatus:registration.registrationStatus,updatedAt:registration.updatedAt},data:updateData});
   if (!changed.count) throw new AppError('Status pengajuan berubah, muat ulang',409);
   const updated = await prisma.customerRegistration.findUnique({where:{id}});
 
