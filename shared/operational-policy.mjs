@@ -1,7 +1,7 @@
 import {DEFAULT_AUDIT_ITEMS} from './supervision-checklist.mjs';
 import {OUTLET_COMPARISON_DEFAULTS as comparison} from './outlet-evidence-policy.mjs';
 export const POLICY_ROLES=['ADMIN','SUPERVISOR','SALES','KEPALA_GUDANG','SUPIR'];
-export const DRIVER_EVIDENCE_KEYS=['DELIVERY_ATTENDANCE_MODE','DELIVERY_STOP_ORDER','DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT','DELIVERY_REQUIRE_GPS','DELIVERY_REQUIRE_PHOTO','DELIVERY_REQUIRE_GEOFENCE','GPS_REQUIRE_METADATA','GPS_MAX_ACCURACY_METERS','GPS_MAX_AGE_SECONDS'];
+export const DRIVER_EVIDENCE_KEYS=['DELIVERY_ATTENDANCE_MODE','DELIVERY_STOP_ORDER','DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT','DELIVERY_ALLOW_RESULT_WITHOUT_OUT','DELIVERY_REQUIRE_GPS','DELIVERY_REQUIRE_PHOTO','DELIVERY_REQUIRE_GEOFENCE','GPS_REQUIRE_METADATA','GPS_MAX_ACCURACY_METERS','GPS_MAX_AGE_SECONDS'];
 const bool=(key,label,defaultValue=true,description='',extra={})=>({key,label,type:'boolean',defaultValue,description,...extra});
 const num=(key,label,defaultValue,min,max,unit,description='')=>({key,label,type:'number',defaultValue,min,max,unit,description});
 const select=(key,label,defaultValue,options,description='',extra={})=>({key,label,type:'select',defaultValue,options,description,...extra});
@@ -101,6 +101,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('TRIP_REQUIRE_RETURN_INSPECTION','Wajib pemeriksaan barang kembali'),
   bool('TRIP_BLOCK_OPEN_ISSUES','Tahan penutupan jika masih ada masalah'),
   select('DELIVERY_ATTENDANCE_MODE','Mode bukti di tujuan','IN_OUT',['IN_OUT','IN_ONLY','OPTIONAL']),
+  bool('DELIVERY_ALLOW_RESULT_WITHOUT_OUT','Izinkan hasil pengiriman tanpa bukti keluar',false,'Hanya pada mode masuk + keluar setelah bukti masuk tersedia. Driver wajib memberi alasan; gudang menerima tugas pemeriksaan. Foto hasil tetap mengikuti kewajibannya. Tidak membuat presensi keluar otomatis.'),
   select('DELIVERY_STOP_ORDER','Urutan pelaksanaan tujuan','FREE',['FREE','SEQUENTIAL'],'Urutan wajib menunggu hasil seluruh tujuan sebelumnya. Tujuan yang sudah dimulai tetap dapat diselesaikan.',{optionLabels:{FREE:'Bebas memilih tujuan',SEQUENTIAL:'Sesuai urutan sampai hasil selesai'}}),
   bool('DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT','Boleh lanjut saat hasil tujuan sebelumnya belum dicatat',true,'Pada urutan bebas, tujuan yang sudah didatangi tetapi belum memiliki hasil ditandai untuk gudang. Tidak membuat bukti keluar atau hasil barang otomatis.'),
   bool('DELIVERY_REQUIRE_GPS','Wajib GPS pada presensi tujuan'),
@@ -110,6 +111,8 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('SALES_TRACKING_MODE','Berbagi GPS Sales','LOGIN',['OFF','LOGIN','SHIFT','VISIT']),
   select('DRIVER_TRACKING_MODE','Berbagi GPS Driver','TRIP',['OFF','TRIP']),
   num('TRACKING_SEND_INTERVAL_SECONDS','Jeda pengiriman lokasi',30,10,600,'detik'),
+  num('TRACKING_TRAIL_MIN_DISTANCE_METERS','Jarak minimum antartitik jejak',0,0,1000,'meter','Membatasi titik jejak yang berdekatan, bukan menghentikan heartbeat GPS saat kendaraan/petugas diam. Nol menyimpan setiap titik yang diterima.'),
+  num('TRACKING_LOCATION_RETENTION_HOURS','Masa simpan titik GPS dan jejak langsung',0,0,8760,'jam','Nol menonaktifkan penghapusan otomatis. Nilai positif menyembunyikan titik kedaluwarsa dan menghapus telemetri melalui pemindaian berkala. Bukti presensi tidak dihapus. Data yang sudah dihapus tidak dipulihkan dengan memperpanjang batas.'),
   num('DRIVER_TRACKING_LIVE_SECONDS','Batas usia GPS langsung Driver',120,30,1800,'detik'),
   num('DRIVER_TRACKING_MAX_POINTS','Panjang jejak Driver',60,5,500,'titik'),
   select('ROUTING_PROVIDER','Layanan rute jalan','AUTO',['AUTO','GOOGLE','OSRM','OFF']),
@@ -119,7 +122,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('PLACE_LOOKUP_TIMEOUT_SECONDS','Batas tunggu setiap layanan alamat',10,2,60,'detik','Pencarian gagal menampilkan pesan untuk mencoba lagi atau melengkapi alamat manual.'),
  ]),
  group('VEHICLE_SERVICE_POLICY','Pemantauan dan pencatatan servis','Interval umum mengikuti profil yang efektif; interval khusus dikelola pada kendaraan. Mematikan pengingat tidak mengubah kelayakan kendaraan.',[
-  bool('VEHICLE_SERVICE_REMINDERS_ENABLED','Aktifkan pengingat servis berdasarkan kilometer'),
+  bool('VEHICLE_SERVICE_REMINDERS_ENABLED','Tampilkan pengingat servis berdasarkan kilometer'),
   num('VEHICLE_SERVICE_WARNING_PERCENT','Peringatan saat interval servis terpakai',80,1,99,'%'),
   bool('VEHICLE_SERVICE_REQUIRE_WORKSHOP','Wajib nama bengkel saat mencatat servis',false),
   bool('VEHICLE_SERVICE_REQUIRE_NOTE','Wajib catatan servis',false),

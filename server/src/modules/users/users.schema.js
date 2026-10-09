@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export const salesLocationSchema=z.object({body:z.object({latitude:z.number().finite().min(-90).max(90),longitude:z.number().finite().min(-180).max(180),accuracy:z.number().finite().nonnegative().nullable().optional(),observedAt:z.string().datetime().nullable().optional(),speed:z.number().finite().nonnegative().nullable().optional(),heading:z.number().finite().min(0).max(360).nullable().optional(),battery:z.number().finite().min(0).max(1).nullable().optional()})});
 
 export const createUserSchema = z.object({
   body: z.object({

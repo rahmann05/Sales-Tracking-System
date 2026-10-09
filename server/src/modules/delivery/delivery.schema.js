@@ -95,6 +95,7 @@ export const updateStopStatusSchema = z.object({
     rejectedCartons: z.number().int().min(0).optional(),
     rejectedItems: z.array(rejectedItem).optional(),
     rejectedInvoices: z.array(invoiceAllocation).optional(),
+    missingCheckoutReason:z.string().trim().min(5).max(2000).optional(),
     notes: z.string().optional(),
     photoUrl: z.string().optional(),
   }),

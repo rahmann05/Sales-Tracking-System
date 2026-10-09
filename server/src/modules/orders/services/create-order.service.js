@@ -67,6 +67,7 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType, manual
   const taxRatePercent=await getDynamicConfig('TAX_RATE_PERCENT',11);
   const taxIncluded=await getDynamicConfig('ORDER_PRICES_INCLUDE_TAX',true);
   const {totalValue,taxAmount}=orderPricing(orderItemsData,taxRatePercent,taxIncluded);
+  if(!Number.isFinite(totalValue)||!Number.isFinite(taxAmount))throw new AppError('Total order tidak valid. Periksa harga dan jumlah produk.',400);
   if(options.expectedTotal!=null&&Math.abs(options.expectedTotal-totalValue)>0.005)throw new AppError('Total berubah karena harga/pajak. Muat ulang dan konfirmasi jumlah baru.',409);
   if(options.expectedTermDays!=null&&options.expectedTermDays!==termOfPaymentDays)throw new AppError('Termin berubah. Muat ulang dan konfirmasi syarat pembayaran.',409);
   if(['SKIPPED','CLOSED_REPORTED'].includes(stop.status))throw new AppError('Order tidak dapat dibuat pada toko dilewati atau dilaporkan tutup',409);

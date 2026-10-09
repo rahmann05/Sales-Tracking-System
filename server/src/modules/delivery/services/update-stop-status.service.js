@@ -3,7 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { finalizeRoute, terminalStop, reconcilePackingInvoices } from './route-lifecycle.service.js';
-import {lockDestinationRoute,assertDestinationStart,flagIncompleteDestinations} from './destination-policy.service.js';
+import {lockDestinationRoute,assertDestinationStart,flagIncompleteDestinations,flagMissingCheckout} from './destination-policy.service.js';
 export async function recordStopResult(tx,stopId,data,driverId) {
   const stop=await tx.deliveryStop.findUnique({where:{id:stopId},include:{deliveryRoute:true,packingList:true,attendances:true}});
   if(!stop)throw new AppError('Stop pengiriman tidak ditemukan',404);
@@ -12,7 +12,12 @@ export async function recordStopResult(tx,stopId,data,driverId) {
   if(stop.deliveryRoute.status!=='IN_TRANSIT'||stop.deliveryRoute.onHold||stop.deliveryRoute.closedAt||stop.deliveryRoute.cancelledAt)throw new AppError('Rute belum berangkat atau tidak aktif',409);
   const mode=await processValue(stop.deliveryRoute,'DELIVERY_ATTENDANCE_MODE','IN_OUT');
   if(mode!=='OPTIONAL'&&!stop.attendances.some(a=>a.type==='IN'))throw new AppError('Absen masuk di tujuan terlebih dahulu',409);
-  if(mode==='IN_OUT'&&!stop.attendances.some(a=>a.type==='OUT'))throw new AppError('Kirim hasil melalui absen keluar tujuan',409);
+  const missingOut=mode==='IN_OUT'&&!stop.attendances.some(a=>a.type==='OUT');
+  if(missingOut){
+    const allowed=stop.deliveryRoute.policySnapshot?stop.deliveryRoute.policySnapshot.values?.DELIVERY_ALLOW_RESULT_WITHOUT_OUT===true:await processValue(stop.deliveryRoute,'DELIVERY_ALLOW_RESULT_WITHOUT_OUT',false);
+    if(!allowed)throw new AppError('Kirim hasil melalui absen keluar tujuan',409);
+    if(typeof data.missingCheckoutReason!=='string'||data.missingCheckoutReason.trim().length<5||data.missingCheckoutReason.trim().length>2000)throw new AppError('Alasan hasil tanpa absen keluar wajib diisi 5–2000 karakter',400);
+  }
   const {status,rejectReason,notes,photoUrl}=data;
   if(!terminalStop(status))throw new AppError('Hasil tidak valid',400);
   if(await processValue(stop.deliveryRoute,'DELIVERY_REQUIRE_PHOTO',true) && !photoUrl)throw new AppError('Foto bukti pengiriman wajib',400);
@@ -32,6 +37,7 @@ export async function recordStopResult(tx,stopId,data,driverId) {
   const changed=await tx.deliveryStop.updateMany({where:{id:stopId,status:'PENDING'},data:{status,rejectReason:status==='DELIVERED'?null:rejectReason.trim(),rejectedCartons,rejectedItems,rejectedInvoices,notes,photoUrl,completedAt:new Date()}});
   if(!changed.count)throw new AppError('Hasil sudah disimpan',409);
   await flagIncompleteDestinations(tx,stop,incomplete,driverId);
+  if(missingOut)await flagMissingCheckout(tx,stop,data.missingCheckoutReason.trim(),driverId);
   if(status!=='DELIVERED')await tx.deliveryIssue.create({data:{routeId:stop.deliveryRouteId,packingListId:stop.packingListId,stopId,title:'Penolakan pengiriman / tindak lanjut pelanggan',reason:rejectReason.trim(),ownerId:stop.deliveryRoute.createdById,createdById:driverId,dueAt:new Date(Date.now()+(await getDynamicConfig('DELIVERY_ISSUE_DEFAULT_HOURS',24))*3600000),history:[{action:'AUTO_REJECTION',actorId:driverId,at:new Date().toISOString()}]}});
   await reconcilePackingInvoices(tx,stop.packingListId);
   const stops=await tx.deliveryStop.findMany({where:{deliveryRouteId:stop.deliveryRouteId}});

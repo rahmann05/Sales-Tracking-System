@@ -36,3 +36,14 @@ export async function flagIncompleteDestinations(tx,stop,incomplete,driverId){
   await policyNotification(tx,{data:{userId:owner.id,type:'DELIVERY_EXCEPTION',title:`Hasil tujuan belum lengkap · ${route.code}`,message:reason,payload:{routeId:route.id,stopId:previous.id,issueId:issue.id,dueAt:dueAt.toISOString()}}});
  }
 }
+
+export async function flagMissingCheckout(tx,stop,reason,driverId){
+ const route=stop.deliveryRoute;
+ const owner=await tx.user.findFirst({where:{id:route.createdById,deletedAt:null,role:{in:['ADMIN','KEPALA_GUDANG']}}})
+  ||await tx.user.findFirst({where:{deletedAt:null,role:{in:['ADMIN','KEPALA_GUDANG']}},orderBy:{id:'asc'}});
+ if(!owner)throw new AppError('Tidak ada Admin atau petugas gudang aktif untuk memeriksa bukti keluar yang terlewat',409);
+ const dueAt=new Date(Date.now()+(await processValue(route,'DELIVERY_ISSUE_DEFAULT_HOURS',24))*3600000);
+ const issue=await tx.deliveryIssue.create({data:{routeId:route.id,stopId:stop.id,packingListId:stop.packingListId,title:'Hasil pengiriman dicatat tanpa bukti keluar',reason,ownerId:owner.id,createdById:driverId,dueAt,history:[{action:'RESULT_WITHOUT_CHECKOUT',actorId:driverId,at:new Date().toISOString(),reason}]}});
+ await policyNotification(tx,{data:{userId:owner.id,type:'DELIVERY_EXCEPTION',title:`Bukti keluar terlewat · ${route.code}`,message:reason,payload:{routeId:route.id,stopId:stop.id,issueId:issue.id,dueAt:dueAt.toISOString()}}});
+ return issue;
+}

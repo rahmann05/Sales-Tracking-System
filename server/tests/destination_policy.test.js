@@ -2,6 +2,19 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {deliveryStopGate} from '../../shared/driver-workspace.mjs';
 import {assertDestinationStart,flagIncompleteDestinations} from '../src/modules/delivery/services/destination-policy.service.js';
+import {updateStopStatusSchema} from '../src/modules/delivery/delivery.schema.js';
+import {parameterGuidance,workflowSummary} from '../../shared/policy-guidance.mjs';
+
+test('checkout exception reason survives API validation and applies only to mandatory checkout mode',()=>{
+ const request={params:{id:'stop'},body:{status:'DELIVERED',missingCheckoutReason:'  GPS ponsel terputus  '}};
+ assert.equal(updateStopStatusSchema.parse(request).body.missingCheckoutReason,'GPS ponsel terputus');
+ for(const reason of ['x','x'.repeat(2001)])assert.equal(updateStopStatusSchema.safeParse({...request,body:{...request.body,missingCheckoutReason:reason}}).success,false);
+ for(const mode of ['IN_ONLY','OPTIONAL'])assert.ok(parameterGuidance('DELIVERY_ALLOW_RESULT_WITHOUT_OUT',{DELIVERY_ATTENDANCE_MODE:mode}));
+ assert.equal(parameterGuidance('DELIVERY_ALLOW_RESULT_WITHOUT_OUT',{DELIVERY_ATTENDANCE_MODE:'IN_OUT'}),'');
+ const values={DELIVERY_ATTENDANCE_MODE:'IN_OUT',DELIVERY_ALLOW_RESULT_WITHOUT_OUT:true};
+ assert.ok(workflowSummary(values,'SUPIR').steps.some(s=>s.includes('alasan wajib dan tugas pemeriksaan gudang')));
+ assert.ok(!workflowSummary({...values,DELIVERY_ALLOW_RESULT_WITHOUT_OUT:false},'SUPIR').steps.some(s=>s.includes('jika OUT tidak tersedia')));
+});
 
 const stops=()=>[1,2,3].map(sequence=>({id:`s${sequence}`,sequence,status:'PENDING',outlet:{name:`Toko ${sequence}`},attendances:[]}));
 test('destination order blocks skipping, but completing an already started destination always remains available',()=>{

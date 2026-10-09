@@ -4,8 +4,11 @@ import { generateDailyPjps } from '../modules/pjp/pjp.service.js';
 import { runAttentionEscalation } from '../modules/attention/attention-escalation.service.js';
 import { schedulerMonitor, nextDailyPjp } from './scheduler-health.js';
 import {dispatchNotifications} from '../modules/notifications/services/notification-delivery.service.js';
+import {purgeExpiredLocations} from '../modules/users/services/location-retention.service.js';
 
 export const initScheduler = () => {
+  schedulerMonitor.register('GPS_RETENTION','Masa simpan telemetri GPS',Date.now()+3600000,3600000);
+  cron.schedule('0 * * * *',()=>{schedulerMonitor.run('GPS_RETENTION',purgeExpiredLocations,now=>now+3600000).catch(()=>console.error('[Scheduler]: GPS telemetry retention scan failed.'));},{timezone:'Asia/Jakarta'});
   schedulerMonitor.register('NOTIFICATIONS','Siaran notifikasi setelah transaksi',Date.now()+5000,15000);
   setInterval(()=>{schedulerMonitor.run('NOTIFICATIONS',dispatchNotifications,now=>now+5000).catch(()=>console.error('[Scheduler]: Notification outbox scan failed.'));},5000).unref();
   schedulerMonitor.register('SLA', 'Pemindaian eskalasi SLA', Date.now() + 5 * 60000, 5 * 60000);

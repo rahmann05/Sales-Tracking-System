@@ -2,14 +2,14 @@ import { Router } from 'express';
 import * as userController from './users.controller.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createUserSchema, updateUserSchema, updatePasswordSchema, updatePermissionsSchema } from './users.schema.js';
+import { createUserSchema, updateUserSchema, updatePasswordSchema, updatePermissionsSchema,salesLocationSchema } from './users.schema.js';
 
 const router = Router();
 
 router.use(authenticate);
 
 // Real-time GPS Location Tracking
-router.post('/location', userController.updateLocation);
+router.post('/location',authorize('SALES'),validate(salesLocationSchema),userController.updateLocation);
 router.get('/live-locations', authorize('ADMIN', 'SUPERVISOR', 'SALES'), userController.getLiveLocations);
 
 // User CRUD

@@ -92,6 +92,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
       </div>
 
       {/* Action Buttons with Mobile-Friendly >= 48px Touch Targets */}
+      {isCompleted&&policy.DELIVERY_ATTENDANCE_MODE==='IN_OUT'&&!stop.attendances?.some(a=>a.type==='OUT')&&<p className="mx-4 mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Hasil barang sudah dicatat. Bukti presensi keluar tidak tersedia; periksa tindak lanjut gudang pada trip ini.</p>}
       {stop.status==='PENDING' && (
         <div className="px-4 pb-4 space-y-2.5">
           {/* Navigation button (min 48px) */}

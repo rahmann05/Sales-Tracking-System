@@ -117,6 +117,6 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
       </div>
     </fieldset>
     {error&&<p role="alert" className="app-error">{error}</p>}
-    <div className="sales-modal-actions"><p className="sales-note">{!pending&&!featurePolicy.canStart?featurePolicy.reason:approval.mode==='NONE'?'Order diterima sesuai aturan dan dapat diproses tanpa pemeriksaan manusia.':'Order dikirim untuk pemeriksaan sebelum diproses.'}</p><button type="button" onClick={handleSubmit} disabled={saving||!orderItems.length||!pending&&!featurePolicy.canStart} title={!pending?featurePolicy.reason:undefined} className="app-button app-button-primary"><LuSend/>{saving?'Mengirim…':pending?'Kirim ulang order yang sama':approval.mode==='NONE'?'Kirim order':'Kirim order untuk diperiksa'}</button></div>
+    <div className="sales-modal-actions"><p className="sales-note">{pending?'Kirim ulang isian yang sama untuk memeriksa hasil pengiriman sebelumnya.':!featurePolicy.canStart?featurePolicy.reason:approval.mode==='NONE'?'Order diterima sesuai aturan dan dapat diproses tanpa pemeriksaan manusia.':'Order dikirim untuk pemeriksaan sebelum diproses.'}</p><button type="button" onClick={handleSubmit} disabled={saving||!orderItems.length||!pending&&!featurePolicy.canStart} title={!pending?featurePolicy.reason:undefined} className="app-button app-button-primary"><LuSend/>{saving?'Mengirim…':pending?'Kirim ulang order yang sama':approval.mode==='NONE'?'Kirim order':'Kirim order untuk diperiksa'}</button></div>
   </SalesDialog>;
 };

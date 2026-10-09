@@ -59,6 +59,52 @@ try{
  for(const stop of direct.stops)await run(()=>updateStopStatus(stop.id,{status:'DELIVERED'},driver.id));
  eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:{in:direct.stops.map(s=>s.id)}}}),0);
  eq((await prisma.deliveryRoute.findUnique({where:{id:direct.id}})).status,'COMPLETED');
+ // Missing checkout is an explicit frozen exception, never a synthetic OUT.
+ const noException=await makeRoute({DELIVERY_ATTENDANCE_MODE:'IN_OUT',DELIVERY_ALLOW_RESULT_WITHOUT_OUT:false});
+ await enter(noException.stops[0]);
+ await rejects(()=>run(()=>updateStopStatus(noException.stops[0].id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},driver.id)),409);
+ eq(await prisma.deliveryIssue.count({where:{routeId:noException.id}}),0);
+ eq((await prisma.deliveryStop.findUnique({where:{id:noException.stops[0].id}})).status,'PENDING');
+ const exception=await makeRoute({DELIVERY_ATTENDANCE_MODE:'IN_OUT',DELIVERY_ALLOW_RESULT_WITHOUT_OUT:true,DELIVERY_STOP_ORDER:'SEQUENTIAL'}),[first,...rest]=exception.stops;
+ await rejects(()=>run(()=>updateStopStatus(first.id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},driver.id)),409);
+ await enter(first);
+ await rejects(()=>run(()=>updateStopStatus(first.id,{status:'DELIVERED'},driver.id)),400);
+ await rejects(()=>run(()=>updateStopStatus(first.id,{status:'DELIVERED',missingCheckoutReason:'x'},driver.id)),400);
+ await rejects(()=>run(()=>updateStopStatus(first.id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},foreign.id)),403);
+ await rejects(()=>run(()=>updateStopStatus(first.id,{status:'PARTIAL_REJECT',missingCheckoutReason:'GPS ponsel berhenti'},driver.id)),400);
+ eq(await prisma.deliveryIssue.count({where:{routeId:exception.id}}),0);
+ eq((await prisma.deliveryStop.findUnique({where:{id:first.id}})).status,'PENDING');
+ await run(()=>updateStopStatus(first.id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},driver.id));
+ eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:first.id,type:'OUT'}}),0);
+ eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:first.id,type:'IN'}}),1);
+ let missingIssue=await prisma.deliveryIssue.findMany({where:{routeId:exception.id}});
+ eq(missingIssue.length,1);eq(missingIssue[0].ownerId,warehouse.id);eq(missingIssue[0].reason,'GPS ponsel berhenti');eq(missingIssue[0].history[0].action,'RESULT_WITHOUT_CHECKOUT');
+ await rejects(()=>run(()=>updateStopStatus(first.id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},driver.id)),409);
+ eq(await prisma.deliveryIssue.count({where:{routeId:exception.id}}),1);
+ for(const stop of rest){await enter(stop);await finish(stop);}
+ eq((await prisma.deliveryRoute.findUnique({where:{id:exception.id}})).status,'COMPLETED');
+ await run(()=>routeAction(exception.id,{action:'RETURN',note:'Kembali dengan hasil dan pengecualian bukti'},driver));
+ await rejects(()=>run(()=>routeAction(exception.id,{action:'CLOSE',note:'Bukti belum diperiksa'},warehouse)),409);
+ await rejects(()=>run(()=>resolveIssue(missingIssue[0].id,'Driver mengakui sendiri',driver)),403);
+ await run(()=>resolveIssue(missingIssue[0].id,'Gudang mengonfirmasi penerimaan, GPS Driver terputus',warehouse));
+ await run(()=>routeAction(exception.id,{action:'CLOSE',note:'Hasil dan pengecualian telah diperiksa'},warehouse));
+ eq((await prisma.deliveryIssue.findUnique({where:{id:missingIssue[0].id}})).status,'DONE');
+ // Old trip snapshots do not inherit a newly enabled escape hatch.
+ const legacy=await makeRoute({DELIVERY_ATTENDANCE_MODE:'IN_OUT'});
+ const oldValues={...legacy.policySnapshot.values};delete oldValues.DELIVERY_ALLOW_RESULT_WITHOUT_OUT;
+ await prisma.deliveryRoute.update({where:{id:legacy.id},data:{policySnapshot:{values:oldValues}}});
+ await enter(legacy.stops[0]);
+ await rejects(()=>withPolicy({values:{...CONFIG_DEFAULTS,DELIVERY_ALLOW_RESULT_WITHOUT_OUT:true},versions:[]},()=>updateStopStatus(legacy.stops[0].id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},driver.id)),409);
+ const photographed=await makeRoute({DELIVERY_ALLOW_RESULT_WITHOUT_OUT:true,DELIVERY_REQUIRE_PHOTO:true});
+ const photographedStop=photographed.stops[0];
+ await run(()=>submitDriverAttendance(photographedStop.id,{type:'IN',photoUrl:'fixture-arrival.jpg'},driver.id));
+ await rejects(()=>run(()=>updateStopStatus(photographedStop.id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},driver.id)),400);
+ eq(await prisma.deliveryIssue.count({where:{routeId:photographed.id}}),0);
+ const results=await Promise.allSettled([1,2].map(()=>run(()=>updateStopStatus(photographedStop.id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti',photoUrl:'fixture-result.jpg'},driver.id))));
+ eq(results.filter(r=>r.status==='fulfilled').length,1);
+ eq(await prisma.deliveryIssue.count({where:{routeId:photographed.id}}),1);
+ eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:photographedStop.id,type:'OUT'}}),0);
+ eq((await prisma.deliveryStop.findUnique({where:{id:photographedStop.id}})).photoUrl,'fixture-result.jpg');
  console.log(`PASS ${checks} destination policy assertions; no published configurations changed.`);
 }finally{
  await prisma.deliveryIssue.deleteMany({where:{routeId:{in:routes}}});

@@ -236,6 +236,7 @@ model User {
   routeChangesHandled   RouteChangeRequest[] @relation("RouteChangeHandledBy")
   routeChangesApproved  RouteChangeRequest[] @relation("RouteChangeApprovedBy")
   notifications         Notification[]
+  salesLivePosition     SalesLivePosition?
   unlockRequestsCreated OutletUnlockRequest[] @relation("UnlockRequestedBy")
   unlockRequestsHandled OutletUnlockRequest[] @relation("UnlockHandledBy")
   ordersCreated         Order[]              @relation("OrderCreatedBy")
@@ -606,6 +607,22 @@ model NotificationOutbox {
   lastError String?
   createdAt DateTime @default(now())
   @@index([state,nextAttemptAt])
+}
+
+model SalesLivePosition {
+ userId String @id
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ latitude Float
+ longitude Float
+ accuracy Float?
+ speed Float?
+ heading Float?
+ battery Float?
+ observedAt DateTime?
+ receivedAt DateTime @default(now())
+ gpsEvidence Json
+ breadcrumbs Json @default("[]")
+ @@index([receivedAt])
 }
 
 model PjpTemplate {

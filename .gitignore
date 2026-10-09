@@ -43,3 +43,5 @@ IMPORT CUSTOMER PVMI CIMAHI.xlsx
 IMPORT NIK.xlsx
 DAILY CALL PVMI 21082026.xlsx
 scripts/
+# Local database backups
+.backups/

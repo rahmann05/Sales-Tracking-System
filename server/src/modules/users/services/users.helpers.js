@@ -25,8 +25,7 @@ export const USER_SELECT = {
   createdAt: true,
 };
 
-// Global in-memory cache for live GPS positions from sales device pings
-export const liveLocationsCache = new Map();
+
 
 
 export const ROLE_LABELS = {

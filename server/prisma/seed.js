@@ -1,30 +1,15 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { assertDemoDatabase, seedDate } from './seeds/context.js';
-import { seedMaster } from './seeds/master.js';
-import { seedLegacyStaff } from './seeds/legacy-staff.js';
-import { seedCoverage } from './seeds/coverage.js';
-import { seedSales } from './seeds/sales.js';
-import { seedStaff } from './seeds/staff.js';
-import { seedWarehouse } from './seeds/warehouse.js';
-const prisma = new PrismaClient();
-try {
-  assertDemoDatabase();
-  const dateKey = seedDate();
-  await prisma.$transaction(async db => {
-    const master = await seedMaster(db);
-    const cohorts=await seedCoverage(db,master,dateKey);
-    const plans = await seedSales(db, master, dateKey);
-    await seedStaff(db, master, plans, dateKey);
-    await seedWarehouse(db, master, dateKey);
-    await seedLegacyStaff(db,master,dateKey);
-    for(const cohort of cohorts){
-      const extraPlans=await seedSales(db,cohort,dateKey,cohort.namespace);
-      await seedStaff(db,cohort,extraPlans,dateKey,cohort.namespace);
-    }
-  }, {timeout:120000,maxWait:10000});
-  console.log(`Seed demo lengkap untuk ${dateKey}: 5 role, tim demo dan tim supervisor bawaan, kluster GT/MT terpisah, riwayat 14 hari, katalog, konfigurasi, PJP, approval, audit, packing, alokasi armada dan retur. Data lama, sandi, konfigurasi dan status tidak ditimpa.`);
-} catch (error) {
-  console.error(error.message);
-  process.exitCode=1;
-} finally { await prisma.$disconnect(); }
+import {PrismaClient} from '@prisma/client';
+import {assertDemoDatabase,seedDate} from './seeds/context.js';
+import {seedBelfoods} from './belfoods/seed.js';
+const prisma=new PrismaClient();
+try{
+ assertDemoDatabase();
+ const previous=await prisma.systemConfig.findUnique({where:{key:'BELFOODS_UAT_SEED'}});
+ const date=process.env.SEED_DATE||previous?.value?.date||seedDate();
+ if(previous?.value?.date&&previous.value.date!==date)throw new Error('Seed ini memakai tanggal uji stabil. Gunakan reset bercadangan untuk mengganti tanggal, bukan menggandakan dataset.');
+ process.env.SEED_DATE=date;seedDate();
+ if(!previous&&await prisma.user.count())throw new Error('Database masih berisi data lama. Gunakan prisma:seed:reset dengan target database eksplisit dan cadangan otomatis.');
+ console.log(JSON.stringify(await prisma.$transaction(db=>seedBelfoods(db,date),{timeout:120000,maxWait:10000})));
+ console.log('Seed Belfoods siap. Eksekusi ulang mempertahankan sandi, konfigurasi, keputusan dan data yang diedit pengguna.');
+}catch(error){console.error(error.message);process.exitCode=1;}finally{await prisma.$disconnect();}

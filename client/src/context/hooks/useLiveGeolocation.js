@@ -33,7 +33,7 @@ export const useLiveGeolocation = (user,settings={},shiftActive=false,visitActiv
           const loc={lat,lng};
           localStorage.setItem('user_gps_location',JSON.stringify(loc));
           window.dispatchEvent(new CustomEvent('gps_location_updated',{detail:loc}));
-          usersApi.updateLocation({latitude:lat,longitude:lng,accuracy:pos.coords.accuracy,observedAt:new Date(pos.timestamp).toISOString(),speed:pos.coords.speed || 0,heading:pos.coords.heading || 0}).catch(()=>{});
+          usersApi.updateLocation({latitude:lat,longitude:lng,accuracy:pos.coords.accuracy,observedAt:new Date(pos.timestamp).toISOString(),speed:pos.coords.speed??null,heading:pos.coords.heading??null}).catch(()=>{});
         }
         // Skip re-rendering if position didn't meaningfully change (> 5 meters)
         if (

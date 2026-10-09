@@ -1,3 +1,4 @@
+import {locationExpired} from './location-retention.mjs';
 export const terminalStop = status => ['DELIVERED', 'REJECTED', 'PARTIAL_REJECT'].includes(status);
 export const acceptedQuantity = (stop, lineId) => terminalStop(stop.status)
   ? Math.max(0, (stop.allocatedItems || []).filter(i => i.lineId === lineId).reduce((n, i) => n + i.quantity, 0) - (stop.rejectedItems || []).filter(i => i.lineId === lineId).reduce((n, i) => n + i.quantity, 0)) : 0;
@@ -29,7 +30,7 @@ export function routeProgress(route) {
 export function routeLocation(route, now = Date.now(),options={}) {
   const attendances = (route.stops || []).flatMap(stop => (stop.attendances || []).map(a => ({ ...a, outletName: stop.outlet?.name, source: 'ATTENDANCE', observedAt: a.timestamp })))
     .filter(a => Number.isFinite(a.latitude) && Number.isFinite(a.longitude)).sort((a, b) => new Date(b.observedAt) - new Date(a.observedAt));
-  const live = route.position;
+  const live = locationExpired(route.position,options.retentionHours,now)?null:route.position;
   const liveNewer = live && (!attendances[0] || new Date(live.observedAt) > new Date(attendances[0].observedAt));
   const location = liveNewer ? { ...live, source: 'GPS' } : attendances[0];
   if (!location) return null;

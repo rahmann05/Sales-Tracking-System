@@ -1,0 +1,259 @@
+{
+  "sourceRows": 443,
+  "uniqueOutletCodes": 443,
+  "physicalSales": 5,
+  "callplanVariants": 7,
+  "salesCounts": {
+    "SLD539 YULI": 49,
+    "SLD517 YATI": 24,
+    "SLD516 (DADAN) W1": 82,
+    "SLD516 (DADAN) W2": 78,
+    "SLD515 { MT PURI}": 64,
+    "SLD514 (CAHYA) W1": 73,
+    "SLD514 (CAHYA) W2": 73
+  },
+  "dayCounts": {
+    "1": 63,
+    "2": 73,
+    "3": 75,
+    "4": 76,
+    "5": 83,
+    "6": 73
+  },
+  "confidenceCounts": {
+    "high": 88,
+    "medium": 11,
+    "low": 7,
+    "unknown": 326,
+    "none": 11
+  },
+  "declaredCountsMatch": true,
+  "excelRows": 444,
+  "excelUnscheduledRows": [
+    {
+      "callplanId": "SLD514W2",
+      "sales": "SLD514 (CAHYA) W2",
+      "day": null,
+      "customer_id": "BFI2168878",
+      "customer_name": "TOKO  INTIK KURIH",
+      "address": "GANG PANYAWEYAN KEC CIMAHI SELATAN SD SMP SMA PLUS Darusurur ",
+      "latitude": -6.9069391,
+      "longitude": 107.5364035,
+      "geocode_confidence": "medium",
+      "catatan_validasi": "Toko Intik Kurih, Gang Panyaweyan dekat SMP Darussurur Cimahi Selatan - proxy dari lokasi sekolah, PERLU VERIFIKASI",
+      "sourceRow": 440
+    }
+  ],
+  "excelScheduledRowsMatchConvertedJson": false,
+  "excelOnlyScheduledRows": 24,
+  "jsonOnlyRows": 24,
+  "excelScheduledBusinessFieldsMatch": true,
+  "perSalesMatchesConvertedJson": true,
+  "rootJsonMatches": true,
+  "mapRows": 443,
+  "mapMatchesSource": true,
+  "reusedCallplanIds": {
+    "SLD534ALLWEEK": [
+      "SLD517 YATI",
+      "SLD539 YULI"
+    ]
+  },
+  "sharedAcrossPhysicalSales": 0,
+  "conflictingOutletFields": [],
+  "sharedCoordinateGroups": 2,
+  "invalidCoordinates": 8,
+  "coordinatesOutsideWestJava": 15,
+  "cache": {
+    "rows": 443,
+    "googlePlacesResults": 0,
+    "googleReverseResults": 0,
+    "osmResults": 428,
+    "missingPlacesGivenFullDistanceScore": 443,
+    "scoreDistribution": {
+      "27.5": 300,
+      "33.5": 1,
+      "31.8": 1,
+      "33.0": 2,
+      "34.2": 2,
+      "50.0": 33,
+      "30.8": 1,
+      "32.0": 2,
+      "30.0": 7,
+      "42.5": 11,
+      "38.0": 1,
+      "65.0": 40,
+      "41.6": 1,
+      "56.3": 1,
+      "57.5": 1,
+      "55.6": 2,
+      "32.8": 1,
+      "36.2": 1,
+      "34.6": 1,
+      "57.1": 1,
+      "56.0": 1,
+      "55.0": 4,
+      "35.0": 3,
+      "31.1": 1,
+      "32.5": 2,
+      "38.4": 1,
+      "33.1": 1,
+      "32.2": 1,
+      "31.6": 1,
+      "32.1": 1,
+      "35.7": 1,
+      "40.0": 9,
+      "54.7": 2,
+      "61.4": 2,
+      "55.8": 1,
+      "58.8": 1,
+      "57.8": 1
+    }
+  },
+  "files": [
+    {
+      "path": "Analisis/admin-preview.html",
+      "bytes": 291,
+      "sha256": "2c63273307a80c2643f882e65abb075e7c1ec0f74082373e300afb44f4228905"
+    },
+    {
+      "path": "Analisis/ADMIN_UI_REDESIGN.md",
+      "bytes": 2551,
+      "sha256": "d435b91de7ca7500aecafd95db0458403bce42026e5d053f19ebb938f797c0da"
+    },
+    {
+      "path": "Analisis/AUDIT-GUDANG-2026-10-08.md",
+      "bytes": 18371,
+      "sha256": "821d8ef9cbaa6f3d33987beded4c9b809a9ec07b5e76cee354d2673e012fba29"
+    },
+    {
+      "path": "Analisis/AUDIT-SISTEM-2026-10-08.md",
+      "bytes": 18809,
+      "sha256": "debdcad336a98354f5566cfa782f72de15e9951967900f8db25114797296b540"
+    },
+    {
+      "path": "Analisis/BUSINESS_PROCESS_REVIEW.md",
+      "bytes": 11791,
+      "sha256": "9e6fbccd622249d1d06e080f2c8fe66761224c3676f88c0d9093cda392eb9d10"
+    },
+    {
+      "path": "Analisis/DELIVERY-CONTROL-IMPLEMENTATION.md",
+      "bytes": 6738,
+      "sha256": "0f2cf6ae1393409632ae6e678908bf569bd15a31079caf89af49b434c2661e1e"
+    },
+    {
+      "path": "Analisis/EDA_Kunjungan_Toko_Belfoods.ipynb",
+      "bytes": 1404693,
+      "sha256": "37a638b9598179dc1220b50b331e93a3dbd38f40bcde66ea838a0ed0b93145df"
+    },
+    {
+      "path": "Analisis/KUNJUNGAN_TOKO_BELFOODS_CONVERTED.json",
+      "bytes": 166927,
+      "sha256": "0af995d344455d67e7b7a55c7c040068f0a0fc6ba157689d0d2cd986c6b03abe"
+    },
+    {
+      "path": "Analisis/KUNJUNGAN_TOKO_BELFOODS_VALIDATED (1).xlsx",
+      "bytes": 58307,
+      "sha256": "d3ea976784ef274d60766657d389edad528c30a8083338c7793e8d9ab0869ee0"
+    },
+    {
+      "path": "Analisis/map_data.json",
+      "bytes": 133793,
+      "sha256": "c56c4dd5a54cf3bcba1ca8e12726034657dc723e07dec83a1e735bdb6fad3a98"
+    },
+    {
+      "path": "Analisis/per_sales/SLD514_(CAHYA)_W1.json",
+      "bytes": 23908,
+      "sha256": "4b6fe0423d955c5c4131fd875d73a87678da8772c148fa777fd42cb452cc2a89"
+    },
+    {
+      "path": "Analisis/per_sales/SLD514_(CAHYA)_W2.json",
+      "bytes": 24199,
+      "sha256": "a42e6da747141bd85905e24d7df865dc4b19b8d06320c215c54f753f3e87ed60"
+    },
+    {
+      "path": "Analisis/per_sales/SLD515_MT_PURI.json",
+      "bytes": 24059,
+      "sha256": "2053109f79726e127c01d90c3970e08a1d0269f1e35e64de26ca83599acf287f"
+    },
+    {
+      "path": "Analisis/per_sales/SLD516_(DADAN)_W1.json",
+      "bytes": 27848,
+      "sha256": "fd0a799ae525a3d5617948e989353ed8a3daf4da2ad9b20a3099bcee20e29dff"
+    },
+    {
+      "path": "Analisis/per_sales/SLD516_(DADAN)_W2.json",
+      "bytes": 27481,
+      "sha256": "3724b38c4a5c5226244701d9de2b15d27ff5c20f9c8959ae47d74bcf0f94ebff"
+    },
+    {
+      "path": "Analisis/per_sales/SLD517_YATI.json",
+      "bytes": 10381,
+      "sha256": "aff2f9595bd1537239f660cdd7437ba5981a35c8a99215f415aea6c4698d6e89"
+    },
+    {
+      "path": "Analisis/per_sales/SLD539_YULI.json",
+      "bytes": 20285,
+      "sha256": "7a0bf6d886c161a99f6144833f3b93210912c4e8ceb162337ec46813eef56d49"
+    },
+    {
+      "path": "Analisis/peta_heatmap.html",
+      "bytes": 16500,
+      "sha256": "5757665b9a8cc176bbb1077f69a4f55f9cf1beb8f623f0b2bd0da7cea459296a"
+    },
+    {
+      "path": "Analisis/peta_interaktif.html",
+      "bytes": 5722,
+      "sha256": "4c2bae01f706372618c05375de0373b1dd1dfcc77c5175e6b1d05ee438ae9e6d"
+    },
+    {
+      "path": "Analisis/peta_semua_outlet.html",
+      "bytes": 496887,
+      "sha256": "03be41e4e5db5999bcb30dbc2bc50994473ec4f5d7ac48f61059bd3b8d566c9f"
+    },
+    {
+      "path": "Analisis/peta_validasi_outlet.html",
+      "bytes": 152225,
+      "sha256": "982d5d104eb6cb9b079d9ef49d36da59f9e2163518f760d54a144433163fe311"
+    },
+    {
+      "path": "Analisis/REFACTOR_PLAN.md",
+      "bytes": 11230,
+      "sha256": "fa9343d057b16ae43972117761c7f8762452dde87ecf9915af415926d794d83f"
+    },
+    {
+      "path": "Analisis/SALES_UI_REDESIGN.md",
+      "bytes": 3642,
+      "sha256": "2cbac23104bb60de25e0d6c2e14f0ce3c0d4e751f12c22371ed5f44af457fd2b"
+    },
+    {
+      "path": "Analisis/SUPERVISOR_UI_REDESIGN.md",
+      "bytes": 4052,
+      "sha256": "7d05a28a9246d59e57686bdbbe0423a2a2a4d162e5fcaf90b3902e5a21beca0c"
+    },
+    {
+      "path": "Analisis/SUPERVISOR_UI_REDESIGN_PLAN.md",
+      "bytes": 17084,
+      "sha256": "8f4e54f26a4b718afdc7916cb810666c972ce5862e3d8c29a6b5e74aba5f7b97"
+    },
+    {
+      "path": "Analisis/Validasi_Outlet_Belfoods.ipynb",
+      "bytes": 657445,
+      "sha256": "5949d5767452e186f214188e24aa59ded7fe86606d60ffa846520fee0be6bc47"
+    },
+    {
+      "path": "Analisis/validation_cache.csv",
+      "bytes": 126184,
+      "sha256": "25cbdae1423871b0ed2fe5d00956d83a5c511f496b10b8ff891840c7712216e0"
+    },
+    {
+      "path": "Analisis/vite.admin-preview.config.js",
+      "bytes": 371,
+      "sha256": "a81b1f0522c2e3ce89d5c01fc344c7ed3f1d6a008be0a004b5a68a7f6aea7522"
+    }
+  ],
+  "notes": [
+    "Source has no visit timestamps, delivery/order/payment records, product catalogue, verified contacts or frequency anchor dates.",
+    "Notebook and HTML outputs are derived, not independent evidence. Notebook code is not executed; embedded credentials are not imported.",
+    "W1/W2 are historical callplan variants. F1/F2/F4 in this application are 1/2/4-week intervals; source F4 does not establish an anchor date."
+  ]
+}

@@ -1,3 +1,4 @@
+import {locationExpired} from '../../../../../shared/location-retention.mjs';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {preparationStages,preparationReady} from '../../../../../shared/warehouse-policy.mjs';
 import {processValue} from '../../config/services/process-policy.service.js';
@@ -115,9 +116,9 @@ export async function operationsDashboard(date) {
   const packingQueue = documents.filter(p => p.status === 'DRAFT' || p.remainingCartons > 0);
   const commercialQueue=documents.filter(p=>p.status==='RELEASED'&&!['RECONCILED','IN_PROGRESS'].includes(p.commercial.status));
   const now = Date.now(),policies=new Map();
-  for(const driverId of new Set(routes.map(r=>r.driverId))){const actor=await prisma.user.findUnique({where:{id:driverId},select:{id:true,role:true,supervisorId:true}});const values=(await effectivePolicy(actor||{role:'SUPIR'})).values;policies.set(driverId,{liveSeconds:values.DRIVER_TRACKING_LIVE_SECONDS,enabled:values.DRIVER_TRACKING_MODE!=='OFF'});}
+  for(const driverId of new Set(routes.map(r=>r.driverId))){const actor=await prisma.user.findUnique({where:{id:driverId},select:{id:true,role:true,supervisorId:true}});const values=(await effectivePolicy(actor||{role:'SUPIR'})).values;policies.set(driverId,{retentionHours:values.TRACKING_LOCATION_RETENTION_HOURS,liveSeconds:values.DRIVER_TRACKING_LIVE_SECONDS,enabled:values.DRIVER_TRACKING_MODE!=='OFF'});}
   return { generatedAt: new Date().toISOString(), date: wibDateKey(date || new Date()), people, issues, orders: backlog, packings: packingQueue,commercialQueue,
-    routes: routes.map(r => ({ ...r, locationPolicy:policies.get(r.driverId),location: routeLocation(r,now,policies.get(r.driverId)), progress: routeProgress(r), alerts: [
+    routes: routes.map(r => ({ ...r,position:locationExpired(r.position,policies.get(r.driverId)?.retentionHours,now)?null:r.position, locationPolicy:policies.get(r.driverId),location: routeLocation(r,now,policies.get(r.driverId)), progress: routeProgress(r), alerts: [
       !r.cancelledAt && !r.closedAt && !r.departedAt && r.plannedStartAt && +new Date(r.plannedStartAt) < now ? 'Lewat jadwal berangkat' : null,
       !r.closedAt && !r.cancelledAt && r.plannedEndAt && +new Date(r.plannedEndAt) < now ? 'Lewat target selesai' : null,
       r.onHold ? 'Trip ditahan' : null,

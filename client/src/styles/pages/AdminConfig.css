@@ -143,7 +143,7 @@
 @media(max-width:650px){.policy-toolbar{align-items:stretch}.policy-role-filter{width:100%}.policy-mode-options label{min-height:64px}.policy-transfer .config-button{width:100%}}
 
 .policy-parameter-detail{font-size:12px;margin-top:10px;color:var(--on-surface-variant)}
-.policy-parameter-detail summary{cursor:pointer;min-height:32px;display:list-item;list-style:disclosure-closed inside}
+.policy-parameter-detail summary{cursor:pointer;min-height:32px;padding:6px 0;line-height:20px;box-sizing:border-box;display:list-item;list-style:disclosure-closed inside}
 .policy-parameter-detail[open] summary{list-style-type:disclosure-open}
 .config-page .policy-search input{min-width:0;border:0!important;border-radius:0;padding:0!important;background:transparent!important;box-shadow:none!important}
 
@@ -151,6 +151,6 @@
 .policy-scope-note>summary{padding:16px 20px;min-height:52px;cursor:pointer;font-size:13px;font-weight:600;list-style:disclosure-closed inside}.policy-scope-note[open]>summary{border-bottom:1px solid var(--border-glass);list-style-type:disclosure-open}.policy-scope-note h3{font-size:14px;font-weight:600;margin-bottom:5px}
 
 @media(min-width:900px){.policy-workspace .config-mode-row{grid-template-columns:1fr;gap:14px}.config-mode-row .policy-mode-options{grid-template-columns:repeat(3,minmax(0,1fr))}.config-mode-row .policy-mode-options label{align-content:center;min-height:78px}}
-@media(max-width:650px){.policy-workspace .policy-search input{font-size:16px}.policy-parameter-detail summary{min-height:44px}}
+@media(max-width:650px){.policy-workspace .policy-search input{font-size:16px}.policy-parameter-detail summary{min-height:44px;padding:12px 0}}
 
 .policy-delivery-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:16px 0}.policy-delivery-metrics>div{padding:14px;border:1px solid #e1e6ed;border-radius:10px}.policy-delivery-metrics dt{font-size:12px;color:#697280}.policy-delivery-metrics dd{margin:6px 0 0;font-size:24px;font-weight:600}.policy-delivery-failures ul{list-style:none;padding:0;margin:0}.policy-delivery-failures li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid #e1e6ed}.policy-delivery-failures li>div{min-width:0;overflow-wrap:anywhere}@media(max-width:600px){.policy-delivery-failures li{align-items:stretch;flex-direction:column}}
