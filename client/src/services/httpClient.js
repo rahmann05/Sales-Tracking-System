@@ -1,4 +1,4 @@
-const API_BASE='/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 const REQUEST_TIMEOUT_MS=30000;
 let sessionRevision=0;
 let refreshFlight=null;

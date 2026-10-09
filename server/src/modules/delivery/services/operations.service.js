@@ -1,6 +1,7 @@
 import {locationExpired} from '../../../../../shared/location-retention.mjs';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
-import {preparationStages,preparationReady} from '../../../../../shared/warehouse-policy.mjs';
+import {preparationStages,preparationReady,preparationOwnerProblem} from '../../../../../shared/warehouse-policy.mjs';
+import {readReviewDefinitions,reviewIdentity} from '../../config/services/approval-readiness.service.js';
 import {processValue} from '../../config/services/process-policy.service.js';
 import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
 import {DRIVER_EVIDENCE_KEYS} from '../../../../../shared/operational-policy.mjs';
@@ -20,7 +21,7 @@ export const routeEvent = (route, action, actor, detail) => [...(route.history |
 
 export async function routeAction(id, data, user, attempt=0) {
   return prisma.$transaction(async tx => {
-    if(['PICK','CHECK','LOAD','START','RESCHEDULE','RESUME'].includes(data.action))await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+    if(['ASSIGN_PREPARATION','PICK','CHECK','LOAD','START','RESCHEDULE','RESUME'].includes(data.action))await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`route:${id}`}))`;
     const r = await tx.deliveryRoute.findUnique({ where: { id }, include: operationsInclude });
     if (!r) throw new AppError('Rute tidak ditemukan', 404);
@@ -39,6 +40,7 @@ export async function routeAction(id, data, user, attempt=0) {
       if (r.preparation?.[action]) fail('Tahap sudah dikonfirmasi');
       const task=r.preparation?.tasks?.[action];
       if(task&&task.ownerId!==user.id&&user.role!=='ADMIN')throw new AppError('Tahap ini ditugaskan kepada petugas lain; ubah penugasan terlebih dahulu',403);
+      if(action==='PICK'&&await processValue(r,'WAREHOUSE_SEPARATE_CHECKER',false)&&r.preparation?.tasks?.CHECK?.ownerId===user.id)fail('Anda ditugaskan sebagai pemeriksa terpisah. Ganti PIC sebelum menyiapkan barang.');
       if (data.cartons !== r.totalCartons) fail('Jumlah aktual berbeda dari muatan. Catat masalah dan revisi alokasi sebelum konfirmasi');
       const required = r.stops.flatMap(s => s.allocatedItems.map(i => ({ key: `${s.id}:${i.lineId}`, quantity: i.quantity })));
       if (required.some(i => data.quantities?.[i.key] !== i.quantity) || Object.keys(data.quantities || {}).length !== required.length) fail('Konfirmasi jumlah aktual setiap barang sesuai muatan');
@@ -47,9 +49,13 @@ export async function routeAction(id, data, user, attempt=0) {
     } else if(action==='ASSIGN_PREPARATION'){
       if(r.status!=='DRAFT'||r.preparation?.[data.stage])fail('Penugasan hanya untuk tahap draft yang belum selesai');
       if(!stages.includes(data.stage)||!data.ownerId||!data.dueAt)throw new AppError('Tahap, PIC dan tenggat wajib',400);
+      const previous=r.preparation?.tasks?.[data.stage];
+      if((previous?.revision||0)!==(data.assignmentRevision??0))fail('Penugasan persiapan berubah. Muat ulang sebelum menyimpan.');
       const owner=await tx.user.findFirst({where:{id:data.ownerId,deletedAt:null,role:{in:['ADMIN','KEPALA_GUDANG']}}});
-      if(!owner)throw new AppError('Petugas gudang tidak aktif',400);
-      change.preparation={...r.preparation,tasks:{...r.preparation?.tasks,[data.stage]:{ownerId:owner.id,ownerName:owner.name,dueAt:data.dueAt,assignedAt:new Date().toISOString(),assignedBy:user.id,note}}};
+      const problem=preparationOwnerProblem(owner&&reviewIdentity(owner,await readReviewDefinitions(tx)),r,data.stage);
+      if(problem)throw new AppError(problem,400);
+      if(note.trim().length<5)throw new AppError('Alasan penugasan minimal 5 karakter',400);
+      change.preparation={...r.preparation,tasks:{...r.preparation?.tasks,[data.stage]:{revision:(previous?.revision||0)+1,ownerId:owner.id,ownerName:owner.name,dueAt:data.dueAt,assignedAt:new Date().toISOString(),assignedBy:user.id,note}}};
       await policyNotification(tx,{data:{userId:owner.id,type:'DELIVERY_PREPARATION',title:`Tugas persiapan ${r.code}`,message:note,payload:{routeId:id,stage:data.stage,dueAt:data.dueAt}}});
     } else if (action === 'START') {
       if (r.status !== 'READY' || !preparationReady(r) || r.onHold) fail('Loading harus selesai dan trip tidak ditahan');
@@ -109,7 +115,7 @@ export async function operationsDashboard(date) {
     prisma.packingList.findMany({ include: { outlet: true, invoices: true, deliveryStops: true }, orderBy: { createdAt: 'asc' } }),
     prisma.order.findMany({ where: { deletedAt: null, status: { in: ['APPROVED', 'PENDING_APPROVAL'] } }, include: { items: { include: { product: true } }, pjpStop: { include: { outlet: true } }, createdByUser: { select: { name: true } } }, orderBy: { createdAt: 'asc' } }),
     prisma.deliveryIssue.findMany({ where: { status: 'OPEN' }, orderBy: { dueAt: 'asc' } }),
-    prisma.user.findMany({ where: { deletedAt: null, role: { in: ['ADMIN', 'KEPALA_GUDANG', 'SUPIR'] } }, select: { id: true, name: true, role: true } }),
+    prisma.user.findMany({ where: { deletedAt: null, role: { in: ['ADMIN', 'KEPALA_GUDANG', 'SUPIR'] } }, select: { id: true, name: true, role: true,roleCode:true,permissions:true } }),
   ]);
   const enriched = orders.map(o => fulfillment(orderSnapshot(o), packings));
   const backlog = enriched.filter(o => !['FULFILLED','CLOSED_WITH_CANCELLATION'].includes(o.fulfillmentStatus));
@@ -118,7 +124,8 @@ export async function operationsDashboard(date) {
   const commercialQueue=documents.filter(p=>p.status==='RELEASED'&&!['RECONCILED','IN_PROGRESS'].includes(p.commercial.status));
   const now = Date.now(),policies=new Map();
   for(const driverId of new Set(routes.map(r=>r.driverId))){const actor=await prisma.user.findUnique({where:{id:driverId},select:{id:true,role:true,supervisorId:true}});const values=(await effectivePolicy(actor||{role:'SUPIR'})).values;policies.set(driverId,{retentionHours:values.TRACKING_LOCATION_RETENTION_HOURS,liveSeconds:values.DRIVER_TRACKING_LIVE_SECONDS,enabled:values.DRIVER_TRACKING_MODE!=='OFF'});}
-  return { generatedAt: new Date().toISOString(), date: wibDateKey(date || new Date()), people, issues, orders: backlog, packings: packingQueue,commercialQueue,
+  const definitions=await readReviewDefinitions(prisma),staff=people.map(person=>reviewIdentity(person,definitions));
+  return { generatedAt: new Date().toISOString(), date: wibDateKey(date || new Date()), people:staff, issues, orders: backlog, packings: packingQueue,commercialQueue,
     routes: routes.map(r => ({ ...r,position:locationExpired(r.position,policies.get(r.driverId)?.retentionHours,now)?null:r.position, locationPolicy:policies.get(r.driverId),location: routeLocation(r,now,policies.get(r.driverId)), progress: routeProgress(r), alerts: [
       !r.cancelledAt && !r.closedAt && !r.departedAt && r.plannedStartAt && +new Date(r.plannedStartAt) < now ? 'Lewat jadwal berangkat' : null,
       !r.closedAt && !r.cancelledAt && r.plannedEndAt && +new Date(r.plannedEndAt) < now ? 'Lewat target selesai' : null,

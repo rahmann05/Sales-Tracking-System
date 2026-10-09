@@ -106,7 +106,7 @@ export const updateStopStatusSchema = z.object({
 
 export const routeActionSchema = z.object({ body: z.object({
   action: z.enum(['ASSIGN_PREPARATION','PICK','CHECK','LOAD','START','RETURN','CLOSE','HOLD','RESUME','RESCHEDULE','CANCEL','LEGACY_ODOMETER']),
-  stage:z.enum(['PICK','CHECK','LOAD']).optional(),ownerId:z.string().uuid().optional(),dueAt:z.string().datetime().optional(),
+  stage:z.enum(['PICK','CHECK','LOAD']).optional(),ownerId:z.string().uuid().optional(),dueAt:z.string().datetime().optional(),assignmentRevision:z.number().int().nonnegative().optional(),
   note: z.string().trim().min(1).max(2000), cartons:z.number().int().nonnegative().optional(),
   quantities:z.record(z.number().int().nonnegative()).optional(), odometer:z.number().nonnegative().optional(), fuelLiters:z.number().nonnegative().optional(), documentsReturned:z.boolean().optional(),
   plannedStartAt:z.string().datetime().optional(), plannedEndAt:z.string().datetime().optional(), vehicleId:z.string().min(1).optional(), driverId:z.string().min(1).optional()

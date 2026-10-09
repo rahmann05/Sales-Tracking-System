@@ -1,6 +1,7 @@
 import {BUILT_IN_ROLES} from '../../roles/roles.constants.js';
 import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
 import {orderReviewerGaps,registrationReviewerGaps} from '../../../../../shared/approval-readiness.mjs';
+import {warehouseAssignmentGaps} from '../../../../../shared/warehouse-assignment-readiness.mjs';
 import {effectivePolicy} from './policy-resolver.service.js';
 import {AppError} from '../../../utils/errors.js';
 export const approvalReadinessDomains=values=>({
@@ -32,13 +33,14 @@ export async function publicationReadiness(db,{scope='GLOBAL',at=Date.now(),over
  return issues;
 }
 async function openWorkGaps(db,people){
- const [orders,registrations,trips]=await Promise.all([db.order.findMany({where:{deletedAt:null,status:'PENDING_APPROVAL'},select:{id:true,code:true,createdBy:true,history:true,policySnapshot:true}}),db.customerRegistration.findMany({where:{registrationStatus:{in:['SUBMITTED','SPV_APPROVED']}},select:{id:true,name:true,salesmanId:true,registrationStatus:true,policySnapshot:true}}),db.deliveryRoute.findMany({where:{closedAt:null,cancelledAt:null,returnedAt:null},select:{id:true,code:true,driverId:true,departedAt:true}})]);
+ const [orders,registrations,trips]=await Promise.all([db.order.findMany({where:{deletedAt:null,status:'PENDING_APPROVAL'},select:{id:true,code:true,createdBy:true,history:true,policySnapshot:true}}),db.customerRegistration.findMany({where:{registrationStatus:{in:['SUBMITTED','SPV_APPROVED']}},select:{id:true,name:true,salesmanId:true,registrationStatus:true,policySnapshot:true}}),db.deliveryRoute.findMany({where:{cancelledAt:null,OR:[{closedAt:null},{stops:{some:{rejectedCartons:{gt:0},returnReceivedAt:null}}}]},select:{id:true,code:true,driverId:true,departedAt:true,returnedAt:true,closedAt:true,status:true,preparation:true,policySnapshot:true,stops:{select:{id:true,rejectedCartons:true,returnInspection:true}}}})]);
  const issues=[];
  for(const [kind,rows,owner,check] of [['ORDER',orders,'createdBy',orderReviewerGaps],['REGISTRATION',registrations,'salesmanId',registrationReviewerGaps]])for(const record of rows){
   const applicant=people.find(p=>p.id===record[owner]),normalized={...record,policySnapshot:{...record.policySnapshot,values:{...CONFIG_DEFAULTS,...record.policySnapshot?.values}}};
   for(const role of check(normalized,applicant,people))issues.push({key:`${kind}:${record.id}:${role}`,message:`${kind==='ORDER'?'Order':'Pengajuan outlet'} ${record.code||record.name||record.id} memerlukan ${role} aktif dengan izin yang sesuai.`});
  }
- for(const trip of trips){const driver=people.find(p=>p.id===trip.driverId);if(!driver||driver.deletedAt||driver.role!=='SUPIR'||driver.permissions.can_access_driver_map===false)issues.push({key:`TRIP:${trip.id}:DRIVER`,message:`Trip ${trip.code} memerlukan Driver aktif dengan akses tugas. ${trip.departedAt?'Selesaikan perjalanan terlebih dahulu.':'Alihkan Driver sebelum menonaktifkan akun.'}`});}
+ for(const trip of trips.filter(r=>!r.returnedAt&&!r.closedAt)){const driver=people.find(p=>p.id===trip.driverId);if(!driver||driver.deletedAt||driver.role!=='SUPIR'||driver.permissions.can_access_driver_map===false)issues.push({key:`TRIP:${trip.id}:DRIVER`,message:`Trip ${trip.code} memerlukan Driver aktif dengan akses tugas. ${trip.departedAt?'Selesaikan perjalanan terlebih dahulu.':'Alihkan Driver sebelum menonaktifkan akun.'}`});}
+ issues.push(...warehouseAssignmentGaps(trips,people));
  return issues;
 }
 // Must hold approval:actors while changing accounts, teams or role permission templates.

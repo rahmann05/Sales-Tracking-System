@@ -41,7 +41,8 @@ export const MapDataProvider = ({ children }) => {
   useEffect(()=>{setOutlets([]);setClusters([]);setSalesUsers([]);if(!user?.id)setIsLoading(false);setError('');},[user?.id]);
   useEffect(()=>{
     if(!user?.id)return;
-    const socket=io({auth:{token:localStorage.getItem('token')},transports:['polling','websocket'],reconnectionAttempts:2,reconnectionDelay:8000,timeout:10000});
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? 'https://sinar-anugrah-production.up.railway.app' : undefined);
+    const socket = io(socketUrl, { auth: { token: localStorage.getItem('token') }, transports: ['polling', 'websocket'], reconnectionAttempts: 2, reconnectionDelay: 8000, timeout: 10000 });
     socket.on('cache:invalidate',event=>{if(event.dataType==='policies')window.dispatchEvent(new Event('policy:changed'));else if(hasFetchedRef.current)fetchAllData();});
     socket.on('notification',()=>window.dispatchEvent(new Event('notifications:changed')));
     socket.on('connect',()=>window.dispatchEvent(new Event('notifications:changed')));

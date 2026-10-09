@@ -5,7 +5,11 @@ dotenv.config();
 export const config = {
   port: process.env.PORT || 5000,
   env: process.env.NODE_ENV || 'development',
-  clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  clientOrigin: (!process.env.CLIENT_ORIGIN || process.env.CLIENT_ORIGIN === '*')
+    ? true
+    : process.env.CLIENT_ORIGIN.includes(',')
+      ? process.env.CLIENT_ORIGIN.split(',').map(s => s.trim())
+      : process.env.CLIENT_ORIGIN,
   jwtSecret: process.env.JWT_SECRET || 'super-secret-access-token-key',
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'super-secret-refresh-token-key',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',

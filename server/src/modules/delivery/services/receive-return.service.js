@@ -1,17 +1,18 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { resolveIdentity } from '../../roles/role-assignment.service.js';
+import { findWarehouseStaff } from './warehouse-staff.service.js';
 export const receiveReturn = (stopId, userId, data) => prisma.$transaction(async tx => {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+  const actor=await findWarehouseStaff(tx,userId,'can_monitor_delivery');
+  if(!actor)throw new AppError('Akun tidak aktif atau tidak memiliki izin pemeriksaan retur',403);
   const reference=await tx.deliveryStop.findUnique({where:{id:stopId},select:{deliveryRouteId:true}});
   if(!reference)throw new AppError('Pengiriman tidak ditemukan',404);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`route:${reference.deliveryRouteId}`}))`;
   const stop = await tx.deliveryStop.findUnique({ where: { id: stopId }, include: { deliveryRoute: true } });
   const task=stop?.deliveryRoute?.preparation?.returnTasks?.[stopId];
   if(task?.ownerId&&task.ownerId!==userId){
-    const actor=await tx.user.findUnique({where:{id:userId},select:{role:true,roleCode:true,permissions:true}});
-    const identity=actor&&await resolveIdentity(actor);
-    if(identity?.role!=='ADMIN')throw new AppError('Pemeriksaan retur ditugaskan kepada petugas lain. Alihkan penugasan terlebih dahulu.',403);
+    if(actor.role!=='ADMIN')throw new AppError('Pemeriksaan retur ditugaskan kepada petugas lain. Alihkan penugasan terlebih dahulu.',403);
   }
   if (!stop) throw new AppError('Pengiriman tidak ditemukan', 404);
   if (!['REJECTED','PARTIAL_REJECT'].includes(stop.status) || !(stop.rejectedCartons > 0)) throw new AppError('Tidak ada retur', 409);
@@ -28,4 +29,4 @@ export const receiveReturn = (stopId, userId, data) => prisma.$transaction(async
   if (!changed.count) throw new AppError('Retur sudah diproses; muat ulang',409);
   if(data.receivedCartons!==stop.rejectedCartons||data.reusableCartons!==data.receivedCartons||data.items.some(i=>i.reusable!==i.received || i.received!==expected.find(e=>e.lineId===i.lineId).quantity)) await tx.deliveryIssue.create({data:{routeId:stop.deliveryRouteId,stopId,packingListId:stop.packingListId,title:'Selisih / barang retur tidak layak kirim',reason:data.note,ownerId:stop.deliveryRoute.createdById,createdById:userId,dueAt:new Date(Date.now()+86400000)}});
   return tx.deliveryStop.findUnique({where:{id:stopId}});
-}, {isolationLevel:'Serializable'});
+}, {isolationLevel:'ReadCommitted'});

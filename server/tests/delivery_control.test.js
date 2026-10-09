@@ -84,7 +84,7 @@ test('GPS rejects other driver and trips already returned, with no writes',async
   await assert.rejects(()=>reportDriverLocation('r',{...p,observedAt:new Date(Date.now()-180000).toISOString()},'d'),/terlalu lama/);
 });
 test('retur validates physical counts before persisting',async t=>{
-  mockTx(t,{$executeRaw:async()=>{},deliveryStop:{findUnique:async()=>({deliveryRouteId:'r',status:'REJECTED',rejectedCartons:2,rejectedItems:[{lineId:'a',quantity:5}]})}});
+  mockTx(t,{$executeRaw:async()=>{},user:{findUnique:async()=>({id:'warehouse',role:'KEPALA_GUDANG'})},systemConfig:{findMany:async()=>[]},deliveryStop:{findUnique:async()=>({deliveryRouteId:'r',status:'REJECTED',rejectedCartons:2,rejectedItems:[{lineId:'a',quantity:5}]})}});
   await assert.rejects(()=>receiveReturn('s','warehouse',{note:'inspect',receivedCartons:3,reusableCartons:2,items:[]}),/fisik/);
   await assert.rejects(()=>receiveReturn('s','warehouse',{note:'inspect',receivedCartons:2,reusableCartons:2,items:[{lineId:'a',received:5,reusable:6}]}),/barang retur/);
   assert.equal(returnSchema.safeParse({body:{note:'inspect',receivedCartons:-1,reusableCartons:0,items:[]}}).success,false);

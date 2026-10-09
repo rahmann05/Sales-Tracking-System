@@ -13,6 +13,7 @@ export const seedDate = () => {
 export const at = (dateKey, time='08:00') => new Date(`${dateKey}T${time}:00+07:00`);
 export const offsetDate = (key, days) => new Date(new Date(`${key}T12:00:00Z`).getTime()+days*86400000).toISOString().slice(0,10);
 export function assertDemoDatabase() {
+  if (process.env.ALLOW_EXTERNAL_SEED === 'true' || process.env.ALLOW_PRODUCTION_SEED === 'true') return;
   const host = new URL(process.env.DATABASE_URL).hostname;
   if (!['localhost','127.0.0.1','[::1]'].includes(host)) throw new Error('Seed demo hanya diizinkan pada database lokal; tidak mengisi database eksternal dengan data contoh.');
 }

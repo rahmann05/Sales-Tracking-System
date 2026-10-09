@@ -20,7 +20,7 @@ export function OperationsWorkspace({section='routes'}={}){
   useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),15000);return()=>clearInterval(timer);},[]);
   const routes=React.useMemo(()=>(data?.routes||[]).map(r=>({...r,location:routeLocation(r,clock,r.locationPolicy||{enabled:false})})),[data,clock]),open=routes.filter(r=>!r.closedAt&&!r.cancelledAt),issues=data?.issues||[];
   const show=filter==='OPEN'?open:filter==='ATTENTION'?open.filter(r=>r.alerts.length||issues.some(i=>i.routeId===r.id)):routes;
-  const canManage=user.role==='ADMIN'||user.permissions?.can_manage_delivery_routes!==false;
+  const canManage=user.permissions?.can_manage_delivery_routes!==false;
   if(user.role==='KEPALA_GUDANG')return <WarehouseOperationsView {...{section,data,error,loading,refresh,filter,setFilter,date,setDate,routes,open,issues,canManage,setActiveTab}}/>;
   return <div className="workspace-page delivery-operations-workspace space-y-5"><header className="admin-page-heading"><div><h1>Pusat kendali pengiriman</h1><p>Order, persiapan gudang, perjalanan dan tindak lanjut sampai tuntas.</p></div><button className="admin-button" disabled={loading} onClick={refresh}>{loading?'Memperbarui…':'Perbarui data'}</button></header>
     <p role="status" className="text-sm">{error?'Data gagal diperbarui — tampilan terakhir mungkin sudah lama.':data?'Pembaruan otomatis setiap 30 detik.':'Memuat antrean…'} Terakhir berhasil: {stamp(data?.generatedAt)}</p>{error&&<p role="alert" className="p-3 border border-red-500 rounded-xl text-red-600">{error}</p>}
