@@ -7,6 +7,7 @@ import { prisma } from '../../../config/prisma.js';
 import {freezeOpenWork} from './process-policy.service.js';
 import {publicationReadiness} from './approval-readiness.service.js';
 import { invalidateConfigCache } from './dynamic-config.service.js';
+import {broadcastCacheInvalidation} from '../../../config/socket.js';
 const auditValue=(key,value)=>key==='MAPS_API_KEY'?'[REDACTED]':value;
 export const saveConfigs=async(configMap,actor={})=>{
   configMap=validateConfigMap(configMap);
@@ -29,5 +30,5 @@ export const saveConfigs=async(configMap,actor={})=>{
     }
     return Object.fromEntries((await tx.systemConfig.findMany({where,orderBy:{key:'asc'}})).filter(row=>!row.key.startsWith('_')).map(row=>[row.key,row.value]));
   },{timeout:15000});
-  invalidateConfigCache();invalidatePolicyCache();return result;
+  invalidateConfigCache();invalidatePolicyCache();broadcastCacheInvalidation('config');return result;
 };

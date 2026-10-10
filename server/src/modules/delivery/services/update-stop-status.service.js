@@ -4,6 +4,7 @@ import { AppError } from '../../../utils/errors.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { finalizeRoute, terminalStop, reconcilePackingInvoices } from './route-lifecycle.service.js';
 import {lockDestinationRoute,assertDestinationStart,flagIncompleteDestinations,flagMissingCheckout} from './destination-policy.service.js';
+import {deliveryRequest} from './delivery-request.service.js';
 export async function recordStopResult(tx,stopId,data,driverId) {
   const stop=await tx.deliveryStop.findUnique({where:{id:stopId},include:{deliveryRoute:true,packingList:true,attendances:true}});
   if(!stop)throw new AppError('Stop pengiriman tidak ditemukan',404);
@@ -47,5 +48,5 @@ export async function recordStopResult(tx,stopId,data,driverId) {
 export const updateStopStatus=(stopId,data,driverId)=>prisma.$transaction(async tx=>{
  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
  await lockDestinationRoute(tx,stopId);
- return recordStopResult(tx,stopId,data,driverId);
-},{isolationLevel:'Serializable'});
+ return deliveryRequest(tx,{stopId,data,driverId,kind:'RESULT'},()=>recordStopResult(tx,stopId,data,driverId));
+},{isolationLevel:'ReadCommitted'});

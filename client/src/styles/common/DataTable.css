@@ -11,6 +11,8 @@ table.app-data-table {
   width:100%;border-collapse:separate;border-spacing:0;
   font-size:13px;line-height:1.5;color:var(--table-text);background:var(--table-row-bg);
 }
+.report-compact {--table-cell-padding:8px 12px;}
+table.app-data-table [hidden] {display:none!important;}
 .app-data-table > thead {background:var(--table-header-bg);color:var(--table-muted);}
 .app-data-table > thead > tr > th {
   padding:var(--table-cell-padding);background:var(--table-header-bg);

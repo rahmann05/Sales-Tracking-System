@@ -1,5 +1,4 @@
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
-import {writeDraft} from '../../../../../shared/form-draft.mjs';
 import { useApp } from '../../../context/AppContext';
 import {visitOutcomeError} from '../../../../../shared/visit-outcome.mjs';
 import { useState, useRef } from 'react';
@@ -12,7 +11,7 @@ import {useAddressLookup} from '../../../shared/hooks/useAddressLookup';
  * (identitas outlet, kamera capture, GPS geofence, reverse-geocode auto-fill).
  */
 export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
-    const { settings,user } = useApp();
+    const { settings } = useApp();
     const draft=useFormDraft('off-pjp',{salesResult:{orderAmount:'',productIds:[]},visitOutcome:{purpose:''},outletName:'',customerName:'',phone:'',address:'',notes:'Kunjungan Prospek Toko Baru di Luar RJP',pending:null});
     const salesResult=draft.value.salesResult,setSalesResult=draft.field('salesResult');
     const visitOutcome=draft.value.visitOutcome,setVisitOutcome=draft.field('visitOutcome');
@@ -71,8 +70,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
             photoUrl: capturedPhoto,
             gpsLocation: gps,
         };
-        if(!writeDraft(()=>sessionStorage,`form-draft:${user.id}:off-pjp`,{...draft.value,pending:payload})){sending.current=false;setSaving(false);setError('Browser tidak dapat menyimpan identitas pengajuan. Jangan kirim sebelum ruang sesi tersedia.');return;}
-        draft.setValue(prev=>({...prev,pending:payload}));
+        if(!draft.persist(prev=>({...prev,pending:payload}))){sending.current=false;setSaving(false);setError('Browser tidak dapat menyimpan identitas pengajuan. Kosongkan ruang browser lalu coba lagi.');return;}
         pendingSubmission.current = structuredClone(payload);
         setRetryPending(true);
         try { await onSubmit(pendingSubmission.current); pendingSubmission.current = null; setRetryPending(false); draft.clear(); }
@@ -83,7 +81,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
     };
 
     return {
-        dirty:draft.dirty||!!capturedPhoto,restored:draft.restored,draftError:draft.storageError,
+        dirty:draft.dirty||!!capturedPhoto,restored:draft.restored,draftNotice:draft.restored||draft.policyChanged?draft.restoreMessage:'',draftError:draft.storageError,
         visitOutcome,setVisitOutcome,
         saving, error, retryPending, salesResult, setSalesResult,        outletName, setOutletName,
         customerName, setCustomerName,

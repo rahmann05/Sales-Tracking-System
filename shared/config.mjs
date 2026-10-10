@@ -1,6 +1,7 @@
 import { CODE_CONFIG_GROUPS } from './coding.mjs';
 import { OPERATIONAL_CONFIG_GROUPS } from './operational-policy.mjs';
 import {parseAuditItems} from './supervision-checklist.mjs';
+import {REPORT_PRESENTATION,reportSelection} from './report-presentation.mjs';
 export const CONFIG_DEFINITIONS = [
   ...OPERATIONAL_CONFIG_GROUPS,
   ...CODE_CONFIG_GROUPS,
@@ -438,6 +439,7 @@ for(let index=CONFIG_DEFINITIONS.length-1;index>=0;index--)if(!CONFIG_DEFINITION
 export const CONFIG_PARAMS = CONFIG_DEFINITIONS.flatMap(group => group.params);
 export const CONFIG_DEFAULTS = Object.fromEntries(CONFIG_PARAMS.map(param => [param.key, param.defaultValue]));
 export function parseConfigValue(param, raw) {
+  if(Object.hasOwn(REPORT_PRESENTATION,param.key))return reportSelection(param.key,raw).join(',');
   if(param.type==='checklist')return parseAuditItems(raw);
   if (param.type === 'boolean') {
     if (![true, false, 'true', 'false'].includes(raw)) throw new Error(`${param.label}: pilih aktif atau nonaktif`);
@@ -452,7 +454,7 @@ export function parseConfigValue(param, raw) {
   if (typeof raw !== 'string' || raw.length > 2000) throw new Error(`${param.label}: teks tidak valid`);
   if (param.options && !param.options.includes(raw)) throw new Error(`${param.label}: pilihan tidak valid`);
   if (['PJP_WORKING_DAYS','SLA_WORKING_DAYS'].includes(param.key) && !/^[0-6](,[0-6])*$/.test(raw)) throw new Error('Hari kerja harus daftar 0–6 dipisahkan koma');
-  if (['SHIFT_START_TIME','SLA_WORK_START','SLA_WORK_END'].includes(param.key) && !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) throw new Error('Jam masuk harus HH:mm');
+  if (['SHIFT_START_TIME','SHIFT_DAY_CUTOFF_TIME','SLA_WORK_START','SLA_WORK_END'].includes(param.key) && !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) throw new Error('Jam masuk harus HH:mm');
   if(param.key==='SLA_HOLIDAYS'&&raw.split(',').filter(Boolean).some(day=>!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day))throw new Error('Tanggal libur harus YYYY-MM-DD valid dipisahkan koma');
   if (param.key.startsWith('JWT_') && !/^[1-9]\d*[smhd]$/.test(raw)) throw new Error('Durasi token harus seperti 12h atau 7d');
   return raw;

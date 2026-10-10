@@ -4,13 +4,15 @@ import { SpvModalShell } from './SpvModalShell';
 import {auditItems} from '../../../../../shared/supervision-checklist.mjs';
 import {useApp} from '../../../context/AppContext';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import {followUpAllowed} from '../../../../../shared/follow-up-policy.mjs';
+import {SpvAuditQuestion} from './SpvAuditQuestion';
 
 /**
  * SpvAuditModal Component
  * Single Responsibility: Modal checklist audit kepatuhan toko & evaluasi sales.
  */
 export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving, followUp, onChangeFollowUp, salesOptions=[] }) => {
-    const {settings}=useApp(),items=auditItems({...settings,...stop.policySnapshot?.values});
+    const {settings,user}=useApp(),items=auditItems({...settings,...stop.policySnapshot?.values});
     return (
     <SpvModalShell error={error} saving={saving}
         title="Form Audit & Evaluasi Supervisi"
@@ -45,15 +47,7 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                 </h4>
                 <div className="space-y-2">
                     {items.map((item) => (
-                        <label
-                            key={item.key}
-                            className="grid gap-2.5 p-3 rounded-xl bg-surface-variant/30 border border-border-glass cursor-pointer hover:bg-surface-variant/50 text-xs"
-                        >
-                            <span className="font-semibold text-on-surface">{item.label}{item.required?' · wajib':''}</span>
-                            <select className="config-input min-h-11" value={checklist[item.key]==null?'':String(checklist[item.key])} onChange={e=>onChangeChecklist({...checklist,[item.key]:e.target.value===''?null:e.target.value==='true'})}>
-                                <option value="">Belum diisi</option><option value="true">Ya</option><option value="false">Tidak</option>
-                            </select>
-                        </label>
+                        <SpvAuditQuestion key={item.key} item={item} value={checklist[item.key]} evidence={checklist._evidence?.[item.key]} onChange={value=>onChangeChecklist({...checklist,[item.key]:value})} onEvidence={proof=>onChangeChecklist({...checklist,_evidence:{...checklist._evidence,[item.key]:proof}})}/>
                     ))}
                 </div>
             </div>
@@ -70,7 +64,7 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                     className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
             </div>
-            {followUp && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||followUp.completed||(settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE')}>
+            {followUp && followUpAllowed(user,'assign') && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||followUp.completed||(settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE')}>
                 <legend className="font-bold text-sm">Tindak lanjut sales</legend>
                 {settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE'&&<p>Tugas baru dijeda oleh Admin. Checklist tetap dapat disimpan; tugas terdahulu diselesaikan melalui menu Tindak lanjut.</p>}
                 {followUp.completed?<p>Tugas sudah selesai atau sedang menunggu pemeriksaan. Buka Tindak lanjut untuk melihat tahap terbaru.</p>:<>

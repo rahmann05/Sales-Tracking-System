@@ -6,10 +6,12 @@ import { calculateDistanceMeters } from '../../../utils/geolocation.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { recordStopResult } from './update-stop-status.service.js';
 import {lockDestinationRoute,assertDestinationStart,flagIncompleteDestinations} from './destination-policy.service.js';
+import {deliveryRequest} from './delivery-request.service.js';
 export const submitDriverAttendance = async(stopId,data,driverId)=>{
   return prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
   await lockDestinationRoute(tx,stopId);
+  return deliveryRequest(tx,{stopId,data,driverId,kind:'ATTENDANCE'},async()=>{
   const stop=await tx.deliveryStop.findUnique({where:{id:stopId},include:{deliveryRoute:true,outlet:true,attendances:true}});
   if(!stop)throw new AppError('Stop tidak ditemukan',404);
   if(stop.deliveryRoute.driverId!==driverId)throw new AppError('Rute bukan tugas Anda',403);
@@ -30,5 +32,6 @@ export const submitDriverAttendance = async(stopId,data,driverId)=>{
     await recordStopResult(tx,stopId,{...data.result,photoUrl:data.photoUrl,notes:data.notes},driverId);
   }
   return attendance;
-},{isolationLevel:'Serializable'});
+  });
+},{isolationLevel:'ReadCommitted'});
 };

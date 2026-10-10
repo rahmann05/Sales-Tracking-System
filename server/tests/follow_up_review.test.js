@@ -5,7 +5,8 @@ import {completeFollowUp,reviewFollowUp} from '../src/modules/staff-attendance/f
 import {paginateAttention} from '../../shared/attention-queue.mjs';
 function fixture(t){
  const record={id:'task',userId:'spv',followUp:{status:'OPEN',ownerId:'sales',dueDate:'2026-10-01',history:[]}};
- const original=prisma.$transaction;prisma.$transaction=async work=>work({$executeRaw:async()=>{},notification:{createMany:async()=>({count:1})},user:{findFirst:async()=>({id:'sales',supervisorId:'spv'}),findMany:async()=>[{id:'admin'}]},staffActivity:{findFirst:async()=>record,update:async({data})=>{record.followUp=data.followUp;return structuredClone(record);}}});
+ const people=[{id:'sales',role:'SALES',supervisorId:'spv'},{id:'spv',role:'SUPERVISOR'},{id:'admin',role:'ADMIN'},{id:'other',role:'ADMIN'}];
+ const original=prisma.$transaction;prisma.$transaction=async work=>work({$executeRaw:async()=>{},systemConfig:{findMany:async()=>[]},notification:{createMany:async()=>({count:1})},user:{findFirst:async()=>people[0],findMany:async()=>people},staffActivity:{findFirst:async()=>record,update:async({data})=>{record.followUp=data.followUp;return structuredClone(record);}}});
  t.after(()=>{prisma.$transaction=original;});return record;
 }
 test('sending evidence does not complete a task until a different reviewer accepts',async t=>{

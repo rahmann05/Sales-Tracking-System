@@ -1,6 +1,7 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const deliveryApi = {
+  findRequest:(stopId,requestId)=>request(`/delivery/stops/${stopId}/requests/${requestId}`),
   assignReturn:(id,body)=>request(`/delivery/stops/${id}/return-assignment`,{method:'PATCH',body:JSON.stringify(body)}),
   correctInvoiceCommercial:(id,data)=>request(`/delivery/packing-lists/${id}/invoices`,{method:'PATCH',body:JSON.stringify(data)}),
   reconcileInvoiceReceipt:(id,data)=>request(`/delivery/packing-lists/${id}/reconciliation`,{method:'POST',body:JSON.stringify(data)}),
@@ -89,3 +90,4 @@ export const deliveryApi = {
     return await request('/delivery/drivers');
   }
 };
+export const sendDriverEvidence=(id,data)=>data.logicalResult?deliveryApi.updateStopStatus(id,{requestId:data.requestId,...data.result,photoUrl:data.photoUrl,notes:data.notes}):deliveryApi.submitDriverAttendance(id,data);

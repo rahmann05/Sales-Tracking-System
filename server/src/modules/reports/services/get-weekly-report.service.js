@@ -1,5 +1,5 @@
 import { loadReportRecords } from './report-records.service.js';
-import { reportBasis } from '../../../../../shared/report-semantics.mjs';
+import { reportBasis,measuredVisitMinutes } from '../../../../../shared/report-semantics.mjs';
 import { mergeReportSales, assignmentReportBasis } from './report-assignment.service.js';
 import { loadSalesTargets } from './sales-target.service.js';
 import { targetResult, targetCoverage, targetBasisNote } from '../../../../../shared/sales-targets.mjs';
@@ -9,6 +9,7 @@ import { calendarWorkingDay, calendarBasis } from '../../../../../shared/report-
 import { loadReportCalendars } from './report-calendar.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
+import {reportProvenance} from './report-provenance.service.js';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -82,6 +83,7 @@ export const getWeeklyReport = async (query = {}) => {
     omzet: 0,
     skuSold: 0,
     durationMinutes: 0,
+    durationSamples: 0,
     anomalies: 0,
   }));
 
@@ -136,10 +138,11 @@ export const getWeeklyReport = async (query = {}) => {
             }
 
             dSku += result.skuSold;
-            const dur = att?.durationMinutes || 0;
-            if(att && Number.isFinite(att.durationMinutes) && att.durationMinutes>=0){dDuration += dur;dSamples++;}
+            const dur = measuredVisitMinutes(stop);
+            if(dur!==null){dDuration += dur;dSamples++;}
 
-            if (dur > 0 && dur < minVisitDuration) dAnomalies += 1;
+            const durationLimit=stop.policySnapshot?.values?.MINIMUM_VISIT_DURATION_MINUTES??minVisitDuration;
+            if (stop.policySnapshot?.values?.ATTENDANCE_ENFORCE_MIN_DURATION!==false&&dur!==null&&dur < durationLimit) dAnomalies += 1;
             if (att?.distanceWarning === 'WARNING') dAnomalies += 1;
           });
         });
@@ -181,6 +184,7 @@ export const getWeeklyReport = async (query = {}) => {
         daysSummary[i].omzet += dOmzet;
         daysSummary[i].skuSold += dSku;
         daysSummary[i].durationMinutes += dDuration;
+        daysSummary[i].durationSamples += dSamples;
         daysSummary[i].anomalies += dAnomalies;
       }
 
@@ -218,7 +222,7 @@ export const getWeeklyReport = async (query = {}) => {
           targetAchievement: target.achievement,
           skuSold: salesSku,
           durationSamples,
-          avgDuration: durationSamples > 0 ? Math.round(salesDuration / durationSamples) : 0,
+          avgDuration: durationSamples > 0 ? Math.round(salesDuration / durationSamples) : null,
           anomalies: salesAnomalies,
         },
       };
@@ -226,7 +230,8 @@ export const getWeeklyReport = async (query = {}) => {
   );
 
   return {
-    basis: { ...reportBasis(), ...assignmentReportBasis(records),...calendarBasis(calendarMonths,calendars),target:'EXPLICIT_SALES_PERIOD',targetNote:targetBasisNote,targetCoverage:targetCoverage(salesmanRows.map(s=>s.target)) },
+    basis: { ...reportBasis(), ...assignmentReportBasis(records),...calendarBasis(calendarMonths,calendars),...reportProvenance({manualSalesMode,minVisitDuration},records),target:'EXPLICIT_SALES_PERIOD',targetNote:targetBasisNote,targetCoverage:targetCoverage(salesmanRows.map(s=>s.target)) },
+    meta:{company:await getDynamicConfig('COMPANY_NAME','PT. SINAR ANUGRAH')},
     period: {
       startDate: wibDateKey(start),
       endDate: wibDateKey(end),
@@ -243,10 +248,10 @@ export const getWeeklyReport = async (query = {}) => {
       totalOrderAmount: totalWeeklyOmzet,
       totalSkuSold: totalWeeklySku,
       durationSamples: totalDurationSamples,
-      avgDurationMinutes: totalDurationSamples > 0 ? Math.round(totalWeeklyDuration / totalDurationSamples) : 0,
+      avgDurationMinutes: totalDurationSamples > 0 ? Math.round(totalWeeklyDuration / totalDurationSamples) : null,
       totalAnomalies: totalWeeklyAnomalies,
     },
-    daysSummary,
+    daysSummary:daysSummary.map(day=>({...day,durationMinutes:day.durationSamples?day.durationMinutes:null})),
     salesmen: salesmanRows,
   };
 };

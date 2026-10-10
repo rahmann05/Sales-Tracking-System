@@ -1,4 +1,6 @@
 import { LuSearch, LuCalendar, LuUser, LuDownload, LuRefreshCw, LuPrinter, LuPlus, LuHourglass, LuTriangleAlert, LuClock, LuShieldAlert, LuCheck } from "react-icons/lu";
+import {useApp} from '../../../context/AppContext';
+import {reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
 
 /**
  * DailyCallFilterBar Component
@@ -22,6 +24,7 @@ export const DailyCallFilterBar = ({
   hideActions = false,
   showStatusPills = true,
 }) => {
+  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
   const filterOptions = [
     { key: 'ALL', label: 'Semua Kunjungan', icon: null },
     { key: 'EFFECTIVE_CALL', label: 'Effective Call (EC)', icon: LuCheck },
@@ -29,7 +32,7 @@ export const DailyCallFilterBar = ({
     { key: 'EXTRA_CALL', label: 'Extra Call', icon: LuPlus },
     { key: 'SKIPPED', label: 'Terlewat', icon: LuHourglass },
     { key: 'ANOMALY_TRAVEL', label: 'Jeda Travel Janggal', icon: LuTriangleAlert },
-    { key: 'ANOMALY_DURATION', label: 'Durasi < 5 Menit', icon: LuClock },
+    { key: 'ANOMALY_DURATION', label: 'Di bawah batas durasi', icon: LuClock },
     { key: 'ALL_ANOMALIES', label: 'Semua Anomali', icon: LuShieldAlert },
   ];
 
@@ -114,6 +117,7 @@ export const DailyCallFilterBar = ({
             <button
               type="button"
               onClick={onExport}
+              disabled={!canExport||isLoading}
               className="flex-1 h-10 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Ekspor Laporan Format Excel ND6"
             >
@@ -123,6 +127,7 @@ export const DailyCallFilterBar = ({
             <button
               type="button"
               onClick={onOpenPdf}
+              disabled={!canExport||isLoading}
               className="flex-1 h-10 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / PDF Resmi"
             >

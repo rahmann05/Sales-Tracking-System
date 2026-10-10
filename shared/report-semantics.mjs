@@ -10,6 +10,15 @@ export function reportChannel(outlet = {}) {
   return 'UNCLASSIFIED';
 }
 export const ratioPercent = (value, base) => base > 0 ? `${Math.round(value / base * 100)}%` : '—';
+// Duration requires a real ordered IN/OUT pair. Unknown evidence is different from a measured zero.
+export function measuredVisitMinutes(stop={}){
+ if((stop.policySnapshot?.values?.SALES_ATTENDANCE_MODE||'IN_OUT')!=='IN_OUT'||stop.visitSession?.state==='INCOMPLETE')return null;
+ const entered=stop.attendances?.find(a=>a.type==='IN'),exited=stop.attendances?.find(a=>a.type==='OUT');
+ if(!entered?.timestamp||!exited?.timestamp)return null;
+ const start=+new Date(entered.timestamp),end=+new Date(exited.timestamp);
+ if(!Number.isFinite(start)||!Number.isFinite(end)||end<start)return null;
+ return Number.isFinite(exited.durationMinutes)&&exited.durationMinutes>=0?exited.durationMinutes:Math.round((end-start)/6000)/10;
+}
 // Revenue has a transaction snapshot. Never reclassify it using today's outlet master.
 export function orderChannelAmounts(stop, result) {
   if (!result.effective) return [];
@@ -35,7 +44,13 @@ const csvCell = value => {
   return `"${safe.replaceAll('"','""')}"`;
 };
 const toCsv = rows => rows.map(row => row.map(csvCell).join(',')).join('\r\n');
-const reportBasisText = basis => [basis?.note,basis?.targetNote,basis?.calendarNote,basis?.archiveNote,
+export const durationStatus=row=>row.isDurationAnomaly?'Di bawah batas aturan':row.durationMinutes==null?'Tidak tersedia':row.durationCheckEnabled===false?'Tidak diwajibkan':'Sesuai batas';
+export const distanceStatus=row=>row.distanceWarning==='WARNING'?'Di luar radius':row.deviationMeters==null?'Tidak tersedia':'Dalam radius';
+export function attendanceAuditCsv(rows=[]){
+ const headers=['No','Tanggal','Salesman','Klaster','Kode toko','Nama toko','Jam masuk','Jam keluar','Durasi (menit)','Status durasi','Batas durasi (menit)','Deviasi GPS (meter)','Status jarak','Radius aturan (meter)','Jarak perjalanan (km)','Jeda perjalanan (menit)','Anomali perjalanan','Alasan','Catatan','Effective call','Nilai order (Rp)','Versi aturan kunjungan'];
+ return toCsv([headers,...rows.map((r,index)=>[index+1,r.date,r.salesmanName,r.clusterName,r.customerId,r.customerName,r.timeIn,r.timeOut,r.durationMinutes,durationStatus(r),r.minimumDuration,r.deviationMeters,distanceStatus(r),r.radiusMeters,r.travelDistanceKm,r.travelDurationMinutes,r.isTravelAnomaly?'Terdeteksi':'Tidak terdeteksi',r.travelAnomalyReason||r.earlyReason,r.reason||r.remark,r.effectiveCall,r.orderAmount,JSON.stringify(r.policyVersions||[])])]);
+}
+const reportBasisText = basis => [basis?.note,basis?.targetNote,basis?.calendarNote,basis?.archiveNote,basis?.formulaVersion?`Formula ${basis.formulaVersion}; ${basis.processPolicies?.length||0} kelompok snapshot; ${basis.legacyPolicyRecords||0} proses tanpa snapshot.`:'',basis?.policyNote,
   ...(basis?.calendarMonths||[]).map(row=>`Kalender ${row.month}: ${row.revision?`versi ${row.revision}`:'belum ditetapkan'}`)].filter(Boolean).join(' ');
 export function weeklyCsv(report) {
   const days = report.period?.weekDays || [];
@@ -59,7 +74,7 @@ export function reportSalesOptions(current, rows, selectedId = '') {
 }
 export function dailyCallCsv(report) {
   const headers = ['No','Salesman','Tanggal','Time-In','Time-Out','Duration (Min)','Customer ID','Customer Name','Sub Channel','Freq','Itny','Plan Call','Actual Call','Effective Call','SKU Sold','Nilai order disetujui (Rp)','Reason','Remark','Deviation (Meters)','Distance Warning','Anomali Durasi','Klaster penugasan','Konteks penugasan','Dibuat pada (UTC)','Dasar laporan'];
-  return toCsv([headers,...(report.rows || []).map(r=>[r.no,r.salesmanName,r.date,r.timeIn,r.timeOut,r.durationMinutes,r.customerId,r.customerName,r.subChannel,r.freq,r.itny,r.planCall,r.actualCall,r.effectiveCall,r.skuSold,r.orderAmount,r.reason,r.remark,r.deviationMeters,r.distanceWarning,r.isDurationAnomaly?'YA':'TIDAK',r.clusterName,r.assignmentHistorical?'Tersimpan':'Belum terverifikasi',report.basis?.generatedAt,report.basis?.note])]);
+  return toCsv([headers,...(report.rows || []).map(r=>[r.no,r.salesmanName,r.date,r.timeIn,r.timeOut,r.durationMinutes,r.customerId,r.customerName,r.subChannel,r.freq,r.itny,r.planCall,r.actualCall,r.effectiveCall,r.skuSold,r.orderAmount,r.reason,r.remark,r.deviationMeters,r.distanceWarning,r.isDurationAnomaly?'YA':'TIDAK',r.clusterName,r.assignmentHistorical?'Tersimpan':'Belum terverifikasi',report.basis?.generatedAt,reportBasisText(report.basis)])]);
 }
 
 // Daily report rows distinguish performed calls (IN) from completed visits (OUT).

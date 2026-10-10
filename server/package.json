@@ -45,17 +45,28 @@
     "verify:cluster-count": "node scripts/verify-cluster-count.mjs",
     "verify:workspace-data": "node scripts/verify-workspace-data.mjs",
     "verify:policy": "node tests/verify-policy-coverage.mjs",
+    "verify:operation-surfaces": "node tests/verify-operation-surfaces.mjs",
+    "verify:form-draft-client": "node tests/form-draft-client.integration.mjs",
+    "verify:policy-pairwise": "node tests/policy-pairwise.integration.mjs",
+    "verify:driver-retry": "node tests/driver-request.integration.mjs",
+    "verify:follow-up-assignment": "node tests/follow-up-assignment.integration.mjs",
+    "verify:socket-adapter": "node tests/socket-adapter.integration.mjs",
+    "verify:socket-processes": "node tests/socket-process.integration.mjs",
     "verify:policy-workflows": "node tests/policy-workflows.integration.mjs",
     "verify:sales-location": "node tests/sales-location.integration.mjs",
     "verify:vehicle-policy": "node tests/vehicle-service-policy.integration.mjs",
     "verify:notification-outbox": "node tests/notification-outbox.integration.mjs",
-    "verify:destination-policy": "node tests/destination-policy.integration.mjs"
+    "verify:destination-policy": "node tests/destination-policy.integration.mjs",
+    "verify:shift-corrections": "node tests/shift-correction.integration.mjs",
+    "verify:supervision-checklist": "node tests/supervision-checklist.integration.mjs",
+    "verify:order-price-policy": "node tests/order-price-policy.integration.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@socket.io/postgres-adapter": "^0.5.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -66,6 +77,7 @@
     "morgan": "^1.10.0",
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
+    "pg": "^8.23.1",
     "socket.io": "^4.8.3",
     "zod": "^3.23.8"
   },

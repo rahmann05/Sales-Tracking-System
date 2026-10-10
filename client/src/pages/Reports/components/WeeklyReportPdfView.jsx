@@ -1,5 +1,7 @@
 import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
+import {useApp} from '../../../context/AppContext';
+import {reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { calendarDayLabel } from '../../../../../shared/report-calendar.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
@@ -10,6 +12,7 @@ import { LuPrinter, LuX } from 'react-icons/lu';
  * Renders an official printable sheet for the Weekly Performance & Attendance Report (ND6).
  */
 export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
+  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
   if (!reportData) return null;
 
   const { period = {}, summary = {}, daysSummary = [], salesmen = [] } = reportData;
@@ -32,6 +35,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
         <button
           type="button"
           onClick={handlePrint}
+          disabled={!canExport}
           className="px-4 py-2.5 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:opacity-90 transition-all cursor-pointer"
         >
           <LuPrinter className="text-base" /> Cetak / Unduh PDF
@@ -55,7 +59,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
         <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
           <div>
             <h1 className="text-base font-black tracking-tight text-gray-900 m-0 uppercase">
-              CV. SINAR ANUGRAH
+              {reportData.meta?.company||'Perusahaan'}
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
               FMCG DISTRIBUTOR
@@ -229,7 +233,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
           <div className="border border-gray-300 p-2.5 rounded-sm">
             <span className="text-gray-500 font-bold block mb-12">Disetujui Oleh (Admin Penjualan),</span>
             <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( Maria Ulfah )
+              ( ____________________ )
             </div>
             <span className="text-[8.5px] text-gray-500">Admin Penjualan</span>
           </div>

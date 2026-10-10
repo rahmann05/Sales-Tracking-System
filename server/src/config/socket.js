@@ -2,16 +2,17 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { prisma } from './prisma.js';
 import { config } from './index.js';
+import {invalidateConfigCache} from '../modules/config/services/dynamic-config.service.js';
+import {invalidatePolicyCache} from '../modules/config/services/policy-resolver.service.js';
 
 let io = null;
-const userSocketMap = new Map();
 
 /**
  * Initialize Socket.IO with an existing HTTP server instance.
  * Must be called once in the app entry point.
  */
-export const initSocket = (httpServer) => {
-  io = new Server(httpServer, {
+export const createSocketServer = (httpServer) => {
+  const server = new Server(httpServer, {
     cors: {
       origin: config.env === 'development' ? true : config.clientOrigin,
       methods: ['GET', 'POST'],
@@ -19,7 +20,7 @@ export const initSocket = (httpServer) => {
     },
   });
 
-  io.use(async (socket, next) => {
+  server.use(async (socket, next) => {
     try {
       const decoded = jwt.verify(socket.handshake.auth?.token, config.jwtSecret);
       const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, deletedAt: true,tokenVersion:true } });
@@ -28,25 +29,25 @@ export const initSocket = (httpServer) => {
       next();
     } catch { next(new Error('Autentikasi socket diperlukan')); }
   });
-  io.on('connection', (socket) => {
+  server.on('policy:invalidate',()=>{invalidateConfigCache();invalidatePolicyCache();});
+  server.on('connection', (socket) => {
     const userId = socket.data.userId;
     socket.join(`user:${userId}`);
     if (userId) {
-      userSocketMap.set(userId, socket.id);
       console.log(`[Socket.IO]: User ${userId} connected (socket: ${socket.id})`);
     }
 
     socket.on('disconnect', () => {
       if (userId) {
-        userSocketMap.delete(userId);
         console.log(`[Socket.IO]: User ${userId} disconnected`);
       }
     });
   });
 
   console.log('[Socket.IO]: Server initialized.');
-  return io;
+  return server;
 };
+export const initSocket=httpServer=>{io=createSocketServer(httpServer);return io;};
 
 /**
  * Emit a Socket.IO event to a specific user by userId.
@@ -68,5 +69,6 @@ export const getIo = () => io;
  */
 export const broadcastCacheInvalidation = (dataType) => {
   if (!io) return;
+  if(['policies','config','configs'].includes(dataType))io.serverSideEmit('policy:invalidate');
   io.emit('cache:invalidate', { dataType, timestamp: Date.now() });
 };

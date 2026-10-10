@@ -40,7 +40,7 @@ export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return <SalesDialog title="Laporkan toko tutup" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!closedPhoto} restored={draft.restored} draftError={draft.storageError}>
+  return <SalesDialog title="Laporkan toko tutup" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!closedPhoto} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError}>
 {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
         <div className="space-y-2">
           <label className="form-label">Alasan Toko Tutup</label>

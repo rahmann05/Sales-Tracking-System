@@ -4,9 +4,9 @@ import {listPlans,getPlan,previewPlan,savePlan} from './services/planning.servic
 import {publishPlan} from './services/publish-plan.service.js';
 const router=Router(),run=fn=>async(req,res,next)=>{try{res.json({success:true,data:await fn(req)});}catch(e){next(e);}};
 router.use(authorize('ADMIN','SUPERVISOR'));
+router.use(authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_rjp'));
 router.get('/',run(req=>listPlans(req.user)));
 router.get('/:id',run(req=>getPlan(req.params.id,req.user)));
-router.use(authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_rjp'));
 router.post('/preview',run(req=>previewPlan(req.body,req.user)));
 router.post('/',run(req=>savePlan(null,req.body,req.user)));
 router.put('/:id',run(req=>savePlan(req.params.id,req.body,req.user)));

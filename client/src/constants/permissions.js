@@ -1,15 +1,17 @@
-import { PERMISSION_CATEGORIES } from "./permissionCategories";
+import { PERMISSION_CATEGORIES } from "./permissionCategories.js";
 /**
  * permissions.js
  * Single Responsibility: Master registry of all granular system permissions,
  * categorized with React Icons, descriptions, and built-in role templates.
- * 
+ *
  * NOTE: Strict compliance - Zero emojis. Pure React Icons.
  */
 
 import { LuLayoutDashboard, LuNavigation, LuPhoneCall, LuMapPin, LuFileCheck, LuUserPlus, LuUsers, LuPackage, LuTruck, LuMap, LuStore, LuSettings, LuShieldCheck, LuDownload, LuLayers } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 export const ALL_PERMISSIONS = [
+...[['propose','Usulkan koreksi waktu shift'],['review','Putuskan koreksi waktu shift']].map(([action,label])=>({key:`can_${action}_shift_correction`,label,desc:'Khusus Admin; waktu asli tetap dan setiap keputusan diaudit.',categoryId:'team',icon:LuUsers})),
+...[['view','Lihat tindak lanjut'],['assign','Tugaskan / alihkan tindak lanjut'],['complete','Kirim hasil tindak lanjut'],['review','Periksa hasil tindak lanjut']].map(([action,label])=>({key:`can_${action}_follow_up`,label,desc:'Tetap mengikuti lingkup tim, kepemilikan dan tahap tugas.',categoryId:'team',icon:LuUsers})),
 // 1. Dashboard & Monitoring
 {
   key: 'can_view_dashboard',
@@ -198,6 +200,7 @@ export const BUILT_IN_ROLE_TEMPLATES = {
   }, {}),
   SUPERVISOR: {
     ...getEmptyPermissions(),
+    can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,
     can_view_dashboard: true,
     can_view_live_tracking: true,
     can_view_daily_call: true,
@@ -218,6 +221,7 @@ export const BUILT_IN_ROLE_TEMPLATES = {
   },
   SALES: {
     ...getEmptyPermissions(),
+    can_view_follow_up:true,can_complete_follow_up:true,
     can_view_dashboard: true,
     can_access_rjp: true,
     can_request_reroute: true,

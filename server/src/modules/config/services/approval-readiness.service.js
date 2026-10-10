@@ -2,6 +2,8 @@ import {BUILT_IN_ROLES} from '../../roles/roles.constants.js';
 import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
 import {orderReviewerGaps,registrationReviewerGaps} from '../../../../../shared/approval-readiness.mjs';
 import {warehouseAssignmentGaps} from '../../../../../shared/warehouse-assignment-readiness.mjs';
+import {followUpAssignmentGaps} from '../../../../../shared/follow-up-policy.mjs';
+import {shiftCorrectionGaps} from '../../../../../shared/shift-policy.mjs';
 import {effectivePolicy} from './policy-resolver.service.js';
 import {AppError} from '../../../utils/errors.js';
 export const approvalReadinessDomains=values=>({
@@ -10,7 +12,7 @@ export const approvalReadinessDomains=values=>({
 });
 export function reviewIdentity(p,definitions=[]){
  const role=(Array.isArray(definitions)?definitions:[]).find(r=>r.code===(p.roleCode||p.role))||BUILT_IN_ROLES.find(r=>r.code===p.role);
- return {...p,role:role?.isSystem?role.code:role?.baseRole||p.role,permissions:{...role?.defaultPermissions,...p.permissions}};
+ return {...p,role:role?.isSystem?role.code:role?.baseRole||p.role,permissions:{...(role?.isSystem?BUILT_IN_ROLES.find(r=>r.code===role.code)?.defaultPermissions:{}),...role?.defaultPermissions,...p.permissions}};
 }
 export async function readReviewDefinitions(db){return (await db.systemConfig.findMany({where:{key:'ROLE_DEFINITIONS'}})).find(r=>r.key==='ROLE_DEFINITIONS')?.value||[];}
 export async function reviewPeople(db,{patches={},definitions}={}){
@@ -41,6 +43,10 @@ async function openWorkGaps(db,people){
  }
  for(const trip of trips.filter(r=>!r.returnedAt&&!r.closedAt)){const driver=people.find(p=>p.id===trip.driverId);if(!driver||driver.deletedAt||driver.role!=='SUPIR'||driver.permissions.can_access_driver_map===false)issues.push({key:`TRIP:${trip.id}:DRIVER`,message:`Trip ${trip.code} memerlukan Driver aktif dengan akses tugas. ${trip.departedAt?'Selesaikan perjalanan terlebih dahulu.':'Alihkan Driver sebelum menonaktifkan akun.'}`});}
  issues.push(...warehouseAssignmentGaps(trips,people));
+ const followUps=await db.staffActivity.findMany({where:{OR:[{followUp:{path:['status'],equals:'OPEN'}},{followUp:{path:['status'],equals:'SUBMITTED'}}]},select:{id:true,outletName:true,followUp:true,policySnapshot:true}});
+ issues.push(...followUpAssignmentGaps(followUps,people));
+ const shiftCorrections=await db.staffActivity.findMany({where:{kind:'SHIFT',timeCorrection:{path:['pending','mode'],equals:'DUAL'}},select:{id:true,userId:true,timeCorrection:true}});
+ issues.push(...shiftCorrectionGaps(shiftCorrections,people));
  return issues;
 }
 // Must hold approval:actors while changing accounts, teams or role permission templates.

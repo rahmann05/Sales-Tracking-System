@@ -18,7 +18,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
 
   if (!isOpen) return null;
 
-  return <SalesDialog title="Kunjungan luar PJP" description={form.settings.OFF_PJP_REQUIRE_REVIEW?'Catat kunjungan tambahan untuk diperiksa Supervisor.':'Catat kunjungan tambahan sesuai aturan perusahaan.'} onClose={onClose} busy={form.saving} dirty={form.dirty||form.retryPending} restored={form.restored} draftError={form.draftError} freshEvidence={!form.retryPending}>
+  return <SalesDialog title="Kunjungan luar PJP" description={form.settings.OFF_PJP_REQUIRE_REVIEW?'Catat kunjungan tambahan untuk diperiksa Supervisor.':'Catat kunjungan tambahan sesuai aturan perusahaan.'} onClose={onClose} busy={form.saving} dirty={form.dirty||form.retryPending} restored={form.restored} draftNotice={form.draftNotice} draftError={form.draftError} freshEvidence={!form.retryPending}>
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-2.5 text-xs text-amber-800 font-medium">
           <FiAlertCircle className="text-lg flex-shrink-0 text-amber-600" />
           <span>

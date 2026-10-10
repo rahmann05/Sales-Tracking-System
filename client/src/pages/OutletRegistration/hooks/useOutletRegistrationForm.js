@@ -268,7 +268,7 @@ export const useOutletRegistrationForm = onSuccess => {
   };
   return {
     formData,
-    draftRestored:draft.restored,draftError:draft.storageError,
+    draftRestored:draft.restored||draft.policyChanged,draftNotice:draft.restoreMessage,draftError:draft.storageError,
     updateField,
     isSubmitting,
     isLocating,gpsError,

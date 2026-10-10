@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import {useApp} from '../../context/AppContext';
+import {reportExportAllowed} from '../../../../shared/report-presentation.mjs';
 import { useDailyCallMonitor } from './hooks/useDailyCallMonitor';
 import { DailyCallHeaderKpi } from './components/DailyCallHeaderKpi';
 import { DailyCallFilterBar } from './components/DailyCallFilterBar';
@@ -16,6 +18,7 @@ import { LuPhoneCall, LuCalendar, LuListOrdered, LuShieldAlert, LuUserCheck, LuR
  * Single Responsibility: Orchestrator for Daily Call Visit Monitoring & Dedicated Anomaly/Suspicious Attendance Audit.
  */
 export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHeader = true }) => {
+  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
   const {
     date,
     setDate,
@@ -187,6 +190,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={exportToCsv}
+              disabled={!canExport||isLoading||Boolean(error)}
               className="h-10 px-3.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Ekspor Laporan Format Excel ND6"
             >
@@ -196,7 +200,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
-              disabled={isLoading || Boolean(error) || !reportData?.summary}
+              disabled={!canExport || isLoading || Boolean(error) || !reportData?.summary}
               className="h-10 px-3.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / PDF Resmi"
             >
@@ -262,7 +266,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       )}
 
       {/* 7. Official Printable PDF Document View */}
-      {isPdfModalOpen && !isLoading && reportData?.summary && (
+      {isPdfModalOpen && canExport && !isLoading && reportData?.summary && (
         <DailyCallPdfView
           reportData={reportData}
           date={date}

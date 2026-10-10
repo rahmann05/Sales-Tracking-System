@@ -1,12 +1,13 @@
 import {initialReviewAssignment,outletReviewOwners} from './outlet-review-assignment.service.js';
 import { z } from 'zod';
+import {actionNames} from '../../../../../shared/business-actions.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { actorSnapshot, lockOutlet, reviewOutlet, reviewScope, reviewInclude } from './outlet-review-policy.service.js';
 import { invalidateOutletCache } from './outlets.helpers.js';
 import {outletReviewEvidenceState} from '../../../../../shared/outlet-evidence-policy.mjs';
 const opening=z.object({reason:z.string().trim().min(10).max(1000)});
-const decision=z.object({revision:z.number().int().positive(),action:z.enum(['KEEP','WAITING_FIELD','CORRECTED']),note:z.string().trim().min(10).max(2000),evidence:z.string().trim().max(2000).optional()});
+const decision=z.object({revision:z.number().int().positive(),action:z.enum(actionNames('OUTLET_REVIEW')),note:z.string().trim().min(10).max(2000),evidence:z.string().trim().max(2000).optional()});
 export async function openOutletReview(id,body,actor) {
   const {reason}=opening.parse(body);
   const result=await prisma.$transaction(async tx=>{

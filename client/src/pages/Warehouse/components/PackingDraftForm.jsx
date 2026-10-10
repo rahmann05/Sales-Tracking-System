@@ -38,7 +38,7 @@ export function PackingDraftForm({
     unit: '',
     quantity: 1
   }]);
-  const [invoices, setInvoices] = useState(doc?.invoices?.map(i=>({invoiceNumber:i.invoiceNumber,totalCartons:i.totalCartons,totalAmount:i.totalAmount,items:i.items||[],taxRatePercent:i.taxRatePercent??undefined,taxIncluded:i.taxIncluded??undefined})) || []);
+  const [invoices, setInvoices] = useState(doc?.invoices?.map(i=>({invoiceNumber:i.invoiceNumber,totalCartons:i.totalCartons,totalAmount:i.totalAmount,items:i.items||[],taxRatePercent:i.taxRatePercent??undefined,taxIncluded:i.taxIncluded??undefined,taxRoundingMode:i.taxRoundingMode||'NEAREST'})) || []);
   const [cartons, setCartons] = useState(doc?.totalCartons || 0);
   const [weight, setWeight] = useState(doc?.totalWeight || 0);
   const [notes, setNotes] = useState(doc?.notes || '');
@@ -146,7 +146,7 @@ export function PackingDraftForm({
       invoiceNumber: '',
       totalCartons: 1,
       totalAmount: ''
-      ,items:[],taxRatePercent:order?.taxRatePercent??Number(settings.TAX_RATE_PERCENT??11),taxIncluded:order?.taxIncluded??settings.ORDER_PRICES_INCLUDE_TAX!==false
+      ,items:[],taxRatePercent:order?.taxRatePercent??Number(settings.TAX_RATE_PERCENT??11),taxIncluded:order?.taxIncluded??settings.ORDER_PRICES_INCLUDE_TAX!==false,taxRoundingMode:order?.policySnapshot?.values?.ORDER_TAX_ROUNDING_MODE||settings.ORDER_TAX_ROUNDING_MODE||'NEAREST'
     }]);
   };
   const removeInvoice = index => {

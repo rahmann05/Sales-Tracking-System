@@ -48,6 +48,7 @@ test('cancelled remainder closes demand explicitly without inflating accepted de
   const state=fulfillment(o,[p]);assert.equal(state.fulfillmentStatus,'CLOSED_WITH_CANCELLATION');assert.equal(state.fulfillmentLines[0].accepted,6);assert.equal(state.fulfillmentLines[0].remaining,0);
 });
 test('open follow-ups are filtered before pagination so finished tasks cannot hide old work',async t=>{
+  const people=prisma.user.findMany;prisma.user.findMany=async()=>[{id:'u',role:'ADMIN',permissions:{}}];t.after(()=>{prisma.user.findMany=people;});
   const original=prisma.staffActivity.findMany;prisma.staffActivity.findMany=async query=>query;t.after(()=>{prisma.staffActivity.findMany=original;});
   const query=await listFollowUps({id:'u',role:'ADMIN'},{status:'OPEN',page:3,limit:50});assert.equal(query.skip,100);assert.equal(query.take,50);assert.deepEqual(query.where.AND[1],{followUp:{path:['status'],equals:'OPEN'}});assert.equal(query.orderBy[0].checkInAt,'asc');
 });

@@ -5,7 +5,7 @@ import { LuClock, LuMapPin, LuImage, LuShieldAlert, LuExternalLink, LuCircleChec
 /**
  * SuspiciousAttendanceTable Component
  * Single Responsibility: Dedicated table and audit dashboard for abnormal / suspicious attendances
- * (Early checkout < 5 minutes, GPS deviation > 50 meters, Travel time gaps e.g. 2km in 2 hours, and Skipped visits).
+ * Uses each visit's effective thresholds and only evaluates available evidence.
  */
 export function SuspiciousAttendanceRows({
   filteredRows,
@@ -64,7 +64,7 @@ export function SuspiciousAttendanceRows({
                     {/* Travel Time & Distance */}
                     <td data-label="Jarak & Jeda" className="md:text-center text-left font-mono">
                       {r.prevStopName ? <div className={`inline-block p-1.5 rounded-lg text-[11px] ${isTravel ? 'bg-rose-500/15 text-rose-700 border border-rose-500/30 font-bold animate-pulse' : 'bg-surface-container text-on-surface-variant'}`}>
-                          <div>{r.travelDistanceKm} km</div>
+                          <div>{r.travelDistanceKm==null?'Jarak tidak tersedia':`${r.travelDistanceKm} km antartitik outlet`}</div>
                           <div className="font-bold">{r.travelDurationFormatted}</div>
                         </div> : <span className="text-on-surface-variant/40">-</span>}
                     </td>
@@ -73,7 +73,7 @@ export function SuspiciousAttendanceRows({
                     <td data-label="Durasi" className="md:text-center text-left">
                       <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black font-mono ${isShort ? 'bg-rose-500/15 text-rose-600 border border-rose-500/30' : 'bg-surface-container text-on-surface font-semibold'}`}>
                         <LuClock className="text-xs" />
-                        {r.durationFormatted || `${r.durationMinutes}m`}
+                        {r.durationFormatted || (r.durationMinutes==null?'Tidak tersedia':`${r.durationMinutes}m`)}
                       </div>
                       {isShort && <div className="text-[10px] font-black text-rose-600 mt-0.5 inline-flex items-center gap-0.5">
                           <LuClock className="text-[10px]" /> Terlalu Singkat
@@ -82,9 +82,9 @@ export function SuspiciousAttendanceRows({
 
                     {/* GPS Deviation Flag */}
                     <td data-label="Deviasi GPS" className="md:text-center text-left">
-                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold ${isFar ? 'bg-amber-500/15 text-amber-700 border border-amber-500/30' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold ${isFar ? 'bg-amber-500/15 text-amber-700 border border-amber-500/30' : r.deviationMeters==null?'bg-surface-container text-on-surface-variant':'bg-emerald-500/10 text-emerald-600'}`}>
                         <LuMapPin className="text-xs" />
-                        {r.deviationMeters || 0} m
+                        {r.deviationMeters==null?'Tidak tersedia':`${r.deviationMeters} m`}
                       </div>
                       {isFar && <div className="text-[10px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-0.5">
                           <LuShieldAlert className="text-[10px]" /> Diluar Radius
@@ -100,7 +100,7 @@ export function SuspiciousAttendanceRows({
                           </div>}
                         {isShort && <div className="p-1 rounded-md bg-rose-500/10 text-rose-800 text-[10.5px] font-semibold flex items-center gap-1">
                             <LuClock className="text-xs shrink-0" />
-                            <span>Durasi &lt;5m {r.earlyReason ? `: "${r.earlyReason}"` : ''}</span>
+                            <span>Di bawah batas durasi {r.earlyReason ? `: "${r.earlyReason}"` : ''}</span>
                           </div>}
                         {isFar && <span className="inline-block px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 text-[10px] font-black border border-amber-500/20">
                             Deviasi Radius GPS ({r.deviationMeters}m)
@@ -142,7 +142,7 @@ export function SuspiciousAttendanceRows({
                       <LuCircleCheck className="text-emerald-500 text-2xl" />
                       <span className="font-bold text-sm text-on-surface">Tidak Ditemukan Absensi Janggal</span>
                       <p className="text-xs text-on-surface-variant m-0 max-w-sm">
-                        Semua kunjungan berjalan sesuai SOP: durasi di toko &gt;= 5 menit, GPS dalam radius aman, dan jeda perjalanan antar-titik wajar.
+                        Tidak ada anomali yang terdeteksi pada data dan filter ini. Bukti yang belum tersedia tetap perlu ditinjau.
                       </p>
                     </div>
                   </td>

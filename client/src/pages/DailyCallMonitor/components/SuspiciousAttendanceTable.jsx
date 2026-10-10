@@ -1,4 +1,5 @@
 import {downloadOperationalFile} from '../../../services/operationalExportService';
+import {attendanceAuditCsv} from '../../../../../shared/report-semantics.mjs';
 import { SuspiciousAttendanceSummary } from './SuspiciousAttendanceSummary';
 import { SuspiciousAttendanceRows } from './SuspiciousAttendanceRows';
 import React, { useState } from 'react';
@@ -39,9 +40,7 @@ export const SuspiciousAttendanceTable = ({
       alert('Tidak ada data absensi janggal untuk diekspor.');
       return;
     }
-    const headers = ['No', 'Tanggal', 'Salesman', 'Klaster', 'Kode Toko', 'Nama Toko', 'Jam In', 'Jam Out', 'Durasi (Menit)', 'Status Durasi', 'Deviasi GPS (Meter)', 'Peringatan Jarak', 'Jarak dari Toko Sebelumnya (Km)', 'Waktu Tempuh Perjalanan (Menit)', 'Peringatan Jeda Travel', 'Jenis Anomali', 'Alasan Checkout Dini / Travel', 'Catatan / Keterangan Toko', 'Effective Call', 'Nilai Order (Rp)'];
-    const csvData = filteredRows.map((r, idx) => [idx + 1, r.date, `"${(r.salesmanName || '').replace(/"/g, '""')}"`, `"${(r.clusterName || '').replace(/"/g, '""')}"`, `"${r.customerId}"`, `"${(r.customerName || '').replace(/"/g, '""')}"`, r.timeIn || '-', r.timeOut || '-', r.durationMinutes || 0, r.isDurationAnomaly ? 'Di bawah batas aturan' : r.durationMinutes==null?'Tidak tersedia':'Normal', r.deviationMeters || 0, r.distanceWarning === 'WARNING' ? 'Di luar radius aturan' : 'OK', r.travelDistanceKm || 0, r.travelDurationMinutes || 0, r.isTravelAnomaly ? 'Jeda Travel Janggal' : 'Normal', `"${[r.isDurationAnomaly ? 'Durasi di bawah batas aturan' : '', r.isDistanceAnomaly ? 'Deviasi GPS melebihi radius' : '', r.isTravelAnomaly ? 'Jeda Travel Janggal' : '', r.isSkipped ? 'Belum Dikunjungi/Kelewat' : ''].filter(Boolean).join(', ')}"`, `"${(r.travelAnomalyReason || r.earlyReason || '-').replace(/"/g, '""')}"`, `"${(r.reason || r.remark || '-').replace(/"/g, '""')}"`, r.effectiveCall === 'Y' ? 'EC' : 'Non-EC', r.orderAmount || 0]);
-    const csvContent = '\uFEFF' + [headers.join(','), ...csvData.map(e => e.join(','))].join('\n');
+    const csvContent = '\uFEFF' + attendanceAuditCsv(filteredRows);
     const blob = new Blob([csvContent], {
       type: 'text/csv;charset=utf-8;'
     });

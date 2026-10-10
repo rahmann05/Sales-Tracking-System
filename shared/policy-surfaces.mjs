@@ -16,6 +16,7 @@ export const POLICY_SURFACES = [
  {id:'reports',label:'Laporan, arsip dan ekspor',prefixes:['REPORT_','TRAVEL_GAP_']},
  {id:'attention',label:'Antrean perhatian dan notifikasi',prefixes:['SLA_','NOTIFY_','NOTIFICATIONS_','AUDIT_']},
  {id:'references',label:'Master referensi dan nomor dokumen',prefixes:['CODE_','DEFAULT_PRODUCT_','DEFAULT_CUSTOMER_']},
+ {id:'drafts',label:'Draf formulir dan pengiriman ulang',prefixes:['DRAFT_']},
 ];
 export function affectedSurfaces(values={}) {
  const keys=Object.keys(values);

@@ -1,12 +1,14 @@
 import { httpServer } from './src/app.js';
 import { config } from './src/config/index.js';
 import { initSocket } from './src/config/socket.js';
+import {configureSocketAdapter} from './src/config/socket-adapter.js';
 import { initScheduler } from './src/utils/scheduler.js';
 
 const PORT = config.port;
 
 // Initialize Socket.IO with httpServer
-initSocket(httpServer);
+const socketServer=initSocket(httpServer);
+const closeSocketAdapter=await configureSocketAdapter(socketServer);
 
 const server = httpServer.listen(PORT, () => {
   console.log(`=================================`);
@@ -21,11 +23,11 @@ const server = httpServer.listen(PORT, () => {
 });
 
 // Graceful shutdown for nodemon & process signals
+let shuttingDown=false;
 const gracefulShutdown = () => {
-  server.close(() => {
-    process.exit(0);
-  });
-  setTimeout(() => process.exit(0), 1000).unref();
+  if(shuttingDown)return;shuttingDown=true;
+  socketServer.close(async()=>{await closeSocketAdapter();server.close(()=>process.exit(0));});
+  setTimeout(() => process.exit(0), 10000).unref();
 };
 
 process.once('SIGUSR2', gracefulShutdown);

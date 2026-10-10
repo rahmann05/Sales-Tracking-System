@@ -1,7 +1,8 @@
 import React,{useState} from 'react';
 import {LuRefreshCw,LuArrowRight,LuMapPin} from 'react-icons/lu';
 import {useApp} from '../../context/AppContext';
-import {deliveryApi} from '../../services/api';
+import {sendDriverEvidence} from '../../services/api/deliveryApi';
+import {DriverPendingSubmissions} from './components/DriverPendingSubmissions';
 import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
 import {useSelectedDetail} from '../../shared/hooks/useSelectedDetail';
 import {TAB_IDS} from '../../constants/navigation';
@@ -23,10 +24,11 @@ export function DriverFieldView(){
  const disabled=!!error||trip?.status!=='IN_TRANSIT'||trip?.onHold||!!trip?.returnedAt;
  const destinationGate=deliveryStopGate(stops,selected?.id,trip?.policySnapshot?.values);
  const tripIssues=issues.filter(i=>i.routeId===trip?.id||stops.some(s=>s.id===i.deliveryStopId));
- const save=async(id,data)=>{if(data.logicalResult)await deliveryApi.updateStopStatus(id,{...data.result,photoUrl:data.photoUrl,notes:data.notes});else await deliveryApi.submitDriverAttendance(id,data);setModal(null);await refresh();};
+ const save=async(id,data)=>{await sendDriverEvidence(id,data);setModal(null);await refresh();};
  return <div className="workspace-page logistics-workspace driver-workspace">
   <header className="admin-page-heading"><div><p className="admin-eyebrow">Driver / Pelaksanaan pengiriman</p><h1>Trip saya</h1><p>Trip yang belum ditutup, termasuk penugasan dari tanggal sebelumnya.</p></div><button type="button" className="admin-button" disabled={loading} onClick={refresh}><LuRefreshCw/>{loading?'Memperbarui…':'Perbarui'}</button></header>
   <p role="status" className="admin-footnote">Pembaruan setiap 30 detik · Terakhir berhasil: {stamp(updatedAt)} WIB</p>
+  <DriverPendingSubmissions onChanged={refresh}/>
   {error&&<p role="alert" className="admin-feedback error">{error} Data terakhir tetap ditampilkan. Perbarui data sebelum melakukan tindakan.</p>}
   {loading&&!routes.length?<p className="admin-empty">Memuat trip yang ditugaskan…</p>:!trip?<section className="admin-panel admin-empty"><h2>Belum ada trip terbuka</h2><p>Hubungi Kepala Gudang untuk memeriksa penugasan Anda.</p></section>:<>
    <section className="admin-panel logistics-trip-heading"><div><span className="admin-status">{deliveryRouteLabel(trip)}</span><h2>{trip.code}</h2><p>{trip.vehicle?.code||'Truk belum ditetapkan'} · {trip.vehicle?.name} · Tanggal trip {trip.date?new Date(trip.date).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta'}):'Belum tersedia'}</p></div><div className="logistics-heading-tools">{routes.length>1&&<label>Trip yang ditugaskan<select value={trip.id} onChange={e=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true}))){selectTrip(e.target.value);selectStop('');}}}>{routes.map(r=><option key={r.id} value={r.id}>{r.code} · {deliveryRouteLabel(r)}</option>)}</select></label>}<button type="button" className="admin-button" onClick={()=>{selectTrip(trip.id);setActiveTab(TAB_IDS.DELIVERY_DRIVER_MAP);}}><LuMapPin/>Peta tujuan</button></div></section>

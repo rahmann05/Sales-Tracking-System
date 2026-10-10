@@ -74,7 +74,7 @@ export function SalesmanTimelineList({
                     </span>}
 
                   {sales.durationAnomalies > 0 && <span className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-700 text-[10px] font-black border border-amber-500/20 inline-flex items-center gap-1">
-                      <FiAlertTriangle className="text-xs" /> Durasi &lt;5m: {sales.durationAnomalies}
+                      <FiAlertTriangle className="text-xs" /> Di bawah batas durasi: {sales.durationAnomalies}
                     </span>}
 
                   <div className="w-8 h-8 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant ml-1">
@@ -102,13 +102,13 @@ export function SalesmanTimelineList({
                               <div className="flex items-center gap-2">
                                 <LuNavigation className={`text-sm ${isTravelAnom ? 'text-rose-600 animate-bounce' : 'text-primary'}`} />
                                 <span>
-                                  Jarak dari <strong>"{stop.prevStopName}"</strong>: {stop.travelDistanceKm} km • Waktu Jeda: <strong>{stop.travelDurationFormatted}</strong>
+                                  Antartitik outlet dari <strong>"{stop.prevStopName}"</strong>: {stop.travelDistanceKm==null?'Jarak tidak tersedia':`${stop.travelDistanceKm} km`} • Jeda OUT–IN: <strong>{stop.travelDurationFormatted}</strong>
                                 </span>
                               </div>
 
                               {isTravelAnom ? <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
                                   <LuShieldAlert className="text-[10px]" /> Jeda Perjalanan Janggal!
-                                </span> : <span className="text-[10px] text-emerald-600 font-bold">Normal</span>}
+                                </span> : <span className="text-[10px] text-on-surface-variant font-bold">{stop.travelDurationMinutes==null||stop.travelDistanceKm==null?'Bukti belum cukup':'Tidak terdeteksi'}</span>}
                             </div>}
 
                           {/* Stop Card */}
@@ -177,12 +177,12 @@ export function SalesmanTimelineList({
 
                                 {isShort && <div className="text-rose-700 font-semibold flex items-center gap-1.5">
                                     <LuClock className="shrink-0" />
-                                    <span>Kunjungan terlalu singkat (&lt; 5 menit). {stop.earlyReason ? `Alasan: "${stop.earlyReason}"` : ''}</span>
+                                    <span>Kunjungan di bawah batas {stop.minimumDuration??'aturan'} menit. {stop.earlyReason ? `Alasan: "${stop.earlyReason}"` : ''}</span>
                                   </div>}
 
                                 {isFar && <div className="text-amber-700 font-semibold flex items-center gap-1.5">
                                     <LuMapPin className="shrink-0" />
-                                    <span>Check-in berada {stop.deviationMeters} meter di luar koordinat fisik toko (radius 50m).</span>
+                                    <span>Jarak check-in ke titik toko {stop.deviationMeters} meter (radius aturan {stop.radiusMeters??'belum tersedia'} meter).</span>
                                   </div>}
                               </div>}
                           </div>

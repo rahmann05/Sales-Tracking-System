@@ -1,5 +1,8 @@
 import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
+import {useApp} from '../../../context/AppContext';
+import {reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
+import {distanceStatus} from '../../../../../shared/report-semantics.mjs';
 import { ReportBasisNote } from '../../Reports/components/ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
@@ -9,6 +12,7 @@ import { LuPrinter, LuX } from 'react-icons/lu';
  * with company header, KPI summary, full ND6 visit table, and signature sections.
  */
 export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) => {
+  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
   if (!reportData) return null;
 
   const { summary = {}, rows = [] } = reportData;
@@ -31,6 +35,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
         <button
           type="button"
           onClick={handlePrint}
+          disabled={!canExport}
           className="px-4 py-2.5 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:opacity-90 transition-all cursor-pointer"
         >
           <LuPrinter className="text-base" /> Cetak / Unduh PDF
@@ -54,7 +59,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
         <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
           <div>
             <h1 className="text-base font-black tracking-tight text-gray-900 m-0 uppercase">
-              CV. SINAR ANUGRAH
+              {reportData.meta?.company||'Perusahaan'}
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
               FMCG DISTRIBUTOR
@@ -85,15 +90,15 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
             <strong className="text-gray-900 text-[11px]">{salesmanName || 'Semua Salesman'}</strong>
           </div>
           <div>
-            <span className="text-gray-500 font-semibold block">Total Kunjungan (Plan / Actual):</span>
+            <span className="text-gray-500 font-semibold block">Realisasi PJP / Rencana:</span>
             <strong className="text-gray-900 text-[11px]">
-              {summary.totalActualCalls} / {summary.totalPlanCalls} Call (kepatuhan PJP: {summary.callComplianceRate || '0%'})
+              {summary.totalPlannedActualCalls} / {summary.totalPlanCalls} (kepatuhan PJP: {summary.callComplianceRate || '0%'}) · {summary.totalActualCalls} aktual termasuk luar PJP
             </strong>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block">Effective Call (EC):</span>
             <strong className="text-gray-900 text-[11px]">
-              {summary.totalEffectiveCalls} Toko ({summary.effectiveCallRate})
+              {summary.totalEffectiveCalls} kunjungan ({summary.effectiveCallRate})
             </strong>
           </div>
           <div>
@@ -164,7 +169,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
                     {r.earlyReason && <div className="text-amber-800">[Dini: {r.earlyReason}]</div>}
                   </td>
                   <td className="p-1.5 text-center font-mono text-[8.5px] whitespace-nowrap">
-                    {r.deviationMeters}m ({r.distanceWarning})
+                    {r.deviationMeters==null?'Tidak tersedia':`${r.deviationMeters} m (${distanceStatus(r)})`}
                   </td>
                 </tr>
               ))}
@@ -200,7 +205,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           <div className="border border-gray-300 p-2.5 rounded-sm">
             <span className="text-gray-500 font-bold block mb-12">Disetujui Oleh (Admin Penjualan),</span>
             <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( Maria Ulfah )
+              ( ____________________ )
             </div>
             <span className="text-[8.5px] text-gray-500">Admin Penjualan</span>
           </div>

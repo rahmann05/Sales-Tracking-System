@@ -4,6 +4,7 @@ import {AppError} from '../../utils/errors.js';
 import {randomUUID} from 'node:crypto';
 import {assertSalesAccess} from '../../utils/team-scope.js';
 import {notifyFollowUp} from './follow-up-notification.service.js';
+import {followUpActor} from './follow-up-access.service.js';
 export async function followUpScope(user, db = prisma) {
   if (user.role === 'ADMIN') return { followUp: { path: ['status'], string_contains: '' } };
   const team = user.role === 'SUPERVISOR' ? await db.user.findMany({ where: { supervisorId: user.id, role: 'SALES', deletedAt: null }, select: { id: true } }) : [];
@@ -14,11 +15,14 @@ export async function followUpScope(user, db = prisma) {
 }
 
 export const listFollowUps=async(user,{status='ALL',page=1,limit=50}={})=>{
+  ({actor:user}=await followUpActor(prisma,user,'view'));
   if(!['ALL','OPEN','SUBMITTED','DONE'].includes(status))throw new AppError('Status tindak lanjut tidak valid',400);
   const current=Math.max(1,Math.floor(Number(page)||1)),size=Math.min(200,Math.max(1,Math.floor(Number(limit)||50)));
   return prisma.staffActivity.findMany({where:{AND:[await followUpScope(user),...(status==='ALL'?[]:[{followUp:{path:['status'],equals:status}}])]},select:{id:true,outletName:true,followUp:true,policySnapshot:true,user:{select:{name:true}}},orderBy:[{checkInAt:'asc'},{id:'asc'}],skip:(current-1)*size,take:size});
 };
 export const completeFollowUp=(id,user,note,evidence)=>prisma.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+  ({actor:user}=await followUpActor(tx,user,'complete'));
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${id}`}))`;
   const record=await tx.staffActivity.findFirst({where:{id,...await followUpScope(user,tx)}});
   if(!record?.followUp)throw new AppError('Tindak lanjut tidak ditemukan',404);
@@ -35,6 +39,8 @@ export const completeFollowUp=(id,user,note,evidence)=>prisma.$transaction(async
 });
 
 export const reviewFollowUp=(id,user,{decision,note,submissionId})=>prisma.$transaction(async tx=>{
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+  ({actor:user}=await followUpActor(tx,user,'review'));
   if(!['ADMIN','SUPERVISOR'].includes(user.role))throw new AppError('Pemeriksaan hanya oleh Admin atau SPV',403);
   if(!['ACCEPT','RETURN'].includes(decision)||typeof note!=='string'||!note.trim()||note.trim().length>2000)throw new AppError('Keputusan dan catatan pemeriksaan wajib diisi',400);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${id}`}))`;

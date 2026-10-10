@@ -19,6 +19,7 @@ export function parameterGuidance(key,values){
  if(values.DELIVERY_STOP_ORDER==='SEQUENTIAL'&&key==='DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT')return 'Tidak berlaku: urutan wajib menunggu hasil seluruh tujuan sebelumnya. Nilai ini dipakai saat urutan bebas.';
  if(!(Number(values.ORDER_APPROVAL_AMOUNT_THRESHOLD)>0)&&key==='ORDER_APPROVAL_AMOUNT_MODE')return 'Tidak berlaku: batas nominal nol menonaktifkan persetujuan khusus nominal.';
  if(String(values.SALES_ALLOW_PRICE_OVERRIDE)==='false'&&/^ORDER_PRICE_OVERRIDE_/.test(key))return 'Tidak berlaku: perubahan harga katalog tidak diizinkan.';
+ if(String(values.ORDER_PRICE_OVERRIDE_LIMIT_ENABLED)==='false'&&/^ORDER_PRICE_OVERRIDE_MAX_/.test(key))return 'Tidak berlaku: batas persentase perubahan harga belum diaktifkan.';
  if((String(values.SALES_ALLOW_PRICE_OVERRIDE)==='false'||!(Number(values.ORDER_APPROVAL_AMOUNT_THRESHOLD)>0)||!values.ORDER_PRICE_OVERRIDE_APPROVAL_MODE||values.ORDER_PRICE_OVERRIDE_APPROVAL_MODE==='INHERIT')&&key==='ORDER_APPROVAL_CONDITION_PRIORITY')return 'Prioritas hanya dipakai jika aturan nominal dan persetujuan perubahan harga sama-sama cocok.';
  if(String(values.NOTIFY_REALTIME_ENABLED)==='false'&&/^NOTIFY_RETRY_/.test(key))return 'Tidak berlaku: siaran langsung dimatikan. Pesan yang diizinkan tetap disimpan di kotak masuk.';
  if(String(values.VEHICLE_SERVICE_ALLOW_BACKDATE)==='false'&&key==='VEHICLE_SERVICE_MAX_BACKDATE_DAYS')return 'Tidak berlaku: pencatatan servis sebelum tanggal hari ini sedang dimatikan.';

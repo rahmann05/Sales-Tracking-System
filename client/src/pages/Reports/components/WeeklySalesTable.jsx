@@ -1,4 +1,6 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
+import {useApp} from '../../../context/AppContext';
+import {selectedReportItems,reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
 import React from 'react';
 import { SalesTargetEditor } from './SalesTargetEditor';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
@@ -25,7 +27,10 @@ export function WeeklySalesTable({
   targetPeriod,
   summary
 }) {
-  return <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
+  const {settings,user}=useApp(),columns=new Set(selectedReportItems(settings,'REPORT_WEEKLY_COLUMNS'));
+  const hidden=column=>!columns.has(column),canExport=reportExportAllowed(user,settings);
+  const visibleCount=1+columns.size-(columns.has('days')?1:0)+(columns.has('days')?daysSummary.length:0);
+  return <div className={`bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden ${settings.REPORT_TABLE_DENSITY==='COMPACT'?'report-compact':''}`}>
         {/* Workspace Card Header */}
         <div className="p-4 sm:p-5 border-b border-border-glass bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -46,11 +51,11 @@ export function WeeklySalesTable({
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
             </button>
 
-            <button type="button" onClick={exportToCsv} className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
+            <button type="button" disabled={!canExport||isLoading} onClick={exportToCsv} className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
               <LuDownload /> Excel
             </button>
 
-            <button type="button" onClick={() => setIsPdfModalOpen(true)} className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
+            <button type="button" disabled={!canExport||isLoading} onClick={() => setIsPdfModalOpen(true)} className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
               <LuPrinter /> Cetak PDF
             </button>
           </div>
@@ -102,12 +107,12 @@ export function WeeklySalesTable({
             <thead>
               <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
                 <th className="">Salesman</th>
-                <th className="">Klaster</th>
-                {daysSummary.map(day => <th key={day.dateStr} className="text-center">{day.dayName}<br />{day.formattedDate || day.dateStr}<br /><span className="font-normal">{calendarDayLabel(day.isWorkingDay)}</span></th>)}
-                <th className="text-center">Total Act / Plan</th>
-                <th className="text-center">Call %</th>
-                <th className="text-center">EC %</th>
-                <th className="text-right">Nilai order disetujui Mingguan (Rp)</th>
+                <th hidden={hidden('cluster')}>Klaster</th>
+                {columns.has('days')&&daysSummary.map(day => <th key={day.dateStr} className="text-center">{day.dayName}<br />{day.formattedDate || day.dateStr}<br /><span className="font-normal">{calendarDayLabel(day.isWorkingDay)}</span></th>)}
+                <th hidden={hidden('calls')} className="text-center">Total Act / Plan</th>
+                <th hidden={hidden('callRate')} className="text-center">Call %</th>
+                <th hidden={hidden('ecRate')} className="text-center">EC %</th>
+                <th hidden={hidden('revenue')} className="text-right">Nilai order disetujui Mingguan (Rp)</th>
               </tr>
             </thead>
             <tbody>
@@ -117,11 +122,11 @@ export function WeeklySalesTable({
                     <p className="text-xs font-normal">Target: {formatTarget(s.weeklyTotal?.target,s.target?.status)} · {s.weeklyTotal?.targetAchievement}</p>
                     <SalesTargetEditor sales={s} kind="WEEK" period={targetPeriod} onSaved={loadData}/>
                   </td>
-                  <td data-label="Klaster" className="text-on-surface-variant text-[11px] whitespace-nowrap">
+                  <td hidden={hidden('cluster')} data-label="Klaster" className="text-on-surface-variant text-[11px] whitespace-nowrap">
                     {s.clusterName}
                   </td>
 
-                  {daysSummary.map(day => {
+                  {columns.has('days')&&daysSummary.map(day => {
               const d = s.days?.[day.dayName.toLowerCase()] || {
                 plan: 0,
                 actual: 0,
@@ -140,22 +145,22 @@ export function WeeklySalesTable({
             })}
 
                   {/* Weekly Totals */}
-                  <td data-label="Total Act/Plan" className="text-center font-mono font-bold text-on-surface whitespace-nowrap">
+                  <td hidden={hidden('calls')} data-label="Total Act/Plan" className="text-center font-mono font-bold text-on-surface whitespace-nowrap">
                     {s.weeklyTotal?.actual} / {s.weeklyTotal?.plan}
                   </td>
-                  <td data-label="Call %" className="text-center font-mono font-bold text-blue-600">
+                  <td hidden={hidden('callRate')} data-label="Call %" className="text-center font-mono font-bold text-blue-600">
                     {s.weeklyTotal?.callRate}
                   </td>
-                  <td data-label="EC %" className="text-center font-mono font-bold text-emerald-600">
+                  <td hidden={hidden('ecRate')} data-label="EC %" className="text-center font-mono font-bold text-emerald-600">
                     {s.weeklyTotal?.ecRate}
                   </td>
-                  <td data-label="Nilai order disetujui" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td hidden={hidden('revenue')} data-label="Nilai order disetujui" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.weeklyTotal?.omzet || 0).toLocaleString('id-ID')}
                   </td>
                 </tr>)}
 
               {filteredSalesmen.length === 0 && <tr>
-                  <td colSpan={daysSummary.length + 6} className="text-center text-on-surface-variant font-semibold">
+                  <td colSpan={visibleCount} className="text-center text-on-surface-variant font-semibold">
                     Tidak ada data performa mingguan untuk filter yang dipilih.
                   </td>
                 </tr>}
@@ -164,23 +169,23 @@ export function WeeklySalesTable({
             {/* Subtotal Footer */}
             {filteredSalesmen.length > 0 && <tfoot>
                 <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
-                  <td className="" colSpan="2">
+                  <td colSpan={columns.has('cluster')?2:1}>
                     TOTAL HASIL LAPORAN (sebelum pencarian nama)
                   </td>
-                  {daysSummary.map((ds, idx) => <td key={idx} className="text-center font-mono text-[11px]">
+                  {columns.has('days')&&daysSummary.map((ds, idx) => <td key={idx} className="text-center font-mono text-[11px]">
                       <div>{ds.actualCalls}/{ds.planCalls}</div>
                       <div className="text-[10px] text-purple-600 font-bold">EC:{ds.effectiveCalls}</div>
                     </td>)}
-                  <td className="text-center font-mono">
+                  <td hidden={hidden('calls')} className="text-center font-mono">
                     {summary.totalActualCalls}/{summary.totalPlanCalls}
                   </td>
-                  <td className="text-center font-mono text-blue-600">
+                  <td hidden={hidden('callRate')} className="text-center font-mono text-blue-600">
                     {summary.callComplianceRate}
                   </td>
-                  <td className="text-center font-mono text-emerald-600">
+                  <td hidden={hidden('ecRate')} className="text-center font-mono text-emerald-600">
                     {summary.effectiveCallRate}
                   </td>
-                  <td className="text-right font-mono text-emerald-700">
+                  <td hidden={hidden('revenue')} className="text-right font-mono text-emerald-700">
                     Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')}
                   </td>
                 </tr>

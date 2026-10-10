@@ -9,6 +9,7 @@ import { calendarMonthMetrics, calendarBasis } from '../../../../../shared/repor
 import { loadReportCalendars } from './report-calendar.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
+import {reportProvenance} from './report-provenance.service.js';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -200,7 +201,8 @@ export const getMtdReport = async (query = {}) => {
   ];
 
   return {
-    basis: { ...reportBasis(), ...assignmentReportBasis(mtdRecords,lmaRecords),...calendarBasis([calendarMonth],calendars), target:'EXPLICIT_SALES_PERIOD',targetNote:targetBasisNote,targetCoverage:coverage, channelNote: channelBasisNote, unverifiedChannelAmount },
+    basis: { ...reportBasis(), ...assignmentReportBasis(mtdRecords,lmaRecords),...calendarBasis([calendarMonth],calendars),...reportProvenance({manualSalesMode},mtdRecords,lmaRecords), target:'EXPLICIT_SALES_PERIOD',targetNote:targetBasisNote,targetCoverage:coverage, channelNote: channelBasisNote, unverifiedChannelAmount },
+    meta:{company:await getDynamicConfig('COMPANY_NAME','PT. SINAR ANUGRAH')},
     period: {
       month: targetMonth,
       monthName: monthNames[targetMonth - 1] || `Bulan ${targetMonth}`,

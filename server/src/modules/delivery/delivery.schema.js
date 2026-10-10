@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {actionNames} from '../../../../shared/business-actions.mjs';
 
 // ═══════════════════════════════════════════════════════════════
 // Packing List Schemas
@@ -8,6 +9,7 @@ const invoiceItemSchema = z.object({
   items:z.array(z.object({lineId:z.string().min(1),quantity:z.number().int().positive(),unitPrice:z.number().nonnegative().optional()})).optional(),
   taxRatePercent:z.number().min(0).max(100).optional(),
   taxIncluded:z.boolean().optional(),
+  taxRoundingMode:z.enum(['NEAREST','DOWN','UP']).optional(),
   invoiceNumber: z.string().trim().max(128).optional(),
   totalAmount: z.number().nonnegative().optional(),
   totalCartons: z.number().int().min(1).default(1),
@@ -74,6 +76,7 @@ const invoiceAllocation = z.object({invoiceId:z.string().min(1),cartons:z.number
 const stopResult = z.object({status:z.enum(['DELIVERED','REJECTED','PARTIAL_REJECT']),rejectReason:z.string().optional(),rejectedCartons:z.number().int().nonnegative().optional(),rejectedItems:z.array(rejectedItem).optional(),rejectedInvoices:z.array(invoiceAllocation).optional()});
 export const submitDriverAttendanceSchema = z.object({
   body: z.object({
+    requestId:z.string().uuid().optional(),
     type: z.enum(['IN', 'OUT']),
     result: stopResult.optional(),
     accuracy:z.number().nonnegative().max(100000).nullable().optional(),
@@ -90,6 +93,7 @@ export const submitDriverAttendanceSchema = z.object({
 
 export const updateStopStatusSchema = z.object({
   body: z.object({
+    requestId:z.string().uuid().optional(),
     status: z.enum(['PENDING', 'DELIVERED', 'REJECTED', 'PARTIAL_REJECT']),
     rejectReason: z.string().optional(),
     rejectedCartons: z.number().int().min(0).optional(),
@@ -105,7 +109,7 @@ export const updateStopStatusSchema = z.object({
 });
 
 export const routeActionSchema = z.object({ body: z.object({
-  action: z.enum(['ASSIGN_PREPARATION','PICK','CHECK','LOAD','START','RETURN','CLOSE','HOLD','RESUME','RESCHEDULE','CANCEL','LEGACY_ODOMETER']),
+  action: z.enum(actionNames('TRIP')),
   stage:z.enum(['PICK','CHECK','LOAD']).optional(),ownerId:z.string().uuid().optional(),dueAt:z.string().datetime().optional(),assignmentRevision:z.number().int().nonnegative().optional(),
   note: z.string().trim().min(1).max(2000), cartons:z.number().int().nonnegative().optional(),
   quantities:z.record(z.number().int().nonnegative()).optional(), odometer:z.number().nonnegative().optional(), fuelLiters:z.number().nonnegative().optional(), documentsReturned:z.boolean().optional(),

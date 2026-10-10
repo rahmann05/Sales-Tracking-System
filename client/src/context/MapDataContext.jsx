@@ -42,8 +42,8 @@ export const MapDataProvider = ({ children }) => {
   useEffect(()=>{
     if(!user?.id)return;
     const socketUrl = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? 'https://sinar-anugrah-production.up.railway.app' : undefined);
-    const socket = io(socketUrl, { auth: { token: localStorage.getItem('token') }, transports: ['polling', 'websocket'], reconnectionAttempts: 2, reconnectionDelay: 8000, timeout: 10000 });
-    socket.on('cache:invalidate',event=>{if(event.dataType==='policies')window.dispatchEvent(new Event('policy:changed'));else if(hasFetchedRef.current)fetchAllData();});
+    const socket = io(socketUrl, { auth: { token: localStorage.getItem('token') }, transports: import.meta.env.PROD?['websocket']:['polling','websocket'], reconnectionAttempts: 2, reconnectionDelay: 8000, timeout: 10000 });
+    socket.on('cache:invalidate',event=>{if(['policies','config','configs'].includes(event.dataType))window.dispatchEvent(new Event('policy:changed'));else if(hasFetchedRef.current)fetchAllData();});
     socket.on('notification',()=>window.dispatchEvent(new Event('notifications:changed')));
     socket.on('connect',()=>window.dispatchEvent(new Event('notifications:changed')));
     socket.io.on('reconnect_attempt',()=>{socket.auth={token:localStorage.getItem('token')};});

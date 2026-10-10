@@ -1,4 +1,6 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
+import {useApp} from '../../../context/AppContext';
+import {selectedReportItems,reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
 import React from 'react';
 import { SalesTargetEditor } from './SalesTargetEditor';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
@@ -22,7 +24,9 @@ export function MtdSalesTable({
   summary,
   year
 }) {
-  return <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
+  const {settings,user}=useApp(),columns=new Set(selectedReportItems(settings,'REPORT_MTD_COLUMNS'));
+  const hidden=column=>!columns.has(column),canExport=reportExportAllowed(user,settings);
+  return <div className={`bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden ${settings.REPORT_TABLE_DENSITY==='COMPACT'?'report-compact':''}`}>
         {/* Workspace Card Header */}
         <div className="p-4 sm:p-5 border-b border-border-glass bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -43,11 +47,11 @@ export function MtdSalesTable({
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
             </button>
 
-            <button type="button" onClick={exportToCsv} className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
+            <button type="button" disabled={!canExport||isLoading} onClick={exportToCsv} className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
               <LuDownload /> Excel
             </button>
 
-            <button type="button" onClick={() => setIsPdfModalOpen(true)} className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
+            <button type="button" disabled={!canExport||isLoading} onClick={() => setIsPdfModalOpen(true)} className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
               <LuPrinter /> Cetak PDF
             </button>
           </div>
@@ -111,16 +115,16 @@ export function MtdSalesTable({
             <thead>
               <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
                 <th className="">Salesman</th>
-                <th className="">Klaster</th>
-                <th className="text-right">Target (Rp)</th>
-                <th className="text-right">MTD Actual (Rp)</th>
-                <th className="text-center">% Achv</th>
-                <th className="text-right">LMA (Rp)</th>
-                <th className="text-center">% MTD/LMA</th>
-                <th className="text-center">MTD Call (A/P)</th>
-                <th className="text-center">Call %</th>
-                <th className="text-center">EC %</th>
-                <th className="text-center">SKU Sold</th>
+                <th hidden={hidden('cluster')}>Klaster</th>
+                <th hidden={hidden('target')} className="text-right">Target (Rp)</th>
+                <th hidden={hidden('revenue')} className="text-right">MTD Actual (Rp)</th>
+                <th hidden={hidden('achievement')} className="text-center">% Achv</th>
+                <th hidden={hidden('lastMonth')} className="text-right">LMA (Rp)</th>
+                <th hidden={hidden('comparison')} className="text-center">% MTD/LMA</th>
+                <th hidden={hidden('calls')} className="text-center">MTD Call (A/P)</th>
+                <th hidden={hidden('callRate')} className="text-center">Call %</th>
+                <th hidden={hidden('ecRate')} className="text-center">EC %</th>
+                <th hidden={hidden('sku')} className="text-center">SKU Sold</th>
               </tr>
             </thead>
             <tbody>
@@ -128,45 +132,45 @@ export function MtdSalesTable({
                   <td data-label="Salesman" className="font-bold text-on-surface whitespace-nowrap">
                     {s.salesmanName}
                   </td>
-                  <td data-label="Klaster" className="text-on-surface-variant text-[11px] whitespace-nowrap">
+                  <td hidden={hidden('cluster')} data-label="Klaster" className="text-on-surface-variant text-[11px] whitespace-nowrap">
                     {s.clusterName}
                   </td>
-                  <td data-label="Target" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
+                  <td hidden={hidden('target')} data-label="Target" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
                     <div>{formatTarget(s.monthlyTarget,s.target?.status)}</div>
                     {s.target?.status!=='COMPARISON_ONLY'&&<SalesTargetEditor sales={s} kind="MONTH" period={`${reportData.period?.year}-${String(reportData.period?.month).padStart(2,'0')}`} onSaved={loadData}/>}
                   </td>
-                  <td data-label="MTD Actual" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td hidden={hidden('revenue')} data-label="MTD Actual" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(s.mtdActualAmount || 0).toLocaleString('id-ID')}
                   </td>
-                  <td data-label="% Achv" className="text-center font-mono font-bold text-purple-600">
+                  <td hidden={hidden('achievement')} data-label="% Achv" className="text-center font-mono font-bold text-purple-600">
                     <span className="px-2 py-0.5 rounded-md bg-purple-500/10">
                       {s.achievementRate}
                     </span>
                   </td>
-                  <td data-label="LMA" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
+                  <td hidden={hidden('lastMonth')} data-label="LMA" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
                     Rp {(s.lastMonthActual || 0).toLocaleString('id-ID')}
                   </td>
-                  <td data-label="% MTD/LMA" className="text-center font-mono font-bold text-emerald-600">
+                  <td hidden={hidden('comparison')} data-label="% MTD/LMA" className="text-center font-mono font-bold text-emerald-600">
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/10">
                       {s.mtdToLmaRate}
                     </span>
                   </td>
-                  <td data-label="MTD Call" className="text-center font-mono whitespace-nowrap">
+                  <td hidden={hidden('calls')} data-label="MTD Call" className="text-center font-mono whitespace-nowrap">
                     {s.mtdActualCalls} / {s.mtdPlanCalls}
                   </td>
-                  <td data-label="Call %" className="text-center font-mono text-blue-600 font-bold">
+                  <td hidden={hidden('callRate')} data-label="Call %" className="text-center font-mono text-blue-600 font-bold">
                     {s.callComplianceRate}
                   </td>
-                  <td data-label="EC %" className="text-center font-mono text-emerald-600 font-bold">
+                  <td hidden={hidden('ecRate')} data-label="EC %" className="text-center font-mono text-emerald-600 font-bold">
                     {s.effectiveCallRate}
                   </td>
-                  <td data-label="SKU Sold" className="text-center font-mono">
+                  <td hidden={hidden('sku')} data-label="SKU Sold" className="text-center font-mono">
                     {s.totalSkuSold} SKU
                   </td>
                 </tr>)}
 
               {filteredSalesmen.length === 0 && <tr>
-                  <td colSpan="11" className="text-center text-on-surface-variant font-semibold">
+                  <td colSpan={columns.size+1} className="text-center text-on-surface-variant font-semibold">
                     Tidak ada data MTD untuk filter yang dipilih.
                   </td>
                 </tr>}
@@ -175,34 +179,34 @@ export function MtdSalesTable({
             {/* Subtotal Footer */}
             {filteredSalesmen.length > 0 && <tfoot>
                 <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
-                  <td className="" colSpan="2">
+                  <td colSpan={columns.has('cluster')?2:1}>
                     TOTAL HASIL LAPORAN (sebelum pencarian nama)
                   </td>
-                  <td className="text-right font-mono whitespace-nowrap">
+                  <td hidden={hidden('target')} className="text-right font-mono whitespace-nowrap">
                     {formatTarget(summary.monthlyTargetAmount)}
                   </td>
-                  <td className="text-right font-mono font-black text-on-surface whitespace-nowrap">
+                  <td hidden={hidden('revenue')} className="text-right font-mono font-black text-on-surface whitespace-nowrap">
                     Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="text-center font-mono text-purple-700">
+                  <td hidden={hidden('achievement')} className="text-center font-mono text-purple-700">
                     {summary.overallAchievementRate}
                   </td>
-                  <td className="text-right font-mono whitespace-nowrap text-on-surface-variant">
+                  <td hidden={hidden('lastMonth')} className="text-right font-mono whitespace-nowrap text-on-surface-variant">
                     Rp {(summary.lastMonthActual || 0).toLocaleString('id-ID')}
                   </td>
-                  <td className="text-center font-mono text-emerald-700">
+                  <td hidden={hidden('comparison')} className="text-center font-mono text-emerald-700">
                     {summary.mtdToLmaRate}
                   </td>
-                  <td className="text-center font-mono">
+                  <td hidden={hidden('calls')} className="text-center font-mono">
                     {summary.totalMtdActualCalls}/{summary.totalMtdPlanCalls}
                   </td>
-                  <td className="text-center font-mono text-blue-600">
+                  <td hidden={hidden('callRate')} className="text-center font-mono text-blue-600">
                     {summary.mtdCallComplianceRate}
                   </td>
-                  <td className="text-center font-mono text-emerald-600">
+                  <td hidden={hidden('ecRate')} className="text-center font-mono text-emerald-600">
                     {summary.mtdEffectiveCallRate}
                   </td>
-                  <td className="text-center font-mono">
+                  <td hidden={hidden('sku')} className="text-center font-mono">
                     {summary.totalMtdSkuSold} SKU
                   </td>
                 </tr>

@@ -14,8 +14,8 @@ import { LuFileSpreadsheet } from 'react-icons/lu';
  * (1. Daily Call Real-Time, 2. Weekly Performance WTD, 3. Month-to-Date MTD vs Target).
  */
 export const ReportsPage = () => {
-  const [activeTab, setActiveTab] = useWorkspaceState('reportView','DAILY');
   const {settings}=useApp();
+  const [activeTab, setActiveTab] = useWorkspaceState('reportView',settings.REPORT_DEFAULT_VIEW||'DAILY');
   useEffect(()=>{if(activeTab==='WEEKLY'&&!settings.REPORT_WEEKLY_ENABLED||activeTab==='MTD'&&!settings.REPORT_MTD_ENABLED)setActiveTab('DAILY');},[activeTab,settings.REPORT_WEEKLY_ENABLED,settings.REPORT_MTD_ENABLED,setActiveTab]);
 
   return (

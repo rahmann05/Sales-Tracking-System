@@ -45,13 +45,13 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
             <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
               {row.isDurationAnomaly && (
                 <li>
-                  <strong>Durasi Terlalu Singkat:</strong> {row.durationMinutes} menit (Standar min. 5 menit).
+                  <strong>Durasi terlalu singkat:</strong> {row.durationMinutes} menit (batas kunjungan: {row.minimumDuration??'belum tersedia'} menit).
                   {row.earlyReason && <span> Alasan: <em>"{row.earlyReason}"</em></span>}
                 </li>
               )}
               {row.isDistanceAnomaly && (
                 <li>
-                  <strong>Deviasi GPS Melebihi Toleransi:</strong> {row.deviationMeters} meter dari titik toko (Radius toleransi: 50m).
+                  <strong>Deviasi GPS melebihi toleransi:</strong> {row.deviationMeters} meter dari titik toko (radius aturan: {row.radiusMeters??'belum tersedia'} meter).
                 </li>
               )}
             </ul>
@@ -72,7 +72,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
           <div>
             <span className="text-[10px] text-on-surface-variant font-semibold block">Durasi Kunjungan</span>
             <strong className="text-on-surface font-mono">{row.durationFormatted}</strong>
-            <span className="text-[10px] text-on-surface-variant block">({row.durationMinutes} menit)</span>
+            {row.durationMinutes!=null&&<span className="text-[10px] text-on-surface-variant block">({row.durationMinutes} menit)</span>}
           </div>
           <div>
             <span className="text-[10px] text-on-surface-variant font-semibold block">Effective Call (EC)</span>

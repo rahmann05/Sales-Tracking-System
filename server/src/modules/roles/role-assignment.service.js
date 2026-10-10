@@ -8,7 +8,7 @@ export async function roleDefinition(code) {
   if(!role) throw new AppError('Definisi role tidak ditemukan',400);
   const baseRole = role.isSystem ? role.code : role.baseRole || 'SALES';
   if(!codes.has(baseRole)) throw new AppError('Role dasar tidak valid',400);
-  return {...role,baseRole};
+  return {...role,baseRole,defaultPermissions:{...(role.isSystem?BUILT_IN_ROLES.find(r=>r.code===role.code)?.defaultPermissions:{}),...role.defaultPermissions}};
 }
 export async function resolveIdentity(user) {
   const definition = await roleDefinition(user.roleCode || user.role);

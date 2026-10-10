@@ -9,6 +9,7 @@ import { calculateDistanceMeters } from '../../utils/geolocation.js';
 import { getDynamicConfig } from '../config/config.service.js';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import { notifyFollowUp } from './follow-up-notification.service.js';
+import {followUpActor,assertFollowUpOwner} from './follow-up-access.service.js';
 import {DEFAULT_AUDIT_ITEMS,parseAuditItems,auditAnswers} from '../../../../shared/supervision-checklist.mjs';
 
 async function perform(db,user, data) {
@@ -58,25 +59,28 @@ async function perform(db,user, data) {
   }
   if (!existing || existing.checkOutAt || existing.checklist?.state==='FINISHED') throw new AppError('Kunjungan belum dimulai atau sudah selesai', 409);
   const questions=parseAuditItems(await processValue(existing,'SPV_AUDIT_ITEMS',DEFAULT_AUDIT_ITEMS));
-  let answers;try{answers=auditAnswers(questions,data.action==='AUDIT'?data.checklist:existing.checklist);}catch(error){throw new AppError(error.message,422);}
+  let answers;try{answers=auditAnswers(questions,data.action==='AUDIT'?data.checklist:existing.checklist,data.action==='AUDIT'?data.auditEvidence||{}:existing.checklist?._evidence||{});}catch(error){throw new AppError(error.message,422);}
   let followUp;
   if(data.action==='AUDIT' && data.followUp) {
     if(await getDynamicConfig('FEATURE_FOLLOW_UP_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Tugas baru dijeda oleh Admin; tugas sebelumnya tetap dapat diselesaikan',409);
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+    const {actor,people}=await followUpActor(db,user,'assign');
     await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${existing.id}`}))`;
     existing=await db.staffActivity.findUnique({where});
     await assertSalesAccess(user,data.followUp.ownerId,db);
-    const owner=await db.user.findFirst({where:{id:data.followUp.ownerId,role:'SALES',deletedAt:null},select:{id:true,name:true}});
-    if(!owner)throw new AppError('Penanggung jawab harus sales aktif',400);
+    const owner=people.find(p=>p.id===data.followUp.ownerId);
+    assertFollowUpOwner(owner,actor,people,await processValue(existing,'FOLLOW_UP_REQUIRE_REVIEW',true));
     if(!data.followUp.note?.trim()||data.followUp.note.trim().length>4000)throw new AppError('Instruksi tindak lanjut wajib diisi, maksimal 4000 karakter',400);
     data.followUp.dueDate ||= wibDateKey(Date.now()+(await getDynamicConfig('FOLLOW_UP_DEFAULT_DAYS',1))*86400000);
     const due=new Date(`${data.followUp.dueDate}T12:00:00Z`);
     if(Number.isNaN(due.getTime())||due.toISOString().slice(0,10)!==data.followUp.dueDate||data.followUp.dueDate<dateKey)throw new AppError('Tenggat harus tanggal valid hari ini atau berikutnya',400);
     if(existing.followUp?.status==='DONE')throw new AppError('Tindak lanjut sudah selesai dan tidak dapat ditimpa',409);
     if(existing.followUp?.status==='SUBMITTED')throw new AppError('Periksa hasil yang sudah dikirim sebelum mengubah penugasan',409);
-    followUp={...data.followUp,note:data.followUp.note.trim(),ownerName:owner.name,status:'OPEN',createdBy:existing.followUp?.createdBy||user.id,createdAt:existing.followUp?.createdAt||new Date().toISOString(),history:[...(existing.followUp?.history||[]),{action:'ASSIGNED',actorId:user.id,at:new Date().toISOString(),before:existing.followUp?{ownerId:existing.followUp.ownerId,dueDate:existing.followUp.dueDate,note:existing.followUp.note}:null,after:{ownerId:owner.id,dueDate:data.followUp.dueDate,note:data.followUp.note.trim()}}]};
+    if(existing.followUp&&(existing.followUp.revision||0)!==data.followUp.revision)throw new AppError('Penugasan berubah. Muat ulang sebelum menyimpan audit.',409);
+    followUp={...data.followUp,revision:(existing.followUp?.revision||0)+1,note:data.followUp.note.trim(),ownerName:owner.name,status:'OPEN',createdBy:existing.followUp?.createdBy||user.id,createdAt:existing.followUp?.createdAt||new Date().toISOString(),history:[...(existing.followUp?.history||[]),{action:'ASSIGNED',actorId:user.id,at:new Date().toISOString(),before:existing.followUp?{ownerId:existing.followUp.ownerId,dueDate:existing.followUp.dueDate,note:existing.followUp.note}:null,after:{ownerId:owner.id,dueDate:data.followUp.dueDate,note:data.followUp.note.trim()}}]};
   }
   const activeMode=await processValue(existing,'SPV_ATTENDANCE_MODE','IN_OUT');
-  const metadata=Object.fromEntries(Object.entries(existing.checklist||{}).filter(([key])=>!questions.some(item=>item.key===key)));
+  const metadata=Object.fromEntries(Object.entries(existing.checklist||{}).filter(([key])=>key!=='_evidence'&&!questions.some(item=>item.key===key)));
   const patch = data.action === 'AUDIT'  ? { checklist: {...metadata,...answers}, notes: data.notes, ...(followUp?{followUp}:{}) } : { ...(activeMode==='IN_OUT'?{checkOutAt:new Date()}:{}),checklist:{...existing.checklist,state:'FINISHED',finishedAt:new Date().toISOString(),finishKind:activeMode==='IN_OUT'?'CHECK_OUT':'BUSINESS_RESULT'} };
   const updated = await db.staffActivity.updateMany({ where: { id: existing.id, checkOutAt: null }, data: patch });
   if (!updated.count) throw new AppError('Kunjungan sudah diselesaikan', 409);

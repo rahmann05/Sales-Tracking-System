@@ -24,7 +24,7 @@ export const OutletRegistrationPage = () => {
   } = useOutletRegistrationHistory();
 
   const {
-    formData,draftRestored,draftError,
+    formData,draftRestored,draftNotice,draftError,
     updateField,
     isSubmitting,
     isLocating,gpsError,
@@ -77,7 +77,7 @@ export const OutletRegistrationPage = () => {
         </div>
       </div>
 
-      {draftRestored&&<p role="status" className="sales-form-help">Draft teks dipulihkan. Ambil ulang GPS, foto outlet, dan foto dokumen sebelum mengajukan.</p>}{draftError&&<p role="alert" className="app-error">{draftError}</p>}
+      {draftRestored&&<p role="status" className="sales-form-help">{draftNotice} Ambil ulang GPS, foto outlet, dan foto dokumen sebelum mengajukan.</p>}{draftError&&<p role="alert" className="app-error">{draftError}</p>}
       {/* 2. Formulir Registrasi (Format Dokumen Fisik Resmi) */}
       {activeTab === 'FORM' && (
         <form onSubmit={submitForm} className="space-y-6 pb-20">

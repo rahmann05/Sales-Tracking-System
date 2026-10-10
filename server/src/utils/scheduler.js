@@ -18,9 +18,10 @@ export const initScheduler = () => {
   schedulerMonitor.register('NOTIFICATIONS','Siaran notifikasi setelah transaksi',Date.now()+5000,15000);
   setInterval(()=>{schedulerMonitor.run('NOTIFICATIONS',dispatchNotifications,now=>now+5000).catch(()=>console.error('[Scheduler]: Notification outbox scan failed.'));},5000).unref();
   schedulerMonitor.register('SLA', 'Pemindaian eskalasi SLA', Date.now() + 5 * 60000, 5 * 60000);
+  schedulerMonitor.register('MISSING_OUT','Pemeriksaan OUT kunjungan dan batas shift',Date.now()+5*60000,5*60000);
   schedulerMonitor.register('PJP', 'Pembuatan PJP harian · 03.00 WIB', nextDailyPjp(), 15 * 60000);
   cron.schedule('*/5 * * * *',async()=>{
-    try{await scanMissingOut();}catch(error){console.error('Pemeriksaan OUT terlewat gagal:',error.message);}
+    try{await schedulerMonitor.run('MISSING_OUT',scanMissingOut,now=>now+5*60000);}catch(error){console.error('Pemeriksaan OUT terlewat gagal:',error.message);}
     try{const result=await schedulerMonitor.run('SLA', runAttentionEscalation, now => now + 5 * 60000);if(result?.notified)console.log('[Scheduler]: SLA escalations sent:',result.notified);}
     catch(error){console.error('[Scheduler]: SLA escalation failed:',error.message);}
   },{timezone:'Asia/Jakarta'});

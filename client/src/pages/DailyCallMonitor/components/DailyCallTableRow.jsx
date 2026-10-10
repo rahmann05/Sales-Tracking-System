@@ -37,7 +37,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             <div className="font-bold text-on-surface font-mono text-xs whitespace-nowrap">{row.timeIn} – {row.timeOut || '-'}</div>
             <div className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5 whitespace-nowrap">
               <LuClock className="text-[10px] text-primary shrink-0" />
-              <span>{row.durationFormatted || `${row.durationMinutes || 0}m`}</span>
+              <span>{row.durationFormatted || (row.durationMinutes==null?'Tidak tersedia':`${row.durationMinutes}m`)}</span>
             </div>
           </div>
         ) : (
@@ -49,11 +49,11 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       <td data-label="Durasi" className="whitespace-nowrap text-center py-2.5 px-2">
         {row.isDurationAnomaly ? (
           <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 text-[10px] font-bold border border-rose-500/20 inline-flex items-center gap-1 whitespace-nowrap">
-            <LuTriangleAlert className="text-xs" /> &lt; 5m
+            <LuTriangleAlert className="text-xs" /> Di bawah batas
           </span>
         ) : isActual ? (
-          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold whitespace-nowrap">
-            Normal
+          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${row.durationMinutes==null||row.durationCheckEnabled===false?'bg-surface-container text-on-surface-variant':'bg-emerald-500/10 text-emerald-600'}`}>
+            {row.durationMinutes==null?'Tidak tersedia':row.durationCheckEnabled===false?'Tidak diwajibkan':'Sesuai batas'}
           </span>
         ) : (
           <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
@@ -89,7 +89,7 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             }`}
           >
             <LuCar className="text-[10px] shrink-0" />
-            <span>Dari "{row.prevStopName}": {row.travelDistanceKm}km ({row.travelDurationFormatted})</span>
+            <span>Antartitik outlet dari "{row.prevStopName}": {row.travelDistanceKm==null?'Jarak tidak tersedia':`${row.travelDistanceKm} km`} · Jeda OUT–IN: {row.travelDurationFormatted}</span>
             {row.isTravelAnomaly && <LuShieldAlert className="text-[10px] text-rose-600 shrink-0" />}
           </div>
         )}
@@ -183,10 +183,10 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             className={`inline-flex px-2 py-0.5 rounded-full font-mono text-[10px] font-bold whitespace-nowrap ${
               row.distanceWarning === 'WARNING'
                 ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                : 'bg-emerald-500/10 text-emerald-600'
+                : row.deviationMeters==null?'bg-surface-container text-on-surface-variant':'bg-emerald-500/10 text-emerald-600'
             }`}
           >
-            {row.deviationMeters}m ({row.distanceWarning})
+            {row.deviationMeters==null?'Tidak tersedia':`${row.deviationMeters}m (${row.distanceWarning})`}
           </span>
         ) : (
           <span className="text-on-surface-variant/60 font-mono text-xs">—</span>

@@ -8,5 +8,5 @@ export function mapInvoiceCommercial(invoice,items,order){
     const source=order?.items.find(i=>i.id===(packingItem.sourceOrderItemId||packingItem.lineId));
     if(order&&!source)throw new AppError('Baris faktur tidak sesuai order sumber',409);
     return {...line,...(source?{unitPrice:source.unitPrice}:{})};
-  }),...(order?{taxRatePercent:order.taxRatePercent,taxIncluded:included}:{})};
+  }),taxRoundingMode:order?.policySnapshot?.values?.ORDER_TAX_ROUNDING_MODE||invoice.taxRoundingMode||'NEAREST',...(order?{taxRatePercent:order.taxRatePercent,taxIncluded:included}:{})};
 }

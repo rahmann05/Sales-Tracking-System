@@ -1,10 +1,12 @@
+import {actionFeature} from './business-actions.mjs';
 // Explicit business intent; GETs retain historical access, even when new work is paused.
 export function requestFeature(path,method='GET',body={}){
  const p=String(path||'').replace(/^\/api\/v1\//,'').split('?')[0];
  if(p.startsWith('absensi/off-pjp'))return ['OFF_PJP',method==='POST'];
  if(p.startsWith('absensi'))return ['SALES_VISITS',/\/(in|start)$/.test(p)];
  if(p.startsWith('staff-attendance/follow-ups'))return ['FOLLOW_UP',false];
- if(p==='staff-attendance'&&method==='POST')return body.action?.startsWith('SHIFT_')?['SHIFT',body.action==='SHIFT_IN']:['SPV_VISITS',['VISIT_IN','OFF_PJP'].includes(body.action)];
+ if(p==='staff-attendance'&&method==='POST')return actionFeature('STAFF',body.action)||['SPV_VISITS',false];
+ if(/^delivery\/routes\/[^/]+\/actions$/.test(p)&&method==='POST')return actionFeature('TRIP',body.action)||['DELIVERY',false];
  if(p.startsWith('staff-attendance'))return ['SHIFT',false];
  if(p.startsWith('route-changes'))return ['REROUTE',method==='POST'&&p==='route-changes'];
  if(p.startsWith('outlets')&&/unlock|\/lock/.test(p))return ['UNLOCK',/unlock-request|\/lock$/.test(p)&&method==='POST'];

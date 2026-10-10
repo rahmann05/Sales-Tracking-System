@@ -1,4 +1,5 @@
 import {DEFAULT_AUDIT_ITEMS} from './supervision-checklist.mjs';
+import {REPORT_PRESENTATION} from './report-presentation.mjs';
 import {OUTLET_COMPARISON_DEFAULTS as comparison} from './outlet-evidence-policy.mjs';
 export const POLICY_ROLES=['ADMIN','SUPERVISOR','SALES','KEPALA_GUDANG','SUPIR'];
 export const DRIVER_EVIDENCE_KEYS=['DELIVERY_ATTENDANCE_MODE','DELIVERY_STOP_ORDER','DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT','DELIVERY_ALLOW_RESULT_WITHOUT_OUT','DELIVERY_REQUIRE_GPS','DELIVERY_REQUIRE_PHOTO','DELIVERY_REQUIRE_GEOFENCE','GPS_REQUIRE_METADATA','GPS_MAX_ACCURACY_METERS','GPS_MAX_AGE_SECONDS'];
@@ -35,6 +36,12 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('SHIFT_ALLOW_CONTINUE_UNCLOSED','Boleh mulai shift baru saat shift lama belum ditutup',false,'Shift sebelumnya ditandai untuk pemeriksaan.'),
   num('SHIFT_LATE_TOLERANCE_MINUTES','Toleransi keterlambatan',0,0,240,'menit'),
   bool('SHIFT_ALLOW_OPEN_VISITS','Boleh menutup shift dengan kunjungan belum selesai',false,'Kegiatan belum lengkap tetap masuk antrean perhatian.'),
+  {key:'SHIFT_DAY_CUTOFF_TIME',label:'Pergantian tanggal kerja shift (WIB)',type:'text',defaultValue:'00:00',description:'Masuk sebelum jam ini memakai tanggal kerja sebelumnya. Cocok untuk shift malam; maksimal sama dengan jam mulai kerja. Tanggal kunjungan tetap mengikuti tanggal kalender.'},
+  select('SHIFT_OVERNIGHT_POLICY','Shift melewati tengah malam','ALLOW',['ALLOW','FLAG'],'Izinkan penyelesaian shift atau tandai untuk pemeriksaan. Tidak menghalangi Driver yang masih menjalankan trip.',{optionLabels:{ALLOW:'Izinkan',FLAG:'Izinkan dengan flag pemeriksaan'}}),
+  num('SHIFT_MAX_DURATION_HOURS','Flag shift berlangsung lebih dari',0,0,168,'jam','Nol mematikan batas. Penyelesaian tetap tersedia; durasi panjang masuk antrean pemeriksaan tanpa mengubah bukti.'),
+  select('SHIFT_CORRECTION_MODE','Koreksi administratif waktu shift','OFF',['OFF','ADMIN','DUAL'],'Waktu server asli tetap. Koreksi tercatat terpisah dengan alasan, revisi dan keputusan; tidak membuat OUT atau menutup shift yang belum selesai.',{optionLabels:{OFF:'Tidak digunakan',ADMIN:'Keputusan Admin berizin',DUAL:'Usulan dan pemeriksaan Admin berbeda'}}),
+  num('SHIFT_CORRECTION_MAX_AGE_DAYS','Batas tanggal lampau koreksi',30,0,365,'hari','Nol hanya mengizinkan koreksi tanggal hari ini (WIB).'),
+  num('SHIFT_CORRECTION_MAX_DURATION_HOURS','Durasi maksimal dalam koreksi',48,1,168,'jam'),
  ]),
  group('SUPERVISION','Supervisi dan tugas','Bukti dan pemeriksaan hasil SPV terpisah dari aturan Sales.',[
   select('SPV_ATTENDANCE_MODE','Mode kunjungan SPV','IN_OUT',['IN_OUT','IN_ONLY','OPTIONAL']),
@@ -42,7 +49,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('SPV_ALLOW_JOINT_VISIT','Izinkan pendampingan Sales'),bool('SPV_ALLOW_PRIORITY_AUDIT','Izinkan audit prioritas'),bool('SPV_ALLOW_OFF_PJP','Izinkan kunjungan SPV luar PJP'),
   bool('FOLLOW_UP_REQUIRE_REVIEW','Hasil tugas perlu pemeriksaan'),bool('FOLLOW_UP_REQUIRE_EVIDENCE','Wajib bukti hasil tugas'),
   num('FOLLOW_UP_DEFAULT_DAYS','Tenggat awal tugas',1,0,90,'hari'),
-  {key:'SPV_AUDIT_ITEMS',label:'Pertanyaan audit supervisi',type:'checklist',defaultValue:DEFAULT_AUDIT_ITEMS,description:'Atur pertanyaan ya/tidak, urutan, dan kewajiban jawaban. Kunjungan yang telah dimulai tetap memakai daftar awal; perubahan label tidak mengganti kode historis.'},
+  {key:'SPV_AUDIT_ITEMS',label:'Pertanyaan audit supervisi',type:'checklist',defaultValue:DEFAULT_AUDIT_ITEMS,description:'Atur jawaban ya/tidak, teks, angka atau pilihan; kondisi gagal, alasan dan foto. Kunjungan yang telah dimulai tetap memakai daftar awal; perubahan label tidak mengganti kode historis.'},
  ]),
  group('PLANNING_POLICY','Aturan wilayah dan PJP','F1/F2/F4 tetap berarti interval setiap 1/2/4 minggu.',[
   bool('CLUSTER_SINGLE_CHANNEL','Satu cluster hanya satu channel'),
@@ -74,6 +81,10 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('ORDER_PRICE_OVERRIDE_APPROVAL_MODE','Persetujuan saat harga katalog diubah','INHERIT',['INHERIT','NONE','ADMIN','SUPERVISOR','BOTH','SEQUENTIAL'],'Hanya berlaku jika perubahan harga memang diizinkan. Mengikuti aturan umum tetap mengizinkan aturan nominal.'),
   select('ORDER_APPROVAL_CONDITION_PRIORITY','Prioritas saat kedua kondisi order terpenuhi','PRICE_FIRST',['PRICE_FIRST','AMOUNT_FIRST'],'Satu alur dipilih dan dibekukan ketika order dibuat; prioritas dinyatakan eksplisit.',{optionLabels:{PRICE_FIRST:'Utamakan perubahan harga',AMOUNT_FIRST:'Utamakan batas nominal'}}),
   bool('ORDER_PRICE_OVERRIDE_REQUIRE_REASON','Wajib alasan perubahan harga katalog',false,'Tidak mengaktifkan izin perubahan harga. Alasan dan harga katalog tersimpan bersama keputusan order.'),
+  bool('ORDER_PRICE_OVERRIDE_LIMIT_ENABLED','Batasi perubahan harga dengan persentase',false,'Tidak memberikan izin mengubah harga. Batas diperiksa terhadap harga katalog saat order baru diterima; order tersimpan tetap memakai harga awal.'),
+  num('ORDER_PRICE_OVERRIDE_MAX_DISCOUNT_PERCENT','Penurunan harga maksimum',100,0,100,'%','Berlaku per produk ketika batas perubahan harga aktif. Nol berarti harga tidak boleh diturunkan.'),
+  num('ORDER_PRICE_OVERRIDE_MAX_MARKUP_PERCENT','Kenaikan harga maksimum',100,0,1000,'%','Berlaku per produk ketika batas perubahan harga aktif. Nol berarti harga tidak boleh dinaikkan.'),
+  select('ORDER_TAX_ROUNDING_MODE','Pembulatan nilai pajak order','NEAREST',['NEAREST','DOWN','UP'],'Pajak dibulatkan ke rupiah. Total harga sebelum pajak tetap sesuai baris produk. Faktur dari order mewarisi aturan yang disimpan pada order.',{optionLabels:{NEAREST:'Rupiah terdekat',DOWN:'Bulatkan ke bawah',UP:'Bulatkan ke atas'}}),
   bool('ORDER_REQUIRE_CHECKIN','Order mengikuti kewajiban masuk kunjungan',true,'Pada mode tanpa presensi wajib, bukti IN tidak dipaksakan.'),
   bool('ORDER_ALLOW_AFTER_VISIT','Izinkan order setelah kegiatan selesai',false),
   bool('ORDER_ALLOW_BATCH_APPROVAL','Izinkan persetujuan massal'),
@@ -114,6 +125,8 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('DELIVERY_ISSUE_DEFAULT_HOURS','Tenggat awal kendala pengiriman',24,1,720,'jam'),
  ]),
  group('TRACKING_POLICY','Berbagi lokasi dan layanan peta','Sakelar pelacakan berlaku segera. Titik presensi dan GPS langsung tetap dibedakan.',[
+  select('DRAFT_STORAGE_MODE','Penyimpanan draf formulir','SESSION',['SESSION','PERSISTENT'],'Sesi browser atau perangkat ini agar bertahan setelah browser ditutup. Terpisah per akun. Berlaku saat formulir dibuka; draf belum menjadi transaksi server.',{optionLabels:{SESSION:'Selama sesi browser',PERSISTENT:'Tetap di perangkat ini'}}),
+  num('DRAFT_RETENTION_HOURS','Masa simpan draf biasa',24,1,168,'jam','Permintaan yang sudah dicoba tetapi belum dikonfirmasi tidak kedaluwarsa otomatis; periksa hasil server dahulu. Foto/GPS lama tetap divalidasi server, bukan dianggap bukti baru.'),
   select('SALES_TRACKING_MODE','Berbagi GPS Sales','LOGIN',['OFF','LOGIN','SHIFT','VISIT']),
   select('DRIVER_TRACKING_MODE','Berbagi GPS Driver','TRIP',['OFF','TRIP']),
   num('TRACKING_SEND_INTERVAL_SECONDS','Jeda pengiriman lokasi',30,10,600,'detik'),
@@ -146,6 +159,9 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   {key:'SLA_HOLIDAYS',label:'Tanggal libur SLA',type:'text',defaultValue:'',description:'Tanggal YYYY-MM-DD dipisahkan koma. Tenggat eksplisit tidak digeser.'},
  ]),
  group('REPORTING_POLICY','Laporan dan notifikasi','Ketersediaan keluaran, pemantauan, dan ukuran halaman.',[
+  select('REPORT_DEFAULT_VIEW','Tab awal laporan','DAILY',['DAILY','WEEKLY','MTD'],'Dipakai jika pengguna belum memilih tab. Tab nonaktif tidak ditawarkan.'),
+  select('REPORT_TABLE_DENSITY','Kepadatan tabel laporan','COMFORTABLE',['COMFORTABLE','COMPACT'],'Pengaturan tampilan saja; tidak mengubah izin, scope, arsip atau isi ekspor.',{optionLabels:{COMFORTABLE:'Nyaman',COMPACT:'Ringkas'}}),
+  ...Object.entries(REPORT_PRESENTATION).map(([key,items])=>({key,label:({REPORT_WEEKLY_WIDGETS:'Kartu ringkasan mingguan',REPORT_MTD_WIDGETS:'Kartu ringkasan bulanan',REPORT_WEEKLY_COLUMNS:'Kelompok kolom mingguan',REPORT_MTD_COLUMNS:'Kolom bulanan'})[key],type:'text',defaultValue:items.join(','),description:'Pilih informasi yang ditampilkan. Urutan kartu dapat diubah; urutan kolom tetap konsisten. Jika semua pilihan dimatikan, identitas Sales tetap tampil. Pengaturan ini tidak membatasi izin akses atau isi ekspor.'})),
   num('NOTIFY_READ_RETENTION_DAYS','Masa simpan notifikasi yang sudah dibaca',0,0,3650,'hari','Nol menyimpan tanpa batas. Hanya pesan dibaca dengan outbox selesai (terkirim/dilewati) yang dihapus; pesan belum dibaca, antrean gagal dan pekerjaan bisnis tetap ada.'),
   num('AUDIT_ACTIVE_RETENTION_DAYS','Masa riwayat audit aktif',0,0,3650,'hari','Khusus perusahaan. Nol tanpa pengarsipan otomatis. Riwayat lebih lama ditandai sebagai arsip dan tetap dapat ditelusuri; bukti keputusan serta pencegah duplikasi tidak dihapus.'),
   bool('NOTIFY_REALTIME_ENABLED','Siarkan notifikasi langsung setelah transaksi berhasil',true,'Nonaktif tetap menyimpan pesan yang diizinkan pada kotak masuk. Siaran socket bukan tanda pesan sudah dibaca.'),
@@ -169,6 +185,7 @@ export function visitPolicy(values={}){
 }
 export function policyConflicts(values){
  const issues=[];
+ if(String(values.SHIFT_DAY_CUTOFF_TIME||'00:00')>String(values.SHIFT_START_TIME||'08:00'))issues.push('Pergantian tanggal kerja shift maksimal sama dengan jam mulai kerja.');
  if(Number(values.OUTLET_REVIEW_DAILY_BUDGET_RUPIAH)>0&&!(Number(values.OUTLET_REVIEW_ESTIMATED_CALL_RUPIAH)>0))issues.push('Batas perkiraan biaya pemeriksaan memerlukan asumsi biaya per panggilan lebih dari nol.');
  if(values.SLA_CLOCK_MODE==='BUSINESS'&&String(values.SLA_WORK_END||'17:00')<=String(values.SLA_WORK_START||'08:00'))issues.push('Akhir jam kerja SLA harus setelah awal pada hari yang sama.');
  if(Number(values.OUTLET_REVIEW_ADDRESS_CONFLICT_PERCENT??20)>=Number(values.OUTLET_REVIEW_ADDRESS_MATCH_PERCENT??60))issues.push('Ambang konflik alamat harus lebih kecil dari ambang alamat selaras.');

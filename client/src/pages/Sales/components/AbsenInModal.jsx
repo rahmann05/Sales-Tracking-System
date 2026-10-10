@@ -69,7 +69,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return <SalesDialog title={requireEvidence?"Absen masuk":"Mulai kegiatan kunjungan"} description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
+  return <SalesDialog title={requireEvidence?"Absen masuk":"Mulai kegiatan kunjungan"} description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError} freshEvidence>
         {/* 1. Live Device Camera & GPS Verification (Top Section) */}
         {requireEvidence && <DeviceCameraCapture outletId={stop.outletId}
           photoRequired={policy.photoIn}

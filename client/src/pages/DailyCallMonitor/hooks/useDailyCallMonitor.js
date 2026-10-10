@@ -26,7 +26,7 @@ export const useDailyCallMonitor = ({enabled=true}={}) => {
       totalOrderAmount: 0,
       totalSkuSold: 0,
       totalDurationMinutes: 0,
-      avgDurationMinutes: 0,
+      avgDurationMinutes: null,
       totalDurationAnomalies: 0,
       totalDistanceAnomalies: 0,
       totalAnomalies: 0,

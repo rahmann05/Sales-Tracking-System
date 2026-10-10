@@ -3,9 +3,16 @@ import {AppError} from '../../utils/errors.js';
 import {assertSalesAccess} from '../../utils/team-scope.js';
 import {flagVisit,visitSettings} from '../absensi/services/visit-session.service.js';
 import {createNotification} from '../notifications/services/create-notification.service.js';
+import {flagShiftRange} from '../staff-attendance/shift-range.service.js';
+import {withUserTransaction} from '../../utils/user-transaction.js';
 export async function scanMissingOut(db=prisma){
  const stops=await db.pjpStop.findMany({where:{status:'PENDING',attendances:{some:{type:'IN'},none:{type:'OUT'}}},include:{attendances:true,outlet:true,pjp:true}});
  for(const stop of stops){const p=await visitSettings(stop);const entered=stop.attendances.find(a=>a.type==='IN');if(p.requireOut&&Date.now()-+new Date(entered.timestamp)>(p.snapshot.values.SALES_MISSING_OUT_MINUTES||720)*60000)await flagVisit(db,stop,stop.pjp.userId,'TIME_LIMIT');}
+ const shifts=await db.staffActivity.findMany({where:{kind:'SHIFT',checkOutAt:null}});
+ for(const row of shifts){
+  if(db===prisma)await withUserTransaction(row.userId,async tx=>{const current=await tx.staffActivity.findUnique({where:{id:row.id}});if(current)await flagShiftRange(tx,current);});
+  else await flagShiftRange(db,row);
+ }
 }
 export async function operationalExceptionRows(actor){
  if(!['ADMIN','SUPERVISOR'].includes(actor.role))return [];

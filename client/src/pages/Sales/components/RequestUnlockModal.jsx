@@ -31,7 +31,7 @@ export const RequestUnlockModal = ({ stop, activeVisitingStop, onClose, onSubmit
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return <SalesDialog title="Ajukan pengecualian GPS" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty} restored={draft.restored} draftError={draft.storageError}>
+  return <SalesDialog title="Ajukan pengecualian GPS" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError}>
 {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-800 space-y-1">
           <p className="font-bold flex items-center gap-1.5 text-amber-900">

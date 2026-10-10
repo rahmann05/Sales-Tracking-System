@@ -85,7 +85,7 @@ export const getNavigationTabs = (userOrRole) => {
     const user = typeof userOrRole === 'object' ? userOrRole : { role: userOrRole, permissions: {} };
     const role = user.role;
     const permissions = user.permissions || {};
-    
+
     const tabs = [getRoleWorkspaceTab(role)];
     if(role===ROLES.KEPALA_GUDANG)tabs.push({id:TAB_IDS.WAREHOUSE_ATTENTION,label:'Tindak lanjut gudang',icon:LuFileCheck},{id:TAB_IDS.WAREHOUSE_VEHICLES,label:'Kendaraan & servis',icon:LuTruck},{id:TAB_IDS.WAREHOUSE_ATTENDANCE,label:'Presensi saya',icon:LuUsers});
     if(role===ROLES.SUPIR)tabs.push({id:TAB_IDS.DRIVER_TRIPS,label:'Trip saya',icon:LuTruck});
@@ -273,7 +273,8 @@ const TAB_PERMISSION_KEYS = {
 export function isTabPermissionAllowed(tabId,user) {
   if([TAB_IDS.WAREHOUSE_ATTENTION,TAB_IDS.WAREHOUSE_VEHICLES,TAB_IDS.WAREHOUSE_ATTENDANCE].includes(tabId))return user?.role===ROLES.KEPALA_GUDANG&&(tabId!==TAB_IDS.WAREHOUSE_ATTENTION||user.permissions?.can_monitor_delivery!==false);
   if(tabId===TAB_IDS.DRIVER_TRIPS)return user?.role===ROLES.SUPIR&&user.permissions?.can_access_driver_map!==false;
-  if ([TAB_IDS.SALES_VISITS,TAB_IDS.SALES_ORDERS,TAB_IDS.SALES_FOLLOW_UP].includes(tabId)) return user?.role===ROLES.SALES;
+  if (tabId===TAB_IDS.SALES_FOLLOW_UP) return user?.role===ROLES.SALES&&user.permissions?.can_view_follow_up!==false;
+  if ([TAB_IDS.SALES_VISITS,TAB_IDS.SALES_ORDERS].includes(tabId)) return user?.role===ROLES.SALES;
   if ([TAB_IDS.SPV_MONITOR,TAB_IDS.SPV_APPROVAL,TAB_IDS.SPV_FIELD,TAB_IDS.SPV_ATTENTION].includes(tabId)) {
     if(user?.role!==ROLES.SUPERVISOR)return false;
     if(tabId===TAB_IDS.SPV_MONITOR)return ['can_view_daily_call','can_view_live_tracking'].some(key=>user.permissions?.[key]!==false);

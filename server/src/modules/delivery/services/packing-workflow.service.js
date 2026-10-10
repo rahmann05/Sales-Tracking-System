@@ -1,5 +1,6 @@
 import {capturePolicySnapshot,processValue} from '../../config/services/process-policy.service.js';
 import { randomUUID } from 'node:crypto';
+import {actionNames} from '../../../../../shared/business-actions.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { getDynamicConfig } from '../../config/config.service.js';
@@ -69,7 +70,7 @@ export async function savePacking(data, userId, id) {
 }
 
 export async function transitionPacking(id, action, userId) {
-  if (!['RELEASE', 'RECALL'].includes(action)) throw new AppError('Aksi tidak valid', 400);
+  if (!actionNames('PACKING').includes(action)) throw new AppError('Aksi tidak valid', 400);
   return prisma.$transaction(async tx => {
     const pl = await tx.packingList.findUnique({ where: { id }, include: packingInclude });
     if (!pl) throw new AppError('Packing list tidak ditemukan', 404);

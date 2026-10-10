@@ -3,11 +3,11 @@ import React,{useState} from 'react';
 import {absensiApi,outletsApi,routeChangesApi} from '../../../services/api';
 import {useApp} from '../../../context/AppContext';
 
-const labels={OPEN_SPV_VISIT:'Kunjungan supervisi belum selesai',MISSING_OUT:'Absen keluar terlewat',UNCLOSED_SHIFT:'Shift belum ditutup',MANUAL_RESULT:'Persetujuan hasil kegiatan',OFF_PJP:'Validasi kunjungan luar PJP',MANUAL_PJP:'Persetujuan hasil manual PJP',MANUAL_OFF_PJP:'Persetujuan hasil manual luar PJP',UNLOCK:'Pengecualian absensi',ROUTE_CHANGE:'Keputusan toko tutup / reroute'};
+const labels={SHIFT_TIME_RANGE:'Shift melewati batas waktu / tengah malam',OPEN_SPV_VISIT:'Kunjungan supervisi belum selesai',MISSING_OUT:'Absen keluar terlewat',UNCLOSED_SHIFT:'Shift belum ditutup',MANUAL_RESULT:'Persetujuan hasil kegiatan',OFF_PJP:'Validasi kunjungan luar PJP',MANUAL_PJP:'Persetujuan hasil manual PJP',MANUAL_OFF_PJP:'Persetujuan hasil manual luar PJP',UNLOCK:'Pengecualian absensi',ROUTE_CHANGE:'Keputusan toko tutup / reroute'};
 export function AttentionExceptionActions({row,onChanged}){
   const {user}=useApp(),e=row.exception;
   const [decision,setDecision]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  const operational=['MISSING_OUT','UNCLOSED_SHIFT','OPEN_SPV_VISIT','MANUAL_RESULT'].includes(e.kind);
+  const operational=['SHIFT_TIME_RANGE','MISSING_OUT','UNCLOSED_SHIFT','OPEN_SPV_VISIT','MANUAL_RESULT'].includes(e.kind);
   const decisions=operational?(e.kind==='MANUAL_RESULT'?['APPROVED','REJECTED']:['ACKNOWLEDGED','REQUIRES_CORRECTION']):e.kind==='ROUTE_CHANGE'?(e.pendingAdmin?['APPROVE','REJECT']:user?.role==='SUPERVISOR'?['SKIP','REJECT']:['REJECT']):['APPROVE','REJECT'];
   const submit=async event=>{event.preventDefault();if(!decision)return;
     setBusy(true);setError('');try{
@@ -25,6 +25,7 @@ export function AttentionExceptionActions({row,onChanged}){
     <strong>{labels[e.kind]}</strong><p>Pemohon: {e.applicantName||e.applicantId}</p>
     {e.decision?.note&&<p>Keputusan terakhir: {e.decision.value==='REQUIRES_CORRECTION'?'Perlu koreksi':e.decision.value} · {e.decision.note}</p>}
     {e.reason&&<p>Alasan / catatan pemohon: {e.reason}</p>}
+    {e.kind==='SHIFT_TIME_RANGE'&&<p>{e.overnight?'Shift melewati tengah malam. ':''}Durasi saat ditandai: {e.elapsedMinutes} menit.{e.maxHours>0?` Batas pemeriksaan: ${e.maxHours} jam.`:''} Flag tidak menutup shift atau mengubah bukti presensi.</p>}
     {e.clarification&&<div className="app-notice"><strong>Penjelasan petugas</strong><p>{e.clarification.note}</p><small>{new Date(e.clarification.at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB · penjelasan tidak menggantikan bukti presensi.</small></div>}
     {e.orderAmount!==undefined&&<p>Hasil manual: Rp {Number(e.orderAmount||0).toLocaleString('id-ID')} · {e.skuSold||0} SKU. Ini bukan penerimaan pembayaran.</p>}
     {e.latitude!==undefined&&<p>Koordinat kunjungan: {e.latitude}, {e.longitude}</p>}

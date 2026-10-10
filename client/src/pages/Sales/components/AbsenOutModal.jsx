@@ -126,7 +126,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
 
-  return <SalesDialog title={requireEvidence?"Hasil kunjungan & absen keluar":"Catat hasil & selesaikan kegiatan"} description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftError={draft.storageError} freshEvidence>
+  return <SalesDialog title={requireEvidence?"Hasil kunjungan & absen keluar":"Catat hasil & selesaikan kegiatan"} description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError} freshEvidence>
         {/* Duration Status Bar */}
         {requireEvidence && <div className="p-3 bg-surface-container rounded-2xl border border-border-glass flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 font-bold text-on-surface">

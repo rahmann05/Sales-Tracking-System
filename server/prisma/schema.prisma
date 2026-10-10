@@ -691,7 +691,7 @@ model Vehicle {
   lastOilChangeKm         Float    @default(0)
   lastOilFilterChangeKm   Float    @default(0)
   lastBrakePadChangeKm    Float    @default(0)
-  
+
   deliveryRoutes    DeliveryRoute[]
   serviceRecords    VehicleServiceRecord[]
 
@@ -718,7 +718,7 @@ model VehicleServiceRecord {
   cost              Float
   odometerAtService Float
   notes             String?  @db.Text
-  
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -1020,6 +1020,7 @@ model PackingList {
 }
 
 model Invoice {
+  taxRoundingMode String @default("NEAREST")
   items Json @default("[]")
   taxRatePercent Float?
   taxIncluded Boolean?
@@ -1203,6 +1204,7 @@ model AuditEvent {
 }
 
 model StaffActivity {
+  timeCorrection Json?
   gpsEvidence Json?
   policySnapshot Json?
   visitMode String?

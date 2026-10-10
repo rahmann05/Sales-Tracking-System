@@ -41,7 +41,7 @@ test('daily PJP schedule uses 03:00 WIB independently of server timezone', () =>
 });
 test('follow-up review notification uses the current supervisor and falls back to Admin when unassigned', async () => {
   let supervisorId = 'spv', delivered = [];
-  const db = { user: { findFirst: async ({ where }) => where.id === 'sales' ? { id: 'sales', supervisorId } : { id: 'spv' }, findMany: async () => [{ id: 'admin' }] }, notification: { createMany: async ({ data }) => { delivered = data; } } };
+  const db = { systemConfig:{findMany:async()=>[]},user: { findFirst: async ({ where }) => where.id === 'sales' ? { id: 'sales', supervisorId } : { id: 'spv' }, findMany: async () => [{ id: 'admin',role:'ADMIN' },{id:'spv',role:'SUPERVISOR'}] }, notification: { createMany: async ({ data }) => { delivered = data; } } };
   const record = { id: 'activity', outletName: 'Toko', followUp: { ownerId: 'sales', dueDate: '2026-10-09' } };
   await notifyFollowUp(db, record, 'SUBMITTED', 'sales'); assert.deepEqual(delivered.map(n => n.userId), ['spv']);
   supervisorId = null; await notifyFollowUp(db, record, 'SUBMITTED', 'sales'); assert.deepEqual(delivered.map(n => n.userId), ['admin']);
