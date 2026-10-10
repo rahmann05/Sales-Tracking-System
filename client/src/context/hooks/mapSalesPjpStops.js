@@ -28,7 +28,7 @@ const cluster = pjpData.user?.cluster;
             const intervalWeeks=pjpData.reportingContext?.planning?.rules?.find(rule=>rule.outletId===(s.outletId||s.outlet?.id))?.intervalWeeks;
 
             return {
-              id: s.id,
+              id: s.id,validationTask:s.validationTask,validationOnly:s.validationOnly,validationResult:s.validationResult,
               policySnapshot:s.policySnapshot,visitSession:s.visitSession,
               pjpId: pjpData.id,
               sequence: s.sequence || idx + 1,

@@ -2,6 +2,7 @@
  * Calculate distance between two coordinates in meters using the Haversine formula
  */
 export const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
+  if(![lat1,lon1,lat2,lon2].every(Number.isFinite))return null;
   const R = 6371e3; // Earth radius in meters
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;

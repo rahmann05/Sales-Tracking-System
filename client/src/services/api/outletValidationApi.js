@@ -1,5 +1,14 @@
 import { request } from "../httpClient";
 export const outletValidationApi = {
+  digital:(outletId,id,body)=>request(`/outlets/${outletId}/reviews/${id}/digital`,{method:'PATCH',body:JSON.stringify(body)}),
+  assignField:(outletId,id,body)=>request(`/outlets/${outletId}/reviews/${id}/field-task`,{method:'POST',body:JSON.stringify(body)}),
+  fieldVisitReport:query=>request(`/outlets/field-visit-report?${new URLSearchParams(query)}`),
+  fieldTask:id=>request(`/outlets/field-tasks/${id}`),
+  fieldTasks:(status='ALL')=>request(`/outlets/field-tasks?status=${status}`),
+  fieldAction:(id,body)=>request(`/outlets/field-tasks/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+  jobs:()=>request('/outlets/validation-jobs'),
+  startJob:body=>request('/outlets/validation-jobs',{method:'POST',body:JSON.stringify(body)}),
+  jobAction:(id,body)=>request(`/outlets/validation-jobs/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
   assign:(outletId,id,body)=>request(`/outlets/${outletId}/reviews/${id}/assignment`,{method:'PATCH',body:JSON.stringify(body)}),
   review:id=>request(`/outlets/reviews/${id}`),
   reviews:params=>request(`/outlets/reviews?${new URLSearchParams(params)}`),

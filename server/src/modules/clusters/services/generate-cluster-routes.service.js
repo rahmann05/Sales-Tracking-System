@@ -2,19 +2,21 @@
 import { prisma } from '../../../config/prisma.js';
 import { haversineKm } from '../cluster-generator.service.js';
 import { optimize2Opt } from './clusters.helpers.js';
+import {AppError} from '../../../utils/errors.js';
 
 
 export const generateClusterRoutes = async (outletIds) => {
   if (!outletIds || !Array.isArray(outletIds) || outletIds.length === 0) return [];
-  
+
   const outlets = await prisma.outlet.findMany({
-    where: { 
+    where: {
       id: { in: outletIds },
       deletedAt: null,
     }
   });
 
   if (outlets.length === 0) return [];
+  if(outlets.some(o=>o.latitude==null||o.longitude==null))throw new AppError('Optimasi rute memerlukan titik setiap outlet. Lengkapi lokasi atau susun urutan kunjungan secara manual; outlet tanpa titik tidak dihapus dari rencana.',422);
 
   // Convert lat/lng to Number and filter out invalid coordinates
   const sanitizedOutlets = outlets.filter(o=>o.latitude != null && o.longitude != null).map(o => ({

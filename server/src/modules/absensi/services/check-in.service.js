@@ -23,6 +23,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   });
 
   if (!stop) throw new AppError('Stop PJP tidak ditemukan', 404);
+  if(stop.validationOnly)throw new AppError('Gunakan formulir Validasi ulang outlet pada tugas PJP ini; presensi biasa tidak menggantikan bukti validasi.',409);
   const visit=await visitSettings(stop);
   if(stop.visitSession?.state==='ACTIVE')throw new AppError('Kegiatan sudah dimulai',409);
   if(stop.outlet.deletedAt)throw new AppError('Outlet sudah nonaktif. Minta Supervisor menyesuaikan rencana kunjungan.',409);
@@ -56,6 +57,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   const distanceWarning = distance==null?'UNAVAILABLE':distance > maxRadius ? 'WARNING' : 'OK';
 
   // Enforce Geofence: Block attendance if outside radius, except for an explicitly configured exception
+  if(visit.mode!=='OPTIONAL'&&hasGps&&distance===null&&await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE',true)&&!isBypassUser&&!hasException)throw new AppError('Koordinat master outlet belum tersedia. Minta koreksi lokasi atau pengecualian presensi resmi.',422);
   if (visit.mode!=='OPTIONAL' && await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE', true) && !isBypassUser && !hasException && distance > maxRadius) {
     throw new AppError(
       `Presensi ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius toko (${maxRadius}m). Harap dekati lokasi fisik outlet.`,
@@ -72,7 +74,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   // Sequential stop validation
   const currentSeq = stop.sequence;
   if (await getDynamicConfig('ATTENDANCE_ENFORCE_SEQUENCE', true) && currentSeq > 1) {
-    const prevStops = stop.pjp.stops.filter((s) => s.sequence < currentSeq);
+    const prevStops = stop.pjp.stops.filter((s) => !s.validationOnly && s.sequence < currentSeq);
     for (const prevStop of prevStops) {
       const allowPending = await getDynamicConfig('ALLOW_CONTINUE_PENDING_CLOSED', true);
       const isSkippedOrClosed = prevStop.status === VISIT_STATUS.SKIPPED || (prevStop.status === VISIT_STATUS.CLOSED_REPORTED && (allowPending || await db.routeChangeRequest.findFirst({where:{pjpStopId:prevStop.id,status:{in:['APPROVED','ACKNOWLEDGED']}}})));

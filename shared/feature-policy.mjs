@@ -10,7 +10,10 @@ export function requestFeature(path,method='GET',body={}){
  if(p.startsWith('staff-attendance'))return ['SHIFT',false];
  if(p.startsWith('route-changes'))return ['REROUTE',method==='POST'&&p==='route-changes'];
  if(p.startsWith('outlets')&&/unlock|\/lock/.test(p))return ['UNLOCK',/unlock-request|\/lock$/.test(p)&&method==='POST'];
- if(p.startsWith('outlets')&&/review|validat/.test(p))return ['OUTLET_REVIEW',method==='POST'];
+ if(p.startsWith('outlets/field-visit-report'))return ['OUTLET_REVIEW',false];
+ if(p.startsWith('outlets/field-tasks'))return ['OUTLET_REVIEW',false];
+ if(p.startsWith('outlets/validation-jobs'))return ['OUTLET_REVIEW',method==='POST'];
+ if(p.startsWith('outlets')&&/review|validat/.test(p))return ['OUTLET_REVIEW',method==='POST'&&!/\/digital$/.test(p)];
  if(p.startsWith('outlets'))return ['OUTLET_MASTER',!['GET','HEAD'].includes(method)&&!p.includes('/coordinates')];
  if(/^customer-registrations\/(search-places|reverse-geocode)$/.test(p))return ['MAPS',true];
  if(p.startsWith('customer-registrations'))return ['REGISTRATION',method==='POST'&&p==='customer-registrations'];

@@ -5,6 +5,7 @@ export async function recordOutletChange(db,before,data,{actor,reason,source='MA
   if(actor&&(!updatedAt||new Date(updatedAt).getTime()!==before.updatedAt.getTime()))throw new AppError('Data outlet sudah berubah. Muat ulang sebelum menyimpan.',409);
   const keys=editableKeys.filter(k=>data[k]!==undefined&&JSON.stringify(data[k])!==JSON.stringify(before[k]));
   if(!keys.length)return {};
+  if(keys.includes('clusterId')&&db.outletFieldTask&&await db.outletFieldTask.count({where:{review:{outletId:before.id},status:{in:['OPEN','SUBMITTED']}}}))throw new AppError('Selesaikan atau batalkan tugas pemeriksaan outlet sebelum memindahkan wilayah, termasuk melalui impor.',409);
   const locationChanged=keys.some(k=>['latitude','longitude'].includes(k));
   if(locationChanged) {
     const active=await db.pjpStop.count({where:{outletId:before.id,attendances:{some:{type:'IN'},none:{type:'OUT'}},status:{notIn:['VISITED','SKIPPED','CLOSED_REPORTED']}}});

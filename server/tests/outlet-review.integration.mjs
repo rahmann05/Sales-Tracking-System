@@ -15,10 +15,17 @@ let mode='EMPTY',mapCalls=0,checks=0;
 const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
 prisma.systemConfig.findMany=async()=>Object.entries({MAPS_API_KEY:'mock-only',CODE_OUTLET_MODE:'MANUAL',CODE_NOO_MODE:'MANUAL',CUSTOMER_REG_REQUIRE_PHOTO:false,CUSTOMER_REG_REQUIRE_TAX_DOCUMENT:false}).map(([key,value])=>({key,value}));invalidateConfigCache();
 globalThis.fetch=async(url,options)=>{
+ if(String(url).startsWith('https://places.googleapis.com/')){
+  mapCalls++;
+  if(mode==='ERROR')return {ok:false,status:403,json:async()=>({})};
+  if(mode==='EMPTY')return {ok:true,json:async()=>({places:[]})};
+  const place={id:'mock',displayName:{text:'Toko Sumber Berkah'},formattedAddress:mode==='CONFLICT'?'Jl Mawar Jakarta':'Jl Melati Bandung',location:{latitude:-6.9,longitude:107.6},businessStatus:'OPERATIONAL'};
+  return {ok:true,json:async()=>String(url).includes(':searchText')?{places:[place]}:place};
+ }
  if(String(url).startsWith('https://maps.googleapis.com/')) {
   mapCalls++;const u=new URL(url);
-  if(mode==='ERROR')return {json:async()=>({status:'REQUEST_DENIED'})};
-  if(mode==='EMPTY')return {json:async()=>({status:'ZERO_RESULTS'})};
+  if(mode==='ERROR')return {ok:false,json:async()=>({status:'REQUEST_DENIED'})};
+  if(mode==='EMPTY')return {ok:true,json:async()=>({status:'ZERO_RESULTS'})};
   if(u.pathname.includes('geocode'))return {json:async()=>({status:'OK',results:[{formatted_address:'Jl Melati Bandung',address_components:[],geometry:{location:{lat:mode==='CONFLICT'&&u.searchParams.has('address')?-6.1:-6.9,lng:107.6},location_type:'ROOFTOP'}}]})};
   const place={name:'Toko Sumber Berkah',place_id:'mock',geometry:{location:{lat:-6.9,lng:107.6}},business_status:'OPERATIONAL'};
   return {json:async()=>({status:'OK',results:[place],candidates:[place]})};
@@ -43,13 +50,13 @@ try {
  let response=await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Data lama perlu diperiksa lokasinya'});eq(response.status,200);let review=response.body.data;
  eq((await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Data lama perlu diperiksa lokasinya'})).body.data.id,review.id);
  eq((await api(`/outlets/reviews/${review.id}`,foreign)).status,404);
- eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:review.revision})).body.data.code,'NO_EVIDENCE');
+ eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:review.revision})).body.data.code,'NOT_FOUND');
  let detail=(await api(`/outlets/reviews/${review.id}`,spv)).body.data;eq(detail.runs.length,1);eq(detail.outlet.validationStatus,'UNVALIDATED');
  eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:1})).status,409);
- mode='CONFLICT';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).body.data.code,'CONFLICT');
- detail=(await api(`/outlets/reviews/${review.id}`,spv)).body.data;eq(detail.runs.length,2);eq(detail.outlet.validationStatus,'WARNING');const previousAt=detail.outlet.validatedAt;
- eq(detail.runs[0].result.comparisonPolicy.nameMatchPercent,70);eq(detail.runs[0].result.expiresAt,null);
- mode='ERROR';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).status,503);
+ mode='CONFLICT';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).body.data.code,'REVIEW');
+ detail=(await api(`/outlets/reviews/${review.id}`,spv)).body.data;eq(detail.runs.length,2);eq(detail.outlet.validationStatus,'UNVALIDATED');const previousAt=detail.outlet.validatedAt;
+ eq(detail.runs[0].result.comparisonPolicy.strongName,90);eq(detail.runs[0].result.expiresAt,null);
+ mode='ERROR';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).body.data.code,'ERROR');
  detail=(await api(`/outlets/reviews/${review.id}`,spv)).body.data;eq(detail.runs.length,3);eq(detail.runs[0].result.code,'ERROR');eq(detail.outlet.validatedAt,previousAt);
  const oldAt=detail.outlet.updatedAt;
  response=await api(`/outlets/${id}`,spv,'PATCH',{updatedAt:oldAt,reason:'Perbaikan identitas pemilik sesuai dokumen',taxType:'NON_PKP',taxNumber:'1234567890123456',taxName:'Pemilik toko'});eq(response.status,200);
@@ -62,7 +69,7 @@ try {
  let profile=(await api(`/outlets/${id}/profile`,spv)).body.data;eq(profile.validationDetails.stale,true);eq(profile.changes.length,2);eq(profile.locationEvidence.source,'FIELD');
  detail=(await api(`/outlets/reviews/${review.id}`,spv)).body.data;
  eq((await api(`/outlets/${id}/reviews/${review.id}`,spv,'PATCH',{revision:detail.revision,action:'KEEP',note:'Data lapangan telah diperiksa ulang'})).status,409);
- eq((await api(`/outlets/${id}/reviews/${review.id}`,spv,'PATCH',{revision:detail.revision,action:'CORRECTED',note:'Titik sudah dikoreksi dengan bukti lapangan'})).body.data.status,'COMPLETED');
+ eq((await api(`/outlets/${id}/reviews/${review.id}/digital`,spv,'PATCH',{revision:detail.revision,action:'INTERNAL_KEEP',reason:'Titik sudah dikoreksi dengan bukti internal',reference:'Dokumen pelanggan dan konfirmasi lokasi pemilik'})).body.data.status,'COMPLETED');
  eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).status,409);
  eq((await api('/outlets/validation-summary',sales)).body.data.COMPLETED,1);
  profile=(await api(`/outlets/${id}/profile`,spv)).body.data;
@@ -100,18 +107,17 @@ try {
  eq((await api(`/outlets/${active.id}`,spv,'DELETE',{updatedAt:scheduled.updatedAt,reason:'Uji penonaktifan dengan kunjungan mendatang'})).status,409);
  await prisma.pjp.delete({where:{id:pjp.id}});
  mode='EMPTY';let follow=(await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Tinjau bukti lapangan database lama'})).body.data;
- eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:follow.id,revision:follow.revision})).body.data.code,'NO_EVIDENCE');
+ eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:follow.id,revision:follow.revision})).body.data.code,'NOT_FOUND');
  follow=(await api(`/outlets/reviews/${follow.id}`,spv)).body.data;
  const latestRun=follow.runs[0];
  await prisma.outletValidationRun.update({where:{id:latestRun.id},data:{result:{...latestRun.result,expiresAt:new Date(Date.now()-1000).toISOString()}}});
  eq((await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'KEEP',note:'Tidak boleh memakai bukti yang kedaluwarsa'})).status,409);
  eq((await api(`/outlets/reviews/${follow.id}`,spv)).body.data.status,'OPEN');
- mode='ERROR';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:follow.id,revision:follow.revision})).status,503);
+ mode='ERROR';eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:follow.id,revision:follow.revision})).body.data.code,'ERROR');
  follow=(await api(`/outlets/reviews/${follow.id}`,spv)).body.data;
  eq((await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'KEEP',note:'Percobaan gagal tidak memperbarui bukti lama'})).status,409);
- response=await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'WAITING_FIELD',note:'Sales perlu mengecek patokan di kunjungan berikutnya',evidence:'Penanggung jawab Sales wilayah pada kunjungan berikutnya'});eq(response.body.data.status,'WAITING_FIELD');
- follow=response.body.data;
- response=await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'KEEP',note:'Sales mengonfirmasi titik master sesuai kondisi fisik',evidence:'Referensi kunjungan lapangan dan foto toko'});eq(response.body.data.status,'COMPLETED');eq(response.body.data.decision.history.length,2);
+ response=await api(`/outlets/${id}/reviews/${follow.id}`,spv,'PATCH',{revision:follow.revision,action:'WAITING_FIELD',note:'Sales perlu mengecek patokan di kunjungan berikutnya',evidence:'Penanggung jawab Sales wilayah pada kunjungan berikutnya'});eq(response.status,409);
+ response=await api(`/outlets/${id}/reviews/${follow.id}/digital`,spv,'PATCH',{revision:follow.revision,action:'INTERNAL_KEEP',reason:'Pemilik mengonfirmasi titik master sesuai kondisi fisik',reference:'Referensi komunikasi pelanggan dan dokumen alamat'});eq(response.body.data.status,'COMPLETED');eq(response.body.data.decision.history.length,1);
  eq((await api(`/outlets/${id}/profile`,spv)).body.data.deletedAt,null);
  const paged=Array.from({length:55},(_,i)=>({id:randomUUID(),name:`${tag}-page-${String(i).padStart(2,'0')}`,address:'Alamat fixture pagination',latitude:-6.5,longitude:107.5,clusterId:cluster.id}));
  await prisma.outlet.createMany({data:paged});outlets.push(...paged.map(o=>o.id));

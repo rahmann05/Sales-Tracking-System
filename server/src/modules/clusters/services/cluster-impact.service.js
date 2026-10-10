@@ -26,5 +26,7 @@ export async function clusterImpact(raw,actor,db=prisma){
 export async function requireClusterImpact(db,raw,actor,token){
  const review=await clusterImpact(raw,actor,db);
  if(review.requiresConfirmation&&review.token!==token)throw new AppError('Tinjau kembali dampak perubahan wilayah sebelum menyimpan. Data mungkin sudah berubah.',409);
+ const affected=review.ownerChanged?await db.outlet.findMany({where:{clusterId:raw.clusterId},select:{id:true}}):review.moves;
+ if(affected.length&&await db.outletFieldTask.count({where:{status:{in:['OPEN','SUBMITTED']},review:{outletId:{in:affected.map(o=>o.id)}}}}))throw new AppError('Ada tugas pemeriksaan outlet yang masih berjalan pada wilayah yang berubah. Selesaikan atau batalkan tugas beralasan sebelum memindahkan wilayah/PIC.',409);
  return review;
 }

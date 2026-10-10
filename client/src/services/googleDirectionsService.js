@@ -13,14 +13,14 @@ export const googleDirectionsService = {
   getDirectionsUrl: (origin, destination, waypoints = []) => {
     if (!origin || !destination) return 'https://www.google.com/maps';
 
-    const originStr = `${origin.lat || origin.latitude},${origin.lng || origin.longitude}`;
-    const destStr = `${destination.lat || destination.latitude},${destination.lng || destination.longitude}`;
+    const originStr = `${origin.lat ?? origin.latitude},${origin.lng ?? origin.longitude}`;
+    const destStr = `${destination.lat ?? destination.latitude},${destination.lng ?? destination.longitude}`;
 
     let url = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destStr}&travelmode=driving`;
 
     if (waypoints.length > 0) {
       const waypointsStr = waypoints
-        .map((w) => `${w.lat || w.latitude},${w.lng || w.longitude}`)
+        .filter(w=>(w.lat??w.latitude)!=null&&(w.lng??w.longitude)!=null).map((w) => `${w.lat ?? w.latitude},${w.lng ?? w.longitude}`)
         .join('|');
       url += `&waypoints=${encodeURIComponent(waypointsStr)}`;
     }
@@ -33,6 +33,7 @@ export const googleDirectionsService = {
    * or backend routing API (/api/v1/routing/road-route) with graceful fallback.
    */
   fetchDirectionsRoute: async (origin, waypoints = []) => {
+    if((origin?.lat??origin?.latitude)==null||(origin?.lng??origin?.longitude)==null||waypoints.some(w=>(w?.lat??w?.latitude)==null||(w?.lng??w?.longitude)==null))throw new Error('Koordinat sebagian tujuan belum tersedia. Periksa data lokasi sebelum menghitung rute.');
     const rawOrigin = { lat: Number(origin?.lat ?? origin?.latitude), lng: Number(origin?.lng ?? origin?.longitude) };
     const directPath = [rawOrigin];
 

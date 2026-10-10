@@ -28,6 +28,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   });
 
   if (!stop) throw new AppError('Stop PJP tidak ditemukan', 404);
+  if(stop.validationOnly)throw new AppError('Gunakan formulir Validasi ulang outlet pada tugas PJP ini; presensi biasa tidak menggantikan bukti validasi.',409);
   if (stop.pjp.userId !== userId) {
     throw new AppError('Anda tidak berhak melakukan absensi pada PJP ini', 403);
   }
@@ -75,6 +76,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
 
   // Enforce Geofence: Block checkout if outside radius, except for an explicitly configured exception
   const hasException = await attendanceException(stop.outlet.id,userId,db);
+  if(hasGps&&distance===null&&await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE',true)&&!isBypassUser&&!hasException)throw new AppError('Koordinat master outlet belum tersedia. Minta koreksi lokasi atau pengecualian presensi resmi.',422);
   if (await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE', true) && !isBypassUser && !hasException && distance > maxRadius) {
     throw new AppError(
       `Absen OUT ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius toko (${maxRadius}m). Harap dekati lokasi fisik outlet.`,

@@ -10,7 +10,9 @@ export function visitState(stop) {
   return 'PENDING';
 }
 
+export const countsAsPlannedVisit=stop=>!(stop.validationOnly&&!stop.validationResult?.submittedAt&&['WAITING_REVIEW','ACCEPTED','RESOLVED','CANCELLED','REASSIGNED'].includes(stop.validationResult?.state));
 export function summarizeVisits(stops = []) {
+  stops=stops.filter(countsAsPlannedVisit);
   const states = stops.map(visitState);
   const completed = states.filter(s => s === 'COMPLETED').length;
   const inProgress = states.filter(s => s === 'IN_PROGRESS').length;
@@ -29,7 +31,7 @@ export function visitSalesResult(stop, options = {}) {
   // Aturan bisnis: Hanya order yang sudah disetujui (APPROVED) yang masuk nominal dan SKU laporan.
   const hasRecordedOrder = (stop.orders || []).some(o => !o.deletedAt);
   const approvedOrders = (stop.orders || []).filter(o => o.status === 'APPROVED' && !o.deletedAt);
-  
+
   // Hasil manual absensi: NOTES_ONLY (default) hanya sebagai catatan; REQUIRE_APPROVAL wajib disetujui.
   const allowManual = !hasRecordedOrder && (
     (salesEvidence?.manualSalesMode ?? manualSalesMode) === 'REQUIRE_APPROVAL' && Boolean(salesEvidence?.isManualSalesApproved)
@@ -43,7 +45,7 @@ export function visitSalesResult(stop, options = {}) {
     ? new Set(approvedOrders.flatMap(o => (o.items || []).map(i => i.productId))).size
     : (allowManual ? Number(salesEvidence?.skuSold || 0) : 0);
 
-  const actual = Boolean(checkIn || checkOut) || visitState(stop) === 'COMPLETED';
+  const actual = Boolean(checkIn || checkOut || stop.validationOnly&&stop.validationResult?.submittedAt) || visitState(stop) === 'COMPLETED';
   return {
     checkIn,
     checkOut,

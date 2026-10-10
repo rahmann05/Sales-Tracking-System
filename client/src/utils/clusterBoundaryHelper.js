@@ -101,7 +101,7 @@ export function computeClusterPolygons(clusters = [], outlets = []) {
   clusters.forEach((cluster, idx) => {
     // 1. Gather all outlets belonging to this cluster
     const clusterOutlets = (outlets || []).filter(
-      (o) => o.clusterId === cluster.id && o.latitude && o.longitude
+      (o) => o.clusterId === cluster.id && o.latitude!=null && o.longitude!=null
     );
 
     const color = cluster.colorHex || getClusterColorHex(cluster.name, idx);
@@ -147,7 +147,7 @@ export function computeClusterPolygons(clusters = [], outlets = []) {
         outletCount: clusterOutlets.length,
         outlets: clusterOutlets,
       });
-    } else if (cluster.centerLat && cluster.centerLng) {
+    } else if (cluster.centerLat!=null && cluster.centerLng!=null) {
       // Center coordinates only
       const circlePath = generateCirclePolygon(Number(cluster.centerLat), Number(cluster.centerLng), 1000);
 

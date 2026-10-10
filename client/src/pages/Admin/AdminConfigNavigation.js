@@ -14,7 +14,7 @@ export const categories = [
  {key:'features',label:'Ketersediaan fitur',icon:LuSlidersHorizontal,description:'Aktifkan, jeda, atau hentikan pekerjaan baru.',groups:['FEATURES']},
  {key:'sales',label:'Kunjungan & shift',icon:LuUsers,description:'Presensi, bukti kunjungan, supervisi, dan hasil lapangan.',groups:['VISIT_WORKFLOW','SALES_ATTENDANCE','GEOFENCE','SHIFT_WORKFLOW','SUPERVISION','OPERATIONS']},
  {key:'planning',label:'Tim, wilayah & PJP',icon:LuUsers,description:'Penugasan Sales, interval kunjungan, dan penerbitan rencana.',groups:['PLANNING_POLICY','TEAM_ASSIGNMENT']},
- {key:'outlet',label:'Outlet & registrasi',icon:LuMapPin,description:'Pengajuan outlet, persetujuan, master, dan pemeriksaan opsional.',groups:['REGISTRATION_WORKFLOW','NOO','OUTLET_REVIEW_POLICY','VALIDATION','DIVISI']},
+ {key:'outlet',label:'Outlet & registrasi',icon:LuMapPin,description:'Pengajuan outlet, persetujuan, master, dan pemeriksaan opsional.',groups:['REGISTRATION_WORKFLOW','NOO','OUTLET_REVIEW_POLICY','OUTLET_REVIEW_SEARCH','OUTLET_REVIEW_MATCHING','OUTLET_FIELD_POLICY','OUTLET_REVIEW_SERVICE','OUTLET_REVIEW_LEGACY','VALIDATION','DIVISI']},
  {key:'orders',label:'Order & penagihan',icon:LuTruck,description:'Persetujuan order, harga, dan catatan pembayaran eksternal.',groups:['ORDER_WORKFLOW','TRANSAKSI']},
  {key:'logistics',label:'Gudang & pengiriman',icon:LuTruck,description:'Packing, persiapan, bukti tujuan, servis, dan penutupan trip.',groups:['WAREHOUSE_WORKFLOW','PACKING_WORKFLOW','VEHICLE_SERVICE_POLICY','LOGISTIK']},
  {key:'monitoring',label:'Pemantauan & laporan',icon:LuShieldCheck,description:'Berbagi lokasi, laporan, notifikasi, dan batas waktu pekerjaan.',groups:['TRACKING_POLICY','REPORTING_POLICY','DAILY_CALLS','ATTENTION_SLA','SLA_CALENDAR']},

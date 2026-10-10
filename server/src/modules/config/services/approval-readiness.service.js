@@ -4,6 +4,7 @@ import {orderReviewerGaps,registrationReviewerGaps} from '../../../../../shared/
 import {warehouseAssignmentGaps} from '../../../../../shared/warehouse-assignment-readiness.mjs';
 import {followUpAssignmentGaps} from '../../../../../shared/follow-up-policy.mjs';
 import {shiftCorrectionGaps} from '../../../../../shared/shift-policy.mjs';
+import {fieldTaskGaps} from '../../../../../shared/outlet-validation.mjs';
 import {effectivePolicy} from './policy-resolver.service.js';
 import {AppError} from '../../../utils/errors.js';
 export const approvalReadinessDomains=values=>({
@@ -47,6 +48,7 @@ async function openWorkGaps(db,people){
  issues.push(...followUpAssignmentGaps(followUps,people));
  const shiftCorrections=await db.staffActivity.findMany({where:{kind:'SHIFT',timeCorrection:{path:['pending','mode'],equals:'DUAL'}},select:{id:true,userId:true,timeCorrection:true}});
  issues.push(...shiftCorrectionGaps(shiftCorrections,people));
+ if(db.outletFieldTask)issues.push(...fieldTaskGaps(await db.outletFieldTask.findMany({where:{status:{in:['OPEN','SUBMITTED']}},select:{id:true,ownerId:true,reviewerId:true,review:{select:{outlet:{select:{cluster:{select:{supervisorId:true}}}}}}}}),people));
  return issues;
 }
 // Must hold approval:actors while changing accounts, teams or role permission templates.

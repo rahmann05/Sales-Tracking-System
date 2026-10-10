@@ -61,8 +61,8 @@ export const useRjpManagement = () => {
         address: o.address,
         clusterName: (!o.cluster || o.cluster.deletedAt || o.cluster.name==='Belum Ditugaskan') ? '-' : (o.cluster.name || o.clusterName || '-'),
         type: o.type || 'MODERN_TRADE',
-        latitude: Number(o.latitude),
-        longitude: Number(o.longitude),
+        latitude: o.latitude==null?null:Number(o.latitude),
+        longitude: o.longitude==null?null:Number(o.longitude),
       })));
       } catch(err){if(current===revision.current)setError(err.message);}
       finally{if(current===revision.current)setLoading(false);}
@@ -74,7 +74,7 @@ export const useRjpManagement = () => {
     const totalOutlets = coverageOutlets.length;
     const gtOutlets = coverageOutlets.filter(o => o.type === 'GENERAL_TRADE');
     const mtOutlets = coverageOutlets.filter(o => o.type !== 'GENERAL_TRADE');
-    
+
     const totalAllocated = coverageOutlets.filter(o => o.clusterName !== '-').length;
     const gtAllocated = gtOutlets.filter(o => o.clusterName !== '-').length;
     const mtAllocated = mtOutlets.filter(o => o.clusterName !== '-').length;

@@ -84,6 +84,7 @@ export const LeafletFallbackRouteMap = ({
 
         {/* Generic markers passed from PersistentMapShell / mapState */}
         {markers.map((m, idx) => {
+        if((m.lat??m.latitude)==null||(m.lng??m.longitude)==null)return null;
         const lat = Number(m.lat ?? m.latitude);
         const lng = Number(m.lng ?? m.longitude);
         if (isNaN(lat) || isNaN(lng)) return null;

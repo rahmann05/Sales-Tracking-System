@@ -10,6 +10,8 @@ export function parameterRoles(key){
  return all;
 }
 export function parameterGuidance(key,values){
+ if(['OUTLET_REVIEW_NAME_MATCH_PERCENT','OUTLET_REVIEW_ADDRESS_MATCH_PERCENT','OUTLET_REVIEW_ADDRESS_CONFLICT_PERCENT','OUTLET_REVIEW_ALTERNATIVE_NAME_PERCENT','OUTLET_REVIEW_AMBIGUITY_GAP_PERCENT','OUTLET_REVIEW_SUGGESTION_NAME_PERCENT'].includes(key))return 'Referensi metode lama. Pemeriksaan baru memakai ambang bukti kuat dan selisih kandidat pada kelompok kecukupan bukti.';
+ if(String(values.OUTLET_FIELD_ENABLED)==='false'&&/^OUTLET_FIELD_/.test(key)&&key!=='OUTLET_FIELD_ENABLED')return 'Tidak berlaku pada tugas baru selama penugasan dimatikan. Tugas berjalan mempertahankan aturan saat ditugaskan.';
  const sales=values.SALES_ATTENDANCE_MODE||'IN_OUT',driver=values.DELIVERY_ATTENDANCE_MODE||'IN_OUT';
  if(sales!=='IN_OUT'&&/^(SALES_OUT_PHOTO|SALES_MISSING_OUT_MINUTES|SALES_ALLOW_CONTINUE_WITHOUT_OUT|MINIMUM_VISIT_DURATION_MINUTES|ATTENDANCE_ENFORCE_MIN_DURATION|ATTENDANCE_ALLOW_EARLY_CHECKOUT)$/.test(key))return 'Tidak berlaku: mode kunjungan ini tidak mewajibkan absen keluar.';
  if(sales==='OPTIONAL'&&/^(SALES_REQUIRE_GPS|SALES_IN_PHOTO|ATTENDANCE_REQUIRE_PHOTO|ATTENDANCE_ENFORCE_GEOFENCE|ATTENDANCE_RADIUS_METERS|ATTENDANCE_USE_OUTLET_RADIUS)$/.test(key))return 'Tidak berlaku: kegiatan Sales tidak mewajibkan presensi. Nilai tetap disimpan untuk mode lain.';
@@ -30,6 +32,8 @@ export function parameterGuidance(key,values){
  return '';
 }
 export function policyTiming(key){
+ if(/^OUTLET_FIELD_/.test(key))return key==='OUTLET_FIELD_ENABLED'?'Berlaku segera untuk penugasan baru; bukti tugas terbuka tetap dapat dikirim dan diperiksa.':'Dibekukan saat penugasan terbaru; perubahan parameter tidak mengubah tugas berjalan sampai ditugaskan ulang.';
+ if(/^OUTLET_REVIEW_(AUTO_CLOSE|MAX_CALLS|MAX_CANDIDATES|EXPAND_SEARCH|STRONG_|CANDIDATE_GAP)/.test(key))return 'Berlaku pada pemeriksaan Google berikutnya; hasil lama mempertahankan ambang awal.';
  if(/^VEHICLE_SERVICE_(REMINDERS_|WARNING_)|^OIL_|^BRAKE_/.test(key))return 'Pengingat diperbarui mengikuti aturan efektif; interval khusus kendaraan didahulukan. Kilometer dan riwayat servis tidak berubah.';
  if(/^OUTLET_REVIEW_(NAME_|ADDRESS_|ALTERNATIVE_|AMBIGUITY_|SUGGESTION_|SEARCH_RADIUS_|TIMEOUT_|EVIDENCE_)/.test(key))return 'Berlaku pada pemeriksaan peta berikutnya. Ambang dan masa berlaku tersimpan bersama hasil; bukti lama tidak dihitung ulang.';
  if(/^FEATURE_|TRACKING_|^SALES_TRACKING_MODE|^DRIVER_TRACKING_MODE|^NOTIFY_|^REPORT_|^ROUTING_|^PLACE_LOOKUP_|^LIVE_TRACKING_|^SLA_|^OUTLET_MAP_|^OUTLET_REVIEW_/.test(key))return 'Berlaku segera saat versi efektif; pekerjaan terbuka tetap dapat diselesaikan.';

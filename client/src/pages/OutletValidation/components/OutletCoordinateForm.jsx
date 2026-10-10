@@ -3,7 +3,7 @@ import {outletValidationApi} from '../../../services/api';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import {point} from '../../OutletManagement/outletPresentation';
 export function OutletCoordinateForm({outlet,onSaved,onClose,suggestion}) {
- const [form,setForm]=useState({latitude:String(outlet.latitude),longitude:String(outlet.longitude),reason:'',source:'MANUAL'}),[busy,setBusy]=useState(false),[locating,setLocating]=useState(false),[error,setError]=useState(''),[gps,setGps]=useState(null),[dirty,setDirty]=useState(false);
+ const [form,setForm]=useState({latitude:outlet.latitude==null?'':String(outlet.latitude),longitude:outlet.longitude==null?'':String(outlet.longitude),reason:'',source:'MANUAL'}),[busy,setBusy]=useState(false),[locating,setLocating]=useState(false),[error,setError]=useState(''),[gps,setGps]=useState(null),[dirty,setDirty]=useState(false);
  useUnsavedNavigation(dirty,busy);
  const mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);

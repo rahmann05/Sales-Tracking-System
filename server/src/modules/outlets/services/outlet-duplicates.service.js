@@ -9,8 +9,8 @@ export async function duplicateOutlets(db,data,actor,excludeId) {
   const where={...await reviewScope(actor,db),...(excludeId?{id:{not:excludeId}}:{})};
   where.OR=[{name:{equals:data.name,mode:'insensitive'}},{address:{equals:data.address,mode:'insensitive'}},...(data.phone?[{phone:data.phone}]:[]),{latitude:{gte:data.latitude-delta,lte:data.latitude+delta},longitude:{gte:data.longitude-delta/Math.max(.01,Math.cos(data.latitude*Math.PI/180)),lte:data.longitude+delta/Math.max(.01,Math.cos(data.latitude*Math.PI/180))}}];
   const rows=await db.outlet.findMany({where,select:{id:true,name:true,address:true,outletCode:true,latitude:true,longitude:true,phone:true},take:100});
-  return rows.map(o=>({...o,distanceMeters:Math.round(calculateDistanceMeters(data.latitude,data.longitude,o.latitude,o.longitude))})).filter(o=>
-    normal(o.name)===normal(data.name)&&normal(o.address)===normal(data.address)||calculateNameSimilarity(data.name,o.name)>=threshold&&o.distanceMeters<=radius
+  return rows.map(o=>{const distance=calculateDistanceMeters(data.latitude,data.longitude,o.latitude,o.longitude);return {...o,distanceMeters:distance===null?null:Math.round(distance)};}).filter(o=>
+    normal(o.name)===normal(data.name)&&normal(o.address)===normal(data.address)||calculateNameSimilarity(data.name,o.name)>=threshold&&o.distanceMeters!==null&&o.distanceMeters<=radius
   ).slice(0,10);
 }
 export async function assertNoUnreviewedDuplicate(db,data,actor,reason,excludeId) {

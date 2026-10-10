@@ -26,7 +26,7 @@ const DETAILS={
   [TAB_IDS.OUTLET_MANAGEMENT]:['Master outlet','Kelola identitas pelanggan, alamat, dan wilayah toko.'],
   [TAB_IDS.OUTLET_REGISTRATION]:['Daftarkan outlet','Buat pengajuan toko baru.'],
   [TAB_IDS.OUTLET_APPROVAL]:['Persetujuan outlet','Periksa pengajuan dan aktifkan toko yang memenuhi syarat.'],
-  [TAB_IDS.OUTLET_VALIDATION]:['Validasi lokasi outlet','Periksa dan koreksi koordinat toko.'],
+  [TAB_IDS.OUTLET_VALIDATION]:['Validasi outlet','Cocokkan identitas dan lokasi melalui Google atau bukti lapangan.'],
   [TAB_IDS.DELIVERY_PACKING_LIST]:['Packing list','Susun dokumen muatan dan kirim ke kepala gudang.'],
   [TAB_IDS.DELIVERY_ROUTES]:['Rute & alokasi mobil','Bagi muatan ke kendaraan dan tetapkan supir.'],
   [TAB_IDS.DELIVERY_MONITOR]:['Monitor pengiriman','Pantau perjalanan, hasil pengiriman, dan retur.'],

@@ -18,6 +18,8 @@ export const updateOutlet = async (id, raw,actor) => {
     if(!previous||previous.deletedAt)throw new AppError('Outlet aktif tidak ditemukan',404);
     assertOutletLegal(input,previous);
     assertOutletTrade(input,previous);
+    const lat=input.latitude===undefined?previous.latitude:input.latitude,lng=input.longitude===undefined?previous.longitude:input.longitude;
+    if((lat==null)!==(lng==null))throw new AppError('Isi kedua koordinat atau kosongkan keduanya.',422);
     if(data.clusterId&&data.clusterId!==previous.clusterId)throw new AppError('Pindahkan outlet melalui Wilayah & outlet pada Master RJP untuk meninjau dampak jadwal.',409);
     if (data.outletCode!==undefined) data={...data,outletCode:await validateCodeUpdate('OUTLET',data.outletCode,id)};
     const audit=await recordOutletChange(tx,previous,data,{actor,reason,updatedAt,locationEvidence,source:locationEvidence?'LOCATION':'MASTER'});

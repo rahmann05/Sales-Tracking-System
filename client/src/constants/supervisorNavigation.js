@@ -15,7 +15,7 @@ const LABELS={
   [TAB_IDS.SPV_FIELD]:'Supervisi lapangan',[TAB_IDS.SPV_ATTENTION]:'Pekerjaan terbuka',
   [TAB_IDS.TEAM_TRACKING]:'Anggota tim',[TAB_IDS.ROUTE_PLANNING]:'Wilayah & jadwal RJP',
   [TAB_IDS.OUTLET_MANAGEMENT]:'Direktori outlet',[TAB_IDS.OUTLET_APPROVAL]:'Pengajuan outlet',
-  [TAB_IDS.OUTLET_VALIDATION]:'Validasi lokasi',[TAB_IDS.REPORTS]:'Rekap operasional',
+  [TAB_IDS.OUTLET_VALIDATION]:'Validasi outlet',[TAB_IDS.REPORTS]:'Rekap operasional',
   [TAB_IDS.DASHBOARD]:'Peta outlet',
 };
 export const supervisorParentTab=id=>({[TAB_IDS.ADMIN_APPROVAL]:TAB_IDS.SPV_APPROVAL,[TAB_IDS.DAILY_CALL_MONITOR]:TAB_IDS.SPV_MONITOR,[TAB_IDS.CREATE_CLUSTER]:TAB_IDS.ROUTE_PLANNING,[TAB_IDS.MASTER_CLUSTERS]:TAB_IDS.ROUTE_PLANNING})[id]||id;

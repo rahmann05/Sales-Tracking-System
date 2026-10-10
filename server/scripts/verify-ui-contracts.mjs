@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 const client=fileURLToPath(new URL('../../client/',import.meta.url));
 const require=createRequire(path.join(client,'package.json'));
 const esbuild=require('esbuild');
-const built=await esbuild.build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,loader:{'.css':'empty'},plugins:[{name:'workspace-fixture',setup(build){build.onResolve({filter:/context\/AppContext(?:\.jsx)?$/},()=>({path:'context',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const useApp=()=>globalThis.workspaceFixture;',loader:'js'}));}}],stdin:{resolveDir:client,loader:'jsx',contents:`
+const built=await esbuild.build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',define:{'import.meta.env':'{}'},write:false,loader:{'.css':'empty'},plugins:[{name:'workspace-fixture',setup(build){build.onResolve({filter:/context\/AppContext(?:\.jsx)?$/},()=>({path:'context',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:"import {CONFIG_DEFAULTS} from '../shared/config.mjs'; export const useApp=()=>({...globalThis.workspaceFixture,settings:{...CONFIG_DEFAULTS,...globalThis.workspaceFixture?.settings}});",resolveDir:client,loader:'js'}));}}],stdin:{resolveDir:client,loader:'jsx',contents:`
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import assert from 'node:assert/strict';
@@ -50,6 +50,12 @@ import {getNavigationTabs,TAB_IDS,isTabPermissionAllowed} from './src/constants/
 import {WorkspaceModuleNav as AdminModuleNav} from './src/shared/components/layout/WorkspaceModuleNav.jsx';
 import {AdminOrderTable} from './src/pages/Admin/components/AdminOrderTable.jsx';
 import {AdminPackingTable} from './src/pages/Admin/components/AdminPackingTable.jsx';
+import {OutletQualityFlag} from './src/pages/OutletManagement/OutletQualityFlag.jsx';
+import {OutletValidationVisit} from './src/pages/Sales/components/OutletValidationVisit.jsx';
+import {SupervisorVisitList} from './src/pages/Supervisor/components/SupervisorVisitList.jsx';
+import {FieldTaskReview} from './src/pages/OutletValidation/components/FieldTaskReview.jsx';
+import {OutletValidationDetail} from './src/pages/OutletValidation/components/OutletValidationDetail.jsx';
+import {GoogleOutletEvidence} from './src/pages/OutletValidation/components/GoogleOutletEvidence.jsx';
 for(const role of ['ADMIN','SUPERVISOR'])assert.ok(!getNavigationTabs(role).some(tab=>tab.id===TAB_IDS.MASTER_CLUSTERS),'Kluster berada di dalam Master RJP, bukan menu duplikat');
 globalThis.workspaceFixture={user:{id:'admin',role:'ADMIN'},syncStatus:{error:'Gagal memperbarui: Order'},notificationStatus:{error:'Notifikasi gagal'},notifications:[{id:'n',source:'SERVER',title:'Penugasan',message:'Periksa tugas',read:false}],notificationUnreadCount:71,notificationHasMore:true};
 const monitoringHtml=renderToStaticMarkup(<MonitoringStatus/>);assert.match(monitoringHtml,/Gagal diperbarui/);assert.match(monitoringHtml,/Scheduler server/);assert.match(monitoringHtml,/Belum terkonfirmasi/);assert.match(monitoringHtml,/Status pemantauan: perlu diperiksa/);
@@ -173,6 +179,18 @@ const knownCalendar=renderToStaticMarkup(<MtdMetrics period={{calendarKnown:true
 assert.match(knownCalendar,/22 Hari/);
 assert.match(sundayTable,/Kalender belum ditetapkan/);
 const visitList=renderToStaticMarkup(<SalesVisitList stops={[{id:"stop-test",sequence:1,outletName:"Toko uji",status:"ARRIVED"}]} selectedId="stop-test" onSelect={()=>{}}/>);assert.match(visitList,/<table/);assert.match(visitList,/Sedang dikunjungi/);assert.match(visitList,/Buka kunjungan/);
+globalThis.workspaceFixture={user:{id:'foreign',role:'SUPERVISOR',permissions:{can_review_outlet_field:true}}};
+const fieldProof={id:'field',status:'SUBMITTED',ownerId:'sales',reviewerId:'assigned',instructions:'Periksa outlet',evidence:{outcome:'FOUND',name:'Toko bukti',address:'Alamat aktual',note:'Bukti diterima di lokasi',latitude:0,longitude:0,photo:'data:image/jpeg;base64,YWJj'}};
+const foreignReview=renderToStaticMarkup(<FieldTaskReview task={fieldProof} act={()=>{}}/>);assert.doesNotMatch(foreignReview,/Terima bukti|Minta kelengkapan/);assert.match(foreignReview,/Bukti lapangan Sales/);
+globalThis.workspaceFixture={settingsReady:true,user:{id:'assigned',role:'SUPERVISOR',permissions:{can_review_outlet_field:true}}};
+assert.match(renderToStaticMarkup(<FieldTaskReview task={fieldProof} act={()=>{}}/>),/Terima bukti/);
+const closedReview=renderToStaticMarkup(<OutletValidationDetail review={{id:'case',status:'COMPLETED',workflow:{stage:'COMPLETED'},outlet:{id:'outlet',name:'Toko uji',address:'Alamat asli',changes:[]},runs:[],fieldTasks:[{...fieldProof,status:'DONE'}]}} onRefresh={()=>{}} onClose={()=>{}}/>);assert.match(closedReview,/Bukti lapangan Sales/);assert.doesNotMatch(closedReview,/Simpan penugasan|Simpan keputusan/);
+const googleReference=renderToStaticMarkup(<GoogleOutletEvidence outlet={{name:'Toko uji'}} run={{providerContent:{candidates:[{placeId:'fixture-place',name:'Nama Google',latitude:0,longitude:0}]}}}/>);assert.match(googleReference,/query_place_id=fixture-place/);assert.match(googleReference,/Titik yang belum tersedia|kunci Google Maps browser/);assert.doesNotMatch(googleReference,/leaflet|openstreetmap/i);
+globalThis.workspaceFixture={settingsReady:true,user:{id:'admin',role:'ADMIN',permissions:{can_validate_outlet:true}}};
+const flagged=renderToStaticMarkup(<OutletQualityFlag outlet={{id:'legacy',name:'Usman',address:'Padalarang'}}/>);assert.match(flagged,/Titik kosong/);assert.match(flagged,/Nama belum jelas/);assert.match(flagged,/Alamat kurang lengkap/);assert.match(flagged,/Validasi data/);
+globalThis.workspaceFixture={settingsReady:true,user:{id:'sales',role:'SALES',permissions:{can_submit_outlet_field:true}}};
+const taskVisit=renderToStaticMarkup(<OutletValidationVisit stop={{validationTask:{id:'task',status:'OPEN',schedule:{mode:'UNTIL_COMPLETE'}},validationResult:{state:'PENDING'}}}/>);assert.match(taskVisit,/Isi validasi ulang/);assert.match(taskVisit,/sampai kasus selesai/);assert.match(taskVisit,/geofence/);
+const validationReport=renderToStaticMarkup(<SupervisorVisitList rows={[{id:'field-stop',salesmanName:'Sales uji',customerName:'Usman',validationOnly:true,validationIncomplete:true,validationResult:{state:'PENDING'}}]} onSelect={()=>{}}/>);assert.match(validationReport,/PJP validasi belum lengkap/);assert.ok(validationReport.includes('terpisah dari IN/OUT'));assert.doesNotMatch(validationReport,/Belum ada presensi masuk/);
 console.log('UI contract verification passed: all 5 roles, desktop/mobile navigation, single profile role, no global search or clipped labels, focused Sales visit list, native admin buttons, attendance states and accessible input labels.');
 `}});
 const module={exports:{}};

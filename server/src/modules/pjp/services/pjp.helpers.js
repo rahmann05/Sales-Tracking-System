@@ -18,19 +18,18 @@ export const getCurrentWeekType = (date = new Date(), mode = 'ISO_PARITY') => {
   return week % 2 ? 'WEEK_1' : 'WEEK_2';
 };
 export const PJP_STOP_INCLUDE = {
+  validationTask:{select:{id:true,status:true,schedule:true,reviewId:true,review:{select:{status:true}}}},
   outlet: { include: { cluster: { select: { id: true, name: true, region: true,
     users: { select: { id: true, name: true, role: true } }, supervisor: { select: { id: true, name: true } } } } } },
   attendances: true, routeChanges: true, orders: { where: { deletedAt: null }, include: { items: true } },
 };
-export const ensureTodayPjpForSales = async (userId, manualCode) => {
-  const now = new Date();
+export const ensureSalesPjpForDate = async (tx,userId,now=new Date(),manualCode) => {
   const key = wibDateKey(now);
   const dayOfWeek = new Date(`${key}T12:00:00Z`).getUTCDay();
   const [days, mode, fallback] = await Promise.all([
     getDynamicConfig('PJP_WORKING_DAYS', '1,2,3,4,5,6'),
     getDynamicConfig('PJP_WEEK_MODE', 'ISO_PARITY'), getDynamicConfig('PJP_FALLBACK_TO_CLUSTER', true),
   ]);
-  return prisma.$transaction(async tx => {
     // All generators serialize on the same sales/day key, without altering historical plans.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${userId}:${key}`}))`;
     const existing = await tx.pjp.findFirst({ where: { userId, date: wibDayRange(now), type: 'SALES' }, include: { stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } } } });
@@ -57,8 +56,8 @@ export const ensureTodayPjpForSales = async (userId, manualCode) => {
     return tx.pjp.create({ data: { ...captureReportAssignment(sales, 'PJP_PLAN', now), code:await resolveBusinessCode('PJP',manualCode,{db:tx,date:now}), userId, date: wibDayRange(now).gte, type: 'SALES', status: 'SCHEDULED',
       stops: { create: [...new Set(outletIds)].map((outletId,i) => ({ outletId, sequence: i+1, status: 'PENDING' })) } },
       include: { user: { select: { id: true, name: true, role: true, cluster: { include: { supervisor: { select: { id: true, name: true } } } } } }, stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } } } });
-  });
 };
+export const ensureTodayPjpForSales = (userId,manualCode) => prisma.$transaction(tx=>ensureSalesPjpForDate(tx,userId,new Date(),manualCode));
 export const generateTodayPjpsAllSales = async (codes = {}) => {
   const sales = await prisma.user.findMany({ where: { role: 'SALES', deletedAt: null }, select: { id: true,role:true,supervisorId:true } });
   let count = 0;

@@ -1,3 +1,4 @@
+import {rollOutletFieldPjps} from '../modules/outlets/services/outlet-field-pjp.service.js';
 import {remindVehicleServices} from '../modules/vehicles/services/service-reminders.service.js';
 import {retainSystemHistory} from '../modules/notifications/services/history-retention.service.js';
 import {scanMissingOut} from '../modules/attention/operational-exceptions.service.js';
@@ -7,8 +8,15 @@ import { runAttentionEscalation } from '../modules/attention/attention-escalatio
 import { schedulerMonitor, nextDailyPjp } from './scheduler-health.js';
 import {dispatchNotifications} from '../modules/notifications/services/notification-delivery.service.js';
 import {purgeExpiredLocations} from '../modules/users/services/location-retention.service.js';
+import {runValidationJobs} from '../modules/outlets/services/outlet-validation-job.service.js';
+import {purgeOutletProviderContent} from '../modules/outlets/services/outlet-provider-content.service.js';
+import {prisma} from '../config/prisma.js';
 
 export const initScheduler = () => {
+  schedulerMonitor.register('OUTLET_FIELD_PJP','Agenda validasi outlet',Date.now()+60000,60000);
+  setInterval(()=>{schedulerMonitor.run('OUTLET_FIELD_PJP',rollOutletFieldPjps,now=>now+60000).catch(()=>console.error('[Scheduler]: Outlet field agenda failed.'));},60000).unref();
+  schedulerMonitor.register('OUTLET_VALIDATION','Pemeriksaan Google terjadwal',Date.now()+15000,15000);
+  setInterval(()=>{schedulerMonitor.run('OUTLET_VALIDATION',async()=>{await purgeOutletProviderContent(prisma);return runValidationJobs();},now=>now+15000).catch(()=>console.error('[Scheduler]: Outlet validation job failed.'));},15000).unref();
   schedulerMonitor.register('HISTORY_RETENTION','Retensi notifikasi dan arsip audit',Date.now()+3600000,3600000);
   cron.schedule('0 * * * *',()=>{schedulerMonitor.run('HISTORY_RETENTION',retainSystemHistory,now=>now+3600000).catch(()=>console.error('[Scheduler]: History retention scan failed.'));},{timezone:'Asia/Jakarta'});
   schedulerMonitor.register('VEHICLE_SERVICE','Pengingat servis berkala',Date.now()+3600000,3600000);

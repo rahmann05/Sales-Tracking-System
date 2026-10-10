@@ -4,7 +4,7 @@ import { calculateAddressSimilarity } from './calculate-address-similarity.servi
 import {OUTLET_COMPARISON_DEFAULTS} from '../../../../../shared/outlet-evidence-policy.mjs';
 const empty = new Set(['ZERO_RESULTS','NO_RESULTS','NO_CANDIDATES']);
 const coords = p => Number.isFinite(p?.lat)&&Number.isFinite(p?.lng)&&Math.abs(p.lat)<=90&&Math.abs(p.lng)<=180;
-const distance = (o,p) => coords(p)?Math.round(calculateDistanceMeters(o.latitude,o.longitude,p.lat,p.lng)):null;
+const distance = (o,p) => {const meters=coords(p)?calculateDistanceMeters(o.latitude,o.longitude,p.lat,p.lng):null;return meters===null?null:Math.round(meters);};
 export function compareOutletEvidence(outlet,raw,options={}) {
   const policy={...OUTLET_COMPARISON_DEFAULTS,suspectDistance:500,warningDistance:200,...options};
   const {suspectDistance,warningDistance,nameMatchPercent,addressMatchPercent,addressConflictPercent,alternativeNamePercent,ambiguityGapPercent,suggestionNamePercent}=policy;

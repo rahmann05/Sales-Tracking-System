@@ -38,6 +38,7 @@ export const useMapMarkers = ({ mapInstanceRef, markersRef, setMapState }) => {
 
     /** Replace all markers. markersData: [{id, lat, lng, title, icon, label, zIndex, onClick}] */
     const setMarkers = useCallback((markersData = []) => {
+        markersData=markersData.filter(m=>m.lat!=null&&m.lng!=null&&Number.isFinite(Number(m.lat))&&Number.isFinite(Number(m.lng)));
         setMapState((prev) => ({ ...prev, markers: markersData }));
 
         const map = mapInstanceRef.current;
@@ -92,7 +93,7 @@ export const useMapMarkers = ({ mapInstanceRef, markersRef, setMapState }) => {
     }, [cullMarkersToViewport]);
 
     const addMarker = useCallback((markerData) => {
-        if (!markerData) return;
+        if (!markerData||markerData.lat==null||markerData.lng==null||!Number.isFinite(Number(markerData.lat))||!Number.isFinite(Number(markerData.lng))) return;
         setMapState((prev) => ({ ...prev, markers: [...prev.markers.filter(x => String(x.id) !== String(markerData.id)), markerData] }));
         const map = mapInstanceRef.current;
         if (!map || !window.google) return;

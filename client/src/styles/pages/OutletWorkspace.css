@@ -30,3 +30,5 @@
 @media(max-width:767px){.outlet-name{min-height:44px}}
 
 .outlet-detail-heading>.app-button{flex-shrink:0;white-space:nowrap}
+
+.outlet-quality{padding:12px;margin-bottom:12px;border:1px solid var(--border-glass);border-left:3px solid var(--warning,#b7791f);border-radius:10px;background:var(--surface-variant,#f6f7f9);font-size:12px}.outlet-quality ul{padding-left:18px;margin:6px 0 10px;line-height:1.6}.outlet-quality .app-button{min-height:44px}

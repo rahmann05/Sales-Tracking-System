@@ -17,6 +17,7 @@ import { getDynamicConfig } from '../config/config.service.js';
  * @returns {Promise<{legs: Array, provider: 'google'|'osrm'}>}
  */
 export const resolveRoadRoute = async (waypoints) => {
+    if(!Array.isArray(waypoints)||waypoints.length<2||waypoints.some(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||Math.abs(p.lat)>90||Math.abs(p.lng)>180))throw new AppError('Rute memerlukan koordinat lengkap pada setiap tujuan. Perbaiki lokasi outlet terlebih dahulu.',422);
     const provider=await getDynamicConfig('ROUTING_PROVIDER','AUTO'),fallback=await getDynamicConfig('ROUTING_ALLOW_FALLBACK',true);
     if(provider==='OFF'||await getDynamicConfig('FEATURE_MAPS_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Layanan rute jalan dinonaktifkan Admin',403);
     let apiKey = config.googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY;

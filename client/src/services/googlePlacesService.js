@@ -11,7 +11,7 @@ export const googlePlacesService = {
   getGoogleMapsUrl: (lat, lng, query = '') => {
     const latNum = Number(lat);
     const lngNum = Number(lng);
-    if (!isNaN(latNum) && !isNaN(lngNum) && latNum !== 0 && lngNum !== 0) {
+    if (lat!=null&&lng!=null&&Number.isFinite(latNum)&&Number.isFinite(lngNum)&&Math.abs(latNum)<=90&&Math.abs(lngNum)<=180) {
       return `https://www.google.com/maps/search/?api=1&query=${latNum},${lngNum}`;
     }
     if (query && query.trim()) {
@@ -33,7 +33,7 @@ export const googlePlacesService = {
 
     // 2. Cross-reference with database master outlets list if needed
     if (
-      (lat == null || lng == null || isNaN(Number(lat)) || isNaN(Number(lng)) || Number(lat) === 0 || Number(lng) === 0) &&
+      (lat == null || lng == null || isNaN(Number(lat)) || isNaN(Number(lng))) &&
       Array.isArray(fallbackOutlets) &&
       fallbackOutlets.length > 0
     ) {

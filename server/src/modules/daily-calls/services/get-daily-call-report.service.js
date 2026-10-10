@@ -2,7 +2,7 @@ import { reportScopeWhere, reportIdentity, assignmentReportBasis } from '../../r
 import { reportBasis,measuredVisitMinutes } from '../../../../../shared/report-semantics.mjs';
 import {reportProvenance} from '../../reports/services/report-provenance.service.js';
 import {visitOutcomeText,includesCollection} from '../../../../../shared/visit-outcome.mjs';
-import { offPjpSalesResult, visitSalesResult, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import { offPjpSalesResult, visitSalesResult, wibDateKey,countsAsPlannedVisit } from '../../../../../shared/visit-metrics.mjs';
 /** getDailyCallReport - single-responsibility service (extracted from daily-calls.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
@@ -93,10 +93,11 @@ export const getDailyCallReport = async (query = {}) => {
     }
 
     for (const stop of pjp.stops) {
+      if(!countsAsPlannedVisit(stop))continue;
       const attendances = stop.attendances || [];
       const checkIn = attendances.find((a) => a.type === ATTENDANCE_TYPE.IN);
       const checkOut = attendances.find((a) => a.type === ATTENDANCE_TYPE.OUT);
-      const policy=stop.policySnapshot?.values||{},attendanceMode=policy.SALES_ATTENDANCE_MODE||'IN_OUT';
+      const policy=stop.policySnapshot?.values||{},attendanceMode=stop.validationOnly?'VALIDATION':policy.SALES_ATTENDANCE_MODE||'IN_OUT';
       const businessResult=checkOut||stop.visitSession?.result;
 
       const outlet = stop.outlet || {};
@@ -126,7 +127,7 @@ export const getDailyCallReport = async (query = {}) => {
       const isSkipped = ['SKIPPED','CLOSED','CLOSED_REPORTED'].includes(stop.status) && !isActual;
 
       const row = {
-        id: stop.id,
+        id: stop.id,validationOnly:stop.validationOnly,validationResult:stop.validationResult,validationIncomplete:Boolean(stop.validationTaskId&&['PENDING','RETURNED'].includes(stop.validationResult?.state)),
         sequence: stop.sequence,
         salesmanId: identity.id,
         salesmanName: identity.name || 'Salesman',
@@ -152,7 +153,7 @@ export const getDailyCallReport = async (query = {}) => {
         extraCall: 'N',
         skuSold,
         orderAmount,
-        reason: businessResult?.reason || checkOut?.earlyReason || (!isEc && isActual ? 'Tidak Ada Order' : isSkipped ? 'Belum Dikunjungi / Terlewat' : ''),
+        reason: stop.validationOnly?`Validasi outlet · ${stop.validationResult?.state||'PENDING'}`:businessResult?.reason || checkOut?.earlyReason || (!isEc && isActual ? 'Tidak Ada Order' : isSkipped ? 'Belum Dikunjungi / Terlewat' : ''),
         earlyReason: checkOut?.earlyReason || null,
         visitOutcome:businessResult?.visitOutcome||null,
         remark: [businessResult?.notes || checkIn?.notes,visitOutcomeText(businessResult?.visitOutcome),stop.visitSession?.state==='INCOMPLETE'?'OUT terlewat · pengecualian SPV':attendanceMode!=='IN_OUT'?'Hasil kegiatan tanpa kewajiban OUT':''].filter(Boolean).join(' · '),

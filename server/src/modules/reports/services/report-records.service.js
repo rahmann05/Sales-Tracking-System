@@ -1,5 +1,5 @@
 import { prisma } from '../../../config/prisma.js';
-import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import { wibDateKey,countsAsPlannedVisit } from '../../../../../shared/visit-metrics.mjs';
 import { reportScopeWhere, REPORT_USER_SELECT } from './report-assignment.service.js';
 function indexRows(rows,dateField,byDay) {
   const grouped=new Map();
@@ -12,5 +12,5 @@ export async function loadReportRecords(start,end,{byDay=false,includeOutlets=fa
     prisma.pjp.findMany({where:{...where,date:period},include:{user:{select:REPORT_USER_SELECT},stops:{include:{...(includeOutlets?{outlet:true}:{}),attendances:true,orders:{include:{items:true}}}}}}),
     prisma.offPjpAttendance.findMany({where:{...where,status:'APPROVED',createdAt:period},include:{user:{select:REPORT_USER_SELECT}}}),
   ]);
-  return {pjps:indexRows(pjps,'date',byDay),offVisits:indexRows(offVisits,'createdAt',byDay),rawRecords:[...pjps,...offVisits]};
+  return {pjps:indexRows(pjps.map(p=>({...p,stops:p.stops.filter(countsAsPlannedVisit)})),'date',byDay),offVisits:indexRows(offVisits,'createdAt',byDay),rawRecords:[...pjps,...offVisits]};
 }

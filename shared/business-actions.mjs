@@ -11,12 +11,17 @@ export const BUSINESS_ACTIONS={
  PACKING:existing('PACKING',['RELEASE','RECALL']),
  OUTLET_REVIEW:existing('OUTLET_REVIEW',['KEEP','WAITING_FIELD','CORRECTED']),
  SHIFT_CORRECTION:existing('SHIFT',['PROPOSE','ACCEPT','REJECT','CANCEL']),
+ OUTLET_DIGITAL:existing('OUTLET_REVIEW',['DIGITAL_KEEP','INTERNAL_KEEP','FIELD_KEEP','PROPOSE','APPLY','RETURN','CANCEL']),
+ OUTLET_FIELD:existing('OUTLET_REVIEW',['SUBMIT','ACCEPT','RETURN','CANCEL']),
+ OUTLET_BATCH:existing('OUTLET_REVIEW',['STOP','RESUME','RETRY']),
 };
 export const actionNames=group=>Object.keys(BUSINESS_ACTIONS[group]||{});
 export const actionFeature=(group,action)=>{
  const rule=BUSINESS_ACTIONS[group]?.[action];return rule?[rule.feature,rule.intent==='NEW_WORK']:null;
 };
 export const BACKGROUND_CONTRACTS={
+ OUTLET_FIELD_PJP:{purpose:'Agenda tugas validasi berulang',consumer:'server/src/modules/outlets/services/outlet-field-pjp.service.js',rule:'Frozen OUTLET_FIELD_PJP_MODE; existing assignment continues without changing recurring templates or fabricating attendance; manual PJP codes remain required'},
+ OUTLET_VALIDATION:{purpose:'Antrean Google dan retensi cache koordinat',consumer:'server/src/modules/outlets/services/outlet-validation-job.service.js',rule:'Effective OUTLET_REVIEW / MAPS availability, actor permission, provider budgets; expired provider cache is purged even when disabled'},
  HISTORY_RETENTION:{purpose:'Retensi histori',consumer:'server/src/modules/notifications/services/history-retention.service.js',rule:'NOTIFY_READ_RETENTION_DAYS / AUDIT_ACTIVE_RETENTION_DAYS; cleanup remains available when a feature is paused'},
  VEHICLE_SERVICE:{purpose:'Pengingat servis',consumer:'server/src/modules/vehicles/services/service-reminders.service.js',rule:'VEHICLE_SERVICE_SCHEDULED_REMINDERS / VEHICLE_SERVICE_REMINDERS_ENABLED and recipient policy'},
  GPS_RETENTION:{purpose:'Retensi lokasi',consumer:'server/src/modules/users/services/location-retention.service.js',rule:'TRACKING_LOCATION_RETENTION_HOURS; retention must continue when tracking is off'},

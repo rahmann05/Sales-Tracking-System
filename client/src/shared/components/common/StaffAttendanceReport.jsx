@@ -1,3 +1,5 @@
+import {OutletValidationAttendanceReport} from './OutletValidationAttendanceReport';
+import '../../../styles/pages/OutletValidation.css';
 import { DataTable } from './DataTable';
 import React, { useEffect, useState } from 'react';
 import { staffAttendanceApi } from '../../../services/api';
@@ -25,6 +27,7 @@ export function StaffAttendanceReport() {
     <p className="text-sm text-on-surface-variant">Shift malam mengikuti tanggal kerja sesuai aturan. Waktu kegiatan tanpa presensi dan koreksi administratif dibedakan dari bukti masuk/keluar asli.</p>
     {error && <p role="alert" className="text-red-600">{error}</p>}
     {loading ? <p role="status">Memuat riwayat…</p> : <div className="overflow-x-auto"><DataTable className="w-full text-sm text-left"><thead><tr>{['Nama','Aktivitas','Toko','Masuk asli (WIB)','Keluar asli (WIB)','Keterangan',...(correctionAccess?['Koreksi']:[])].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(r=>{const t=shiftTimeView(r);return <tr className="border-t border-border-glass" key={r.id}><td>{r.user?.name}</td><td>{{SHIFT:'Shift',VISIT:'Supervisi toko',OFF_PJP:'Luar PJP'}[r.kind]}{pendingOnly&&<p>{r.dateKey}</p>}</td><td>{r.outletName||'—'}</td><td>{time(t.actualIn)}</td><td>{time(t.actualOut)}</td><td>{r.kind==='SHIFT'?(t.lateMinutes===null?'Presensi tidak diwajibkan':t.lateMinutes?`Terlambat ${t.lateMinutes} menit${t.corrected?' (koreksi diterima)':''}`:'Tepat waktu'+(t.corrected?' (koreksi diterima)':'')):r.notes||'—'}{t.corrected&&<p className="text-xs mt-2">Waktu koreksi diterima: {time(t.reportedIn)} → {time(t.reportedOut)}</p>}{r.timeCorrection?.pending&&<p className="text-xs mt-2">Usulan koreksi menunggu pemeriksaan</p>}</td>{correctionAccess&&<td>{r.kind==='SHIFT'&&t.actualIn&&<button type="button" className="app-button" onClick={()=>setSelected(r)}>Koreksi / riwayat</button>}</td>}</tr>;})}</tbody></DataTable>{!rows.length&&!error&&<p className="p-3 text-on-surface-variant">{pendingOnly?'Tidak ada usulan koreksi menunggu keputusan.':'Belum ada catatan pada tanggal kerja ini.'}</p>}{pendingOnly&&rows.length===100&&<p>Menampilkan 100 usulan tertua. Selesaikan untuk memuat antrean berikutnya.</p>}</div>}
+    {!pendingOnly&&<OutletValidationAttendanceReport date={date}/>}
     {selected&&<ShiftCorrectionDialog row={selected} onClose={()=>setSelected(null)} onSaved={async()=>setRevision(v=>v+1)}/>}
   </section>;
 }

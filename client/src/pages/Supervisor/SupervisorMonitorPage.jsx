@@ -1,3 +1,5 @@
+import {OutletValidationAttendanceReport} from '../../shared/components/common/OutletValidationAttendanceReport';
+import '../../styles/pages/OutletValidation.css';
 import React from 'react';
 import {LuRefreshCw,LuList,LuMap,LuClock,LuShieldCheck} from 'react-icons/lu';
 import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
@@ -34,6 +36,7 @@ export function SupervisorMonitorPage(){
         {effectiveView==='timeline'&&<SalesmanDailyTimelineView salesmanSummaries={report.reportData?.salesmanSummaries||[]} isLoading={report.isLoading} onSelectStop={report.setSelectedRow}/>}
         {effectiveView==='audit'&&<><p className="spv-note">Indikasi membantu pemeriksaan bukti; bukan kesimpulan pelanggaran.</p><SuspiciousAttendanceTable rows={report.reportData?.rows||[]} isLoading={report.isLoading} onSelectRow={report.setSelectedRow}/></>}
       </section>}
+      <OutletValidationAttendanceReport date={report.date} salesmanId={report.salesmanId} search={report.search} refreshKey={report.reportData}/>
       {report.selectedRow&&<DailyCallDetailModal row={report.selectedRow} onClose={()=>report.setSelectedRow(null)}/>}
     </>}
   </div>;

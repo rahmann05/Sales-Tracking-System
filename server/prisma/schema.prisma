@@ -335,8 +335,8 @@ model Outlet {
   id        String @id @default(uuid())
   name      String
   address   String
-  latitude  Float
-  longitude Float
+  latitude  Float?
+  longitude Float?
 
   // Relasi ke Cluster (FK mandatory)
   clusterId String
@@ -421,6 +421,11 @@ model Pjp {
 }
 
 model PjpStop {
+  validationTaskId String?
+  validationTask OutletFieldTask? @relation("OutletValidationVisits", fields: [validationTaskId], references: [id], onDelete: SetNull)
+  validationOnly Boolean @default(false)
+  validationResult Json?
+  @@index([validationTaskId])
   visitSession Json?
   policySnapshot Json?
   id       String      @id @default(uuid())
@@ -860,6 +865,9 @@ model CustomerRegistration {
 }
 
 model OutletReview {
+  workflow Json @default("{}")
+  proposal Json?
+  fieldTasks OutletFieldTask[]
   ownerId String?
   dueAt DateTime?
   assignment Json @default("{}")
@@ -882,6 +890,8 @@ model OutletReview {
 }
 
 model OutletValidationRun {
+  providerContent Json?
+  providerExpiresAt DateTime?
   id String @id @default(uuid())
   reviewId String
   review OutletReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
@@ -890,6 +900,43 @@ model OutletValidationRun {
   actor Json
   createdAt DateTime @default(now())
   @@index([reviewId, createdAt])
+}
+
+model OutletFieldTask {
+  schedule Json @default("{}")
+  validationVisits PjpStop[] @relation("OutletValidationVisits")
+  id String @id @default(uuid())
+  reviewId String
+  review OutletReview @relation(fields: [reviewId], references: [id])
+  ownerId String
+  reviewerId String
+  status String @default("OPEN")
+  revision Int @default(1)
+  dueAt DateTime?
+  pjpStopId String?
+  instructions String
+  policySnapshot Json
+  evidence Json?
+  history Json @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([reviewId, status])
+  @@index([ownerId, status])
+  @@index([reviewerId, status])
+}
+
+model OutletValidationJob {
+  id String @id @default(uuid())
+  requestId String @unique
+  actorId String
+  status String @default("QUEUED")
+  reason String
+  items Json
+  leaseUntil DateTime?
+  leaseToken String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, createdAt])
 }
 
 model OutletChange {
