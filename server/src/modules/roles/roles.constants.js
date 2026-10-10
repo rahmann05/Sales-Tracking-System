@@ -1,4 +1,5 @@
 import {TRIP_PERMISSION_LABELS,tripPermission,tripPermissionDefaults} from '../../../../shared/trip-permissions.mjs';
+import {ORDER_OPERATION_PERMISSIONS} from '../../../../shared/order-operation-permissions.mjs';
 /**
  * roles.constants.js
  * Single Responsibility: Master registry of all system permissions, categories,
@@ -6,6 +7,9 @@ import {TRIP_PERMISSION_LABELS,tripPermission,tripPermissionDefaults} from '../.
  */
 
 export const ALL_PERMISSIONS = [
+  ...Object.values(ORDER_OPERATION_PERMISSIONS).map(p=>({...p,category:'Transaksi & Approval'})),
+  {key:'can_review_route_change',label:'Putuskan toko tutup / reroute',desc:'Mengikuti tahap, penugasan kasus dan larangan memeriksa usulan sendiri.',category:'RJP & Jadwal Sales'},
+  {key:'can_assign_route_review',label:'Tugaskan pemeriksa rute',desc:'Khusus Admin; delegasi per kasus tanpa menambah hak akses umum.',category:'RJP & Jadwal Sales'},
   ...Object.entries(TRIP_PERMISSION_LABELS).map(([action,label])=>({key:tripPermission(action),label,desc:'Mengikuti izin akses pengiriman, tahap, penugasan dan kepemilikan trip.',category:'Gudang & Logistik'})),
   ...[['run','Jalankan pemeriksaan Google'],['propose','Usulkan koreksi outlet'],['apply','Terapkan koreksi outlet'],['assign','Tugaskan pemeriksaan outlet'],['submit','Kirim bukti lapangan outlet'],['review','Periksa bukti lapangan outlet']].map(([action,label])=>({key:`can_${action}_outlet_${['submit','review'].includes(action)?'field':'review'}`,label,desc:'Mengikuti wilayah, kepemilikan dan revisi data.',category:'Tim & Master Wilayah'})),
   ...[['propose','Usulkan koreksi waktu shift'],['review','Putuskan koreksi waktu shift']].map(([action,label])=>({key:`can_${action}_shift_correction`,label,desc:'Khusus Admin; waktu asli tetap dan setiap keputusan diaudit.',category:'Tim & Master Wilayah'})),
@@ -218,7 +222,7 @@ export const BUILT_IN_ROLES = [
     workspaceTab: 'role-workspace',
     defaultPermissions: {
       ...getEmptyPermissions(),
-      can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,
+      can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,can_review_route_change:true,
       can_view_dashboard: true,
       can_view_live_tracking: true,
       can_view_daily_call: true,

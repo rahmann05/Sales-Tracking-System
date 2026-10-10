@@ -1,3 +1,3 @@
-export const ASSIGNMENT_KINDS={FOLLOW_UP:'Tindak lanjut Sales',RETURN:'Pemeriksaan retur',ORDER_REVIEW:'Pemeriksaan order',OUTLET_REVIEW:'Validasi outlet',PREPARATION:'Persiapan gudang',TEAM:'Transfer tim Sales'};
+export const ASSIGNMENT_KINDS={FOLLOW_UP:'Tindak lanjut Sales',RETURN:'Pemeriksaan retur',ORDER_REVIEW:'Pemeriksaan order',OUTLET_REVIEW:'Validasi outlet',ROUTE_REVIEW:'Keputusan toko tutup / reroute',PREPARATION:'Persiapan gudang',TEAM:'Transfer tim Sales'};
 export const ASSIGNMENT_STATES={SCHEDULED:'Menunggu waktu mulai',ACTIVE:'Delegasi berjalan',APPLIED:'Penugasan diterapkan',RESTORED:'PIC awal dipulihkan',SUPERSEDED:'Digantikan perubahan terbaru',FINISHED:'Tugas telah dikirim/selesai',CANCELLED:'Jadwal dibatalkan',EXPIRED:'Jendela waktu terlewat',FAILED:'Gagal diterapkan',NEEDS_ATTENTION:'Pemulihan perlu ditangani Admin'};
 export const wibInputToIso=value=>value?new Date(`${value}:00+07:00`).toISOString():null;

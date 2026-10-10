@@ -7,14 +7,14 @@ import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 import {inTransaction} from '../../../utils/in-transaction.js';
+import {assertOrderOperation} from './order-operation-permissions.js';
 const keyFor=id=>`_ORDER_REVIEW:${id}`;
 export function salesOrderHistory(history=[]){return history.filter(event=>!['ASSIGN_REVIEWER','RELEASE_REVIEWER'].includes(event.action)).map(event=>Object.fromEntries(Object.entries(event).filter(([name])=>!['assignmentRevision','assignedOwnerId','overrideReason'].includes(name))));}
 const schema=z.object({ownerId:z.string().uuid().nullable(),dueAt:z.string().datetime().nullable(),revision:z.number().int().min(0),reason:z.string().trim().min(5).max(2000)}).strict();
-function adminOnly(actor){if(actor?.role!=='ADMIN'||actor.permissions?.can_approve_order===false)throw new AppError('Penugasan pemeriksa hanya untuk Admin dengan izin approval order',403);}
 const allowedOwner=(owner,order,sales,mode='BOTH')=>reviewRoleAllowed(orderReviewRole(order,{ORDER_APPROVAL_MODE:mode}),owner?.role)&&owner&&!owner.deletedAt&&owner.permissions?.can_approve_order!==false&&owner.id!==order.createdBy&&(owner.role==='ADMIN'||owner.role==='SUPERVISOR'&&!sales?.deletedAt&&sales?.supervisorId===owner.id);
 export function orderReviewConflict(error){if(error?.code==='P2034')throw new AppError('Order atau penugasan berubah bersamaan. Muat ulang sebelum melanjutkan.',409);throw error;}
 export async function saveOrderReviewAssignment(orderId,raw,actor,{db=prisma,validateOnly=false}={}){
-  adminOnly(actor);const parsed=schema.safeParse(raw);if(!parsed.success)throw new AppError('PIC, tenggat, versi dan alasan penugasan tidak valid',400);
+  assertOrderOperation(actor,'ASSIGN_REVIEW');const parsed=schema.safeParse(raw);if(!parsed.success)throw new AppError('PIC, tenggat, versi dan alasan penugasan tidak valid',400);
   const data=parsed.data;if(Boolean(data.ownerId)!==Boolean(data.dueAt))throw new AppError('PIC dan tenggat wajib diisi bersama, atau keduanya kosong untuk melepas penugasan',400);
   return inTransaction(db,async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;

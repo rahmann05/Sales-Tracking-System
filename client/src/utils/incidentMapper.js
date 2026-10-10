@@ -22,6 +22,7 @@ const mapRouteChangeStatus = (req) => {
 };
 
 export const mapServerRouteChange = (req = {}) => ({
+  canDecide:req.canDecide,
   workflow:req.workflow,decisionMode:routeChangeWorkflow(req).mode,
   id: req.id,
   type: 'CLOSED_SHOP',

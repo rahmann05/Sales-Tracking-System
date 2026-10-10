@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {useApp} from '../../../context/AppContext';
 import {ordersApi} from '../../../services/api';
+import {canOrderOperation} from '../../../../../shared/order-operation-permissions.mjs';
 const wibInput=value=>value?new Date(Date.parse(value)+7*3600000).toISOString().slice(0,16):'';
 export function OrderReviewAssignmentEditor({orderId,readOnly=false}){
   const {user}=useApp();const [open,setOpen]=useState(false),[loading,setLoading]=useState(false),[loaded,setLoaded]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState('');
@@ -9,7 +10,7 @@ export function OrderReviewAssignmentEditor({orderId,readOnly=false}){
     ordersApi.getReviewAssignment(orderId).then(res=>{if(!active)return;setData(res.data);setOwnerId(res.data.assignment?.ownerId||'');setDue(wibInput(res.data.assignment?.dueAt));setReason('');setLoaded(true);})
       .catch(err=>{if(active)setError(err.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};
   },[open,orderId]);
-  if(!['ADMIN','SUPERVISOR'].includes(user?.role)||!readOnly&&(user.role!=='ADMIN'||user.permissions?.can_approve_order===false))return null;
+  if(!['ADMIN','SUPERVISOR'].includes(user?.role)||!readOnly&&!canOrderOperation(user,'ASSIGN_REVIEW'))return null;
   const save=async event=>{event.preventDefault();if(reason.trim().length<5){setError('Alasan wajib berisi setidaknya 5 karakter selain spasi.');return;}
     setSaving(true);setError('');try{
       await ordersApi.saveReviewAssignment(orderId,{ownerId:ownerId||null,dueAt:ownerId?new Date(`${due}:00+07:00`).toISOString():null,revision:data.assignment?.revision||0,reason:reason.trim()});

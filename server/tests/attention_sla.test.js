@@ -35,10 +35,11 @@ test('pending exceptions and submitted results share review filtering before pag
   assert.equal(result.summary.awaitingReview,2);assert.equal(result.total,2);assert.equal(result.rows.length,1);
 });
 test('exception queries scope every source to the current SPV team and avoid double review of off-PJP',async t=>{
+  replace(t,prisma.systemConfig,'findMany',async()=>[]);
   replace(t,prisma.operationalException,'findMany',async()=>[]);
   const queries=[];for(const model of ['offPjpAttendance','attendance','outletUnlockRequest','routeChangeRequest'])replace(t,prisma[model],'findMany',async query=>{queries.push({model,query});return [];});
   assert.deepEqual(await exceptionAttentionRows({id:'spv',role:'SUPERVISOR'}),[]);assert.equal(queries.length,5);
-  for(const {model,query} of queries){const relation=model==='outletUnlockRequest'?'requestedByUser':model==='routeChangeRequest'?'reportedByUser':'user';assert.equal(query.where[relation].supervisorId,'spv');assert.equal(query.where[relation].deletedAt,null);}
+  for(const {model,query} of queries){const relation=model==='outletUnlockRequest'?'requestedByUser':model==='routeChangeRequest'?'reportedByUser':'user',scope=model==='routeChangeRequest'?query.where.OR[0]:query.where;assert.equal(scope[relation].supervisorId,'spv');assert.equal(scope[relation].deletedAt,null);}
   const manualOff=queries.find(value=>value.model==='offPjpAttendance'&&value.query.where.manualSalesStatus);assert.equal(manualOff.query.where.status,'APPROVED');
   const manual=queries.find(value=>value.model==='attendance');assert.deepEqual(manual.query.where.pjpStop.orders.none,{deletedAt:null});
   queries.length=0;assert.deepEqual(await exceptionAttentionRows({role:'KEPALA_GUDANG'}),[]);assert.equal(queries.length,0);

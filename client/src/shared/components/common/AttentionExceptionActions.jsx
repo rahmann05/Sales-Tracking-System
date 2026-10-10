@@ -2,13 +2,14 @@ import {request} from '../../../services/httpClient';
 import React,{useState,useEffect} from 'react';
 import {absensiApi,outletsApi,routeChangesApi} from '../../../services/api';
 import {useApp} from '../../../context/AppContext';
+import {RouteReviewAssignmentEditor} from './RouteReviewAssignmentEditor';
 
 const labels={SHIFT_TIME_RANGE:'Shift melewati batas waktu / tengah malam',OPEN_SPV_VISIT:'Kunjungan supervisi belum selesai',MISSING_OUT:'Absen keluar terlewat',UNCLOSED_SHIFT:'Shift belum ditutup',MANUAL_RESULT:'Persetujuan hasil kegiatan',OFF_PJP:'Validasi kunjungan luar PJP',MANUAL_PJP:'Persetujuan hasil manual PJP',MANUAL_OFF_PJP:'Persetujuan hasil manual luar PJP',UNLOCK:'Pengecualian absensi',ROUTE_CHANGE:'Keputusan toko tutup / reroute'};
 export function AttentionExceptionActions({row,onChanged}){
   const {user}=useApp(),e=row.exception;
   const [decision,setDecision]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [replacement,setReplacement]=useState(''),[outletSearch,setOutletSearch]=useState(''),[options,setOptions]=useState([]),[loading,setLoading]=useState(false);
-  useEffect(()=>{if(decision!=='REROUTE')return;let alive=true;setReplacement('');setLoading(true);outletsApi.directory({search:outletSearch,limit:25}).then(r=>{if(alive)setOptions(r.data);}).catch(err=>{if(alive)setError(err.message);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[decision,outletSearch]);
+  useEffect(()=>{if(decision!=='REROUTE')return;let alive=true;setReplacement('');setLoading(true);routeChangesApi.replacements(e.id,{search:outletSearch}).then(r=>{if(alive)setOptions(r.data);}).catch(err=>{if(alive)setError(err.message);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[decision,outletSearch,e.id]);
   const operational=['SHIFT_TIME_RANGE','MISSING_OUT','UNCLOSED_SHIFT','OPEN_SPV_VISIT','MANUAL_RESULT'].includes(e.kind);
   const decisions=operational?(e.kind==='MANUAL_RESULT'?['APPROVED','REJECTED']:['ACKNOWLEDGED','REQUIRES_CORRECTION']):e.kind==='ROUTE_CHANGE'?(e.pendingAdmin?['APPROVE','REJECT']:['SKIP','REROUTE','REJECT']):['APPROVE','REJECT'];
   const submit=async event=>{event.preventDefault();if(!decision)return;
@@ -37,10 +38,12 @@ export function AttentionExceptionActions({row,onChanged}){
     {e.pendingAdmin&&user?.role!=='ADMIN'&&<p>Menunggu keputusan Admin; SPV tidak dapat menyetujui tahap ini.</p>}
     {e.kind==='ROUTE_CHANGE'&&!e.pendingAdmin&&<p>Menolak laporan mengembalikan toko asal ke status menunggu kunjungan. {e.decisionMode==='SEQUENTIAL'?'Skip maupun penggantian toko memerlukan persetujuan Admin setelah usulan Supervisor.':''}</p>}
     {e.proposedAction==='SKIP'&&<p>Usulan Supervisor: lewati toko tanpa pengganti.</p>}
+    {e.reviewAssignment&&<p>Pemeriksa: {e.reviewAssignment.ownerName} · tenggat {new Date(e.reviewAssignment.dueAt).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB</p>}
+    {e.kind==='ROUTE_CHANGE'&&user.role==='ADMIN'&&user.permissions?.can_assign_route_review!==false&&<RouteReviewAssignmentEditor id={e.id} onChanged={onChanged}/>}
     {!row.canDecide&&<p>Tindakan tidak tersedia bagi akun ini. Hubungi SPV / Admin yang berwenang.</p>}
     {row.canDecide&&<form className="space-y-3" onSubmit={submit}><fieldset disabled={busy} className="space-y-3">
       <label className="block">Keputusan<select required className="form-input block w-full" value={decision} onChange={event=>setDecision(event.target.value)}><option value="">Pilih keputusan</option>{decisions.map(value=><option key={value} value={value}>{value==='ACKNOWLEDGED'?'Akui pengecualian':value==='REQUIRES_CORRECTION'?'Tandai perlu koreksi':value==='APPROVED'?'Setujui hasil':value==='REJECTED'?'Tolak hasil':value==='SKIP'?'Akui laporan dan lewati toko':value==='REJECT'?'Tolak pengajuan':e.kind==='ROUTE_CHANGE'?'Setujui reroute':'Setujui pengajuan'}</option>)}</select></label>
-      {decision==='REROUTE'&&<><label className="block">Cari toko pengganti<input className="form-input block w-full" value={outletSearch} onChange={event=>setOutletSearch(event.target.value)}/></label><label className="block">Toko pengganti (maksimal 25 hasil pencarian)<select required className="form-input block w-full" value={replacement} onChange={event=>setReplacement(event.target.value)}><option value="">{loading?'Memuat…':'Pilih outlet aktif dalam cakupan Anda'}</option>{options.map(o=><option key={o.id} value={o.id}>{o.name} · {o.address}</option>)}</select></label></>}
+      {decision==='REROUTE'&&<><label className="block">Cari toko pengganti<input className="form-input block w-full" value={outletSearch} onChange={event=>setOutletSearch(event.target.value)}/></label><label className="block">Toko pengganti (maksimal 100 hasil pencarian)<select required className="form-input block w-full" value={replacement} onChange={event=>setReplacement(event.target.value)}><option value="">{loading?'Memuat…':'Pilih outlet aktif sesuai kasus'}</option>{options.map(o=><option key={o.id} value={o.id}>{o.name} · {o.address}</option>)}</select></label></>}
       {(operational||e.kind==='OFF_PJP'||e.kind.startsWith('MANUAL')||decision==='REROUTE')&&<label className="block">Catatan keputusan (wajib bila ditolak)<textarea className="form-input block w-full" required={operational||decision==='REJECT'||decision==='REROUTE'} maxLength={2000} value={note} onChange={event=>setNote(event.target.value)}/></label>}
       <button className="btn btn-secondary min-h-11" disabled={!decision}>{busy?'Menyimpan…':'Simpan keputusan'}</button>
     </fieldset></form>}

@@ -1,4 +1,5 @@
 import {TRIP_PERMISSION_LABELS,tripPermission,tripPermissionDefaults} from '../../../shared/trip-permissions.mjs';
+import {ORDER_OPERATION_PERMISSIONS} from '../../../shared/order-operation-permissions.mjs';
 import { PERMISSION_CATEGORIES } from "./permissionCategories.js";
 /**
  * permissions.js
@@ -11,6 +12,9 @@ import { PERMISSION_CATEGORIES } from "./permissionCategories.js";
 import { LuLayoutDashboard, LuNavigation, LuPhoneCall, LuMapPin, LuFileCheck, LuUserPlus, LuUsers, LuPackage, LuTruck, LuMap, LuStore, LuSettings, LuShieldCheck, LuDownload, LuLayers } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 export const ALL_PERMISSIONS = [
+...Object.values(ORDER_OPERATION_PERMISSIONS).map(p=>({...p,categoryId:'transaction',icon:LuFileCheck})),
+{key:'can_review_route_change',label:'Putuskan toko tutup / reroute',desc:'Mengikuti tahap, penugasan kasus dan larangan memeriksa usulan sendiri.',categoryId:'rjp',icon:LuNavigation},
+{key:'can_assign_route_review',label:'Tugaskan pemeriksa rute',desc:'Khusus Admin; delegasi per kasus tanpa menambah hak akses umum.',categoryId:'rjp',icon:LuNavigation},
 ...Object.entries(TRIP_PERMISSION_LABELS).map(([action,label])=>({key:tripPermission(action),label,desc:'Mengikuti izin akses pengiriman, tahap, penugasan dan kepemilikan trip.',categoryId:'warehouse',icon:LuTruck})),
 ...[['run','Jalankan pemeriksaan Google'],['propose','Usulkan koreksi outlet'],['apply','Terapkan koreksi outlet'],['assign','Tugaskan pemeriksaan outlet'],['submit','Kirim bukti lapangan outlet'],['review','Periksa bukti lapangan outlet']].map(([action,label])=>({key:`can_${action}_outlet_${['submit','review'].includes(action)?'field':'review'}`,label,desc:'Mengikuti wilayah, kepemilikan dan revisi data.',categoryId:'team',icon:LuMapPin})),
 ...[['propose','Usulkan koreksi waktu shift'],['review','Putuskan koreksi waktu shift']].map(([action,label])=>({key:`can_${action}_shift_correction`,label,desc:'Khusus Admin; waktu asli tetap dan setiap keputusan diaudit.',categoryId:'team',icon:LuUsers})),
@@ -203,7 +207,7 @@ export const BUILT_IN_ROLE_TEMPLATES = {
   }, {}),
   SUPERVISOR: {
     ...getEmptyPermissions(),
-    can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,
+    can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,can_review_route_change:true,
     can_view_dashboard: true,
     can_view_live_tracking: true,
     can_view_daily_call: true,

@@ -1,6 +1,9 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const routeChangesApi = {
+  replacements:(id,query={})=>request(`/route-changes/${id}/replacements?${queryString(query)}`),
+  assignmentOptions:id=>request(`/route-changes/${id}/assignment`),
+  assignReview:(id,body)=>request(`/route-changes/${id}/assignment`,{method:'PUT',body:JSON.stringify(body)}),
   rejectReroute: id => request(`/route-changes/${id}/reject`,{method:'PATCH'}),
   reportClosed: async ({
     pjpId,

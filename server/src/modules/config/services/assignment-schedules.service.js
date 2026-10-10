@@ -24,10 +24,11 @@ export async function assignmentScheduleOptions(kind,actor){
  else if(kind==='FOLLOW_UP')records=await prisma.staffActivity.findMany({where:{followUp:{path:['status'],equals:'OPEN'}},select:{id:true},take:100,orderBy:{checkInAt:'asc'}});
  else if(kind==='RETURN')records=await prisma.deliveryStop.findMany({where:{rejectedCartons:{gt:0},returnInspection:{equals:Prisma.DbNull},deliveryRoute:{cancelledAt:null}},select:{id:true},take:100});
  else if(kind==='ORDER_REVIEW')records=await prisma.order.findMany({where:{status:'PENDING_APPROVAL',deletedAt:null},select:{id:true},take:100,orderBy:{createdAt:'asc'}});
+ else if(kind==='ROUTE_REVIEW')records=await prisma.routeChangeRequest.findMany({where:{status:'PENDING_APPROVAL'},select:{id:true},take:100,orderBy:{createdAt:'asc'}});
  else if(kind==='PREPARATION'){const routes=await prisma.deliveryRoute.findMany({where:{status:'DRAFT',cancelledAt:null,closedAt:null},select:{id:true,preparation:true,policySnapshot:true},take:50,orderBy:{createdAt:'asc'}});records=routes.flatMap(route=>preparationStages(route.policySnapshot?.values).filter(stage=>!route.preparation?.[stage]).map(stage=>({id:`${route.id}:${stage}`})));}
  else records=await prisma.outletReview.findMany({where:{status:{notIn:['COMPLETED','CANCELLED']}},select:{id:true},take:100,orderBy:{createdAt:'asc'}});
  const people=(await reviewPeople(prisma)).filter(p=>!p.deletedAt&&(kind==='TEAM'?p.role==='SUPERVISOR':kind==='FOLLOW_UP'?p.role==='SALES':['RETURN','PREPARATION'].includes(kind)?['ADMIN','KEPALA_GUDANG'].includes(p.role):['ADMIN','SUPERVISOR'].includes(p.role)));
- return {tasks:await Promise.all(records.map(async row=>({id:row.id,...await assignmentState(prisma,kind,row.id)}))),people:people.map(({id,name,role})=>({id,name,role}))};
+ return {tasks:await Promise.all(records.map(async row=>({id:row.id,...await assignmentState(prisma,kind,row.id)}))),people:people.filter(p=>kind!=='ROUTE_REVIEW'||p.permissions?.can_review_route_change!==false).map(({id,name,role})=>({id,name,role}))};
 }
 export async function listAssignmentSchedules(actor){if(actor?.role!=='ADMIN')throw new AppError('Khusus Admin.',403);return (await prisma.systemConfig.findMany({where:{key:{startsWith:prefix}},orderBy:{updatedAt:'desc'},take:100})).map(row=>row.value);}
 export async function createAssignmentSchedule(raw,actor){

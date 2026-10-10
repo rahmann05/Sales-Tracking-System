@@ -42,5 +42,5 @@ test('Server rejects nested new evidence, honors frozen settings and compatibili
   await assertEvidenceImages({photoUrl:png},{entity:{policySnapshot:{values:{}}}});
   await assertEvidenceImages({photoUrl:'https://example.invalid/a'},{entity:{policySnapshot:{values:{}}}});
  });
- await assert.rejects(()=>assertEvidenceImages({photos:[{photoUrl:'data:image/jpeg;base64,YWJj'}]},{values:{}}),e=>e.statusCode===422&&e.message.includes('Bukti.photos.0.photoUrl'));
+ await assert.rejects(()=>assertEvidenceImages({photos:[{photoUrl:'data:image/jpeg;base64,YWJj'}]},{values:{}}),e=>e.statusCode===422&&e.message.includes('Foto bukti 1'));
 });

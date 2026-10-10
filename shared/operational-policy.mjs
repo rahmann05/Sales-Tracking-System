@@ -24,6 +24,7 @@ export const BUSINESS_FEATURES=[
 export const OPERATIONAL_CONFIG_GROUPS=[
  group('CLOSED_OUTLET_POLICY','Laporan toko tutup','Tahapan keputusan dibekukan ketika Sales melapor; perubahan pengaturan tidak memindahkan pengajuan berjalan.',[
   select('CLOSED_OUTLET_DECISION_MODE','Pemeriksa laporan toko tutup','INHERIT',Object.keys(ROUTE_DECISION_MODES),'Dua tahap berlaku pada skip maupun penggantian toko. Mode kompatibilitas mempertahankan aturan lama: skip satu tahap, reroute mengikuti sakelar persetujuan Admin.',{optionLabels:ROUTE_DECISION_MODES}),
+  bool('ROUTE_REVIEW_ALLOW_DELEGATION','Izinkan penugasan pemeriksa rute',true,'Admin dapat menunjuk pemeriksa per kasus dan menjadwalkan delegasi. Tidak mengubah tahap persetujuan atau memberi akses umum ke tim lain. Nonaktif menolak penugasan baru; pemulihan delegasi tersimpan tetap berjalan.'),
   bool('CLOSED_OUTLET_REQUIRE_PHOTO','Wajib foto toko tutup',false),
   bool('CLOSED_OUTLET_REQUIRE_REASON','Wajib alasan toko tutup',false),
  ]),

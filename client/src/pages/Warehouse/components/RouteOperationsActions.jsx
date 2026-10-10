@@ -16,7 +16,7 @@ export function RouteOperationsActions({route,onChanged,driver=false}){
   const changeAction=next=>{if(!busy&&(!dirty||window.confirm('Isian tindakan belum disimpan. Ganti tindakan?'))){setAction(next);setNote('');setError('');setQuantities({});setCartons('');setOdometer('');setFuel('');setDocs(false);setDepartureAnswers({});setStart('');setEnd('');}};
   useEffect(()=>{if(action!=='RESCHEDULE')return;let active=true;Promise.all([vehiclesApi.getAll(),deliveryApi.getDrivers()]).then(([v,d])=>{if(active)setOptions({vehicles:v.data,drivers:d.data});}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[action]);
   if(route.closedAt||route.cancelledAt)return <><DepartureChecklistSummary route={route}/><p className="text-sm">{route.closedAt?'Trip ditutup':'Trip dibatalkan'}</p></>;
-  const policy=route.policySnapshot?.values||{},stages=preparationStages(policy);
+  const policy={...route.policySnapshot?.values,...route.policySnapshot?.warehouseEvidence?.values},stages=preparationStages(policy);
   const actions=[];
   if(!driver){
     if(route.status==='DRAFT'&&!route.onHold)actions.push(...stages.filter(stage=>!route.preparation?.[stage]).slice(0,1));

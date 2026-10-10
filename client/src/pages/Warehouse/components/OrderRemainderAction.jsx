@@ -1,9 +1,12 @@
 import React,{useState} from 'react';
 import {ordersApi} from '../../../services/api';
+import {useApp} from '../../../context/AppContext';
+import {canOrderOperation} from '../../../../../shared/order-operation-permissions.mjs';
 export function OrderRemainderAction({order,onChanged}){
+  const {user}=useApp();
   const [quantities,setQuantities]=useState({}),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const lines=order.fulfillmentLines.filter(i=>i.unpacked>0);
-  if(order.status!=='APPROVED'||!lines.length)return null;
+  if(!canOrderOperation(user,'CANCEL_REMAINDER')||order.status!=='APPROVED'||!lines.length)return null;
   const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{
     const selected=lines.map(i=>({id:i.id,quantity:Number(quantities[i.id]||0)})).filter(i=>i.quantity>0);
     if(!selected.length)throw new Error('Isi jumlah sisa yang dibatalkan.');

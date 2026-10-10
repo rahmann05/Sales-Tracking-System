@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { assertSalesAccess, assertOutletAccess } from '../../../utils/team-scope.js';
+import {assertRouteDecisionScope,routeReplacementScope} from './route-review-scope.service.js';
+import {assertSalesAccess} from '../../../utils/team-scope.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { createNotification } from '../../notifications/notifications.service.js';
 import {attachRouteWorkflows,routeWorkflowKey} from './route-workflow.service.js';
@@ -23,8 +24,8 @@ export async function decideRoute(actorId,requestId,action,replacementOutletId,r
     const found=await tx.routeChangeRequest.findUnique({where:{id:requestId},include:{pjp:{include:{stops:true}}}});
     if(!found)throw new AppError('Pengajuan tidak ditemukan',404);
     const [r]=await attachRouteWorkflows(tx,[found]),flow=routeChangeWorkflow(r,{REROUTE_REQUIRE_ADMIN_APPROVAL:requireAdmin});
-    await assertSalesAccess(actor,r.reportedBy,tx);
-    if(r.status!=='PENDING_APPROVAL')throw new AppError('Pengajuan sudah diputuskan',409);
+    if(r.status!=='PENDING_APPROVAL'){await assertSalesAccess(actor,r.reportedBy,tx);throw new AppError('Pengajuan sudah diputuskan',409);}
+    await assertRouteDecisionScope(tx,r,actor);
     const pendingAdmin=Boolean(flow.proposal);
     if(!flow.canDecide(actor))throw new AppError(`Pengajuan menunggu keputusan ${flow.stage==='ADMIN'?'Admin berbeda dari pengusul':'Supervisor'} sesuai aturan saat dilaporkan.`,403);
     if(action==='APPROVE'&&!pendingAdmin)throw new AppError('Belum ada usulan Supervisor untuk disetujui.',409);
@@ -39,8 +40,8 @@ export async function decideRoute(actorId,requestId,action,replacementOutletId,r
     const target=action==='APPROVE'?flow.proposal.target:replacementOutletId;
     if(decidedAction!=='SKIP') {
       if(!target)throw new AppError('Pilih toko pengganti',400);
-      await assertOutletAccess(actor,target,tx);
-      if(!await tx.outlet.findFirst({where:{id:target,deletedAt:null},select:{id:true}}))throw new AppError('Outlet pengganti tidak aktif',404);
+      const cluster=await routeReplacementScope(tx,r,actor);
+      if(!await tx.outlet.findFirst({where:{id:target,deletedAt:null,cluster},select:{id:true}}))throw new AppError('Outlet pengganti tidak aktif atau di luar wilayah Sales pada pengajuan ini.',403);
       if(r.pjp.stops.some(s=>s.outletId===target))throw new AppError('Toko pengganti sudah ada pada PJP',409);
     }
     if(!pendingAdmin&&(flow.mode==='SEQUENTIAL'||flow.mode==='LEGACY_SEQUENTIAL'&&action==='REROUTE'&&actor.role!=='ADMIN')){

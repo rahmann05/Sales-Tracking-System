@@ -53,3 +53,5 @@ skills-lock.json
 .backups/
 .neon
 neon.ts
+.vercel
+.env*

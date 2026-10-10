@@ -4,8 +4,9 @@ import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {fulfillment} from '../../../../../shared/delivery-operations.mjs';
 import {packingOrderWhere} from '../../../../../shared/packing-orders.mjs';
+import {assertOrderOperation} from './order-operation-permissions.js';
 export const cancelOrderRemainder=(id,data,user)=>prisma.$transaction(async tx=>{
-  if(user.role!=='ADMIN')throw new AppError('Pembatalan sisa order hanya oleh Admin',403);
+  assertOrderOperation(user,'CANCEL_REMAINDER');
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${id}`}))`;
   const order=await tx.order.findUnique({where:{id},include:{items:{include:{product:true}}}});
   if(!order||order.deletedAt||order.status!=='APPROVED')throw new AppError('Hanya sisa order disetujui yang dapat dibatalkan',409);

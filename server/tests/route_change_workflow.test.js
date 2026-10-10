@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {routeChangeWorkflow,routeChangeReviewGaps} from '../../shared/route-change-workflow.mjs';
+import {routeChangeWorkflow,routeChangeReviewGaps,routeReviewerEligible} from '../../shared/route-change-workflow.mjs';
 test('Frozen route-change stage controls distinct actors for both skip and reroute',()=>{
  const sales={id:'sales',role:'SALES',supervisorId:'spv'},spv={id:'spv',role:'SUPERVISOR'},admin={id:'admin',role:'ADMIN'};
  const request={reportedBy:'sales',workflow:{mode:'SEQUENTIAL',proposal:null}};
@@ -12,4 +12,19 @@ test('Frozen route-change stage controls distinct actors for both skip and rerou
  assert.deepEqual(routeChangeReviewGaps(proposal,[sales,spv]),['ADMIN']);
  const legacy={reportedBy:'sales',type:'REROUTE',handledBy:'spv',replacementOutletId:'target'};
  assert.equal(routeChangeWorkflow(legacy).stage,'ADMIN');
+});
+test('Case delegation respects stage, permissions, team boundary, expiry and distinct proposers',()=>{
+ const sales={id:'sales',role:'SALES',supervisorId:'spv'},spv={id:'spv',role:'SUPERVISOR'},foreign={id:'foreign',role:'SUPERVISOR'},admin={id:'admin',role:'ADMIN'};
+ const request={reportedBy:'sales',workflow:{mode:'SEQUENTIAL',assignment:{stage:'SUPERVISOR',ownerId:'foreign',validUntil:new Date(Date.now()+60000).toISOString()}}};
+ assert.equal(routeReviewerEligible(request,foreign,[sales]),true);
+ assert.equal(routeReviewerEligible(request,spv,[sales]),false);
+ assert.equal(routeChangeWorkflow(request).canDecide(admin),false);
+ assert.equal(routeChangeWorkflow(request).canDecide({...foreign,permissions:{can_review_route_change:false}}),false);
+ assert.deepEqual(routeChangeReviewGaps(request,[sales,spv,admin]),['SUPERVISOR']);
+ assert.deepEqual(routeChangeReviewGaps(request,[sales,foreign,admin]),[]);
+ const expired={...request,workflow:{...request.workflow,assignment:{...request.workflow.assignment,validUntil:new Date(Date.now()-1).toISOString()}}};
+ assert.equal(routeReviewerEligible(expired,foreign,[sales]),false);assert.equal(routeReviewerEligible(expired,spv,[sales]),true);
+ const proposed={...request,workflow:{...request.workflow,proposal:{action:'SKIP',actorId:'foreign'}}};
+ assert.equal(routeChangeWorkflow(proposed).assignment,null);assert.equal(routeChangeWorkflow(proposed).canDecide(admin),true);
+ assert.equal(routeChangeWorkflow(proposed).canDecide({...foreign,role:'ADMIN'}),false);
 });
