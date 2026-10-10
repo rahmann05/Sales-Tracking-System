@@ -1,4 +1,6 @@
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
+import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
+import {featureAvailable} from '../../../../../shared/operational-policy.mjs';
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportsApi } from '../../../services/api';
@@ -11,10 +13,12 @@ import {downloadOperationalFile} from '../../../services/operationalExportServic
 const timestamp=value=>new Date(value).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'});
 const download=(content,type,name)=>downloadOperationalFile(content,name,type);
 export function ReportArchivePanel({kind,period}){
+  const canCreate=useDomainPermission('REPORT_ARCHIVE');
   const {user,settings}=useApp();const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [items,setItems]=useState([]),[cursor,setCursor]=useState(null),[reason,setReason]=useState(''),[selected,setSelected]=useState(null),[print,setPrint]=useState(false);
   const pending=useRef(null),revision=useRef(0);
   const allowed=user?.role==='ADMIN'&&user.permissions?.can_view_reports!==false;
+  const creationEnabled=canCreate&&(Boolean(pending.current)||settings?.REPORT_ARCHIVE_ENABLED!==false&&featureAvailable(settings,'REPORTS'));
   useEffect(()=>{
     const version=++revision.current;pending.current=null;setSelected(null);setPrint(false);setReason('');setError('');
     if(!open||!allowed||targetPeriodError(kind,period))return;
@@ -25,7 +29,7 @@ export function ReportArchivePanel({kind,period}){
   },[open,allowed,kind,period]);
   if(!allowed||targetPeriodError(kind,period))return null;
   const save=async event=>{
-    event.preventDefault();if(!pending.current&&reason.trim().length<5){setError('Alasan harus berisi setidaknya 5 karakter selain spasi.');return;}
+    event.preventDefault();if(!creationEnabled)return;if(!pending.current&&reason.trim().length<5){setError('Alasan harus berisi setidaknya 5 karakter selain spasi.');return;}
     const version=revision.current;setBusy(true);setError('');
     const payload=pending.current||{kind,period,reason:reason.trim(),requestId:crypto.randomUUID()};pending.current=payload;
     try{const res=await reportsApi.createArchive(payload);if(version!==revision.current)return;
@@ -50,8 +54,8 @@ export function ReportArchivePanel({kind,period}){
         {busy&&<p role="status">Memproses arsip…</p>}
         <form onSubmit={save} className="space-y-2">
           <label className="block">Alasan penyimpanan / koreksi arsip sebelumnya<textarea required minLength={5} maxLength={1000} className="app-input w-full" value={reason} disabled={busy||!!pending.current} onChange={event=>setReason(event.target.value)}/></label>
-          <button className="app-button" type="submit" disabled={busy||settings?.REPORT_ARCHIVE_ENABLED===false}>{pending.current?'Coba lagi permintaan arsip':'Simpan arsip baru seluruh perusahaan'}</button>
-          {settings?.REPORT_ARCHIVE_ENABLED===false&&<p className="text-xs">Pembuatan arsip baru dinonaktifkan. Arsip sebelumnya tetap dapat dibuka.</p>}
+          <button className="app-button" type="submit" disabled={busy||!creationEnabled}>{pending.current?'Coba lagi permintaan arsip':'Simpan arsip baru seluruh perusahaan'}</button>
+          {!creationEnabled&&<p className="text-xs">Pembuatan arsip baru tidak tersedia untuk izin atau aturan saat ini. Arsip sebelumnya tetap dapat dibuka.</p>}
         </form>
         <p className="text-xs">Koreksi disimpan sebagai arsip baru dengan alasan; arsip sebelumnya tetap tersedia.</p>
         <ul className="space-y-2">{items.map(item=><li key={item.id} className="border-b py-2 text-sm"><button type="button" className="app-button" disabled={busy} onClick={()=>view(item.id)}>Buka</button> {timestamp(item.createdAt)} WIB · {item.createdByName||'Admin'} · {item.reason}</li>)}</ul>

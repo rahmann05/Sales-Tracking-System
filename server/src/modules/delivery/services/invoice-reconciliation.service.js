@@ -1,4 +1,5 @@
 import {prisma} from '../../../config/prisma.js';
+import {assertDomainAction} from '../../../middlewares/domain-permission.middleware.js';
 import {AppError} from '../../../utils/errors.js';
 import {invoiceReconciliation,invoiceMappingErrors} from '../../../../../shared/invoice-reconciliation.mjs';
 import {packingBalance} from '../../../../../shared/packing.mjs';
@@ -6,6 +7,7 @@ import {reconcilePackingInvoices} from './route-lifecycle.service.js';
 import {mapInvoiceCommercial} from './invoice-mapping.service.js';
 import {packingOrderIds} from '../../../../../shared/packing-orders.mjs';
 export const reconcileInvoiceReceipt=(id,data,user)=>prisma.$transaction(async tx=>{
+  assertDomainAction(user,'INVOICE_RECONCILIATION');
   if(user.role!=='ADMIN')throw new AppError('Rekonsiliasi faktur hanya oleh Admin',403);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`packing:${id}`}))`;
   const packing=await tx.packingList.findUnique({where:{id},include:{invoices:true,deliveryStops:true}});
@@ -33,6 +35,7 @@ export const reconcileInvoiceReceipt=(id,data,user)=>prisma.$transaction(async t
 },{isolationLevel:'Serializable'});
 
 export const correctInvoiceCommercial=(id,data,user)=>prisma.$transaction(async tx=>{
+  assertDomainAction(user,'INVOICE_CORRECTION');
   if(user.role!=='ADMIN')throw new AppError('Koreksi faktur hanya oleh Admin',403);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`packing:${id}`}))`;
   const packing=await tx.packingList.findUnique({where:{id},include:{invoices:true,deliveryStops:true}});

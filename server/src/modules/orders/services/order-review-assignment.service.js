@@ -8,6 +8,7 @@ import {AppError} from '../../../utils/errors.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 import {inTransaction} from '../../../utils/in-transaction.js';
 import {assertOrderOperation} from './order-operation-permissions.js';
+import {readReviewDefinitions,reviewIdentity} from '../../config/services/approval-readiness.service.js';
 const keyFor=id=>`_ORDER_REVIEW:${id}`;
 export function salesOrderHistory(history=[]){return history.filter(event=>!['ASSIGN_REVIEWER','RELEASE_REVIEWER'].includes(event.action)).map(event=>Object.fromEntries(Object.entries(event).filter(([name])=>!['assignmentRevision','assignedOwnerId','overrideReason'].includes(name))));}
 const schema=z.object({ownerId:z.string().uuid().nullable(),dueAt:z.string().datetime().nullable(),revision:z.number().int().min(0),reason:z.string().trim().min(5).max(2000)}).strict();
@@ -21,7 +22,8 @@ export async function saveOrderReviewAssignment(orderId,raw,actor,{db=prisma,val
     const order=await tx.order.findUnique({where:{id:orderId}});if(!order||order.deletedAt||order.status!=='PENDING_APPROVAL')throw new AppError('Order sudah diputuskan atau tidak aktif',409);
     const key=keyFor(orderId),previous=(await tx.systemConfig.findUnique({where:{key}}))?.value||null;
     if((previous?.revision||0)!==data.revision)throw new AppError('Penugasan sudah berubah. Muat ulang sebelum menyimpan.',409);
-    const sales=await tx.user.findUnique({where:{id:order.createdBy}}),owner=data.ownerId?await tx.user.findUnique({where:{id:data.ownerId}}):null;
+    const sales=await tx.user.findUnique({where:{id:order.createdBy}}),record=data.ownerId?await tx.user.findUnique({where:{id:data.ownerId}}):null;
+    const owner=record?reviewIdentity(record,await readReviewDefinitions(tx)):null;
     if(data.ownerId&&!allowedOwner(owner,order,sales,await processValue(order,'ORDER_APPROVAL_MODE','BOTH')))throw new AppError('PIC harus Admin aktif atau SPV tim sales saat ini dengan izin approval; pemohon tidak dapat memeriksa sendiri',400);
     if(validateOnly)return previous||{revision:0,ownerId:null,dueAt:null};
     const value={...data,orderId,ownerName:owner?.name||null,ownerRole:owner?.role||null,revision:data.revision+1,assignedAt:new Date().toISOString(),assignedBy:actor.id,assignedByName:actor.name||null};
@@ -37,12 +39,13 @@ export async function getOrderReviewAssignment(orderId,actor){
   const order=await prisma.order.findUnique({where:{id:orderId}});if(!order||order.deletedAt)throw new AppError('Order tidak ditemukan',404);
   await assertSalesAccess(actor,order.createdBy);
   const sales=await prisma.user.findUnique({where:{id:order.createdBy}}),mode=await processValue(order,'ORDER_APPROVAL_MODE','BOTH');
-  const [saved,history,people]=await Promise.all([
+  const [saved,history,people,definitions]=await Promise.all([
     prisma.systemConfig.findUnique({where:{key:keyFor(orderId)}}),
     prisma.auditEvent.findMany({where:{entityType:'ORDER_REVIEW_ASSIGNMENT',entityId:orderId},orderBy:[{createdAt:'desc'},{id:'desc'}],take:30}),
-    actor.role==='ADMIN'?prisma.user.findMany({where:{deletedAt:null,OR:[{role:'ADMIN'},{id:sales?.supervisorId||'',role:'SUPERVISOR'}]},select:{id:true,name:true,role:true,deletedAt:true,permissions:true}}):[],
+    actor.role==='ADMIN'?prisma.user.findMany({where:{deletedAt:null,OR:[{role:'ADMIN'},{id:sales?.supervisorId||'',role:'SUPERVISOR'}]},select:{id:true,name:true,role:true,roleCode:true,deletedAt:true,permissions:true}}):[],
+    readReviewDefinitions(prisma),
   ]);
-  return {assignment:saved?.value||null,history,people:people.filter(person=>allowedOwner(person,order,sales,mode)).map(({id,name,role})=>({id,name,role})),status:order.status};
+  return {assignment:saved?.value||null,history,people:people.map(person=>reviewIdentity(person,definitions)).filter(person=>allowedOwner(person,order,sales,mode)).map(({id,name,role})=>({id,name,role})),status:order.status};
 }
 export async function loadOrderReviewAssignments(orders){
   if(!orders.length)return new Map();
@@ -50,7 +53,8 @@ export async function loadOrderReviewAssignments(orders){
   const saved=await prisma.systemConfig.findMany({where:{key:{in:keys}},select:{key:true,value:true}});
   const records=saved.filter(row=>keys.includes(row.key)&&row.value?.orderId&&row.key===keyFor(row.value.orderId));
   const ids=[...new Set(records.map(row=>row.value.ownerId).filter(Boolean))];
-  const owners=ids.length?await prisma.user.findMany({where:{id:{in:ids}},select:{id:true,name:true,role:true,deletedAt:true,permissions:true}}):[];
+  const definitions=await readReviewDefinitions(prisma);
+  const owners=ids.length?(await prisma.user.findMany({where:{id:{in:ids}},select:{id:true,name:true,role:true,roleCode:true,deletedAt:true,permissions:true}})).map(person=>reviewIdentity(person,definitions)):[];
   return new Map(records.map(({value})=>{const order=orders.find(row=>row.id===value.orderId),owner=owners.find(row=>row.id===value.ownerId);
     return [value.orderId,{...value,ownerValid:!value.ownerId||Boolean(allowedOwner(owner,order,order.createdByUser)),ownerCurrentName:owner?.name||null}];}));
 }

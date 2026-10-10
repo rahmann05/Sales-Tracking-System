@@ -21,6 +21,7 @@ export function requestFeature(path,method='GET',body={}){
  if(p.startsWith('delivery/packing-lists'))return ['PACKING',method==='POST'&&p==='delivery/packing-lists'];
  if(p.startsWith('delivery/stops')&&p.endsWith('/return'))return ['RETURNS',false];
  if(p.startsWith('delivery'))return ['DELIVERY',method==='POST'&&p==='delivery/routes'];
+ if(p==='reports/archives'&&method==='POST')return ['REPORTS',true];
  const module=p.split('/')[0];
  if(/^pjp\/planning\/[^/]+\/(cancel-schedule|cancel-published)$/.test(p))return ['PJP',false];
  const feature={pjp:'PJP',clusters:'CLUSTERS',teams:'TEAMS',orders:'ORDERS',products:'PRODUCTS',vehicles:'VEHICLES',reports:'REPORTS',notifications:'NOTIFICATIONS',routing:'MAPS','daily-calls':'REPORTS'}[module];

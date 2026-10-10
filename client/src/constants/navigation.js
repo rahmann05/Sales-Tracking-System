@@ -271,6 +271,17 @@ const TAB_PERMISSION_KEYS = {
   [TAB_IDS.DELIVERY_DRIVER_MAP]: ['can_access_driver_map'],
 };
 export function isTabPermissionAllowed(tabId,user) {
+  if(!user)return false;
+  const roles={
+    [TAB_IDS.DAILY_CALL_MONITOR]:DAILY_CALL_ROLES,[TAB_IDS.ROUTE_PLANNING]:ROUTE_PLANNING_ROLES,
+    [TAB_IDS.TEAM_TRACKING]:TEAM_TRACKING_ROLES,[TAB_IDS.REPORTS]:['ADMIN','SUPERVISOR','SALES'],
+    [TAB_IDS.OUTLET_REGISTRATION]:['ADMIN','SUPERVISOR','SALES'],[TAB_IDS.OUTLET_APPROVAL]:OUTLET_APPROVAL_ROLES,
+    [TAB_IDS.OUTLET_REGISTRATION_REPORT]:OUTLET_REGISTRATION_REPORT_ROLES,[TAB_IDS.OUTLET_VALIDATION]:OUTLET_VALIDATION_ROLES,
+    [TAB_IDS.OUTLET_MANAGEMENT]:['ADMIN','SUPERVISOR'],[TAB_IDS.CREATE_CLUSTER]:['ADMIN','SUPERVISOR'],[TAB_IDS.MASTER_CLUSTERS]:['ADMIN','SUPERVISOR'],
+    [TAB_IDS.DELIVERY_PACKING_LIST]:DELIVERY_MANAGEMENT_ROLES,[TAB_IDS.DELIVERY_ROUTES]:DELIVERY_MANAGEMENT_ROLES,[TAB_IDS.DELIVERY_MONITOR]:DELIVERY_MANAGEMENT_ROLES,[TAB_IDS.DELIVERY_DRIVER_MAP]:DELIVERY_FIELD_ROLES,
+    [TAB_IDS.ADMIN_APPROVAL]:['ADMIN'],
+  };
+  if(roles[tabId]&&!roles[tabId].includes(user.role))return false;
   if([TAB_IDS.WAREHOUSE_ATTENTION,TAB_IDS.WAREHOUSE_VEHICLES,TAB_IDS.WAREHOUSE_ATTENDANCE].includes(tabId))return user?.role===ROLES.KEPALA_GUDANG&&(tabId!==TAB_IDS.WAREHOUSE_ATTENTION||user.permissions?.can_monitor_delivery!==false);
   if(tabId===TAB_IDS.DRIVER_TRIPS)return user?.role===ROLES.SUPIR&&user.permissions?.can_access_driver_map!==false;
   if (tabId===TAB_IDS.SALES_FOLLOW_UP) return user?.role===ROLES.SALES&&user.permissions?.can_view_follow_up!==false;
@@ -280,6 +291,8 @@ export function isTabPermissionAllowed(tabId,user) {
     if(tabId===TAB_IDS.SPV_MONITOR)return ['can_view_daily_call','can_view_live_tracking'].some(key=>user.permissions?.[key]!==false);
     return true;
   }
+  if(tabId===TAB_IDS.SYSTEM_CONFIG)return user?.role===ROLES.ADMIN&&user.permissions?.can_manage_system_config!==false;
+  if(tabId===TAB_IDS.USER_MANAGEMENT)return user?.role===ROLES.ADMIN&&['can_manage_users','can_manage_roles'].some(key=>user.permissions?.[key]!==false);
   if ([TAB_IDS.SYSTEM_CONFIG,TAB_IDS.USER_MANAGEMENT,TAB_IDS.ADMIN_ATTENTION,TAB_IDS.ADMIN_PRODUCTS,TAB_IDS.ADMIN_PJP,TAB_IDS.ADMIN_ATTENDANCE,TAB_IDS.ADMIN_MASTERS].includes(tabId)) return user.role===ROLES.ADMIN;
   const keys=TAB_PERMISSION_KEYS[tabId];
   return !keys || keys.some(key=>user.permissions?.[key]!==false);

@@ -1,5 +1,6 @@
 import {auditItems,auditAnswers} from '../../../../../shared/supervision-checklist.mjs';
 import {followUpAllowed} from '../../../../../shared/follow-up-policy.mjs';
+import {processPolicyValues} from '../../../../../shared/process-policy.mjs';
 import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import { useApp } from '../../../context/AppContext';
 import { staffAttendanceApi } from '../../../services/api';
@@ -80,18 +81,18 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = [], refr
         setSelectedStop({...stop,policySnapshot:existing?.policySnapshot});
         setInputNotes(existing?.notes || '');
 
-        setChecklist({...Object.fromEntries(auditItems({...settings,...existing?.policySnapshot?.values}).map(item=>[item.key,existing?.checklist?.[item.key]??null])),_evidence:existing?.checklist?._evidence||{}});
+        setChecklist({...Object.fromEntries(auditItems(processPolicyValues(existing?.policySnapshot,settings)).map(item=>[item.key,existing?.checklist?.[item.key]??null])),_evidence:existing?.checklist?._evidence||{}});
         setFollowUp({enabled:['OPEN','SUBMITTED','DONE'].includes(existing?.followUp?.status),revision:existing?.followUp?.revision||0,ownerId:existing?.followUp?.ownerId||stop.salesId||'',dueDate:existing?.followUp?.dueDate||'',note:existing?.followUp?.note||'',completed:['DONE','SUBMITTED'].includes(existing?.followUp?.status)});
         setActiveModal('AUDIT');
     };
 
     const saveAudit = () => {
         if (!selectedStop) return;
-        const assignable=followUpAllowed(user,'assign')&&(!settings.FEATURE_FOLLOW_UP_MODE||settings.FEATURE_FOLLOW_UP_MODE==='ACTIVE');
+        const assignable=!selectedStop.followUpReadOnly&&followUpAllowed(user,'assign')&&(!settings.FEATURE_FOLLOW_UP_MODE||settings.FEATURE_FOLLOW_UP_MODE==='ACTIVE');
         if (assignable && followUp.enabled && !followUp.completed && (!followUp.ownerId || !followUp.note.trim())) {
             setError('Sales penanggung jawab, tenggat dan instruksi tindak lanjut wajib diisi.'); return;
         }
-        let checked;try{checked=auditAnswers(auditItems({...settings,...selectedStop.policySnapshot?.values}),checklist);}catch(err){setError(err.message);return;}
+        let checked;try{checked=auditAnswers(auditItems(processPolicyValues(selectedStop.policySnapshot,settings)),checklist);}catch(err){setError(err.message);return;}
         const {_evidence,...answers}=checked;
         return submit({ action:'AUDIT', stopId:selectedStop.id, notes:inputNotes, checklist:answers,auditEvidence:_evidence||{},
             ...(assignable&&followUp.enabled&&!followUp.completed?{followUp:{ownerId:followUp.ownerId,revision:followUp.revision,...(followUp.dueDate?{dueDate:followUp.dueDate}:{}),note:followUp.note.trim()}}:{}) });

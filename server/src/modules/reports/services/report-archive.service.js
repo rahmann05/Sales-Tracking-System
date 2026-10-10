@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import {assertDomainAction} from '../../../middlewares/domain-permission.middleware.js';
+import {getDynamicConfig} from '../../config/config.service.js';
 import { z } from 'zod';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -17,8 +19,10 @@ export const archiveHash=value=>createHash('sha256').update(JSON.stringify(canon
 function verified(value){if(!value||archiveHash(value.report)!==value.digest)throw new AppError('Integritas arsip tidak cocok. Hubungi Admin sistem.',409);return value;}
 function retry(saved,data,actor){const value=verified(saved.value);if(value.createdBy!==actor.id||value.kind!==data.kind||value.period!==data.period||value.reason!==data.reason)throw new AppError('Identitas permintaan arsip sudah digunakan untuk isi lain',409);return value;}
 export async function createReportArchive(raw,actor){
+  assertDomainAction(actor,'REPORT_ARCHIVE');
   adminOnly(actor);const data=parse(createSchema,raw),key=keyFor(data.requestId);
   const existing=await prisma.systemConfig.findUnique({where:{key}});if(existing)return retry(existing,data,actor);
+  if(await getDynamicConfig('FEATURE_REPORTS_MODE','ACTIVE')!=='ACTIVE'||!await getDynamicConfig('REPORT_ARCHIVE_ENABLED',true))throw new AppError('Pembuatan arsip baru dijeda atau dinonaktifkan. Arsip tersimpan tetap dapat dibuka.',409);
   const generated=data.kind==='MONTH'?await getMtdReport({year:Number(data.period.slice(0,4)),month:Number(data.period.slice(5))}):await getWeeklyReport({startDate:data.period});
   const report=JSON.parse(JSON.stringify(generated));
   report.basis={...report.basis,archiveNote:`Arsip perusahaan ${data.requestId}. Disimpan oleh ${actor.name||'Admin'}; alasan: ${data.reason}. Arsip tidak menutup transaksi periode.`};

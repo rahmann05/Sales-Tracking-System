@@ -8,6 +8,7 @@ import { RoleTemplateEditModal } from './RoleTemplateEditModal';
  * NOTE: Strict compliance - Zero emojis. Pure React Icons.
  */
 
+import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
 import React, { useState, useEffect } from 'react';
 import { rolesApi } from '../../../services/api';
 import { LuPlus, LuShield, LuShieldCheck, LuUsers, LuPackage, LuTruck, LuNavigation, LuSave, LuX } from 'react-icons/lu';
@@ -23,6 +24,7 @@ const ROLE_ICONS = {
   SUPIR: LuTruck
 };
 export const RoleTemplateManager = () => {
+  const canManage=useDomainPermission('ROLES');
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -168,7 +170,7 @@ export const RoleTemplateManager = () => {
           </p>
         </div>
 
-        <button type="button" onClick={handleOpenCreateModal} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer">
+        <button type="button" disabled={!canManage} onClick={handleOpenCreateModal} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer">
           <LuPlus className="text-sm" />
           <span>Tambah Role Baru</span>
         </button>
@@ -177,13 +179,13 @@ export const RoleTemplateManager = () => {
       {/* Roles Grid */}
       {loading ? <div className="p-12 text-center text-xs text-on-surface-variant">
           Memuat daftar role dan template...
-        </div> : <RoleTemplateGrid ROLE_ICONS={ROLE_ICONS} handleDeleteRole={handleDeleteRole} handleOpenEditModal={handleOpenEditModal} roles={roles} />}
+        </div> : <RoleTemplateGrid canManage={canManage} ROLE_ICONS={ROLE_ICONS} handleDeleteRole={handleDeleteRole} handleOpenEditModal={handleOpenEditModal} roles={roles} />}
 
       {/* Modal: Tambah Role Baru */}
-      {isCreateModalOpen && <RoleTemplateEditModal handleCloneChange={handleCloneChange} handleCreateRole={handleCreateRole} newRoleForm={newRoleForm} roles={roles} setIsCreateModalOpen={setIsCreateModalOpen} setNewRoleForm={setNewRoleForm} submitting={submitting} />}
+      {canManage&&isCreateModalOpen && <RoleTemplateEditModal handleCloneChange={handleCloneChange} handleCreateRole={handleCreateRole} newRoleForm={newRoleForm} roles={roles} setIsCreateModalOpen={setIsCreateModalOpen} setNewRoleForm={setNewRoleForm} submitting={submitting} />}
 
       {/* Modal: Edit Template Default Role */}
-      {isEditModalOpen && activeRole && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+      {canManage&&isEditModalOpen && activeRole && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-surface border border-border-glass rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
             <div className="px-6 py-4 border-b border-border-glass flex items-center justify-between bg-surface-container/30 shrink-0">
               <div className="flex items-center gap-2">

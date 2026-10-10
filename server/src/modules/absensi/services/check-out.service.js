@@ -1,4 +1,5 @@
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
+import {assertVisitReviewersAvailable} from './visit-review-permissions.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {visitSettings,validateVisitResult} from './visit-session.service.js';
 import {withProcessPolicy} from '../../config/services/process-policy.service.js';
@@ -26,7 +27,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
 
   const stop = await db.pjpStop.findUnique({
     where: { id: pjpStopId },
-    include: { outlet: true, attendances: true, pjp: true },
+    include: { outlet: true, attendances: true, pjp: true, orders:{where:{deletedAt:null},select:{id:true}} },
   });
 
   if (!stop) throw new AppError('Stop PJP tidak ditemukan', 404);
@@ -47,10 +48,11 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
     if(!stop.visitSession?.startedAt&&!existingIn)throw new AppError('Mulai kegiatan kunjungan sebelum mencatat hasil',409);
     if(stop.visitSession?.finishedAt)throw new AppError('Kegiatan sudah selesai',409);
     const result=await resolveSalesResult(payload);
+    if(result.manualSalesStatus==='PENDING'&&!stop.orders.length)await assertVisitReviewersAvailable(db,userId,['MANUAL_SALES']);
     const visitOutcome=payload.visitOutcome?visitOutcomeSchema.parse(payload.visitOutcome):undefined;
     const session={...stop.visitSession,state:'FINISHED',finishedAt:new Date().toISOString(),attendanceMode:visit.mode,result:{...result,notes:notes||null,...(visitOutcome?{visitOutcome}:{})}};
     await db.pjpStop.update({where:{id:pjpStopId},data:{status:VISIT_STATUS.VISITED,visitSession:session,policySnapshot:visit.snapshot}});
-    if(result.manualSalesStatus==='PENDING'){
+    if(result.manualSalesStatus==='PENDING'&&!stop.orders.length){
       const user=await db.user.findUnique({where:{id:userId},select:{supervisorId:true}});
       await db.operationalException.upsert({where:{dedupeKey:`MANUAL_RESULT:${pjpStopId}`},update:{},create:{dedupeKey:`MANUAL_RESULT:${pjpStopId}`,kind:'MANUAL_RESULT',entityId:pjpStopId,userId,supervisorId:user.supervisorId,details:{outletName:stop.outlet.name,orderAmount:result.orderAmount,skuSold:result.skuSold}}});
     }
@@ -112,6 +114,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   }
 
   const result = await resolveSalesResult(payload);
+  if(result.manualSalesStatus==='PENDING'&&!stop.orders.length)await assertVisitReviewersAvailable(db,userId,['MANUAL_SALES']);
   const visitOutcome=payload.visitOutcome?visitOutcomeSchema.parse(payload.visitOutcome):undefined;
   const effective = result.isEffectiveCall;
 

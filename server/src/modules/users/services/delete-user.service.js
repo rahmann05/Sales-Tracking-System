@@ -3,12 +3,14 @@ import { prisma } from '../../../config/prisma.js';
 import {protectAdminRecovery} from './admin-recovery.service.js';
 import {getIo} from '../../../config/socket.js';
 import {assertReviewersRemain} from '../../config/services/approval-readiness.service.js';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 
 
-export const deleteUser = async (id) => {
+export const deleteUser = async (id,actor=null) => {
   const removed=await prisma.$transaction(async db=>{
    await protectAdminRecovery(db,id,null);
    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+   if(actor?.id)await freshDomainActor(db,actor.id,'USERS');
    await assertReviewersRemain(db,{patches:{[id]:{deletedAt:new Date()}}});
    return db.user.update({
     where: { id },

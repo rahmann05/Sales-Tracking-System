@@ -1,4 +1,5 @@
 import {assertEvidenceImages} from '../../utils/evidence-images.js';
+import {freshDomainActor} from '../../middlewares/domain-permission.middleware.js';
 import {gpsEvidence} from '../../utils/gps-evidence.js';
 import {capturePolicySnapshot,processValue} from '../config/services/process-policy.service.js';
 import {requireActiveShift} from '../absensi/services/attendance-policy.service.js';
@@ -14,11 +15,13 @@ import {followUpActor,assertFollowUpOwner} from './follow-up-access.service.js';
 import {DEFAULT_AUDIT_ITEMS,parseAuditItems,auditAnswers} from '../../../../shared/supervision-checklist.mjs';
 
 async function perform(db,user, data) {
+  const starting=['VISIT_IN','OFF_PJP'].includes(data.action);
+  if(starting)user=await freshDomainActor(db,user.id,'SPV_VISIT');
   if (!['SUPERVISOR', 'ADMIN'].includes(user.role)) throw new AppError('Khusus supervisor', 403);
   const dateKey = wibDateKey();
   if(['VISIT_IN','OFF_PJP'].includes(data.action))await requireActiveShift(user.id,db);
-  if(data.visitMode==='JOINT_VISIT'&&!await getDynamicConfig('SPV_ALLOW_JOINT_VISIT',true))throw new AppError('Pendampingan dinonaktifkan',403);
-  if(data.visitMode==='PRIORITY_AUDIT'&&!await getDynamicConfig('SPV_ALLOW_PRIORITY_AUDIT',true))throw new AppError('Audit prioritas dinonaktifkan',403);
+  if(starting&&data.visitMode==='JOINT_VISIT'&&!await getDynamicConfig('SPV_ALLOW_JOINT_VISIT',true))throw new AppError('Pendampingan dinonaktifkan',403);
+  if(starting&&data.visitMode==='PRIORITY_AUDIT'&&!await getDynamicConfig('SPV_ALLOW_PRIORITY_AUDIT',true))throw new AppError('Audit prioritas dinonaktifkan',403);
   const requiredGps=await getDynamicConfig('SPV_REQUIRE_GPS',true),requiredPhoto=await getDynamicConfig('SPV_REQUIRE_PHOTO',true),mode=await getDynamicConfig('SPV_ATTENDANCE_MODE','IN_OUT');
   if (data.action === 'OFF_PJP') {
     await assertEvidenceImages({photoUrl:data.photoUrl});
@@ -43,13 +46,20 @@ async function perform(db,user, data) {
       },
     });
   }
-  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
   if (!data.stopId) throw new AppError('Pilih toko PJP', 400);
-  const stop = await db.pjpStop.findUnique({ where: { id: data.stopId }, include: { pjp: true, outlet: { include: { cluster: true } } } });
-  if (!stop || wibDateKey(stop.pjp.date) !== dateKey) throw new AppError('PJP hari ini tidak ditemukan', 404);
-  if (user.role !== 'ADMIN' && stop.outlet.cluster?.supervisorId !== user.id) throw new AppError('Toko berada di luar tim supervisi Anda', 403);
-  const where = { userId_dateKey_activityKey: { userId: user.id, dateKey, activityKey: data.stopId } };
-  let existing = await db.staffActivity.findUnique({ where });
+  let stop,existing,where;
+  if(starting){
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
+    stop = await db.pjpStop.findUnique({ where: { id: data.stopId }, include: { pjp: true, outlet: { include: { cluster: true } } } });
+    if (!stop || wibDateKey(stop.pjp.date) !== dateKey) throw new AppError('PJP hari ini tidak ditemukan', 404);
+    if (user.role !== 'ADMIN' && stop.outlet.cluster?.supervisorId !== user.id) throw new AppError('Toko berada di luar tim supervisi Anda', 403);
+    where = { userId_dateKey_activityKey: { userId: user.id, dateKey, activityKey: data.stopId } };
+    existing = await db.staffActivity.findUnique({ where });
+  }else{
+    // Finish only the actor's active record, including after midnight or a territory transfer.
+    existing=await db.staffActivity.findFirst({where:{userId:user.id,kind:'VISIT',activityKey:data.stopId,checkOutAt:null},orderBy:{checkInAt:'desc'}});
+    where=existing?{id:existing.id}:null;
+  }
   if (data.action === 'VISIT_IN') {
     await assertEvidenceImages({photoUrl:data.photoUrl});
     if (existing) throw new AppError('Kunjungan sudah dimulai', 409);

@@ -29,6 +29,7 @@ prisma.$transaction = (work, options) => originalTransaction.call(prisma, tx => 
 } })), options);
 prisma.systemConfig.findMany = async () => [
   { key: 'OFF_PJP_ENABLED', value: true }, { key: 'ATTENDANCE_ALLOW_MANUAL_SALES', value: true },
+  { key: 'OFF_PJP_REQUIRE_PHOTO', value: false },
   { key: 'MANUAL_SALES_REPORT_MODE', value: 'NOTES_ONLY' }, { key: 'REROUTE_REQUIRE_ADMIN_APPROVAL', value: false },
 ];
 invalidateConfigCache();
@@ -114,6 +115,7 @@ try {
 } finally {
   if (httpServer.listening) await new Promise(resolve => httpServer.close(resolve));
   prisma.$transaction = originalTransaction; prisma.systemConfig.findMany = originalConfig; invalidateConfigCache();
+  await prisma.auditEvent.deleteMany({where:{actorId:{in:userIds}}});
   await prisma.notification.deleteMany({ where: { OR: [{ userId: { in: userIds } }, ...userIds.map(id => ({ payload: { path: ['salesId'], equals: id } }))] } });
   await prisma.systemConfig.deleteMany({ where: { key: { in: keys } } });
   await prisma.staffActivity.deleteMany({ where: { userId: { in: userIds } } });

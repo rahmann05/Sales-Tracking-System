@@ -1,4 +1,5 @@
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
+import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportsApi } from '../../../services/api';
@@ -9,6 +10,7 @@ export function ReportCalendarEditor({ month, onSaved }) {
   const {user,settings}=useApp();
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState('');
   const [saved,setSaved]=useState(null),[history,setHistory]=useState([]),[weekdays,setWeekdays]=useState([]),[exceptions,setExceptions]=useState([]),[reason,setReason]=useState('');
+  const canEdit=useDomainPermission('REPORT_CALENDAR');
   useEffect(()=>{
     if(!open)return;let active=true;setBusy(true);setLoaded(false);setError('');
     reportsApi.getCalendar({month}).then(response=>{
@@ -17,7 +19,7 @@ export function ReportCalendarEditor({ month, onSaved }) {
     }).catch(err=>{if(active)setError(err.message);}).finally(()=>{if(active)setBusy(false);});
     return()=>{active=false;};
   },[open,month,settings?.PJP_WORKING_DAYS]);
-  if(user?.role!=='ADMIN'||user.permissions?.can_view_reports===false||!validMonth(month))return null;
+  if(!canEdit||user?.role!=='ADMIN'||user.permissions?.can_view_reports===false||!validMonth(month))return null;
   const lastDay=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).getUTCDate();
   const updateException=(index,patch)=>setExceptions(rows=>rows.map((row,i)=>i===index?{...row,...patch}:row));
   const submit=async event=>{

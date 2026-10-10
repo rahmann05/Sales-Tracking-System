@@ -13,6 +13,7 @@ import {
 } from './outlet-lock.controller.js';
 import * as validationController from './outlet-validation.controller.js';
 import { authenticate, authorize, authorizeWithPermission } from '../../middlewares/auth.middleware.js';
+import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { createOutletSchema, updateOutletSchema, lockOutletSchema, unlockRequestSchema } from './outlets.schema.js';
 import {outletDirectory,outletProfile} from './services/outlet-directory.service.js';
@@ -42,7 +43,7 @@ router.post('/validation-jobs',action(req=>startValidationJob(req.body,req.user)
 router.patch('/validation-jobs/:jobId',action(req=>changeValidationJob(req.params.jobId,req.body,req.user)));
 router.patch('/:id/reviews/:reviewId/digital',action(req=>decideDigitalOutlet(req.params.id,req.params.reviewId,req.body,req.user)));
 router.post('/:id/reviews/:reviewId/field-task',action(req=>assignOutletField(req.params.id,req.params.reviewId,req.body,req.user)));
-const directoryAccess=(req,res,next)=>{if(['ADMIN','SUPERVISOR'].includes(req.user.role)&&req.user.permissions?.can_manage_outlets!==false||req.user.permissions?.can_manage_outlets||req.user.permissions?.can_validate_outlet)return next();next(new AppError('Akses direktori ditolak',403));};
+const directoryAccess=(req,res,next)=>{if(['ADMIN','SUPERVISOR'].includes(req.user.role)&&(req.user.permissions?.can_manage_outlets!==false||req.user.permissions?.can_validate_outlet!==false))return next();next(new AppError('Akses direktori ditolak',403));};
 router.get('/directory',directoryAccess,async(req,res,next)=>{try{res.json({status:'success',...await outletDirectory(req.query,req.user)});}catch(e){next(e);}});
 router.get('/reviews',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),async(req,res,next)=>{try{res.json({status:'success',...await getOutletReviews(req.query,req.user)});}catch(e){next(e);}});
 router.get('/reviews/:reviewId',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>getOutletReview(req.params.reviewId,req.user)));
@@ -110,7 +111,7 @@ router.post(
 );
 router.post(
   '/:id/unlock-request',
-  authorize('SALES'),
+  authorizeDomainAction('REQUEST_EXCEPTION'),
   validate(unlockRequestSchema),
   handleRequestUnlock
 );

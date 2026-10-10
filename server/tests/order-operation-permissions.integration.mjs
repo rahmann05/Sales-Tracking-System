@@ -7,7 +7,7 @@ import {prisma} from '../src/config/prisma.js';
 import {config} from '../src/config/index.js';
 import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
 import {ORDER_OPERATION_PERMISSIONS} from '../../shared/order-operation-permissions.mjs';
-import {saveOrderReviewAssignment} from '../src/modules/orders/services/order-review-assignment.service.js';
+import {saveOrderReviewAssignment,getOrderReviewAssignment} from '../src/modules/orders/services/order-review-assignment.service.js';
 import {setOrderPromise} from '../src/modules/orders/services/order-promise.service.js';
 import {cancelOrderRemainder} from '../src/modules/orders/services/cancel-order-remainder.service.js';
 import {assignmentSchedulePreview,createAssignmentSchedule,runAssignmentSchedules,cancelAssignmentSchedule,retryAssignmentSchedule} from '../src/modules/config/services/assignment-schedules.service.js';
@@ -49,10 +49,12 @@ try{
  }
  // Custom Admin templates must honor explicit denials just like built-in Admin.
  const existing=(await prisma.systemConfig.findUnique({where:{key:'ROLE_DEFINITIONS'}}))?.value||[];
- const custom={code:roleCode,name:'Test restricted Admin',baseRole:'ADMIN',isSystem:false,defaultPermissions:Object.fromEntries(Object.values(ORDER_OPERATION_PERMISSIONS).map(p=>[p.key,false]))};
+ const custom={code:roleCode,name:'Test restricted Admin',baseRole:'ADMIN',isSystem:false,defaultPermissions:{...Object.fromEntries(Object.values(ORDER_OPERATION_PERMISSIONS).map(p=>[p.key,false])),can_approve_order:false}};
  await prisma.systemConfig.upsert({where:{key:'ROLE_DEFINITIONS'},create:{key:'ROLE_DEFINITIONS',value:[...existing,custom]},update:{value:[...existing,custom]}});customAdded=true;
  const restricted=await person('ADMIN',{roleCode});
  for(const [,path,body,method] of calls)eq((await api(restricted,path,body,method)).status,403);
+ await reject(()=>saveOrderReviewAssignment(pending.id,{...assignment,ownerId:restricted.id},admin),400);
+ eq((await getOrderReviewAssignment(pending.id,admin)).people.some(person=>person.id===restricted.id),false);
  await prisma.user.update({where:{id:admin.id},data:{permissions:{can_cancel_order_remainder:false,can_assign_order_review:false}}});
  eq((await api(admin,calls[0][1],promise,'PATCH',sameToken)).status,200);
  eq((await prisma.order.findUnique({where:{id:approved.id}})).history.at(-1).action,'PROMISE');
@@ -62,6 +64,11 @@ try{
  await prisma.user.update({where:{id:admin.id},data:{permissions:{can_set_order_promise:false,can_cancel_order_remainder:false}}});
  eq((await api(admin,calls[2][1],assignment,'PUT',sameToken)).status,200);
  eq((await prisma.systemConfig.findUnique({where:{key:'_ORDER_REVIEW:'+pending.id}})).value.ownerId,reviewer.id);
+ eq((await api(admin,`/users/${reviewer.id}/permissions`,{permissions:{can_approve_order:false}},'PUT',sameToken)).status,409);
+ eq((await prisma.user.findUnique({where:{id:reviewer.id}})).permissions,reviewer.permissions);
+ const freeAdmin=await person('ADMIN'),oldSession=token(freeAdmin);
+ eq((await api(admin,`/users/${freeAdmin.id}/permissions`,{permissions:{can_set_order_promise:false}},'PUT',sameToken)).status,200);
+ eq((await api(freeAdmin,calls[0][1],promise,'PATCH',oldSession)).status,401);
  const scheduled=await makeOrder(),preview=await assignmentSchedulePreview('ORDER_REVIEW',scheduled.id,admin);
  const job=await run(()=>createAssignmentSchedule({kind:'ORDER_REVIEW',entityId:scheduled.id,fingerprint:preview.fingerprint,ownerId:reviewer.id,dueAt:iso(3600000),startsAt:iso(1000),endsAt:iso(60000),reason:'Uji pencabutan izin sebelum jadwal berjalan'},admin));jobs.push(job.id);
  await prisma.user.update({where:{id:admin.id},data:{permissions:{can_assign_order_review:false}}});

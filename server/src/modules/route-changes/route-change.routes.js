@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as routeChangeController from './route-change.controller.js';
-import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
+import { authenticate, authorize,authorizeWithPermission } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { reportClosedSchema, rerouteSchema, skipSchema } from './route-change.schema.js';
 import {assignRouteReview,routeReviewAssignmentOptions} from './services/route-review-assignment.service.js';
@@ -14,7 +14,7 @@ router.get('/:id/replacements',authorize('SUPERVISOR','ADMIN'),run(req=>routeRep
 router.get('/:id/assignment',authorize('ADMIN'),run(req=>routeReviewAssignmentOptions(req.params.id,req.user)));
 router.put('/:id/assignment',authorize('ADMIN'),run(req=>assignRouteReview(req.params.id,req.body,req.user)));
 
-router.post('/', authorize('SALES'), validate(reportClosedSchema), routeChangeController.reportClosed);
+router.post('/', authorizeWithPermission(['SALES'],'can_request_reroute'), validate(reportClosedSchema), routeChangeController.reportClosed);
 router.post('/:id/reroute', authorize('SUPERVISOR','ADMIN'), validate(rerouteSchema), routeChangeController.reroute);
 router.post('/:id/skip', authorize('SUPERVISOR','ADMIN'), validate(skipSchema), routeChangeController.skip);
 router.patch('/:id/approve', authorize('SUPERVISOR', 'ADMIN'), routeChangeController.approve);

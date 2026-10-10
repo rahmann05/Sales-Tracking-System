@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import * as userController from './users.controller.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
@@ -7,6 +8,7 @@ import { createUserSchema, updateUserSchema, updatePasswordSchema, updatePermiss
 const router = Router();
 
 router.use(authenticate);
+router.use((req,res,next)=>!['GET','HEAD','OPTIONS'].includes(req.method)&&req.path!=='/location'?authorizeDomainAction('USERS')(req,res,next):next());
 
 // Real-time GPS Location Tracking
 router.post('/location',authorize('SALES'),validate(salesLocationSchema),userController.updateLocation);

@@ -44,6 +44,8 @@ export const reportClosedOutlet = async (salesId, pjpStopId, reason = null, phot
 
   const request = await prisma.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+    const people=await reviewPeople(tx),applicant=people.find(person=>person.id===salesId);
+    if(!applicant||applicant.deletedAt||applicant.role!=='SALES'||applicant.permissions?.can_request_reroute===false)throw new AppError('Akun tidak berizin mengajukan laporan toko tutup',403);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`closed:${pjpStopId}`}))`;
     if(await tx.routeChangeRequest.findFirst({where:{pjpStopId,status:'PENDING_APPROVAL'}}))throw new AppError('Pengajuan sudah ada',409);
@@ -52,7 +54,7 @@ export const reportClosedOutlet = async (salesId, pjpStopId, reason = null, phot
     await tx.pjpStop.update({where:{id:pjpStopId},data:{status:'CLOSED_REPORTED'}});
     const request = await tx.routeChangeRequest.create({data:{pjpId:stop.pjpId,pjpStopId,type:'SKIP',reportedBy:salesId,reason,photoUrl,status:'PENDING_APPROVAL'},include:{pjpStop:{include:{outlet:true}}}});
     const workflow=await newRouteWorkflow();
-    const gaps=routeChangeReviewGaps({...request,workflow},await reviewPeople(tx));
+    const gaps=routeChangeReviewGaps({...request,workflow},people);
     if(gaps.length)throw new AppError(`Laporan belum dapat diajukan: pemeriksa ${gaps.join(', ')} aktif belum tersedia. Minta Admin memperbaiki penugasan tim.`,409);
     await tx.systemConfig.create({data:{key:routeWorkflowKey(request.id),value:workflow}});
 

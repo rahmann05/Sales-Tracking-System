@@ -56,7 +56,7 @@ export const VehicleMaintenanceCard = ({
         </div>
 
         <div className="pt-3 border-t border-border-glass mt-auto">
-          <button onClick={onRecord} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 font-semibold text-sm transition-colors">
+          <button disabled={!onRecord} onClick={onRecord} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 font-semibold text-sm transition-colors">
             <LuPlus /> Catat Servis
           </button>
         </div>

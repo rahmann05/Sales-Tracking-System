@@ -10,7 +10,7 @@ const input={ownerId:spv.id,dueAt:'2026-10-09T03:00:00Z',revision:0,reason:'Peri
 function replace(t,model,method,fn){const original=model[method];model[method]=fn;t.after(()=>{model[method]=original;});}
 test('assign, transfer and release preserve revisions, before/after audit and order history',async t=>{
   let saved=null;const events=[],notifications=[];
-  const tx={$executeRaw:async()=>{},order:{findUnique:async()=>order,update:async({data})=>{order.history=data.history;}},user:{findUnique:async({where})=>[sales,spv,admin].find(person=>person.id===where.id)},systemConfig:{findUnique:async()=>saved,upsert:async({update})=>{saved={value:update.value};}},auditEvent:{create:async({data})=>events.push(data)},notification:{create:async({data})=>notifications.push(data)}};
+  const tx={$executeRaw:async()=>{},order:{findUnique:async()=>order,update:async({data})=>{order.history=data.history;}},user:{findUnique:async({where})=>[sales,spv,admin].find(person=>person.id===where.id)},systemConfig:{findMany:async()=>[],findUnique:async()=>saved,upsert:async({update})=>{saved={value:update.value};}},auditEvent:{create:async({data})=>events.push(data)},notification:{create:async({data})=>notifications.push(data)}};
   replace(t,prisma,'$transaction',async work=>work(tx));
   const first=await saveOrderReviewAssignment(order.id,input,admin);assert.equal(first.revision,1);assert.equal(first.ownerName,'SPV');
   await assert.rejects(()=>saveOrderReviewAssignment(order.id,input,admin),error=>error.statusCode===409);

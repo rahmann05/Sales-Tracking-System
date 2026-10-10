@@ -4,10 +4,12 @@ import {getIo} from '../../config/socket.js';
 import {AppError} from '../../utils/errors.js';
 import {assertReviewersRemain} from '../config/services/approval-readiness.service.js';
 import {BUILT_IN_ROLES} from './roles.constants.js';
+import {freshDomainActor} from '../../middlewares/domain-permission.middleware.js';
 export const normalizeRoleDefinitions=list=>list.map(({userCount,...role})=>({...role,baseRole:role.isSystem?role.code:role.baseRole||'SALES',defaultPermissions:{...(role.isSystem?BUILT_IN_ROLES.find(r=>r.code===role.code)?.defaultPermissions:{}),...role.defaultPermissions}}));
 export async function persistRoleDefinitions(previous,next,{revokeCode,deleteCode,actor={}}={}){
  const ids=await prisma.$transaction(async db=>{
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+  if(actor.id)await freshDomainActor(db,actor.id,'ROLES');
   const current=(await db.systemConfig.findUnique({where:{key:'ROLE_DEFINITIONS'}}))?.value||[];
   if(!isDeepStrictEqual(normalizeRoleDefinitions(current),normalizeRoleDefinitions(previous)))throw new AppError('Definisi role berubah. Muat ulang sebelum menyimpan.',409);
   if(deleteCode&&await db.user.count({where:{roleCode:deleteCode,deletedAt:null}}))throw new AppError('Role masih digunakan pengguna aktif. Ubah penugasan terlebih dahulu.',409);

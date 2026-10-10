@@ -65,8 +65,9 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                     className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
             </div>
-            {followUp && followUpAllowed(user,'assign') && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||followUp.completed||(settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE')}>
+            {followUp && followUpAllowed(user,'assign') && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||stop.followUpReadOnly||followUp.completed||(settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE')}>
                 <legend className="font-bold text-sm">Tindak lanjut sales</legend>
+                {stop.followUpReadOnly&&<p>Target tidak berada di PJP saat ini. Audit aktif tetap dapat diselesaikan; penugasan tindak lanjut mengikuti wilayah dan tim terbaru melalui menu Tindak lanjut.</p>}
                 {settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE'&&<p>Tugas baru dijeda oleh Admin. Checklist tetap dapat disimpan; tugas terdahulu diselesaikan melalui menu Tindak lanjut.</p>}
                 {followUp.completed?<p>Tugas sudah selesai atau sedang menunggu pemeriksaan. Buka Tindak lanjut untuk melihat tahap terbaru.</p>:<>
                     <label className="flex gap-2 text-sm"><input type="checkbox" checked={followUp.enabled} onChange={e=>onChangeFollowUp({...followUp,enabled:e.target.checked})}/>Tugaskan tindak lanjut</label>

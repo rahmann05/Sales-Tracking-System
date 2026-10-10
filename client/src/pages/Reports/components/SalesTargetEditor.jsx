@@ -1,3 +1,4 @@
+import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { collectPages, reportsApi, usersApi } from '../../../services/api';
@@ -9,6 +10,7 @@ export function SalesTargetEditor({ sales, kind, period, onSaved }) {
   const [error,setError]=useState(''),[target,setTarget]=useState(null),[history,setHistory]=useState([]),[supervisors,setSupervisors]=useState([]);
   const [loaded,setLoaded]=useState(false);
   const [amount,setAmount]=useState(''),[supervisorId,setSupervisorId]=useState(''),[reason,setReason]=useState('');
+  const canEdit=useDomainPermission('REPORT_TARGET');
   useEffect(()=>{
     if(!open)return;
     let active=true;setLoading(true);setLoaded(false);setError('');
@@ -18,7 +20,7 @@ export function SalesTargetEditor({ sales, kind, period, onSaved }) {
       .catch(err=>{if(active)setError(err.message);}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[open,kind,period,sales.salesmanId]);
-  if(user?.role!=='ADMIN'||user.permissions?.can_view_reports===false)return null;
+  if(!canEdit||user?.role!=='ADMIN'||user.permissions?.can_view_reports===false)return null;
   const periodError=targetPeriodError(kind,period);
   const submit=async event=>{
     event.preventDefault();setSaving(true);setError('');

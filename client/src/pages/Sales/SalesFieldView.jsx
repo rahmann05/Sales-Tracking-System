@@ -1,3 +1,4 @@
+import {useDomainPermission} from '../../shared/hooks/useDomainPermission';
 import React from 'react';
 import {useApp} from '../../context/AppContext';
 import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
@@ -13,6 +14,7 @@ import {SalesModals} from './components/SalesModals';
 import {useSalesVisitModals} from './hooks/useSalesVisitModals';
 import {activeVisitStatuses,completedVisitStatuses,stampWib} from './salesPresentation';
 export function SalesFieldView(){
+  const canOffPjp=useDomainPermission('OFF_PJP');
   const {settings,salesStops,offPjpAttendances,syncStatus}=useApp();
   const [view,setView]=useWorkspaceState('salesVisitView','pjp'),[query,setQuery]=useWorkspaceState('salesVisitSearch',''),[filter,setFilter]=useWorkspaceState('salesVisitStatus','ALL'),[selectedId,setSelectedId]=useWorkspaceState('salesStop','');
   const modal=useSalesVisitModals();
@@ -34,7 +36,7 @@ export function SalesFieldView(){
     {!ready&&!error&&<p role="status">Memuat agenda dan presensi Anda…</p>}
     {ready&&!error&&<SalesDailyPerformanceTracker salesStops={stops} offPjpAttendances={offPjpAttendances} targetDailyVisits={settings.DAILY_CALL_TARGET_CALLS}/>}
     {ready&&active&&<section className="sales-active-visit" aria-label="Kunjungan sedang berlangsung"><div><span className="admin-eyebrow">Lanjutkan pekerjaan</span><h2>{active.outletName}</h2><p>{active.checkInTime?`Masuk ${active.checkInTime}. `:'Kegiatan sedang berjalan. '}Lengkapi order atau hasil kunjungan{requiresOut?', lalu absen keluar.':', lalu selesaikan kegiatan.'}</p></div><button type="button" className="app-button app-button-primary" onClick={()=>{setView('pjp');selectStop(active.id);}}>Lanjutkan kunjungan</button></section>}
-    <div className="sales-section-toolbar"><nav className="sales-tabs" aria-label="Jenis kunjungan"><button type="button" aria-pressed={view!=='offpjp'} onClick={()=>setView('pjp')}>PJP hari ini</button><button type="button" aria-pressed={view==='offpjp'} onClick={()=>setView('offpjp')}>Kunjungan luar PJP</button></nav><button type="button" className="app-button" disabled={!ready||Boolean(error)||Boolean(settings.FEATURE_OFF_PJP_MODE&&settings.FEATURE_OFF_PJP_MODE!=='ACTIVE')} onClick={()=>open('OFFPJP_ABSEN')}>Catat kunjungan luar PJP</button></div>
+    <div className="sales-section-toolbar"><nav className="sales-tabs" aria-label="Jenis kunjungan"><button type="button" aria-pressed={view!=='offpjp'} onClick={()=>setView('pjp')}>PJP hari ini</button><button type="button" aria-pressed={view==='offpjp'} onClick={()=>setView('offpjp')}>Kunjungan luar PJP</button></nav><button type="button" className="app-button" disabled={!canOffPjp||!ready||Boolean(error)||Boolean(settings.FEATURE_OFF_PJP_MODE&&settings.FEATURE_OFF_PJP_MODE!=='ACTIVE')} onClick={()=>open('OFFPJP_ABSEN')}>Catat kunjungan luar PJP</button></div>
     {ready&&view!=='offpjp'&&<>
       <div className="sales-toolbar"><label className="sales-search">Cari outlet<input type="search" value={query} placeholder="Nama, kode, atau alamat…" onChange={e=>setQuery(e.target.value,{replace:true})}/></label><label>Status kunjungan<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="ALL">Semua status</option><option value="PENDING">Belum dikunjungi</option><option value="ACTIVE">Sedang berlangsung</option><option value="DONE">Selesai</option><option value="EXCEPTION">Tutup / dilewati</option></select></label><span className="sales-note">{filtered.length} dari {stops.length} outlet terjadwal</span></div>
       {!stops.length?<div className="sales-panel sales-empty"><h2>Belum ada PJP hari ini</h2><p>Hubungi Supervisor untuk memeriksa penugasan. Kunjungan tambahan dapat diajukan melalui Kunjungan luar PJP.</p></div>:<div className={`sales-split ${selected?'has-selection':''}`}>

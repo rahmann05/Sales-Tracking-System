@@ -3,8 +3,10 @@ import { useApp } from '../../../context/AppContext';
 import {ShiftEvidenceDialog} from './ShiftEvidenceDialog';
 import {shiftDateKey} from '../../../../../shared/shift-policy.mjs';
 import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
+import {useDomainPermission} from '../../hooks/useDomainPermission';
 
 export function ShiftAttendanceWidget() {
+  const canStart=useDomainPermission('START_SHIFT');
   const { shiftAttendance: shift, shiftBusy, shiftError, handleShiftClockIn, handleShiftClockOut, settings } = useApp();
   const [dialog,setDialog]=useState(false);
   const values=shift.clockedIn?{...CONFIG_DEFAULTS,...shift.policyValues}:settings;
@@ -39,7 +41,7 @@ export function ShiftAttendanceWidget() {
         </div>
       </div>
 
-      {!shift.finished && (
+      {!shift.finished && (shift.clockedIn||canStart) && (
         <button
           type="button"
           disabled={shiftBusy||!shift.clockedIn&&['PAUSED','OFF'].includes(settings.FEATURE_SHIFT_MODE)}

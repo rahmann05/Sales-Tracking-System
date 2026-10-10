@@ -1,5 +1,7 @@
 import {TRIP_PERMISSION_LABELS,tripPermission,tripPermissionDefaults} from '../../../../shared/trip-permissions.mjs';
 import {ORDER_OPERATION_PERMISSIONS} from '../../../../shared/order-operation-permissions.mjs';
+import {VISIT_REVIEW_PERMISSIONS} from '../../../../shared/visit-review-permissions.mjs';
+import {DOMAIN_PERMISSIONS,domainPermissionDefaults} from '../../../../shared/domain-permissions.mjs';
 /**
  * roles.constants.js
  * Single Responsibility: Master registry of all system permissions, categories,
@@ -7,6 +9,8 @@ import {ORDER_OPERATION_PERMISSIONS} from '../../../../shared/order-operation-pe
  */
 
 export const ALL_PERMISSIONS = [
+  ...Object.values(DOMAIN_PERMISSIONS).map(p=>({key:p.key,label:p.label,desc:p.desc,category:({team:'Tim & Master Wilayah',rjp:'RJP & Jadwal Sales',warehouse:'Gudang & Logistik',transaction:'Transaksi & Approval',reports:'Laporan & Analitik'})[p.categoryId]})),
+  ...Object.values(VISIT_REVIEW_PERMISSIONS).map(p=>({...p,category:'Transaksi & Approval'})),
   ...Object.values(ORDER_OPERATION_PERMISSIONS).map(p=>({...p,category:'Transaksi & Approval'})),
   {key:'can_review_route_change',label:'Putuskan toko tutup / reroute',desc:'Mengikuti tahap, penugasan kasus dan larangan memeriksa usulan sendiri.',category:'RJP & Jadwal Sales'},
   {key:'can_assign_route_review',label:'Tugaskan pemeriksa rute',desc:'Khusus Admin; delegasi per kasus tanpa menambah hak akses umum.',category:'RJP & Jadwal Sales'},
@@ -222,7 +226,7 @@ export const BUILT_IN_ROLES = [
     workspaceTab: 'role-workspace',
     defaultPermissions: {
       ...getEmptyPermissions(),
-      can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,can_review_route_change:true,
+      can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,can_review_route_change:true,can_review_off_pjp:true,can_review_manual_sales:true,
       can_view_dashboard: true,
       can_view_live_tracking: true,
       can_view_daily_call: true,
@@ -290,4 +294,4 @@ export const BUILT_IN_ROLES = [
   },
 ];
 
-for(const role of BUILT_IN_ROLES)Object.assign(role.defaultPermissions,tripPermissionDefaults(role.code));
+for(const role of BUILT_IN_ROLES)Object.assign(role.defaultPermissions,tripPermissionDefaults(role.code),domainPermissionDefaults(role.code));

@@ -1,4 +1,5 @@
 import {listFollowUps,completeFollowUp,reviewFollowUp} from './follow-up.service.js';
+import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import {assignFollowUp} from './follow-up-assignment.service.js';
 import {followUpCandidates} from './follow-up-access.service.js';
 import { Router } from 'express';
@@ -21,7 +22,11 @@ router.get('/follow-ups',async(req,res,next)=>{try{res.json({data:await listFoll
 router.patch('/follow-ups/:id',async(req,res,next)=>{try{res.json({data:await completeFollowUp(req.params.id,req.user,req.body.note,req.body.evidence)});}catch(e){next(e);}});
 router.post('/follow-ups/:id/review',authorize('ADMIN','SUPERVISOR'),async(req,res,next)=>{try{res.json({data:await reviewFollowUp(req.params.id,req.user,req.body)});}catch(e){next(e);}});
 router.get('/', async (req, res, next) => {
-  try { const day=wibDateKey(),shiftDay=shiftDateKey(Date.now(),await getDynamicConfig('SHIFT_DAY_CUTOFF_TIME','00:00'));const rows=await prisma.staffActivity.findMany({ where: { userId:req.user.id, OR:[{kind:{not:'SHIFT'},dateKey:day},{kind:'SHIFT',dateKey:shiftDay},{kind:'SHIFT',checkOutAt:null}] }, orderBy: { checkInAt: 'asc' } });res.json({data:rows.filter(row=>row.kind!=='SHIFT'||row.dateKey===shiftDay||row.checklist?.state!=='FINISHED'&&!row.checkOutAt)}); }
+  try {
+    const day=wibDateKey(),shiftDay=shiftDateKey(Date.now(),await getDynamicConfig('SHIFT_DAY_CUTOFF_TIME','00:00'));
+    const rows=await prisma.staffActivity.findMany({where:{userId:req.user.id,OR:[{kind:{not:'SHIFT'},dateKey:day},{kind:'SHIFT',dateKey:shiftDay},{kind:{in:['SHIFT','VISIT']},checkOutAt:null}]},orderBy:{checkInAt:'asc'}});
+    res.json({data:rows.filter(row=>row.dateKey===(row.kind==='SHIFT'?shiftDay:day)||['SHIFT','VISIT'].includes(row.kind)&&row.checklist?.state!=='FINISHED'&&!row.checkOutAt)});
+  }
   catch (error) { next(error); }
 });
 router.get('/report', authorize('ADMIN', 'SUPERVISOR', 'KEPALA_GUDANG'), async (req, res, next) => {
@@ -33,7 +38,12 @@ router.get('/report', authorize('ADMIN', 'SUPERVISOR', 'KEPALA_GUDANG'), async (
     res.json({ data: await prisma.staffActivity.findMany({ where, include: { user: { select: { name: true, role: true } } }, orderBy: { checkInAt: 'asc' } }) });
   } catch (error) { next(error); }
 });
-router.post('/', async (req, res, next) => {
+router.post('/', (req,res,next)=>{
+ const action=req.body.action;
+ if(action==='SHIFT_IN')return authorizeDomainAction('START_SHIFT')(req,res,next);
+ if(['VISIT_IN','OFF_PJP'].includes(action))return authorizeDomainAction('SPV_VISIT')(req,res,next);
+ next();
+}, async (req, res, next) => {
   try {
     const { body } = staffActionSchema.parse({ body: req.body });
     const data = body.action.startsWith('SHIFT_') ? await recordShift(req.user.id, body.action,body) : await recordSupervisorVisit(req.user, body);

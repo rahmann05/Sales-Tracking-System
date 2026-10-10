@@ -1,5 +1,5 @@
 const defaults={view:['ADMIN','SUPERVISOR','SALES'],assign:['ADMIN','SUPERVISOR'],complete:['ADMIN','SUPERVISOR','SALES'],review:['ADMIN','SUPERVISOR']};
-export const followUpAllowed=(person,action)=>Boolean(person&&!person.deletedAt&&(person.permissions?.[`can_${action}_follow_up`]??defaults[action]?.includes(person.role)));
+export const followUpAllowed=(person,action)=>Boolean(person&&!person.deletedAt&&defaults[action]?.includes(person.role)&&person.permissions?.[`can_${action}_follow_up`]!==false);
 export const followUpOwnerEligible=person=>Boolean(person?.role==='SALES'&&followUpAllowed(person,'view')&&followUpAllowed(person,'complete'));
 export function followUpReviewers(owner,people){
  return people.filter(p=>p.id!==owner?.id&&followUpAllowed(p,'view')&&followUpAllowed(p,'review')&&(p.role==='ADMIN'||p.role==='SUPERVISOR'&&p.id===owner?.supervisorId));

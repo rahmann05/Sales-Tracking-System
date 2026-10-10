@@ -4,12 +4,14 @@
  */
 
 import { Router } from 'express';
+import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import * as rolesController from './roles.controller.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.use((req,res,next)=>!['GET','HEAD','OPTIONS'].includes(req.method)?authorizeDomainAction('ROLES')(req,res,next):next());
 
 // List all permissions metadata (public to authenticated users)
 router.get('/permissions', rolesController.getAllPermissions);

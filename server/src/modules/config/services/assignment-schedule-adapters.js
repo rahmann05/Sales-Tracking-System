@@ -11,10 +11,12 @@ import {assignRouteReview} from '../../route-changes/services/route-review-assig
 import {attachRouteWorkflows} from '../../route-changes/services/route-workflow.service.js';
 import {routeChangeWorkflow} from '../../../../../shared/route-change-workflow.mjs';
 import {assertOrderOperation} from '../../orders/services/order-operation-permissions.js';
+import {assertDomainAction} from '../../../middlewares/domain-permission.middleware.js';
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export {ASSIGNMENT_KINDS};
 const rights={ROUTE_REVIEW:'can_assign_route_review',FOLLOW_UP:'can_assign_follow_up',RETURN:'can_monitor_delivery',ORDER_REVIEW:'can_approve_order',OUTLET_REVIEW:'can_assign_outlet_review',PREPARATION:'can_trip_assign_preparation',TEAM:'can_view_team'};
 export function assertScheduleActor(actor,kind){
+ if(kind==='TEAM')assertDomainAction(actor,'ASSIGN_TEAM');
  if(kind==='ORDER_REVIEW')assertOrderOperation(actor,'ASSIGN_REVIEW');
  if(!actor||actor.deletedAt||actor.role!=='ADMIN'||actor.permissions?.[rights[kind]]===false)throw new AppError('Admin aktif dengan izin proses diperlukan untuk menjadwalkan penugasan.',403);
 }

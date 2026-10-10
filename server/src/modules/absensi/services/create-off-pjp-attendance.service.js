@@ -1,4 +1,6 @@
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
+import {assertVisitReviewersAvailable} from './visit-review-permissions.js';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {validateVisitResult} from './visit-session.service.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
@@ -26,6 +28,8 @@ export const createOffPjpAttendance = async (userId, data) => {
   const fingerprint = createHash('sha256').update(JSON.stringify(canonical(content))).digest('hex');
   const requestKey = requestId ? `_OFF_PJP_REQUEST:${userId}:${requestId.toLowerCase()}` : null;
   const record = await prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`staff:${userId}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
     const sales = await tx.user.findUnique({ where: { id: userId }, select: { ...REPORT_USER_SELECT, deletedAt: true } });
     if (!sales || sales.deletedAt || sales.role !== 'SALES') throw new AppError('Akun sales aktif tidak ditemukan', 403);
@@ -38,6 +42,7 @@ export const createOffPjpAttendance = async (userId, data) => {
         return existing;
       }
     }
+    await freshDomainActor(tx,userId,'OFF_PJP');
     if(await getDynamicConfig('FEATURE_OFF_PJP_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Kunjungan luar PJP baru dijeda oleh Admin',409);
     if (!await getDynamicConfig('OFF_PJP_ENABLED', true)) throw new AppError('Kunjungan luar PJP dinonaktifkan admin', 403);
     if(await getDynamicConfig('OFF_PJP_REQUIRE_PHOTO',true)&&!photoUrl)throw new AppError('Foto luar PJP wajib diisi',422);
@@ -46,6 +51,7 @@ export const createOffPjpAttendance = async (userId, data) => {
     await validateVisitResult(data);
     const needsReview=await getDynamicConfig('OFF_PJP_REQUIRE_REVIEW',true);
     const salesResult = await resolveSalesResult(data);
+    await assertVisitReviewersAvailable(tx,userId,[...(needsReview?['OFF_PJP']:[]),...(salesResult.manualSalesStatus==='PENDING'?['MANUAL_SALES']:[])]);
     const record = await tx.offPjpAttendance.create({
     data: {
       ...captureReportAssignment(sales, 'OFF_PJP_SUBMISSION'),

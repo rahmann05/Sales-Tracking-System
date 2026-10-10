@@ -24,7 +24,7 @@ export const authenticate = async (req, res, next) => {
     req.policy=await effectivePolicy(req.user,Date.now(),{fresh:true});
     const availability=featureDecision(req.policy.values,req.originalUrl,req.method,req.body);
     // These services validate idempotent replays before rejecting new work.
-    const replayAware=req.method==='POST'&&['/api/v1/orders','/api/v1/absensi/off-pjp','/api/v1/customer-registrations'].includes(req.originalUrl.split('?')[0].replace(/\/$/,''));
+    const replayAware=req.method==='POST'&&['/api/v1/orders','/api/v1/absensi/off-pjp','/api/v1/customer-registrations','/api/v1/reports/archives'].includes(req.originalUrl.split('?')[0].replace(/\/$/,''));
     if(!availability.allowed&&!replayAware)throw new AppError('Fitur sedang dijeda atau dinonaktifkan oleh Admin. Histori dan penyelesaian pekerjaan terbuka tetap tersedia.',409);
     withPolicy(req.policy,next);
   } catch (error) {
@@ -56,13 +56,7 @@ export const authorizeWithPermission = (roles, permissionKey) => {
       return next();
     }
     
-    // If user has the specific permission in JWT, allow
-    const permissions = req.user.permissions || {};
-    if (permissions[permissionKey]) {
-      return next();
-    }
-    
-    return next(new AppError(`Anda tidak memiliki izin untuk mengakses resource ini (Memerlukan role ${roles.join('/')} atau izin ${permissionKey})`, 403));
+    return next(new AppError(`Anda tidak memiliki izin untuk mengakses resource ini (Memerlukan role ${roles.join('/')} dan izin ${permissionKey})`, 403));
   };
 };
 
@@ -82,11 +76,6 @@ export const requirePermission = (permissionKey) => {
         return next(new AppError('User tidak ditemukan', 404));
       }
       
-      // ADMIN roles bypass all permission checks
-      if (userRecord.role === 'ADMIN') {
-        return next();
-      }
-
       const identity = await resolveIdentity(userRecord);
       const permissions = identity.permissions;
       if (!permissions[permissionKey]) {

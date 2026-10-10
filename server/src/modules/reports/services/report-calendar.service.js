@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {assertDomainAction} from '../../../middlewares/domain-permission.middleware.js';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { calendarKey, validMonth, validCalendarDate } from '../../../../../shared/report-calendar.mjs';
@@ -13,6 +14,7 @@ export async function getReportCalendar({month},actor){
   return {calendar:saved?.value||null,history};
 }
 export async function saveReportCalendar(raw,actor){
+  assertDomainAction(actor,'REPORT_CALENDAR');
   adminOnly(actor);const parsed=schema.safeParse(raw);
   if(!parsed.success)throw new AppError(parsed.error.issues.map(row=>row.message).join('; '),400);
   const data=parsed.data;assertMonth(data.month);

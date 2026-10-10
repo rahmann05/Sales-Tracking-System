@@ -32,7 +32,7 @@ export const create = async (req, res, next) => {
 
 export const update = async (req, res, next) => {
   try {
-    const user = await userService.updateUser(req.params.id, req.body);
+    const user = await userService.updateUser(req.params.id, req.body,req.user);
     return successResponse(res, 200, user, 'User berhasil diperbarui');
   } catch (error) {
     next(error);
@@ -41,7 +41,7 @@ export const update = async (req, res, next) => {
 
 export const remove = async (req, res, next) => {
   try {
-    await userService.deleteUser(req.params.id);
+    await userService.deleteUser(req.params.id,req.user);
     return successResponse(res, 200, null, 'User berhasil dihapus');
   } catch (error) {
     next(error);
@@ -50,7 +50,7 @@ export const remove = async (req, res, next) => {
 
 export const updatePassword = async (req, res, next) => {
   try {
-    const user = await userService.updatePassword(req.params.id, req.body.password);
+    const user = await userService.updatePassword(req.params.id, req.body.password,req.user);
     return successResponse(res, 200, user, 'Password berhasil diperbarui');
   } catch (error) {
     next(error);
@@ -59,7 +59,7 @@ export const updatePassword = async (req, res, next) => {
 
 export const updatePermissions = async (req, res, next) => {
   try {
-    const user = await userService.updatePermissions(req.params.id, req.body.permissions);
+    const user = await userService.updatePermissions(req.params.id, req.body.permissions,req.user);
     return successResponse(res, 200, user, 'Izin akses berhasil diperbarui');
   } catch (error) {
     next(error);

@@ -11,6 +11,7 @@ import { LuLayers, LuTrash2 } from 'react-icons/lu';
 import { FiEdit } from 'react-icons/fi';
 import { ALL_PERMISSIONS } from '../../../constants/permissions';
 export function RoleTemplateGrid({
+  canManage=true,
   ROLE_ICONS,
   handleDeleteRole,
   handleOpenEditModal,
@@ -74,12 +75,12 @@ export function RoleTemplateGrid({
 
                 {/* Footer Buttons */}
                 <div className="flex items-center justify-between gap-2 pt-3 border-t border-border-glass">
-                  <button type="button" onClick={() => handleOpenEditModal(r)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-variant border border-border-glass text-xs font-bold text-on-surface transition-colors cursor-pointer">
+                  <button type="button" disabled={!canManage} onClick={() => handleOpenEditModal(r)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-variant border border-border-glass text-xs font-bold text-on-surface transition-colors cursor-pointer">
                     <FiEdit className="text-xs" />
                     <span>Ubah Template</span>
                   </button>
 
-                  {!r.isSystem && <button type="button" onClick={() => handleDeleteRole(r)} className="p-1.5 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer" title="Hapus Role Kustom">
+                  {!r.isSystem && <button type="button" disabled={!canManage} onClick={() => handleDeleteRole(r)} className="p-1.5 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer" title="Hapus Role Kustom">
                       <LuTrash2 className="text-sm" />
                     </button>}
                 </div>

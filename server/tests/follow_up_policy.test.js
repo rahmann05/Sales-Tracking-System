@@ -5,6 +5,8 @@ test('Follow-up explicit denial applies to Admin and legacy templates keep role 
  assert.equal(followUpAllowed({role:'ADMIN',permissions:{can_assign_follow_up:false}},'assign'),false);
  assert.equal(followUpAllowed({role:'SUPERVISOR'},'review'),true);
  assert.equal(followUpOwnerEligible({role:'SALES',deletedAt:new Date()}),false);
+ for(const role of ['KEPALA_GUDANG','SUPIR'])for(const action of ['view','assign','complete','review'])assert.equal(followUpAllowed({role,permissions:{[`can_${action}_follow_up`]:true}},action),false);
+ assert.equal(followUpAllowed({role:'SALES',permissions:{can_review_follow_up:true}},'review'),false);
 });
 test('Follow-up reviewer must be active and in the owner team; completed tasks release accounts',()=>{
  const task={id:'f',followUp:{status:'SUBMITTED',ownerId:'sales'},policySnapshot:{values:{FOLLOW_UP_REQUIRE_REVIEW:true}}};

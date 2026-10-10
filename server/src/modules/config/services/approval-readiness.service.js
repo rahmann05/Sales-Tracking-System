@@ -1,7 +1,7 @@
 import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
 import {BUILT_IN_ROLES} from '../../roles/roles.constants.js';
 import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
-import {orderReviewerGaps,registrationReviewerGaps} from '../../../../../shared/approval-readiness.mjs';
+import {orderReviewerGaps,orderReviewAssignmentGaps,registrationReviewerGaps,visitReviewGaps} from '../../../../../shared/approval-readiness.mjs';
 import {warehouseAssignmentGaps} from '../../../../../shared/warehouse-assignment-readiness.mjs';
 import {followUpAssignmentGaps} from '../../../../../shared/follow-up-policy.mjs';
 import {shiftCorrectionGaps} from '../../../../../shared/shift-policy.mjs';
@@ -11,6 +11,7 @@ import {AppError} from '../../../utils/errors.js';
 import {assertSchedulePeopleRemain} from './assignment-schedule-protection.js';
 import {routeChangeReviewGaps} from '../../../../../shared/route-change-workflow.mjs';
 import {attachRouteWorkflows} from '../../route-changes/services/route-workflow.service.js';
+import {hasAdminRecovery,canDomainAction} from '../../../../../shared/domain-permissions.mjs';
 export const approvalReadinessDomains=values=>({
  order:Object.keys(values).some(k=>k.startsWith('ORDER_APPROVAL_')||['ORDER_PRICE_OVERRIDE_APPROVAL_MODE','SALES_ALLOW_PRICE_OVERRIDE','FEATURE_ORDERS_MODE'].includes(k)),
  registration:Object.keys(values).some(k=>['REGISTRATION_APPROVAL_MODE','REGISTRATION_ACTIVATOR','FEATURE_REGISTRATION_MODE'].includes(k)),
@@ -42,6 +43,34 @@ export async function publicationReadiness(db,{scope='GLOBAL',at=Date.now(),over
 async function openWorkGaps(db,people){
  const [orders,registrations,trips]=await Promise.all([db.order.findMany({where:{deletedAt:null,status:'PENDING_APPROVAL'},select:{id:true,code:true,createdBy:true,history:true,policySnapshot:true}}),db.customerRegistration.findMany({where:{registrationStatus:{in:['SUBMITTED','SPV_APPROVED']}},select:{id:true,name:true,salesmanId:true,registrationStatus:true,policySnapshot:true}}),db.deliveryRoute.findMany({where:{cancelledAt:null,OR:[{closedAt:null},{stops:{some:{rejectedCartons:{gt:0},returnReceivedAt:null}}}]},select:{id:true,code:true,driverId:true,departedAt:true,returnedAt:true,closedAt:true,status:true,preparation:true,policySnapshot:true,stops:{select:{id:true,rejectedCartons:true,returnInspection:true}}}})]);
  const issues=[];
+ if(!people.some(hasAdminRecovery))issues.push({key:'ADMIN:RECOVERY',message:'Minimal satu Admin aktif harus mempunyai izin pengguna, role dan pengaturan sistem untuk pemulihan akses.'});
+ if(db.deliveryIssue){
+  for(const issue of await db.deliveryIssue.findMany({where:{status:'OPEN'},select:{id:true,ownerId:true}})){
+   const owner=people.find(p=>p.id===issue.ownerId);
+   if(!canDomainAction(owner,'RESOLVE_DELIVERY_ISSUE')||owner.permissions?.[owner.role==='SUPIR'?'can_access_driver_map':'can_monitor_delivery']===false)issues.push({key:`ISSUE:${issue.id}:OWNER`,message:'PIC kendala pengiriman terbuka harus tetap aktif dan berizin menyelesaikan tugasnya.'});
+  }
+ }
+ if(db.operationalException){
+  const results=await db.operationalException.findMany({where:{kind:'MANUAL_RESULT',status:'OPEN'},select:{id:true,userId:true,entityId:true}});
+  const actionable=results.length?new Set((await db.pjpStop.findMany({where:{id:{in:results.map(row=>row.entityId)},orders:{none:{deletedAt:null}},visitSession:{path:['result','manualSalesStatus'],equals:'PENDING'}},select:{id:true}})).map(row=>row.id)):new Set();
+  for(const record of results.filter(row=>actionable.has(row.entityId)))for(const gap of visitReviewGaps(record,'MANUAL_SALES',people))issues.push({key:`VISIT:RESULT:${record.id}:${gap}`,message:'Hasil manual kegiatan tanpa check-out wajib memerlukan pemeriksa aktif berizin.'});
+  const exceptions=await db.operationalException.findMany({where:{kind:{not:'MANUAL_RESULT'},status:'OPEN'},select:{id:true,userId:true}});
+  for(const record of exceptions){const applicant=people.find(p=>p.id===record.userId);if(!people.some(p=>p.id!==record.userId&&canDomainAction(p,'EXCEPTION_REVIEW')&&(p.role==='ADMIN'||applicant?.supervisorId===p.id)))issues.push({key:`EXCEPTION:${record.id}:REVIEWER`,message:'Pengecualian presensi terbuka memerlukan Admin atau Supervisor tim aktif berizin pemeriksaan.'});}
+ }
+ if(db.offPjpAttendance&&db.attendance){
+  const [off,manual]=await Promise.all([
+   db.offPjpAttendance.findMany({where:{OR:[{status:'PENDING'},{status:'APPROVED',manualSalesMode:'REQUIRE_APPROVAL',manualSalesStatus:'PENDING'}]},select:{id:true,userId:true,status:true,manualSalesMode:true,manualSalesStatus:true}}),
+   db.attendance.findMany({where:{type:'OUT',manualSalesMode:'REQUIRE_APPROVAL',manualSalesStatus:'PENDING',pjpStop:{orders:{none:{deletedAt:null}}}},select:{id:true,userId:true}}),
+  ]);
+  for(const record of off){
+   const actions=[...(record.status==='PENDING'?['OFF_PJP']:[]),...(record.manualSalesMode==='REQUIRE_APPROVAL'&&record.manualSalesStatus==='PENDING'?['MANUAL_SALES']:[])];
+   for(const action of actions)for(const gap of visitReviewGaps(record,action,people))issues.push({key:`VISIT:OFF_PJP:${record.id}:${gap}`,message:`Kunjungan luar PJP memerlukan pemeriksa aktif berizin untuk ${action==='OFF_PJP'?'validasi kunjungan':'hasil manual'}.`});
+  }
+  for(const record of manual)for(const gap of visitReviewGaps(record,'MANUAL_SALES',people))issues.push({key:`VISIT:PJP:${record.id}:${gap}`,message:'Hasil manual PJP memerlukan pemeriksa aktif berizin.'});
+ }
+ const assignments=orders.length?await db.systemConfig.findMany({where:{key:{in:orders.map(order=>`_ORDER_REVIEW:${order.id}`)}},select:{key:true,value:true}}):[];
+ const assigned=new Map(assignments.map(row=>[row.key,row.value]));
+ for(const order of orders)for(const gap of orderReviewAssignmentGaps(order,assigned.get(`_ORDER_REVIEW:${order.id}`),people))issues.push({key:`ORDER:${order.id}:${gap}`,message:`Order ${order.code||order.id} masih ditugaskan kepada pemeriksa ini. Alihkan atau lepas penugasan sebelum mengubah akses/tim.`});
  if(db.routeChangeRequest){const requests=await attachRouteWorkflows(db,await db.routeChangeRequest.findMany({where:{status:'PENDING_APPROVAL'}}));for(const request of requests)for(const role of routeChangeReviewGaps(request,people))issues.push({key:`ROUTE_CHANGE:${request.id}:${role}`,message:`Laporan toko tutup memerlukan pemeriksa ${role} aktif sesuai tahap tersimpan.`});}
  for(const [kind,rows,owner,check] of [['ORDER',orders,'createdBy',orderReviewerGaps],['REGISTRATION',registrations,'salesmanId',registrationReviewerGaps]])for(const record of rows){
   const applicant=people.find(p=>p.id===record[owner]),normalized={...record,policySnapshot:{...record.policySnapshot,values:{...CONFIG_DEFAULTS,...record.policySnapshot?.values}}};

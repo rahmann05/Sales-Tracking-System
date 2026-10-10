@@ -7,9 +7,10 @@ import { USER_SELECT, enrichUserResponse } from './users.helpers.js';
 import {protectAdminRecovery} from './admin-recovery.service.js';
 import {AppError} from '../../../utils/errors.js';
 import {assertReviewersRemain} from '../../config/services/approval-readiness.service.js';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 
 
-export const updateUser = async (id, raw) => {
+export const updateUser = async (id, raw,actor=null) => {
   const current = await prisma.user.findUnique({where:{id},select:{role:true,clusterId:true}});
   const data = await userAssignment(raw,current);
   if (data.password) {
@@ -20,6 +21,7 @@ export const updateUser = async (id, raw) => {
   const updated = await prisma.$transaction(async db=>{
    const fresh=await protectAdminRecovery(db,id,data.role??current?.role);
    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+   if(actor?.id)await freshDomainActor(db,actor.id,'USERS');
    if(data.role!==undefined)await roleDefinition(data.roleCode||data.role);
    // Re-read under the same lock as account deletion and demotion.
    if(data.role===undefined&&fresh.role!==current?.role)throw new AppError('Role pengguna berubah. Muat ulang sebelum menyimpan.',409);

@@ -5,6 +5,7 @@ import {orderApprovalDecision} from '../../../../../shared/approval-workflow.mjs
 import {POLICY_OPTION_LABELS} from '../../../../../shared/operational-policy.mjs';
 import {orderTerms} from '../../../../../shared/order-terms.mjs';
 import { ProductForm } from '../../../shared/components/common/ProductForm';
+import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
 import React, { useState } from 'react';
 import {ordersApi} from '../../../services/api';
 import { LuSend } from 'react-icons/lu';
@@ -18,6 +19,7 @@ import { BusinessCodeInput } from '../../../shared/components/common/BusinessCod
  * 1 File per Component
  */
 export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
+  const canCreateProduct=useDomainPermission('CREATE_PRODUCT');
   const featurePolicy=useFeaturePolicy('ORDERS');
   const { products = [], setProducts, settings } = useApp(); // Produk dari PostgreSQL via context
   const {user}=useApp();
@@ -106,7 +108,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
     <fieldset disabled={saving||!!pending}>
       <div className="sales-order-builder">
         <section className="sales-catalog"><h3>Pilih produk</h3><label>Cari produk<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nama atau kode produk…"/></label>
-          {settings.SALES_ALLOW_PRODUCT_CREATE && (addingProduct ? <ProductForm onCancel={() => setAddingProduct(false)} onSaved={product => { setProducts(prev => [...prev, product]); setAddingProduct(false); }} /> : <button type="button" className="app-button" onClick={() => setAddingProduct(true)}>Tambah produk</button>)}
+          {canCreateProduct&&settings.SALES_ALLOW_PRODUCT_CREATE && (addingProduct ? <ProductForm onCancel={() => setAddingProduct(false)} onSaved={product => { setProducts(prev => [...prev, product]); setAddingProduct(false); }} /> : <button type="button" className="app-button" onClick={() => setAddingProduct(true)}>Tambah produk</button>)}
           <div className="sales-product-list">{visibleProducts.map(prd=>{const existing=orderItems.find(i=>i.product.id===prd.id);return <div key={prd.id}><ProductOrderItem product={existing?.product||prd} qty={existing?.qty||0} onQtyChange={updateProductQty}/>{settings.SALES_ALLOW_PRICE_OVERRIDE&&existing&&<label>Harga per unit (Rp)<input aria-label={`Harga ${prd.name}`} type="number" min="1" step="1" value={existing.product.price} onChange={e=>setOrderItems(prev=>prev.map(i=>i.product.id===prd.id?{...i,product:{...i.product,price:Number(e.target.value)}}:i))}/></label>}</div>;})}</div>
           {!visibleProducts.length&&<p className="sales-note">{products.length?'Tidak ada produk sesuai pencarian.':'Katalog produk belum tersedia. Hubungi Admin.'}</p>}
         </section>

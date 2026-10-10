@@ -1,9 +1,11 @@
+import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { productsApi } from '../../../services/api';
 import { ProductForm } from '../../../shared/components/common/ProductForm';
 
 export function AttendanceSalesInput({ value, onChange }) {
+  const canCreateProduct=useDomainPermission('CREATE_PRODUCT');
   const { settings, products, setProducts } = useApp();
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState('');
@@ -20,6 +22,6 @@ export function AttendanceSalesInput({ value, onChange }) {
     <div className="max-h-44 overflow-auto space-y-1">{products.filter(p => `${p.name} ${p.sku}`.toLowerCase().includes(search.toLowerCase())).map(p => <label key={p.id} className="flex items-center gap-3 min-h-11 text-sm cursor-pointer"><input type="checkbox" checked={value.productIds.includes(p.id)} onChange={e => onChange({ ...value, productIds: e.target.checked ? [...value.productIds, p.id] : value.productIds.filter(id => id !== p.id) })} /><span>{p.name} <span className="text-on-surface-variant">({p.sku})</span></span></label>)}</div>
     <p className="text-sm">{value.productIds.length} jenis SKU dipilih. SKU dihitung sebagai jenis produk, bukan jumlah unit.</p>
     {!products.length && <p className="text-sm text-on-surface-variant">Katalog kosong. Hubungi admin untuk menambahkan produk.</p>}
-    {settings.SALES_ALLOW_PRODUCT_CREATE && (adding ? <ProductForm onCancel={() => setAdding(false)} onSaved={p => { setProducts(prev => [...prev, p]); onChange({ ...value, productIds: [...value.productIds, p.id] }); setAdding(false); }} /> : <button type="button" className="btn btn-secondary min-h-11" onClick={() => setAdding(true)}>Tambah produk baru</button>)}
+    {canCreateProduct&&settings.SALES_ALLOW_PRODUCT_CREATE && (adding ? <ProductForm onCancel={() => setAdding(false)} onSaved={p => { setProducts(prev => [...prev, p]); onChange({ ...value, productIds: [...value.productIds, p.id] }); setAdding(false); }} /> : <button type="button" className="btn btn-secondary min-h-11" onClick={() => setAdding(true)}>Tambah produk baru</button>)}
   </section>;
 }

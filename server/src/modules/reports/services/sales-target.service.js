@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {assertDomainAction} from '../../../middlewares/domain-permission.middleware.js';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { targetPeriodError, targetKey } from '../../../../../shared/sales-targets.mjs';
@@ -25,6 +26,7 @@ export async function getSalesTarget(input, actor) {
   return {target:saved?.value || null,history};
 }
 export async function saveSalesTarget(input, actor) {
+  assertDomainAction(actor,'REPORT_TARGET');
   requireAdmin(actor);
   const data = parse(definition,input), key = targetKey(data.kind,data.period,data.userId);
   return prisma.$transaction(async tx => {

@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {VEHICLE_SERVICE_TYPES} from '../../../../../shared/vehicle-service-policy.mjs';
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
@@ -7,6 +8,7 @@ export const maintenancePolicySchema=z.object({updatedAt:z.string().datetime(),r
 export async function setMaintenancePolicy(id,raw,actor){
  const data=maintenancePolicySchema.parse(raw);
  return prisma.$transaction(async tx=>{
+  actor=await freshDomainActor(tx,actor.id,'VEHICLE_POLICY');
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`vehicle:${id}`}))`;
   const vehicle=await tx.vehicle.findUnique({where:{id}});
   if(!vehicle||vehicle.deletedAt)throw new AppError('Kendaraan tidak ditemukan',404);

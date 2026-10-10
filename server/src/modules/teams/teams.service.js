@@ -6,6 +6,7 @@ import { AppError } from '../../utils/errors.js';
 import { getDynamicConfig } from '../config/config.service.js';
 import { invalidateClusterCache } from '../clusters/services/clusters.helpers.js';
 import {inTransaction} from '../../utils/in-transaction.js';
+import {freshDomainActor} from '../../middlewares/domain-permission.middleware.js';
 const selection = {id:true,name:true,email:true,supervisorId:true,updatedAt:true,cluster:{select:{id:true,name:true,deletedAt:true}},supervisor:{select:{id:true,name:true}},assignedClusters:{where:{deletedAt:null},select:{id:true,name:true}}};
 export async function listTeams(actor) {
   const canClaim = await getDynamicConfig('TEAM_SPV_CAN_CLAIM_UNASSIGNED',true);
@@ -21,6 +22,8 @@ export async function assignTeam(salesId, raw, actor,{db=prisma,validateOnly=fal
   const canClaim = await getDynamicConfig('TEAM_SPV_CAN_CLAIM_UNASSIGNED',true);
   const result = await inTransaction(db,async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+    actor=await freshDomainActor(tx,actor.id,'ASSIGN_TEAM');
+    if(actor.permissions?.can_view_team===false)throw new AppError('Akses tim diperlukan untuk mengalihkan personel',403);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${salesId}`}))`;
     const sales = await tx.user.findFirst({where:{id:salesId,role:'SALES',deletedAt:null},select:{id:true,supervisorId:true,updatedAt:true}});

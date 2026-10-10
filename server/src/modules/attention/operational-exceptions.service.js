@@ -5,6 +5,11 @@ import {flagVisit,visitSettings} from '../absensi/services/visit-session.service
 import {createNotification} from '../notifications/services/create-notification.service.js';
 import {flagShiftRange} from '../staff-attendance/shift-range.service.js';
 import {withUserTransaction} from '../../utils/user-transaction.js';
+import {canReviewVisit} from '../../../../shared/visit-review-permissions.mjs';
+import {assertVisitReview} from '../absensi/services/visit-review-permissions.js';
+import {reviewPeople,reviewIdentity,readReviewDefinitions} from '../config/services/approval-readiness.service.js';
+import {canDomainAction} from '../../../../shared/domain-permissions.mjs';
+import {assertDomainAction} from '../../middlewares/domain-permission.middleware.js';
 export async function scanMissingOut(db=prisma){
  const stops=await db.pjpStop.findMany({where:{status:'PENDING',attendances:{some:{type:'IN'},none:{type:'OUT'}}},include:{attendances:true,outlet:true,pjp:true}});
  for(const stop of stops){const p=await visitSettings(stop);const entered=stop.attendances.find(a=>a.type==='IN');if(p.requireOut&&Date.now()-+new Date(entered.timestamp)>(p.snapshot.values.SALES_MISSING_OUT_MINUTES||720)*60000)await flagVisit(db,stop,stop.pjp.userId,'TIME_LIMIT');}
@@ -17,30 +22,45 @@ export async function scanMissingOut(db=prisma){
 export async function operationalExceptionRows(actor){
  if(!['ADMIN','SUPERVISOR'].includes(actor.role))return [];
  const records=await prisma.operationalException.findMany({where:{status:'OPEN'}});
+ const definitions=await readReviewDefinitions(prisma);
  const rows=[];
  for(const record of records){
   try{await assertSalesAccess(actor,record.userId);}catch{continue;}
-  const person=await prisma.user.findUnique({where:{id:record.userId},select:{name:true,supervisorId:true,supervisor:{select:{name:true}}}});
-  rows.push({key:`operational:${record.id}`,category:'EXCEPTION',stage:'EXCEPTION',status:'PENDING',needsReview:true,title:`${record.details?.outletName||'Kegiatan'} · ${person?.name||'Staf'}`,since:record.createdAt,ownerId:person?.supervisorId,ownerName:person?.supervisor?.name,ownerSource:'TEAM_SUPERVISOR',responsibleRole:'SPV / ADMIN',nextAction:record.kind==='MANUAL_RESULT'?'Periksa hasil manual kegiatan':'Periksa bukti presensi yang belum lengkap',target:'EXCEPTION',exception:{id:record.id,kind:record.kind,applicantId:record.userId,applicantName:person?.name,reason:record.details?.source,decision:record.decision,...record.details},canDecide:record.userId!==actor.id});
+  const person=await prisma.user.findUnique({where:{id:record.userId},select:{name:true,supervisorId:true,supervisor:{select:{id:true,name:true,role:true,roleCode:true,permissions:true,deletedAt:true}}}});
+  const supervisor=person?.supervisor&&reviewIdentity(person.supervisor,definitions);
+  const owner=supervisor&&!supervisor.deletedAt&&(record.kind==='MANUAL_RESULT'?canReviewVisit(supervisor,'MANUAL_SALES',record.userId):canDomainAction(supervisor,'EXCEPTION_REVIEW'))?supervisor:null;
+  rows.push({key:`operational:${record.id}`,category:'EXCEPTION',stage:'EXCEPTION',status:'PENDING',needsReview:true,title:`${record.details?.outletName||'Kegiatan'} · ${person?.name||'Staf'}`,since:record.createdAt,ownerId:owner?.id,ownerName:owner?.name,ownerSource:owner?'TEAM_SUPERVISOR':null,responsibleRole:'SPV / ADMIN',nextAction:record.kind==='MANUAL_RESULT'?'Periksa hasil manual kegiatan':'Periksa bukti presensi yang belum lengkap',target:'EXCEPTION',exception:{id:record.id,kind:record.kind,applicantId:record.userId,applicantName:person?.name,reason:record.details?.source,decision:record.decision,...record.details},canDecide:record.userId!==actor.id&&(record.kind==='MANUAL_RESULT'?canReviewVisit(actor,'MANUAL_SALES',record.userId):canDomainAction(actor,'EXCEPTION_REVIEW'))});
  }
  return rows;
 }
 export async function resolveOperationalException(id,body,actor){
  if(!['ADMIN','SUPERVISOR'].includes(actor.role))throw new AppError('Khusus peninjau berwenang',403);
- if(!['ACKNOWLEDGED','REQUIRES_CORRECTION','APPROVED','REJECTED'].includes(body.decision)||typeof body.note!=='string'||body.note.trim().length<5)throw new AppError('Keputusan dan catatan minimal 5 karakter wajib diisi',400);
+ if(!['ACKNOWLEDGED','REQUIRES_CORRECTION','APPROVED','REJECTED'].includes(body.decision)||typeof body.note!=='string'||body.note.trim().length<5||body.note.trim().length>2000)throw new AppError('Keputusan dan catatan 5–2000 karakter wajib diisi',400);
  return prisma.$transaction(async tx=>{
+  const subject=await tx.operationalException.findUnique({where:{id},select:{userId:true}});
+  if(!subject)throw new AppError('Pengecualian tidak ditemukan',404);
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`staff:${subject.userId}`}))`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`exception:${id}`}))`;
+  const reviewer=(await reviewPeople(tx)).find(person=>person.id===actor.id);
+  if(!reviewer||reviewer.deletedAt||!['ADMIN','SUPERVISOR'].includes(reviewer.role))throw new AppError('Khusus peninjau aktif berwenang',403);
   const record=await tx.operationalException.findUnique({where:{id}});
   if(!record)throw new AppError('Pengecualian tidak ditemukan',404);
   if(record.userId===actor.id)throw new AppError('Tidak dapat meninjau bukti sendiri',403);
-  await assertSalesAccess(actor,record.userId,tx);
+  await assertSalesAccess(reviewer,record.userId,tx);
   if(record.status!=='OPEN')throw new AppError('Pengecualian sudah diproses',409);
   if(record.kind==='MANUAL_RESULT'){
+   assertVisitReview(reviewer,'MANUAL_SALES',record.userId);
    if(!['APPROVED','REJECTED'].includes(body.decision))throw new AppError('Pilih persetujuan atau penolakan hasil manual',400);
    const stop=await tx.pjpStop.findUnique({where:{id:record.entityId},include:{orders:true}});
+   if(!stop)throw new AppError('Kegiatan tidak ditemukan',404);
    if(stop.orders.some(o=>!o.deletedAt))throw new AppError('Sudah terdapat order terperinci; gunakan persetujuan order',409);
+   if(stop.visitSession?.result?.manualSalesStatus!=='PENDING')throw new AppError('Hasil manual sudah diproses atau tidak memerlukan persetujuan',409);
    await tx.pjpStop.update({where:{id:stop.id},data:{visitSession:{...stop.visitSession,result:{...stop.visitSession.result,manualSalesStatus:body.decision,isManualSalesApproved:body.decision==='APPROVED',manualSalesReviewedBy:actor.id,manualSalesReviewNote:body.note.trim()}}}});
-  }else if(['APPROVED','REJECTED'].includes(body.decision))throw new AppError('Pilih akui pengecualian atau perlu koreksi. Keputusan tidak membuat bukti OUT.',400);
+  }else{
+   assertDomainAction(reviewer,'EXCEPTION_REVIEW');
+   if(['APPROVED','REJECTED'].includes(body.decision))throw new AppError('Pilih akui pengecualian atau perlu koreksi. Keputusan tidak membuat bukti OUT.',400);
+  }
   const decision={value:body.decision,note:body.note.trim(),actorId:actor.id,at:new Date().toISOString()};
   const result=await tx.operationalException.update({where:{id},data:{status:body.decision==='REQUIRES_CORRECTION'?'OPEN':body.decision,decision:{...decision,history:[...(record.decision?.history||[]),decision]}}});
   if(body.decision==='REQUIRES_CORRECTION')await createNotification(record.userId,'EXCEPTION_CORRECTION_REQUESTED','Penjelasan presensi diperlukan',body.note.trim(),{exceptionId:id},tx);

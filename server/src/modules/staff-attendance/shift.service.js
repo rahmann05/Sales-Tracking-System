@@ -1,4 +1,5 @@
 import {assertEvidenceImages} from '../../utils/evidence-images.js';
+import {freshDomainActor} from '../../middlewares/domain-permission.middleware.js';
 import {capturePolicySnapshot,processValue} from '../config/services/process-policy.service.js';
 import {flagVisit} from '../absensi/services/visit-session.service.js';
 import {withUserTransaction} from '../../utils/user-transaction.js';
@@ -28,6 +29,7 @@ async function perform(db,userId, action,data) {
   const unfinished={checkOutAt:null};
   const existing = action==='SHIFT_OUT'?(await db.staffActivity.findMany({where:{userId,kind:'SHIFT',...unfinished},orderBy:{checkInAt:'desc'}})).find(row=>row.checklist?.state!=='FINISHED'):await db.staffActivity.findUnique({ where });
   if (action === 'SHIFT_IN') {
+    await freshDomainActor(db,userId,'START_SHIFT');
     const snapshot=await capturePolicySnapshot(),optional=snapshot.values.SHIFT_ATTENDANCE_MODE==='OPTIONAL';
     const evidence=await shiftEvidence(action,dateKey,snapshot.values,data);
     const open=(await db.staffActivity.findMany({where:{userId,kind:'SHIFT',...unfinished}})).filter(row=>row.checklist?.state!=='FINISHED');

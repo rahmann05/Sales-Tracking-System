@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, authorizeWithPermission } from "../../middlewares/auth.middleware.js";
+import { authenticate, authorize,authorizeWithPermission } from "../../middlewares/auth.middleware.js";
 import { validate } from '../../middlewares/validate.middleware.js';
 import * as controller from './customer-registrations.controller.js';
 import * as schema from './customer-registrations.schema.js';
@@ -10,6 +10,7 @@ import {reviseRegistration} from './services/revise-registration.service.js';
 const router = express.Router();
 
 router.use(authenticate);
+router.use(authorize(ROLES.SALES,ROLES.SUPERVISOR,ROLES.ADMIN));
 
 // 1. Submit new registration (Sales, SPV, Admin)
 router.post(

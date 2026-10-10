@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import * as vehicleController from './vehicles.controller.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import {z} from 'zod';
@@ -9,6 +10,11 @@ import {setMaintenancePolicy} from './services/maintenance-policy.service.js';
 const router = Router();
 
 router.use(authenticate);
+router.use((req,res,next)=>{
+ if(['GET','HEAD','OPTIONS'].includes(req.method))return next();
+ const action=req.path.endsWith('/service-policy')?'VEHICLE_POLICY':req.path.endsWith('/condition')?'VEHICLE_CONDITION':req.path.endsWith('/maintenance')?'VEHICLE_MAINTENANCE':'MANAGE_VEHICLE';
+ return authorizeDomainAction(action)(req,res,next);
+});
 router.patch('/:id/service-policy',authorize('ADMIN'),async(req,res,next)=>{
  try{res.json({status:'success',data:await setMaintenancePolicy(req.params.id,req.body,req.user)});}catch(error){next(error);}
 });

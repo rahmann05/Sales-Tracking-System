@@ -1,5 +1,7 @@
 import {TRIP_PERMISSION_LABELS,tripPermission,tripPermissionDefaults} from '../../../shared/trip-permissions.mjs';
 import {ORDER_OPERATION_PERMISSIONS} from '../../../shared/order-operation-permissions.mjs';
+import {VISIT_REVIEW_PERMISSIONS} from '../../../shared/visit-review-permissions.mjs';
+import {DOMAIN_PERMISSIONS,domainPermissionDefaults} from '../../../shared/domain-permissions.mjs';
 import { PERMISSION_CATEGORIES } from "./permissionCategories.js";
 /**
  * permissions.js
@@ -12,6 +14,8 @@ import { PERMISSION_CATEGORIES } from "./permissionCategories.js";
 import { LuLayoutDashboard, LuNavigation, LuPhoneCall, LuMapPin, LuFileCheck, LuUserPlus, LuUsers, LuPackage, LuTruck, LuMap, LuStore, LuSettings, LuShieldCheck, LuDownload, LuLayers } from 'react-icons/lu';
 import { FiBarChart2 } from 'react-icons/fi';
 export const ALL_PERMISSIONS = [
+...Object.values(DOMAIN_PERMISSIONS).map(p=>({key:p.key,label:p.label,desc:p.desc,categoryId:p.categoryId,icon:LuShieldCheck})),
+...Object.values(VISIT_REVIEW_PERMISSIONS).map(p=>({...p,categoryId:'transaction',icon:LuFileCheck})),
 ...Object.values(ORDER_OPERATION_PERMISSIONS).map(p=>({...p,categoryId:'transaction',icon:LuFileCheck})),
 {key:'can_review_route_change',label:'Putuskan toko tutup / reroute',desc:'Mengikuti tahap, penugasan kasus dan larangan memeriksa usulan sendiri.',categoryId:'rjp',icon:LuNavigation},
 {key:'can_assign_route_review',label:'Tugaskan pemeriksa rute',desc:'Khusus Admin; delegasi per kasus tanpa menambah hak akses umum.',categoryId:'rjp',icon:LuNavigation},
@@ -207,7 +211,7 @@ export const BUILT_IN_ROLE_TEMPLATES = {
   }, {}),
   SUPERVISOR: {
     ...getEmptyPermissions(),
-    can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,can_review_route_change:true,
+    can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,can_review_route_change:true,can_review_off_pjp:true,can_review_manual_sales:true,
     can_view_dashboard: true,
     can_view_live_tracking: true,
     can_view_daily_call: true,
@@ -249,5 +253,5 @@ export const BUILT_IN_ROLE_TEMPLATES = {
     can_access_driver_map: true
   }
 };
-for(const [role,permissions] of Object.entries(BUILT_IN_ROLE_TEMPLATES))Object.assign(permissions,tripPermissionDefaults(role));
+for(const [role,permissions] of Object.entries(BUILT_IN_ROLE_TEMPLATES))Object.assign(permissions,tripPermissionDefaults(role),domainPermissionDefaults(role));
 export { PERMISSION_CATEGORIES };

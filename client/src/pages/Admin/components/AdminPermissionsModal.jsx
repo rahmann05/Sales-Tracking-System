@@ -12,12 +12,14 @@ import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { notifySuccess, notifyError } from '../../../services/notificationService';
 import { PermissionsCustomizer } from './PermissionsCustomizer';
 import { BUILT_IN_ROLE_TEMPLATES, getEmptyPermissions } from '../../../constants/permissions';
+import {effectiveUserPermissions} from '../../../utils/userPermissions';
 
 export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
   const [permissions, setPermissions] = useState({});
   const [availableRoles, setAvailableRoles] = useState([]);
   const [templateToApply, setTemplateToApply] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rolesLoaded,setRolesLoaded]=useState(false),[roleError,setRoleError]=useState('');
 
   // Fetch roles to allow template switching
   useEffect(() => {
@@ -27,9 +29,10 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
         const res = await rolesApi.getAll();
         if (isMounted && res?.data) {
           setAvailableRoles(res.data);
+          setRolesLoaded(true);
         }
       } catch (err) {
-        console.error('Failed to load roles in permissions modal:', err);
+        if(isMounted)setRoleError(err.message||'Template peran gagal dimuat. Tutup lalu buka kembali.');
       }
     };
     fetchRoles();
@@ -38,16 +41,16 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
 
   // Initialize permissions from user
   useEffect(() => {
-    if (user) {
-      setPermissions(user.permissions || {});
-      setTemplateToApply(user.role || 'SALES');
+    if (user&&rolesLoaded) {
+      setPermissions(effectiveUserPermissions(user,availableRoles));
+      setTemplateToApply(user.roleCode||user.role||'SALES');
     }
-  }, [user]);
+  }, [user,availableRoles,rolesLoaded]);
 
   // Current user's role definition
   const userRoleDef = useMemo(() => {
-    return availableRoles.find((r) => r.code === user?.role);
-  }, [availableRoles, user?.role]);
+    return availableRoles.find((r) => r.code === (user?.roleCode||user?.role));
+  }, [availableRoles, user?.role,user?.roleCode]);
 
   // Check if permissions differ from current role template
   const isModifiedFromTemplate = useMemo(() => {
@@ -86,6 +89,7 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if(!rolesLoaded||loading)return;
     setLoading(true);
 
     try {
@@ -105,12 +109,14 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
 
   return <NativeDialog open title={`Izin akses · ${user.name}`} onClose={onClose} busy={loading} className="admin-permissions-dialog">
     <p className="admin-dialog-description">Tinjau izin untuk {user.email}. Perubahan berlaku setelah disimpan.</p>
+    {!rolesLoaded&&!roleError&&<p role="status">Memuat template dan izin efektif…</p>}{roleError&&<p role="alert">{roleError}</p>}
+    <p className="admin-dialog-description">Izin awal menggabungkan template peran dan penyesuaian akun. Batas role, wilayah dan perlindungan petugas pekerjaan aktif tetap berlaku. Penyimpanan mencabut sesi pengguna yang diubah.</p>
     <form onSubmit={handleSubmit}>
-      <fieldset disabled={loading} className="admin-permissions-fields">
+      <fieldset disabled={loading||!rolesLoaded} className="admin-permissions-fields">
         <div className="admin-template-picker"><label>Template peran<select value={templateToApply} onChange={event=>setTemplateToApply(event.target.value)}>{availableRoles.map(role=><option key={role.code} value={role.code}>{role.name}</option>)}</select></label><button type="button" onClick={handleApplyTemplate}>Gunakan template</button></div>
         <PermissionsCustomizer permissions={permissions} onTogglePermission={handleToggle} onBulkSet={setPermissions} onResetToTemplate={handleResetToUserRole} selectedRoleName={userRoleDef?.name||user.role} isModified={isModifiedFromTemplate}/>
       </fieldset>
-      <footer className="admin-dialog-actions"><button type="button" disabled={loading} onClick={onClose}>Batal</button><button type="submit" disabled={loading} className="admin-primary-button">{loading?'Menyimpan…':'Simpan izin akses'}</button></footer>
+      <footer className="admin-dialog-actions"><button type="button" disabled={loading} onClick={onClose}>Batal</button><button type="submit" disabled={loading||!rolesLoaded} className="admin-primary-button">{loading?'Menyimpan…':'Simpan izin akses'}</button></footer>
     </form>
   </NativeDialog>;
 };

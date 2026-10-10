@@ -78,7 +78,7 @@ export const AdminUserListPage = ({
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
       // Role filter
-      if (filterRole !== 'ALL' && u.role !== filterRole) {
+      if (filterRole !== 'ALL' && (u.roleCode||u.role) !== filterRole) {
         return false;
       }
       // Cluster filter

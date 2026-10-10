@@ -28,7 +28,7 @@ export const validateOffPjpSchema = z.object({
   }),
   body: z.object({
     approved: z.boolean({ required_error: 'Field approved (true/false) wajib diisi' }),
-    rejectionNote: z.string().optional(),
+    rejectionNote: z.string().max(2000).optional(),
   }),
 });
 

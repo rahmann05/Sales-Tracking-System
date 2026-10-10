@@ -8,10 +8,12 @@ import * as configSchema from './config.schema.js';
 import {prisma} from '../../config/prisma.js';
 import {parsePagination,buildPaginatedResponse} from '../../utils/pagination.js';
 import policyRoutes from './policy.routes.js';
+import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 
 const router = express.Router();
 
 router.use(authenticate);
+router.use((req,res,next)=>!['GET','HEAD','OPTIONS'].includes(req.method)?authorizeDomainAction('SYSTEM')(req,res,next):next());
 router.use('/policies',policyRoutes);
 router.get('/access/export',async(req,res,next)=>{
  try{

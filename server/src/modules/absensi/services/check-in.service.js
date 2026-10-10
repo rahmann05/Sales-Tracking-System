@@ -1,4 +1,5 @@
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {withProcessPolicy} from '../../config/services/process-policy.service.js';
 import {visitSettings,settlePreviousVisit} from './visit-session.service.js';
@@ -119,4 +120,4 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   return {...attendance,policySnapshot:visit.snapshot,visitSession:session,settledVisits};
 };
 
-export const checkIn=(pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null,metadata={})=>withUserTransaction(userId,async db=>withProcessPolicy(await db.pjpStop.findUnique({where:{id:pjpStopId}}),()=>perform(db,pjpStopId,userId,latitude,longitude,photoUrl,notes,metadata)));
+export const checkIn=(pjpStopId, userId, latitude, longitude, photoUrl = null, notes = null,metadata={})=>withUserTransaction(userId,async db=>{await freshDomainActor(db,userId,'SALES_VISIT');return withProcessPolicy(await db.pjpStop.findUnique({where:{id:pjpStopId}}),()=>perform(db,pjpStopId,userId,latitude,longitude,photoUrl,notes,metadata));});

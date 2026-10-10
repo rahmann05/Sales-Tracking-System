@@ -1,4 +1,5 @@
 import {unlockKindAllowed} from '../../../../../shared/unlock-policy.mjs';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
 import {resolveIdentity} from '../../roles/role-assignment.service.js';
 import { prisma } from '../../../config/prisma.js';
@@ -14,6 +15,7 @@ export const requestOutletUnlock = async (outletId,userId,reason,kind='BOTH') =>
   const snapshot=await capturePolicySnapshot(),values=snapshot.values;
   if(!unlockKindAllowed(kind,values))throw new AppError('Jenis pengecualian tidak diizinkan oleh parameter Anda.',422);
   const request = await prisma.$transaction(async tx => {
+    await freshDomainActor(tx,userId,'REQUEST_EXCEPTION');
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`unlock:${outletId}:${userId}`}))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`unlock-frequency:${userId}`}))`;
     const limit=Number(values.UNLOCK_MAX_REQUESTS_PER_WINDOW)||0;

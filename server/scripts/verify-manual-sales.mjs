@@ -10,7 +10,7 @@ assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABAS
 const original=prisma.systemConfig.findMany;
 let policy={MANUAL_SALES_REPORT_MODE:'REQUIRE_APPROVAL'};
 prisma.systemConfig.findMany=async()=>Object.entries(policy).map(([key,value])=>({key,value}));
-const offIds=[];let pjpId;let checks=0;
+const offIds=[],attendanceIds=[];let pjpId;let checks=0;
 const check=(a,b)=>{assert.deepEqual(a,b);checks++;};
 const rejects=async fn=>{await assert.rejects(fn);checks++;};
 try {
@@ -21,6 +21,7 @@ try {
  const result=await resolveSalesResult({orderAmount:100,skuSold:2});check(result.manualSalesStatus,'PENDING');
  const pjp=await prisma.pjp.create({data:{type:'SALES',userId:sales.id,date:new Date('2050-01-01T00:00:00+07:00'),stops:{create:{outletId:outlet.id,sequence:1}}},include:{stops:true}});pjpId=pjp.id;
  const out=await prisma.attendance.create({data:{...result,type:'OUT',pjpStopId:pjp.stops[0].id,userId:sales.id,latitude:-6,longitude:107}});
+ attendanceIds.push(out.id);
  const reviewer={id:admin.id,role:'ADMIN'};
  check((await listManualSales(reviewer)).data.some(r=>r.id===out.id),true);
  await rejects(()=>reviewManualSales({id:sales.id,role:'SALES'},'PJP',out.id,'APPROVED'));
@@ -40,6 +41,7 @@ try {
  await rejects(()=>reviewManualSales(reviewer,'OFF_PJP',notesOff.id,'APPROVED'));
  console.log(`Manual sales integration passed: ${checks} checks, including role/team scope and concurrent approval.`);
 } finally {
+ await prisma.auditEvent.deleteMany({where:{entityType:'MANUAL_SALES',entityId:{in:[...attendanceIds,...offIds]}}});
  if(pjpId)await prisma.pjp.delete({where:{id:pjpId}});
  await prisma.offPjpAttendance.deleteMany({where:{id:{in:offIds}}});
  prisma.systemConfig.findMany=original;invalidateConfigCache();await prisma.$disconnect();

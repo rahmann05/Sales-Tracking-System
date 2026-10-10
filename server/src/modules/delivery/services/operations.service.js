@@ -1,9 +1,11 @@
 import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
+import {canDomainAction} from '../../../../../shared/domain-permissions.mjs';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {locationExpired} from '../../../../../shared/location-retention.mjs';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {preparationStages,preparationReady,preparationOwnerProblem,departureChecklist} from '../../../../../shared/warehouse-policy.mjs';
-import {readReviewDefinitions,reviewIdentity} from '../../config/services/approval-readiness.service.js';
+import {readReviewDefinitions,reviewIdentity,reviewPeople} from '../../config/services/approval-readiness.service.js';
 import {processValue} from '../../config/services/process-policy.service.js';
 import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
 import {DRIVER_EVIDENCE_KEYS} from '../../../../../shared/operational-policy.mjs';
@@ -144,6 +146,10 @@ export async function operationsDashboard(date) {
 }
 
 export const createIssue = (data, user) => prisma.$transaction(async tx => {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+  const people=await reviewPeople(tx),creator=people.find(p=>p.id===user.id),owner=people.find(p=>p.id===data.ownerId);
+  if(!creator||creator.deletedAt||!['ADMIN','KEPALA_GUDANG'].includes(creator.role)||creator.permissions?.can_monitor_delivery===false)throw new AppError('Akun tidak berizin menugaskan kendala pengiriman',403);
+  if(!owner||owner.deletedAt||!canDomainAction(owner,'RESOLVE_DELIVERY_ISSUE')||owner.permissions?.[owner.role==='SUPIR'?'can_access_driver_map':'can_monitor_delivery']===false)throw new AppError('PIC harus aktif dan berizin menyelesaikan kendala pengiriman',409);
   if (!await tx.user.findFirst({ where: { id: data.ownerId, deletedAt: null, role: { in: ['ADMIN', 'KEPALA_GUDANG', 'SUPIR'] } } })) throw new AppError('PIC tidak aktif', 400);
   for (const [field, model] of [['routeId', 'deliveryRoute'], ['packingListId', 'packingList'], ['orderId', 'order']]) if (data[field] && !await tx[model].findUnique({ where: { id: data[field] } })) throw new AppError('Referensi masalah tidak ditemukan', 404);
   if(data.routeId){const route=await tx.deliveryRoute.findUnique({where:{id:data.routeId}});if(route.closedAt||route.cancelledAt)fail('Trip sudah ditutup/dibatalkan');}
@@ -153,10 +159,12 @@ export const createIssue = (data, user) => prisma.$transaction(async tx => {
 });
 
 export const resolveIssue = (id, resolution, user) => prisma.$transaction(async tx => {
+  user=await freshDomainActor(tx,user.id,'RESOLVE_DELIVERY_ISSUE');
+  if(user.permissions?.[user.role==='SUPIR'?'can_access_driver_map':'can_monitor_delivery']===false)throw new AppError('Akses pengiriman diperlukan untuk menyelesaikan kendala',403);
   const issue = await tx.deliveryIssue.findUnique({ where: { id } });
   if (!issue || issue.status !== 'OPEN') fail('Masalah tidak ditemukan atau sudah selesai');
   if(user.role==='SUPIR' && issue.ownerId!==user.id)throw new AppError('Tindak lanjut bukan tugas Anda',403);
   const changed = await tx.deliveryIssue.updateMany({ where: { id, status: 'OPEN' }, data: { status: 'DONE', resolution, resolvedAt: new Date(), history: [...issue.history, { action: 'RESOLVE', actorId: user.id, at: new Date().toISOString(), resolution }] } });
   if (!changed.count) fail('Masalah telah diproses');
   return { id, status: 'DONE' };
-}, { isolationLevel: 'Serializable' });
+}, { timeout:15000 });

@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {AppError} from '../../../utils/errors.js';
 import {prisma} from '../../../config/prisma.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
@@ -10,6 +11,7 @@ export const recordMaintenance=async(id,data,actor={})=>{
  const normalized={vehicleId:id,serviceType:data.serviceType,odometerAtService:data.odometerAtService,cost:data.cost??0,workshopName:data.workshopName?.trim()||'',notes:data.notes?.trim()||null,serviceDate:data.serviceDate||null};
  const requestHash=createHash('sha256').update(JSON.stringify({...normalized,actorId:actor.id||null})).digest('hex');
  return prisma.$transaction(async tx=>{
+  if(actor.id)actor=await freshDomainActor(tx,actor.id,'VEHICLE_MAINTENANCE');
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`vehicle:${id}`}))`;
   const vehicle=await tx.vehicle.findUnique({where:{id}});
   if(!vehicle||vehicle.deletedAt)throw new AppError('Kendaraan tidak ditemukan',404);
