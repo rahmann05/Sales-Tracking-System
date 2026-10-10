@@ -10,7 +10,7 @@ const input={ownerId:spv.id,dueAt:'2026-10-09T03:00:00Z',revision:0,reason:'Peri
 function replace(t,model,method,fn){const original=model[method];model[method]=fn;t.after(()=>{model[method]=original;});}
 test('assign, transfer and release preserve revisions, before/after audit and order history',async t=>{
   let saved=null;const events=[],notifications=[];
-  const tx={$executeRaw:async()=>{},order:{findUnique:async()=>order,update:async({data})=>{order.history=data.history;}},user:{findUnique:async({where})=>[sales,spv,admin].find(person=>person.id===where.id)},systemConfig:{findMany:async()=>[],findUnique:async()=>saved,upsert:async({update})=>{saved={value:update.value};}},auditEvent:{create:async({data})=>events.push(data)},notification:{create:async({data})=>notifications.push(data)}};
+  const tx={$executeRaw:async()=>{},order:{findUnique:async()=>order,update:async({data})=>{order.history=data.history;}},user:{findMany:async()=>[sales,spv,admin],findUnique:async({where})=>[sales,spv,admin].find(person=>person.id===where.id)},systemConfig:{findMany:async()=>[],findUnique:async()=>saved,upsert:async({update})=>{saved={value:update.value};}},auditEvent:{create:async({data})=>events.push(data)},notification:{create:async({data})=>notifications.push(data)}};
   replace(t,prisma,'$transaction',async work=>work(tx));
   const first=await saveOrderReviewAssignment(order.id,input,admin);assert.equal(first.revision,1);assert.equal(first.ownerName,'SPV');
   await assert.rejects(()=>saveOrderReviewAssignment(order.id,input,admin),error=>error.statusCode===409);
@@ -21,8 +21,15 @@ test('invalid assignments and unauthorized assignment changes do not enter a tra
   for(const actor of [spv,sales,{...admin,permissions:{can_approve_order:false}}])await assert.rejects(()=>saveOrderReviewAssignment(order.id,input,actor),error=>error.statusCode===403);
   for(const patch of [{ownerId:null},{dueAt:null},{reason:'x'},{revision:-1},{dueAt:'invalid'},{extra:'field'}])await assert.rejects(()=>saveOrderReviewAssignment(order.id,{...input,...patch},admin),error=>error.statusCode===400);
 });
+test('assignment re-reads a revoked Admin grant after acquiring the actor lock',async t=>{
+  let reads=0;
+  const tx={$executeRaw:async()=>{},user:{findMany:async()=>[{...admin,permissions:{can_assign_order_review:false}}]},systemConfig:{findMany:async()=>[]},order:{findUnique:async()=>{reads++;return order;}}};
+  replace(t,prisma,'$transaction',async work=>work(tx));
+  await assert.rejects(()=>saveOrderReviewAssignment(order.id,input,admin),error=>error.statusCode===403);
+  assert.equal(reads,0);
+});
 test('decisions require the latest assignment and only Admin can override another reviewer with a reason',async()=>{
-  const tx={systemConfig:{findUnique:async()=>({value:{ownerId:admin.id,revision:2}})},user:{findFirst:async()=>sales}};
+  const tx={systemConfig:{findMany:async()=>[],findUnique:async()=>({value:{ownerId:admin.id,revision:2}})},user:{findFirst:async()=>sales}};
   await assert.rejects(()=>assertOrderReviewDecision(tx,order,spv,{assignmentRevision:2}),error=>error.statusCode===403);
   await assert.rejects(()=>assertOrderReviewDecision(tx,order,admin,{assignmentRevision:1}),error=>error.statusCode===409);
   const other={...admin,id:randomUUID()};
@@ -31,7 +38,7 @@ test('decisions require the latest assignment and only Admin can override anothe
   await assert.rejects(()=>assertOrderReviewDecision(tx,order,{...admin,permissions:{can_approve_order:false}},{assignmentRevision:2}),error=>error.statusCode===403);
 });
 test('unassigned orders keep ordinary scoped approval and a release still rejects stale revisions',async()=>{
-  const tx={systemConfig:{findUnique:async()=>null},user:{findFirst:async()=>sales}};
+  const tx={systemConfig:{findMany:async()=>[],findUnique:async()=>null},user:{findFirst:async()=>sales}};
   assert.equal((await assertOrderReviewDecision(tx,order,spv)).assignmentRevision,0);
   tx.systemConfig.findUnique=async()=>({value:{ownerId:null,revision:3}});
   await assert.rejects(()=>assertOrderReviewDecision(tx,order,spv),error=>error.statusCode===409);

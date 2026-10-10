@@ -1,3 +1,4 @@
+import {masterImport} from '../products/master-import.service.js';
 import { Router } from 'express';
 import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import * as vehicleController from './vehicles.controller.js';
@@ -36,6 +37,8 @@ router.patch('/:id/condition', authorize('ADMIN','SUPERVISOR','KEPALA_GUDANG'), 
   }catch(e){next(e);}
 });
 
+router.post('/import/preview',authorize('ADMIN'),async(req,res,next)=>{try{res.json({data:await masterImport('vehicles',req.body,req.user)});}catch(error){next(error);}});
+router.post('/import/apply',authorize('ADMIN'),async(req,res,next)=>{try{res.json({data:await masterImport('vehicles',req.body,req.user,true)});}catch(error){next(error);}});
 router.get('/', vehicleController.getVehicles);
 router.get('/:id', vehicleController.getVehicleById);
 

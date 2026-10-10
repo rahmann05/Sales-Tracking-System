@@ -24,7 +24,7 @@ export const authenticate = async (req, res, next) => {
     req.policy=await effectivePolicy(req.user,Date.now(),{fresh:true});
     const availability=featureDecision(req.policy.values,req.originalUrl,req.method,req.body);
     // These services validate idempotent replays before rejecting new work.
-    const replayAware=req.method==='POST'&&['/api/v1/orders','/api/v1/absensi/off-pjp','/api/v1/customer-registrations','/api/v1/reports/archives'].includes(req.originalUrl.split('?')[0].replace(/\/$/,''));
+    const replayAware=req.method==='POST'&&['/api/v1/orders','/api/v1/absensi/off-pjp','/api/v1/customer-registrations','/api/v1/reports/archives','/api/v1/products/import/apply','/api/v1/vehicles/import/apply'].includes(req.originalUrl.split('?')[0].replace(/\/$/,''));
     if(!availability.allowed&&!replayAware)throw new AppError('Fitur sedang dijeda atau dinonaktifkan oleh Admin. Histori dan penyelesaian pekerjaan terbuka tetap tersedia.',409);
     withPolicy(req.policy,next);
   } catch (error) {

@@ -1,5 +1,8 @@
 import { request } from "../httpClient";
 export const configApi = {
+  autoDelegation:(query={})=>request('/config/policies/auto-delegation?'+new URLSearchParams(query)),
+  saveAutoDelegation:body=>request('/config/policies/auto-delegation',{method:'PUT',body:JSON.stringify(body)}),
+  retryAutoDelegation:body=>request('/config/policies/auto-delegation/retry',{method:'POST',body:JSON.stringify(body)}),
   assignmentSchedules:()=>request('/config/policies/assignments'),
   assignmentScheduleOptions:kind=>request('/config/policies/assignments/options?'+new URLSearchParams({kind})),
   scheduleAssignment:body=>request('/config/policies/assignments',{method:'POST',body:JSON.stringify(body)}),

@@ -14,6 +14,7 @@ const formatTime = (iso) =>
 // Server RouteChangeRequest status/type → UI incident status
 const mapRouteChangeStatus = (req) => {
   if (req.status === 'PENDING_APPROVAL') return routeChangeWorkflow(req).stage==='ADMIN'?'PENDING_ADMIN':'PENDING_SPV';
+  if((req.type==='REVISIT'||req.workflow?.decisionAction==='REVISIT')&&req.status==='APPROVED')return 'RESOLVED_REVISIT';
   if (req.status === 'ACKNOWLEDGED') return 'RESOLVED_SKIP';
   if (req.status === 'APPROVED' && req.type === 'SKIP') return 'RESOLVED_SKIP';
   if (req.status === 'APPROVED' && req.type === 'REROUTE') return 'RESOLVED_DIRECT_REROUTE';
@@ -23,6 +24,7 @@ const mapRouteChangeStatus = (req) => {
 
 export const mapServerRouteChange = (req = {}) => ({
   canDecide:req.canDecide,
+  revisit:req.revisit,decisionAction:req.decisionAction,
   workflow:req.workflow,decisionMode:routeChangeWorkflow(req).mode,
   id: req.id,
   type: 'CLOSED_SHOP',

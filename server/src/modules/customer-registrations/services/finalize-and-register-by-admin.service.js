@@ -14,7 +14,7 @@ import {synchronizeOutletCounts} from '../../clusters/services/cluster-assignmen
 import {invalidateClusterCache} from '../../clusters/services/clusters.helpers.js';
 import {invalidateOutletCache} from '../../outlets/services/outlets.helpers.js';
 import {registrationLocation} from '../../../../../shared/registration-policy.mjs';
-import {REGISTRATION_FIELDS,registrationFieldError} from '../../../../../shared/registration-fields.mjs';
+import {registrationSupplement,registrationFieldError} from '../../../../../shared/registration-fields.mjs';
 import {assertOutletLegal} from '../../outlets/services/outlet-data-policy.service.js';
 
 /**
@@ -46,8 +46,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
 
   let finalCode;
 
-  const fields=payload.registrationFields||{};
-  if(Object.entries(fields).some(([key,value])=>!Object.hasOwn(REGISTRATION_FIELDS,key)||typeof value!=='string'||value.length>2000))throw new AppError('Data pelengkap aktivasi tidak valid.',422);
+  let fields;try{fields=registrationSupplement(payload.registrationFields||{});}catch(error){throw new AppError(error.message,422);}
   const beforeFields=Object.fromEntries(Object.keys(fields).map(key=>[key,registration[key]??null]));
   assertOutletLegal(fields,registration);registration={...registration,...fields};
   const fieldError=registrationFieldError(registration,await processValue(registration,'REGISTRATION_ACTIVATION_REQUIRED_FIELDS',''),'aktivasi');if(fieldError)throw new AppError(fieldError,422);

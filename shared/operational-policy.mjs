@@ -1,8 +1,10 @@
+import {VISIT_REFERENCE_CATALOGS,defaultVisitCatalog} from './visit-reference-catalog.mjs';
+import {WORKSPACE_DEFAULTS} from './workspace-presentation.mjs';
 import {DEFAULT_AUDIT_ITEMS} from './supervision-checklist.mjs';
 import {DEFAULT_EARLY_REASONS} from './visit-reasons.mjs';
 import {DEFAULT_SERVICE_CATALOG} from './reference-catalog.mjs';
 import {CAMERA_INPUT_LABELS} from './camera-input-policy.mjs';
-import {REGISTRATION_FIELDS} from './registration-fields.mjs';
+import {REGISTRATION_FIELDS,MASTER_OUTLET_FIELDS} from './registration-fields.mjs';
 import {ROUTE_DECISION_MODES} from './route-change-workflow.mjs';
 import {REPORT_PRESENTATION} from './report-presentation.mjs';
 import {OUTLET_COMPARISON_DEFAULTS as comparison} from './outlet-evidence-policy.mjs';
@@ -27,9 +29,20 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('ROUTE_REVIEW_ALLOW_DELEGATION','Izinkan penugasan pemeriksa rute',true,'Admin dapat menunjuk pemeriksa per kasus dan menjadwalkan delegasi. Tidak mengubah tahap persetujuan atau memberi akses umum ke tim lain. Nonaktif menolak penugasan baru; pemulihan delegasi tersimpan tetap berjalan.'),
   bool('CLOSED_OUTLET_REQUIRE_PHOTO','Wajib foto toko tutup',false),
   bool('CLOSED_OUTLET_REQUIRE_REASON','Wajib alasan toko tutup',false),
+  bool('CLOSED_OUTLET_ALLOW_REVISIT','Izinkan keputusan kunjungi kembali',true,'Agenda bertanggal terpisah dari laporan hari asal; tidak mengubah template rutin.'),
+  num('CLOSED_OUTLET_REVISIT_MAX_DAYS','Batas jadwal kunjungan kembali',30,1,366,'hari'),
+  num('REROUTE_MIN_REVISIT_DAYS','Jeda minimal kunjungan outlet pengganti',0,0,366,'hari','Nol tanpa pembatas. Kunjungan aktual terbaru Sales yang sama menjadi acuan, bukan sekadar rencana.'),
+  num('REROUTE_MAX_PER_WINDOW','Batas keputusan penggantian per Sales',0,0,500,'keputusan','Nol tanpa batas; keputusan disetujui dihitung.'),
+  num('REROUTE_WINDOW_DAYS','Rentang batas reroute',7,1,366,'hari'),
+  select('OFF_PJP_OUTLET_SCOPE','Outlet yang boleh dikunjungi di luar PJP','BOTH',['BOTH','MASTER_ONLY','PROSPECT_ONLY'],'Master wajib berasal dari wilayah penugasan; calon outlet tetap tidak dibuat sebagai master otomatis.'),
+  num('OFF_PJP_MAX_PER_WINDOW','Batas kunjungan luar PJP per Sales',0,0,500,'kunjungan','Nol tanpa batas. Semua pengajuan termasuk ditolak dihitung; retry tersimpan tidak dihitung ulang.'),
+  num('OFF_PJP_WINDOW_DAYS','Rentang batas luar PJP',7,1,366,'hari'),
+  num('OFF_PJP_MASTER_MIN_DAYS','Jeda luar PJP ke outlet master yang sama',0,0,366,'hari','Nol tanpa pembatas; seluruh pengajuan sebelumnya menjadi acuan.'),
  ]),
  group('ASSIGNMENT_POLICY','Penugasan bertanggal','Penjadwalan memakai kewenangan proses yang sudah dimiliki; tidak memberikan izin role tambahan.',[
   bool('ASSIGNMENT_SCHEDULE_ENABLED','Izinkan jadwal penugasan baru',true,'Nonaktif menghentikan pembuatan jadwal baru; jadwal tersimpan dan pemulihan delegasi tetap diproses agar tugas tidak terbengkalai.'),
+  bool('AUTO_DELEGATION_ENABLED','Aktifkan pengalihan pekerjaan otomatis',false,'Aturan rinci dan urutan pengganti diatur pada panel auto-delegasi. Nonaktif menghentikan pengalihan baru; akhir delegasi sementara tetap dipulihkan. Tidak mengalihkan tim Sales.'),
+  num('AUTO_DELEGATION_SCAN_LIMIT','Pekerjaan per proses dalam satu pemindaian',50,10,200,'pekerjaan','Pemindaian bertahap dengan cursor; pekerjaan sesudah halaman pertama tetap mendapat giliran.'),
  ]),
  group('EVIDENCE_INPUT','Pengambilan foto','Cara pengguna memilih foto pada formulir kamera bersama. Kewajiban foto dan GPS tetap diatur per proses; pengaturan ini bukan pembuktian keaslian kamera.',[
   num('EVIDENCE_IMAGE_MAX_KB','Batas ukuran setiap foto bukti',2000,50,2000,'KB','Batas server pada bukti baru. Lampiran hasil kunjungan tetap memiliki batas tambahan sekitar 500 KB dan 3 gambar. Bukti tersimpan tidak dihapus.'),
@@ -92,7 +105,14 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('SPV_REQUIRE_PHOTO','Wajib foto kunjungan SPV'),bool('SPV_REQUIRE_GPS','Wajib GPS kunjungan SPV'),bool('SPV_ENFORCE_GEOFENCE','Batasi kunjungan SPV dengan radius'),
   bool('SPV_ALLOW_JOINT_VISIT','Izinkan pendampingan Sales'),bool('SPV_ALLOW_PRIORITY_AUDIT','Izinkan audit prioritas'),bool('SPV_ALLOW_OFF_PJP','Izinkan kunjungan SPV luar PJP'),
   bool('FOLLOW_UP_REQUIRE_REVIEW','Hasil tugas perlu pemeriksaan'),bool('FOLLOW_UP_REQUIRE_EVIDENCE','Wajib bukti hasil tugas'),
+  ...Object.keys(VISIT_REFERENCE_CATALOGS).map(key=>({key,label:{VISIT_PURPOSE_CATALOG:'Referensi tujuan kunjungan',COLLECTION_RESULT_CATALOG:'Referensi hasil penagihan',VISIT_OBSTACLE_CATALOG:'Klasifikasi kendala kunjungan'}[key],type:'catalog',defaultValue:defaultVisitCatalog(key),description:'Kode dan label saat pencatatan disimpan untuk histori. Tujuan/hasil memiliki perilaku tetap; klasifikasi kendala boleh ditambah.'})),
   num('FOLLOW_UP_DEFAULT_DAYS','Tenggat awal tugas',1,0,90,'hari'),
+  bool('FOLLOW_UP_AUTO_ENABLED','Buat tugas otomatis dari supervisi',false,'Diperiksa ketika audit disimpan atau kunjungan diselesaikan. Satu tugas per kunjungan; tugas manual/terkirim/selesai tidak ditimpa.'),
+  select('FOLLOW_UP_AUTO_TRIGGER','Pemicu tugas otomatis','SELECTED_FAILURE',['ANY_FAILURE','SELECTED_FAILURE','SLA','FAILURE_OR_SLA'],'SLA berarti durasi kunjungan supervisi sejak mulai, diperiksa pada penyimpanan audit/penyelesaian, bukan pekerja latar belakang.'),
+  num('FOLLOW_UP_AUTO_SLA_MINUTES','Ambang durasi supervisi untuk tugas',120,1,10080,'menit'),
+  num('FOLLOW_UP_AUTO_DUE_DAYS','Tenggat tugas otomatis sejak dibuat',1,0,90,'hari'),
+  select('FOLLOW_UP_AUTO_OWNER','PIC awal tugas otomatis','PJP_SALES',['PJP_SALES','CLUSTER_SALES'],'Sales pemilik PJP atau Sales utama cluster terkini. Harus aktif, dalam tim, berizin dan memiliki pemeriksa. Pilihan PIC manual pada audit mengesampingkan otomatisasi.'),
+  select('FOLLOW_UP_REVIEWER_MODE','Pemeriksa hasil tugas baru','BOTH',['BOTH','SUPERVISOR','ADMIN'],'Pemeriksa tetap pengguna berbeda dari PIC, aktif dan berizin. Tugas tersimpan mengikuti aturan awal.'),
   {key:'SPV_AUDIT_ITEMS',label:'Pertanyaan audit supervisi',type:'checklist',defaultValue:DEFAULT_AUDIT_ITEMS,description:'Atur jawaban ya/tidak, teks, angka atau pilihan; kondisi gagal, alasan dan foto. Kunjungan yang telah dimulai tetap memakai daftar awal; perubahan label tidak mengganti kode historis.'},
  ]),
  group('PLANNING_POLICY','Aturan wilayah dan PJP','F1/F2/F4 tetap berarti interval setiap 1/2/4 minggu.',[
@@ -114,6 +134,9 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('OFF_PJP_REQUIRE_PHOTO','Wajib foto luar PJP'),bool('OFF_PJP_REQUIRE_GPS','Wajib GPS luar PJP'),
  ]),
  group('REGISTRATION_WORKFLOW','Alur outlet baru','Pemeriksaan lokasi opsional tidak menjadi gerbang registrasi.',[
+  {key:'MASTER_OUTLET_REQUIRED_FIELDS',label:'Data wajib pada pembuatan/perubahan master outlet',type:'field-requirements',defaultValue:'',options:Object.keys(MASTER_OUTLET_FIELDS),optionLabels:MASTER_OUTLET_FIELDS,description:'Mengikuti kebijakan role/tim petugas yang mengubah master. Data registrasi tidak otomatis diwajibkan ulang; aktivasi mengikuti snapshot pengajuannya. Perubahan tertunda diperiksa kembali saat diterapkan.'},
+  bool('MASTER_OUTLET_CREATE_REQUIRE_LOCATION','Wajib titik saat membuat master outlet'),
+  bool('MASTER_OUTLET_UPDATE_REQUIRE_LOCATION','Wajib titik saat mengubah master outlet',false),
   bool('OUTLET_DEFERRED_CHANGE_ENABLED','Izinkan perubahan master tertunda',true,'Usulan menunggu waktu efektif dan pekerjaan aktif selesai. Perubahan master sesudah usulan dibuat membuat usulan gagal agar tidak menimpa data baru. Usulan tersimpan tetap diselesaikan saat opsi dimatikan.'),
   select('REGISTRATION_APPROVAL_MODE','Pemeriksaan pengajuan','BOTH',['NONE','ADMIN','SUPERVISOR','BOTH','SEQUENTIAL']),
   select('REGISTRATION_ACTIVATOR','Pihak yang mengaktifkan outlet','BOTH',['ADMIN','SUPERVISOR','BOTH']),
@@ -263,6 +286,10 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   {key:'SLA_HOLIDAYS',label:'Tanggal libur SLA',type:'text',defaultValue:'',description:'Tanggal YYYY-MM-DD dipisahkan koma. Tenggat eksplisit tidak digeser.'},
  ]),
  group('REPORTING_POLICY','Laporan dan notifikasi','Ketersediaan keluaran, pemantauan, dan ukuran halaman.',[
+  ...Object.entries(WORKSPACE_DEFAULTS).map(([key,options])=>select(key,({ATTENTION_DEFAULT_FILTER:'Kondisi awal antrean tindak lanjut',ATTENTION_DEFAULT_CATEGORY:'Modul awal antrean tindak lanjut',MASTER_OUTLET_DEFAULT_STATUS:'Status awal direktori outlet',OUTLET_REVIEW_DEFAULT_STAGE:'Tahap awal antrean validasi outlet',ORDER_REVIEW_DEFAULT_STATUS:'Status awal persetujuan order'})[key],options[0],options,'Default saat URL belum menyimpan pilihan. Cakupan akses role/tim tetap diperiksa.')) ,
+  num('WORKSPACE_PAGE_SIZE','Ukuran halaman direktori / validasi / tindak lanjut',25,10,100,'baris','Batas server tetap berlaku. Perubahan tampilan tidak mengubah total data atau izin.'),
+  bool('MAP_DEFAULT_SHOW_CLUSTERS','Tampilkan wilayah cluster pada peta secara awal'),
+  bool('MAP_DEFAULT_SHOW_OUTLETS','Tampilkan titik outlet pada peta secara awal'),
   bool('REPORT_SHOW_COMMERCIAL','Tampilkan nominal dan target pada laporan',true,'Pembatasan server laporan harian, mingguan, MTD, rekap dan arsip, termasuk ekspor dari data laporan. Atur per role/tim melalui profil. Tidak mengubah akses order operasional.'),
   bool('REPORT_SHOW_CONTACT','Tampilkan kolom kontak dan alamat laporan',true,'Membatasi kolom terstruktur kontak/alamat pada server laporan. Catatan bebas dan hak akses modul master diatur terpisah.'),
   bool('REPORT_SHOW_LOCATION','Tampilkan titik lokasi pada laporan',true,'Membatasi koordinat, tautan peta dan metadata lokasi terstruktur. Flag anomali kunjungan tetap tampil.'),
@@ -276,7 +303,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('REPORT_MTD_DEFAULT_PERIOD','Periode awal bulanan','CURRENT',['CURRENT','PREVIOUS'],'Hanya pemilihan awal; formula target dan bulan pembanding tetap.',{optionLabels:{CURRENT:'Bulan berjalan',PREVIOUS:'Bulan sebelumnya'}}),
   select('REPORT_DEFAULT_VIEW','Tab awal laporan','DAILY',['DAILY','WEEKLY','MTD'],'Dipakai jika pengguna belum memilih tab. Tab nonaktif tidak ditawarkan.'),
   select('REPORT_TABLE_DENSITY','Kepadatan tabel laporan','COMFORTABLE',['COMFORTABLE','COMPACT'],'Pengaturan tampilan saja; tidak mengubah izin, scope, arsip atau isi ekspor.',{optionLabels:{COMFORTABLE:'Nyaman',COMPACT:'Ringkas'}}),
-  ...Object.entries(REPORT_PRESENTATION).map(([key,items])=>({key,label:({REPORT_SPV_WIDGETS:'Kartu ringkasan pemantauan Supervisor',REPORT_WEEKLY_WIDGETS:'Kartu ringkasan mingguan',REPORT_MTD_WIDGETS:'Kartu ringkasan bulanan',REPORT_WEEKLY_COLUMNS:'Kelompok kolom mingguan',REPORT_MTD_COLUMNS:'Kolom bulanan'})[key],type:'text',defaultValue:items.join(','),description:'Pilih informasi yang ditampilkan. Urutan kartu dapat diubah; urutan kolom tetap konsisten. Jika semua pilihan dimatikan, identitas Sales tetap tampil. Pengaturan ini tidak membatasi izin akses atau isi ekspor.'})),
+  ...Object.entries(REPORT_PRESENTATION).map(([key,items])=>({key,label:({ATTENTION_WIDGETS:'Kartu ringkasan antrean tindak lanjut',REPORT_SPV_WIDGETS:'Kartu ringkasan pemantauan Supervisor',REPORT_WEEKLY_WIDGETS:'Kartu ringkasan mingguan',REPORT_MTD_WIDGETS:'Kartu ringkasan bulanan',REPORT_WEEKLY_COLUMNS:'Kelompok kolom mingguan',REPORT_MTD_COLUMNS:'Kolom bulanan'})[key],type:'text',defaultValue:items.join(','),description:'Pilih informasi yang ditampilkan. Urutan kartu dapat diubah; urutan kolom tetap konsisten. Jika semua pilihan dimatikan, identitas Sales tetap tampil. Pengaturan ini tidak membatasi izin akses atau isi ekspor.'})),
   num('NOTIFY_READ_RETENTION_DAYS','Masa simpan notifikasi yang sudah dibaca',0,0,3650,'hari','Nol menyimpan tanpa batas. Hanya pesan dibaca dengan outbox selesai (terkirim/dilewati) yang dihapus; pesan belum dibaca, antrean gagal dan pekerjaan bisnis tetap ada.'),
   num('AUDIT_ACTIVE_RETENTION_DAYS','Masa riwayat audit aktif',0,0,3650,'hari','Khusus perusahaan. Nol tanpa pengarsipan otomatis. Riwayat lebih lama ditandai sebagai arsip dan tetap dapat ditelusuri; bukti keputusan serta pencegah duplikasi tidak dihapus.'),
   bool('NOTIFY_REALTIME_ENABLED','Siarkan notifikasi langsung setelah transaksi berhasil',true,'Nonaktif tetap menyimpan pesan yang diizinkan pada kotak masuk. Siaran socket bukan tanda pesan sudah dibaca.'),
@@ -289,7 +316,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
 ];
 export const POLICY_OPTION_LABELS={ACTIVE:'Aktif',PAUSED:'Jeda pekerjaan baru',OFF:'Nonaktif',IN_OUT:'Masuk dan keluar',IN_ONLY:'Masuk saja',OPTIONAL:'Tanpa presensi wajib',INHERIT:'Ikuti aturan umum',REQUIRED:'Wajib',ADMIN:'Admin',SUPERVISOR:'Supervisor',BOTH:'Admin atau Supervisor',SEQUENTIAL:'Supervisor lalu Admin',NONE:'Tanpa persetujuan manusia',BLOCK:'Blokir',REASON:'Izinkan dengan alasan',WARN:'Izinkan dengan peringatan',LOGIN:'Selama masuk aplikasi',SHIFT:'Saat shift aktif',VISIT:'Saat kunjungan aktif',TRIP:'Saat trip berjalan',AUTO:'Otomatis: Google lalu OSRM',GOOGLE:'Google',OSRM:'OpenStreetMap / OSRM'};
 export const POLICY_SECRET_KEYS=['MAPS_API_KEY','BYPASS_GEOFENCE_EMAILS','JWT_EXPIRES_IN','JWT_REFRESH_EXPIRES_IN'];
-export const policyGlobalOnly=key=>POLICY_SECRET_KEYS.includes(key)||key.startsWith('CODE_')||key==='AUDIT_ACTIVE_RETENTION_DAYS';
+export const policyGlobalOnly=key=>POLICY_SECRET_KEYS.includes(key)||key.startsWith('CODE_')||key.startsWith('AUTO_DELEGATION_')||key==='AUDIT_ACTIVE_RETENTION_DAYS';
 export const featureAvailable=(values,id)=>!['OFF','PAUSED'].includes(values?.[`FEATURE_${id}_MODE`]);
 export const featureReadable=(values,id)=>values?.[`FEATURE_${id}_MODE`]!=='OFF';
 export function visitPolicy(values={}){

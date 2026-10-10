@@ -4,7 +4,7 @@ export function PolicyChecklistQuestion({item,index,onChange}){
  const type=item.type||'BOOLEAN';
  const set=(key,value)=>onChange({...item,[key]:value});
  const changeType=next=>{
-  const base=Object.fromEntries(Object.entries(item).filter(([key])=>!['options','min','max','failureBelow','failedValues','requireFailurePhoto','requireFailureReason'].includes(key)));
+  const base=Object.fromEntries(Object.entries(item).filter(([key])=>!['options','min','max','failureBelow','failedValues','requireFailurePhoto','requireFailureReason','autoFollowUp'].includes(key)));
   onChange({...base,type:next,...(next==='SELECT'?{options:['Sesuai','Perlu perbaikan'],failedValues:['Perlu perbaikan']}:{})});
  };
  return <div className="grid gap-3">
@@ -18,6 +18,7 @@ export function PolicyChecklistQuestion({item,index,onChange}){
   </>}
   {type!=='TEXT'&&<fieldset className="grid gap-2"><legend className="text-sm font-semibold mb-2">Bukti ketika jawaban gagal{type==='BOOLEAN'?' (Tidak)':''}</legend>
    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!item.requireFailureReason} onChange={e=>set('requireFailureReason',e.target.checked)}/>Wajib alasan</label>
+   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!item.autoFollowUp} onChange={e=>set('autoFollowUp',e.target.checked)}/>Buat tugas jika gagal (bila otomatisasi aktif)</label>
    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!item.requireFailurePhoto} onChange={e=>set('requireFailurePhoto',e.target.checked)}/>Wajib foto temuan</label>
   </fieldset>}
  </div>;

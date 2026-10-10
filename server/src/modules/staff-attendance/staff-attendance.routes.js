@@ -1,3 +1,4 @@
+import {retryAutomaticFollowUp} from './retry-automatic-follow-up.service.js';
 import {listFollowUps,completeFollowUp,reviewFollowUp} from './follow-up.service.js';
 import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import {assignFollowUp} from './follow-up-assignment.service.js';
@@ -16,6 +17,7 @@ const router = Router();
 router.use(authenticate);
 router.get('/time-corrections',authorize('ADMIN'),async(req,res,next)=>{try{res.json({data:await pendingShiftCorrections(req.user)});}catch(e){next(e);}});
 router.patch('/:id/time-correction',authorize('ADMIN'),async(req,res,next)=>{try{res.json({data:await correctShiftTime(req.params.id,req.body,req.user)});}catch(e){next(e);}});
+router.post('/follow-ups/:id/retry-auto',authorize('ADMIN','SUPERVISOR'),async(req,res,next)=>{try{res.json({data:await retryAutomaticFollowUp(req.params.id,req.user,req.body)});}catch(error){next(error);}});
 router.get('/follow-ups/candidates',async(req,res,next)=>{try{res.json({data:await followUpCandidates(req.user)});}catch(e){next(e);}});
 router.patch('/follow-ups/:id/assignment',authorize('ADMIN','SUPERVISOR'),async(req,res,next)=>{try{res.json({data:await assignFollowUp(req.params.id,req.user,req.body)});}catch(e){next(e);}});
 router.get('/follow-ups',async(req,res,next)=>{try{res.json({data:await listFollowUps(req.user,req.query)});}catch(e){next(e);}});

@@ -4,7 +4,7 @@ import {assignFollowUp} from '../../staff-attendance/follow-up-assignment.servic
 import {assignReturnInspection} from '../../delivery/services/return-assignment.service.js';
 import {assignOutletReview} from '../../outlets/services/outlet-review-assignment.service.js';
 import {saveOrderReviewAssignment} from '../../orders/services/order-review-assignment.service.js';
-import {ASSIGNMENT_KINDS} from '../../../../../shared/assignment-schedules.mjs';
+import {ASSIGNMENT_KINDS,canScheduleAssignment} from '../../../../../shared/assignment-schedules.mjs';
 import {routeAction} from '../../delivery/services/operations.service.js';
 import {assignTeam} from '../../teams/teams.service.js';
 import {assignRouteReview} from '../../route-changes/services/route-review-assignment.service.js';
@@ -12,13 +12,15 @@ import {attachRouteWorkflows} from '../../route-changes/services/route-workflow.
 import {routeChangeWorkflow} from '../../../../../shared/route-change-workflow.mjs';
 import {assertOrderOperation} from '../../orders/services/order-operation-permissions.js';
 import {assertDomainAction} from '../../../middlewares/domain-permission.middleware.js';
+import {preparationStages} from '../../../../../shared/warehouse-policy.mjs';
+import {processValue} from './process-policy.service.js';
+import {orderReviewRole,reviewRoleAllowed} from '../../../../../shared/approval-workflow.mjs';
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export {ASSIGNMENT_KINDS};
-const rights={ROUTE_REVIEW:'can_assign_route_review',FOLLOW_UP:'can_assign_follow_up',RETURN:'can_monitor_delivery',ORDER_REVIEW:'can_approve_order',OUTLET_REVIEW:'can_assign_outlet_review',PREPARATION:'can_trip_assign_preparation',TEAM:'can_view_team'};
 export function assertScheduleActor(actor,kind){
  if(kind==='TEAM')assertDomainAction(actor,'ASSIGN_TEAM');
  if(kind==='ORDER_REVIEW')assertOrderOperation(actor,'ASSIGN_REVIEW');
- if(!actor||actor.deletedAt||actor.role!=='ADMIN'||actor.permissions?.[rights[kind]]===false)throw new AppError('Admin aktif dengan izin proses diperlukan untuk menjadwalkan penugasan.',403);
+ if(!canScheduleAssignment(actor,kind))throw new AppError('Admin aktif dengan izin proses diperlukan untuk menjadwalkan penugasan.',403);
 }
 export async function assignmentState(db,kind,id){
  let data,label,finished=false,revision=0,ownerId=null,dueAt=null,context={};
@@ -37,7 +39,8 @@ export async function assignmentState(db,kind,id){
  }else if(kind==='ORDER_REVIEW'){
   data=await db.order.findUnique({where:{id}});
   if(!data)throw new AppError('Order tidak ditemukan.',404);
-  const task=(await db.systemConfig.findUnique({where:{key:`_ORDER_REVIEW:${id}`}}))?.value;label=`Order ${data.code||id}`;finished=Boolean(data.deletedAt)||data.status!=='PENDING_APPROVAL';revision=task?.revision||0;ownerId=task?.ownerId||null;dueAt=task?.dueAt||null;context={status:data.status,stage:data.history?.filter(e=>['SPV_APPROVED','APPROVED'].includes(e.action)).length||0};
+  const task=(await db.systemConfig.findUnique({where:{key:`_ORDER_REVIEW:${id}`}}))?.value,mode=await processValue(data,'ORDER_APPROVAL_MODE','BOTH'),required=orderReviewRole(data,{ORDER_APPROVAL_MODE:mode}),current=mode==='SEQUENTIAL'&&!reviewRoleAllowed(required,task?.ownerRole)?null:task;
+  label=`Order ${data.code||id}`;finished=Boolean(data.deletedAt)||data.status!=='PENDING_APPROVAL';revision=task?.revision||0;ownerId=current?.ownerId||null;dueAt=current?.dueAt||null;context={status:data.status,stage:data.history?.some(e=>e.action==='SUPERVISOR_REVIEW')?1:0};
  }else if(kind==='ROUTE_REVIEW'){
   const found=await db.routeChangeRequest.findUnique({where:{id},include:{pjpStop:{select:{outlet:{select:{name:true}}}}}});if(!found)throw new AppError('Laporan toko tutup tidak ditemukan.',404);
   [data]=await attachRouteWorkflows(db,[found]);const flow=routeChangeWorkflow(data),task=data.workflow?.assignment?.stage===flow.stage?data.workflow.assignment:null;
@@ -45,7 +48,7 @@ export async function assignmentState(db,kind,id){
  }else if(kind==='PREPARATION'){
   const [routeId,stage]=id.split(':');if(!['PICK','CHECK','LOAD'].includes(stage))throw new AppError('Tahap persiapan tidak valid.',400);
   data=await db.deliveryRoute.findUnique({where:{id:routeId}});if(!data)throw new AppError('Trip tidak ditemukan.',404);
-  const task=data.preparation?.tasks?.[stage];label=`${data.code||routeId} · ${stage}`;finished=data.status!=='DRAFT'||Boolean(data.cancelledAt||data.closedAt||data.preparation?.[stage]);revision=task?.revision||0;ownerId=task?.ownerId||null;dueAt=task?.dueAt||null;context={routeId,stage};
+  const task=data.preparation?.tasks?.[stage];label=`${data.code||routeId} · ${stage}`;finished=data.status!=='DRAFT'||!preparationStages(data.policySnapshot?.values).includes(stage)||Boolean(data.cancelledAt||data.closedAt||data.preparation?.[stage]);revision=task?.revision||0;ownerId=task?.ownerId||null;dueAt=task?.dueAt||null;context={routeId,stage};
  }else if(kind==='OUTLET_REVIEW'){
   data=await db.outletReview.findUnique({where:{id},include:{outlet:{select:{name:true}}}});
   if(!data)throw new AppError('Kasus validasi tidak ditemukan.',404);

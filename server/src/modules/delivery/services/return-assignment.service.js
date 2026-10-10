@@ -4,11 +4,14 @@ import {AppError} from '../../../utils/errors.js';
 import {findWarehouseStaff} from './warehouse-staff.service.js';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {inTransaction} from '../../../utils/in-transaction.js';
+import {reviewPeople} from '../../config/services/approval-readiness.service.js';
 const schema=z.object({revision:z.number().int().nonnegative(),ownerId:z.string().min(1).nullable(),dueAt:z.string().datetime({offset:true}).nullable(),reason:z.string().trim().min(5).max(2000)}).strict();
 export async function assignReturnInspection(stopId,raw,actor,{db=prisma,validateOnly=false}={}){
  const data=schema.parse(raw);
  return inTransaction(db,async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+  actor=(await reviewPeople(tx)).find(person=>person.id===actor?.id);
+  if(!actor||actor.deletedAt||!['ADMIN','KEPALA_GUDANG'].includes(actor.role)||actor.permissions?.can_monitor_delivery===false)throw new AppError('Petugas gudang/Admin aktif dengan izin monitor pengiriman diperlukan untuk menugaskan pemeriksaan retur.',403);
   const reference=await tx.deliveryStop.findUnique({where:{id:stopId},select:{deliveryRouteId:true}});
   if(!reference)throw new AppError('Tujuan pengiriman tidak ditemukan',404);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`route:${reference.deliveryRouteId}`}))`;

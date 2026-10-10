@@ -1,3 +1,4 @@
+import {OffPjpMasterSelector} from './OffPjpMasterSelector';
 import {SalesDialog} from './SalesDialog';
 import { AttendanceSalesInput } from './AttendanceSalesInput';
 import {VisitOutcomeInput} from './VisitOutcomeInput';
@@ -46,6 +47,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
           />
         </div>
 
+        <OffPjpMasterSelector scope={form.settings.OFF_PJP_OUTLET_SCOPE} outletId={form.outletId} onSelect={form.selectOutlet}/>
         <OffPjpIdentityForm
           outletName={form.outletName}
           onOutletNameChange={form.setOutletName}

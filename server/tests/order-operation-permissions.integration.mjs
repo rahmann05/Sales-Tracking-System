@@ -12,6 +12,8 @@ import {setOrderPromise} from '../src/modules/orders/services/order-promise.serv
 import {cancelOrderRemainder} from '../src/modules/orders/services/cancel-order-remainder.service.js';
 import {assignmentSchedulePreview,createAssignmentSchedule,runAssignmentSchedules,cancelAssignmentSchedule,retryAssignmentSchedule} from '../src/modules/config/services/assignment-schedules.service.js';
 import {withPolicy} from '../src/modules/config/services/policy-context.service.js';
+import {approveOrder} from '../src/modules/orders/services/approve-order.service.js';
+import {rejectOrder} from '../src/modules/orders/services/reject-order.service.js';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local fixtures only');
 const tag='order-permissions-'+randomUUID(),roleCode='TEST_ORDER_'+randomUUID().replaceAll('-','').toUpperCase(),users=[],orders=[],jobs=[];
 let cluster,outlet,product,customAdded=false,checks=0;
@@ -53,6 +55,10 @@ try{
  await prisma.systemConfig.upsert({where:{key:'ROLE_DEFINITIONS'},create:{key:'ROLE_DEFINITIONS',value:[...existing,custom]},update:{value:[...existing,custom]}});customAdded=true;
  const restricted=await person('ADMIN',{roleCode});
  for(const [,path,body,method] of calls)eq((await api(restricted,path,body,method)).status,403);
+ await reject(()=>approveOrder(pending.id,restricted.id),403);
+ await reject(()=>rejectOrder(pending.id,restricted.id,'Penolakan tidak boleh melewati template'),403);
+ // Recipient eligibility must be tested with an actor whose live assignment grant is restored.
+ await prisma.user.update({where:{id:admin.id},data:{permissions:{}}});
  await reject(()=>saveOrderReviewAssignment(pending.id,{...assignment,ownerId:restricted.id},admin),400);
  eq((await getOrderReviewAssignment(pending.id,admin)).people.some(person=>person.id===restricted.id),false);
  await prisma.user.update({where:{id:admin.id},data:{permissions:{can_cancel_order_remainder:false,can_assign_order_review:false}}});

@@ -13,6 +13,8 @@ export function requestFeature(path,method='GET',body={}){
  if(/^outlets\/[^/]+\/google-location\/refresh$/.test(p))return ['OUTLET_REVIEW',false];
  if(p.startsWith('outlets/field-visit-report'))return ['OUTLET_REVIEW',false];
  if(p.startsWith('outlets/field-tasks'))return ['OUTLET_REVIEW',false];
+ if(/^outlets\/[^/]+\/change-queue\/[^/]+\/cancel$/.test(p))return ['OUTLET_MASTER',false];
+ if(p==='outlets/duplicates')return ['OUTLET_MASTER',false];
  if(p.startsWith('outlets/validation-jobs'))return ['OUTLET_REVIEW',method==='POST'];
  if(p.startsWith('outlets')&&/review|validat/.test(p))return ['OUTLET_REVIEW',method==='POST'&&!/\/digital$/.test(p)];
  if(p.startsWith('outlets'))return ['OUTLET_MASTER',!['GET','HEAD'].includes(method)&&!p.includes('/coordinates')];

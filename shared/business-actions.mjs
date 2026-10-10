@@ -20,6 +20,7 @@ export const actionFeature=(group,action)=>{
  const rule=BUSINESS_ACTIONS[group]?.[action];return rule?[rule.feature,rule.intent==='NEW_WORK']:null;
 };
 export const BACKGROUND_CONTRACTS={
+ AUTO_DELEGATION:{purpose:'Pengalihan pekerjaan berdasarkan kondisi',consumer:'server/src/modules/config/services/auto-delegation.service.js',rule:'Explicit Admin rule, current actor/recipient scope and permissions; ordered eligible fallback; transfer and loop limits; shares schedule lock and restoration; manual changes require explicit retry; blocked cases visible'},
  OUTLET_CHANGE_QUEUE:{purpose:'Perubahan master sesudah waktu efektif dan kunjungan selesai',consumer:'server/src/modules/outlets/services/outlet-change-queue.service.js',rule:'Fresh actor/scope, optimistic master revision; busy jobs wait; stale proposals fail without overwriting master; atomic change/audit/job'},
  ASSIGNMENT_SCHEDULE:{purpose:'Penugasan bertanggal dan pemulihan delegasi',consumer:'server/src/modules/config/services/assignment-schedules.service.js',rule:'Frozen task revision; active authorized actor and eligible owner; atomic task/schedule update; finished or manually reassigned work is never overwritten'},
  PJP_PUBLICATION:{purpose:'Penerbitan planner pada jadwal yang disimpan',consumer:'server/src/modules/pjp/services/publication-schedule.service.js',rule:'Fresh actor/permission/team/rules/calendar check; pause defers, cancellation serialized; all or nothing publication'},

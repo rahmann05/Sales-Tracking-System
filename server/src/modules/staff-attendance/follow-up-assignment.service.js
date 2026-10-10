@@ -20,7 +20,7 @@ export const assignFollowUp=(id,user,raw,{db:database=prisma,validateOnly=false,
  const f=record.followUp;if(f.status!=='OPEN')throw new AppError('Hanya tugas terbuka yang dapat dialihkan; periksa atau kembalikan hasil terlebih dahulu.',409);
  if((f.revision||0)!==data.revision)throw new AppError('Penugasan berubah. Muat ulang tugas.',409);
  const owner=people.find(p=>p.id===data.ownerId);
- assertFollowUpOwner(owner,actor,people,await processValue(record,'FOLLOW_UP_REQUIRE_REVIEW',true));
+ assertFollowUpOwner(owner,actor,people,await processValue(record,'FOLLOW_UP_REQUIRE_REVIEW',true),record.followUp?.reviewerMode||'BOTH');
  if(validateOnly)return record;
  const at=new Date().toISOString(),followUp={...f,ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate,revision:data.revision+1,history:[...(f.history||[]),{action:'REASSIGNED',actorId:actor.id,at,note:data.reason,before:{ownerId:f.ownerId,ownerName:f.ownerName,dueDate:f.dueDate},after:{ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate}}]};
  const updated=await db.staffActivity.update({where:{id},data:{followUp}});

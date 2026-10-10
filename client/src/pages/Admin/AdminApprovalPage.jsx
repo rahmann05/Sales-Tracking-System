@@ -18,7 +18,7 @@ export const AdminApprovalPage = ({
   embedded = false
 }) => {
   const {
-    orders = [],
+    settings,orders = [],
     setOrders,
     handleAdminOrderDecision,
     incidents = [],
@@ -28,7 +28,7 @@ export const AdminApprovalPage = ({
     setActiveTab,
     salesList = []
   } = useApp();
-  const [orderFilter, setOrderFilter] = useWorkspaceState('orderStatus','PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [orderFilter, setOrderFilter] = useWorkspaceState('orderStatus',settings.ORDER_REVIEW_DEFAULT_STATUS||'PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
   const [selectedSales, setSelectedSales] = useWorkspaceState('orderSales','ALL'); // 'ALL' | <salesName>
   const [loading, setLoading] = useState(false);
   const [loadError,setLoadError]=useState('');

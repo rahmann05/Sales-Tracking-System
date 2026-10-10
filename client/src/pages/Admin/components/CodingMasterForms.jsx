@@ -1,3 +1,4 @@
+import {MasterImportPanel} from '../../../shared/components/common/MasterImportPanel';
 import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
 import React,{useState} from 'react';
 import {vehiclesApi,divisionsApi} from '../../../services/api';
@@ -20,6 +21,7 @@ export function CodingMasterForms() {
   }
   return <details className="p-5 rounded-2xl border border-border-glass space-y-3">
     <summary className="font-semibold cursor-pointer">Tambah master divisi / kendaraan</summary>
+    {canVehicle&&<MasterImportPanel kind="vehicles"/>}
     <form onSubmit={save} className="space-y-3 pt-3">
       <label className="app-field">Jenis master<select value={kind} disabled={busy} onChange={e=>{setKind(e.target.value);setForm({});setMessage('');}}><option value="DIVISION">Divisi</option><option value="VEHICLE">Kendaraan</option></select></label>
       <BusinessCodeInput entity={kind} value={form.code || ''} onChange={value=>field('code',value)} optional={kind==='DIVISION'} disabled={busy}/>

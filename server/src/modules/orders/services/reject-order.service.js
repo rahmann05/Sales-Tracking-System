@@ -24,6 +24,7 @@ export const rejectOrder = async (orderId, adminId, reason = null, options={}) =
   await assertSalesAccess(reviewer,order.createdBy);
   if(!reason?.trim())throw new AppError('Alasan penolakan wajib',400);
   const changed=await prisma.$transaction(async tx=>{
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
     const current=await tx.order.findUnique({where:{id:orderId}});
     if(!current||current.deletedAt||current.status!==ORDER_STATUS.PENDING_APPROVAL)throw new AppError('Order sudah diproses atau tidak aktif',409);

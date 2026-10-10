@@ -1,4 +1,5 @@
 export const REPORT_PRESENTATION={
+ ATTENTION_WIDGETS:['total','overdue','awaitingReview','missingOwner','missingDeadline'],
  REPORT_SPV_WIDGETS:['totalPlanCalls','totalActualCalls','totalEffectiveCalls','totalAnomalies'],
  REPORT_WEEKLY_WIDGETS:['calls','ec','revenue','anomalies'],
  REPORT_MTD_WIDGETS:['calendar','target','comparison','calls'],

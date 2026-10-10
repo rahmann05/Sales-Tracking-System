@@ -1,3 +1,4 @@
+import {visitReferenceLabels} from '../../../../../shared/visit-reference-catalog.mjs';
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {AppError} from '../../../utils/errors.js';
@@ -31,8 +32,9 @@ export async function settlePreviousVisit(db,userId,excludeId){
 export async function validateVisitResult(payload){
  await assertEvidenceImages({attachments:payload.visitOutcome?.attachments});
  if(['COLLECTION','BOTH'].includes(payload.visitOutcome?.purpose)&&await getDynamicConfig('FEATURE_COLLECTION_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Pencatatan penagihan baru dinonaktifkan oleh Admin',409);
- const keys=['SALES_REQUIRE_VISIT_RESULT','VISIT_RESULT_REQUIRE_NOTE','VISIT_RESULT_OFFER_MODE','VISIT_RESULT_OBSTACLE_MODE','VISIT_RESULT_ATTACHMENT_MODE'];
+ const keys=['SALES_REQUIRE_VISIT_RESULT','VISIT_RESULT_REQUIRE_NOTE','VISIT_RESULT_OFFER_MODE','VISIT_RESULT_OBSTACLE_MODE','VISIT_RESULT_ATTACHMENT_MODE','VISIT_PURPOSE_CATALOG','COLLECTION_RESULT_CATALOG','VISIT_OBSTACLE_CATALOG'];
  const values=Object.fromEntries(await Promise.all(keys.map(async k=>[k,await getDynamicConfig(k)])));
  const error=visitResultPolicyError(payload.visitOutcome,values,payload.notes);
  if(error)throw new AppError(error,422);
+ if(payload.visitOutcome)try{payload.visitOutcome={...payload.visitOutcome,referenceLabels:visitReferenceLabels(payload.visitOutcome,values)};}catch(e){throw new AppError(e.message,422);}
 }

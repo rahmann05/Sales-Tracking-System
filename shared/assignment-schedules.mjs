@@ -1,3 +1,7 @@
 export const ASSIGNMENT_KINDS={FOLLOW_UP:'Tindak lanjut Sales',RETURN:'Pemeriksaan retur',ORDER_REVIEW:'Pemeriksaan order',OUTLET_REVIEW:'Validasi outlet',ROUTE_REVIEW:'Keputusan toko tutup / reroute',PREPARATION:'Persiapan gudang',TEAM:'Transfer tim Sales'};
 export const ASSIGNMENT_STATES={SCHEDULED:'Menunggu waktu mulai',ACTIVE:'Delegasi berjalan',APPLIED:'Penugasan diterapkan',RESTORED:'PIC awal dipulihkan',SUPERSEDED:'Digantikan perubahan terbaru',FINISHED:'Tugas telah dikirim/selesai',CANCELLED:'Jadwal dibatalkan',EXPIRED:'Jendela waktu terlewat',FAILED:'Gagal diterapkan',NEEDS_ATTENTION:'Pemulihan perlu ditangani Admin'};
 export const wibInputToIso=value=>value?new Date(`${value}:00+07:00`).toISOString():null;
+import {canDomainAction} from './domain-permissions.mjs';
+import {canOrderOperation} from './order-operation-permissions.mjs';
+export const ASSIGNMENT_RIGHTS={ROUTE_REVIEW:'can_assign_route_review',FOLLOW_UP:'can_assign_follow_up',RETURN:'can_monitor_delivery',ORDER_REVIEW:'can_approve_order',OUTLET_REVIEW:'can_assign_outlet_review',PREPARATION:'can_trip_assign_preparation',TEAM:'can_view_team'};
+export function canScheduleAssignment(actor,kind){return Boolean(ASSIGNMENT_RIGHTS[kind]&&actor&&!actor.deletedAt&&actor.role==='ADMIN'&&actor.permissions?.[ASSIGNMENT_RIGHTS[kind]]!==false&&(kind!=='TEAM'||canDomainAction(actor,'ASSIGN_TEAM'))&&(kind!=='ORDER_REVIEW'||canOrderOperation(actor,'ASSIGN_REVIEW')));}

@@ -12,7 +12,9 @@ import {useAddressLookup} from '../../../shared/hooks/useAddressLookup';
  */
 export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
     const { settings } = useApp();
-    const draft=useFormDraft('off-pjp',{salesResult:{orderAmount:'',productIds:[]},visitOutcome:{purpose:''},outletName:'',customerName:'',phone:'',address:'',notes:'Kunjungan Prospek Toko Baru di Luar RJP',pending:null});
+    const draft=useFormDraft('off-pjp',{salesResult:{orderAmount:'',productIds:[]},visitOutcome:{purpose:''},outletId:'',outletName:'',customerName:'',phone:'',address:'',notes:'Kunjungan Prospek Toko Baru di Luar RJP',pending:null});
+    const outletId=draft.value.outletId||'';
+    const selectOutlet=outlet=>draft.setValue(prev=>({...prev,outletId:outlet?.id||'',outletName:outlet?.name||'',address:outlet?.address||'',customerName:outlet?.ownerName||'',phone:outlet?.phone||''}));
     const salesResult=draft.value.salesResult,setSalesResult=draft.field('salesResult');
     const visitOutcome=draft.value.visitOutcome,setVisitOutcome=draft.field('visitOutcome');
     const outletName=draft.value.outletName,setOutletName=draft.field('outletName');
@@ -52,6 +54,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
         if(outcomeError){setError(outcomeError);return;}
         const gps = capturedGps || userLocation;
         if (settings.OFF_PJP_REQUIRE_GPS&&(!gps || !Number.isFinite(gps.lat) || !Number.isFinite(gps.lng))) { setError('GPS belum tersedia. Ambil ulang foto.'); return; }
+        if(settings.OFF_PJP_OUTLET_SCOPE==='MASTER_ONLY'&&!outletId){setError('Pilih outlet master terlebih dahulu.');return;}
         if (!outletName.trim()) {setError('Isi nama toko terlebih dahulu.');return;}
         if (!customerName.trim()) {setError('Isi nama pelanggan / pemilik toko terlebih dahulu.');return;}
         if (address.trim().length < 5) { setError('Isi alamat toko minimal 5 karakter.'); return; }
@@ -60,6 +63,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
         sending.current = true; setSaving(true); setError('');
         const payload = {
             requestId: crypto.randomUUID(),
+            ...(outletId?{outletId}:{}),
             ...(settings.ATTENDANCE_ALLOW_MANUAL_SALES ? { orderAmount: Number(salesResult.orderAmount || 0), productIds: salesResult.productIds } : {}),
             outletName: outletName.trim(),
             customerName: customerName.trim(),
@@ -82,7 +86,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
 
     return {
         dirty:draft.dirty||!!capturedPhoto,restored:draft.restored,draftNotice:draft.restored||draft.policyChanged?draft.restoreMessage:'',draftError:draft.storageError,
-        visitOutcome,setVisitOutcome,
+        visitOutcome,setVisitOutcome,outletId,selectOutlet,
         saving, error, retryPending, salesResult, setSalesResult,        outletName, setOutletName,
         customerName, setCustomerName,
         phone, setPhone,

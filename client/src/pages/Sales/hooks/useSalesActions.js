@@ -207,6 +207,7 @@ export const useSalesActions = ({
   // Sales Action: Absen Toko Luar RJP (Off-PJP)
   const handleSalesAbsenOffPJP = useCallback(async ({
     requestId,
+    outletId,
     outletName,
     customerName,
     phone,
@@ -220,6 +221,7 @@ export const useSalesActions = ({
     try {
       const res = await absensiApi.submitOffPjp({
         requestId,
+        outletId,
         orderAmount, productIds,
         visitOutcome,
         outletName,

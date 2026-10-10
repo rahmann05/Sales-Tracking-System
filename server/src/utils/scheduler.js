@@ -15,8 +15,11 @@ import {prisma} from '../config/prisma.js';
 import {runScheduledPublications} from '../modules/pjp/services/publication-schedule.service.js';
 import {runAssignmentSchedules} from '../modules/config/services/assignment-schedules.service.js';
 import {runOutletChanges} from '../modules/outlets/services/outlet-change-queue.service.js';
+import {runAutoDelegation} from '../modules/config/services/auto-delegation.service.js';
 
 export const initScheduler = () => {
+  schedulerMonitor.register('AUTO_DELEGATION','Pengalihan pekerjaan otomatis',Date.now()+60000,60000);
+  setInterval(()=>{schedulerMonitor.run('AUTO_DELEGATION',runAutoDelegation,now=>now+60000).catch(()=>console.error('[Scheduler]: Automatic delegation failed.'));},60000).unref();
   schedulerMonitor.register('OUTLET_CHANGE_QUEUE','Perubahan master outlet tertunda',Date.now()+30000,30000);
   setInterval(()=>{schedulerMonitor.run('OUTLET_CHANGE_QUEUE',runOutletChanges,now=>now+30000).catch(()=>console.error('[Scheduler]: Outlet change queue failed.'));},30000).unref();
   schedulerMonitor.register('ASSIGNMENT_SCHEDULE','Penugasan dan akhir delegasi',Date.now()+30000,30000);

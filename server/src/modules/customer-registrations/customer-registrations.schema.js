@@ -29,10 +29,10 @@ export const createRegistrationSchema = z.object({
 
     // Wilayah, Klaster & Geografis (dinamis sesuai definisi klaster supervisor)
     clusterId: z.string().optional().nullable(),
-    area: z.string().optional().default('CIMAHI'),
+    area: z.string().optional().default(''),
     subAreaKecamatan: z.string().optional().nullable(),
     kelurahan: z.string().optional().nullable(),
-    city: z.string().default('CIMAHI'),
+    city: z.string().default(''),
     latitude: z.number().finite().min(-90).max(90).nullable().optional(),
     longitude: z.number().finite().min(-180).max(180).nullable().optional(),
     placeId: z.string().optional().nullable(),

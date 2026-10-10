@@ -7,7 +7,7 @@ export function salesVisitActions({stop,isLocked=false,settings={},user}){
  const frozen=processPolicyValues(stop?.policySnapshot,settings),policy=visitPolicy(frozen);
  const active=activeVisitStatuses.includes(stop?.status),complete=completedVisitStatuses.includes(stop?.status),sales=user?.role==='SALES'&&!user.deletedAt;
  return {frozen,policy,active,complete,lockedEntry:isLocked&&!active&&!complete,
-  canStart:stop?.status==='PENDING'&&!isLocked&&canDomainAction(user,'SALES_VISIT')&&featureAvailable(settings,'SALES_VISITS'),
+  canStart:(!stop?.visitSession?.plannedFor||Date.parse(stop.visitSession.plannedFor)<=Date.now())&&stop?.status==='PENDING'&&!isLocked&&canDomainAction(user,'SALES_VISIT')&&featureAvailable(settings,'SALES_VISITS'),
   canComplete:Boolean(sales&&active),
   canRequestException:canDomainAction(user,'REQUEST_EXCEPTION')&&featureAvailable(settings,'UNLOCK'),
   canReportClosed:Boolean(sales&&user.permissions?.can_request_reroute!==false&&featureAvailable(settings,'REROUTE')&&stop?.status!=='ORDERED'),

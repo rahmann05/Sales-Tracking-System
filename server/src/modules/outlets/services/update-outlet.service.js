@@ -1,3 +1,4 @@
+import {assertMasterRequiredFields} from './outlet-required-fields.service.js';
 import {assertClusterTrade} from '../../clusters/services/cluster-trade-policy.service.js';
 /** updateOutlet - single-responsibility service (extracted from outlets.service.js). */
 import { prisma } from '../../../config/prisma.js';
@@ -18,6 +19,7 @@ export const updateOutlet = async (id, raw,actor,{db=prisma,validateOnly=false}=
     await lockOutlet(tx,id);
     const previous = await tx.outlet.findUnique({where:{id}});
     if(!previous||previous.deletedAt)throw new AppError('Outlet aktif tidak ditemukan',404);
+    await assertMasterRequiredFields({...previous,...input},'perubahan master');
     assertOutletLegal(input,previous);
     assertOutletTrade(input,previous);
     const lat=input.latitude===undefined?previous.latitude:input.latitude,lng=input.longitude===undefined?previous.longitude:input.longitude;

@@ -12,7 +12,7 @@ export function FollowUpActions({id,followUp:f,policySnapshot,onChanged}) {
  const {note,evidence}=draft.value,setNote=draft.field('note'),setEvidence=draft.field('evidence');
  const [decision,setDecision]=useState('ACCEPT'),[busy,setBusy]=useState(false),[error,setError]=useState('');
  useUnsavedNavigation(Boolean(note||evidence),busy);
- const review=f.status==='SUBMITTED'&&['ADMIN','SUPERVISOR'].includes(user?.role)&&followUpAllowed(user,'review')&&f.ownerId!==user.id;
+ const review=f.status==='SUBMITTED'&&(!f.reviewerMode||f.reviewerMode==='BOTH'||f.reviewerMode===user?.role)&&['ADMIN','SUPERVISOR'].includes(user?.role)&&followUpAllowed(user,'review')&&f.ownerId!==user.id;
  const submit=f.status==='OPEN'&&followUpAllowed(user,'complete')&&f.ownerId===user?.id;
  const save=async e=>{e.preventDefault();setBusy(true);setError('');try{
   if(review)await staffAttendanceApi.reviewFollowUp(id,{decision,note,submissionId:f.submission.id});

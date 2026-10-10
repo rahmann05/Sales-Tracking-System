@@ -36,6 +36,7 @@ export const ROUTE_CHANGE_TYPE = /** @type {const} */ ({
   REROUTE: 'REROUTE',
   SKIP: 'SKIP',
   OFF_PJP_REQUEST: 'OFF_PJP_REQUEST',
+  REVISIT: 'REVISIT',
 });
 
 export const ROUTE_CHANGE_STATUS = /** @type {const} */ ({

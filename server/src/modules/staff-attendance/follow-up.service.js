@@ -1,3 +1,5 @@
+import {followUpReviewers} from '../../../../shared/follow-up-policy.mjs';
+import {reviewPeople} from '../config/services/approval-readiness.service.js';
 import {processValue} from '../config/services/process-policy.service.js';
 import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
@@ -47,6 +49,8 @@ export const reviewFollowUp=(id,user,{decision,note,submissionId})=>prisma.$tran
   const record=await tx.staffActivity.findFirst({where:{id,...await followUpScope(user,tx)}});
   if(!record?.followUp)throw new AppError('Tindak lanjut tidak ditemukan',404);
   const f=record.followUp;
+  const people=await reviewPeople(tx);
+  if(!followUpReviewers(people.find(p=>p.id===f.ownerId),people,f.reviewerMode||'BOTH').some(p=>p.id===user.id))throw new AppError('Anda bukan pemeriksa yang diizinkan untuk tugas ini.',403);
   if(f.ownerId===user.id)throw new AppError('Hasil tugas sendiri harus diperiksa pengguna lain',403);
   await assertSalesAccess(user,f.ownerId,tx);
   if(f.status!=='SUBMITTED'||!submissionId||f.submission?.id!==submissionId)throw new AppError('Hasil sudah berubah atau sudah diperiksa. Muat ulang tugas.',409);

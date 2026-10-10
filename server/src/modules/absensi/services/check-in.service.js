@@ -25,6 +25,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   });
 
   if (!stop) throw new AppError('Stop PJP tidak ditemukan', 404);
+  if(stop.visitSession?.plannedFor&&Date.parse(stop.visitSession.plannedFor)>Date.now())throw new AppError('Kunjungan kembali belum memasuki waktu pelaksanaan yang dijadwalkan.',409);
   if(stop.validationOnly)throw new AppError('Gunakan formulir Validasi ulang outlet pada tugas PJP ini; presensi biasa tidak menggantikan bukti validasi.',409);
   const visit=await visitSettings(stop);
   if(stop.visitSession?.state==='ACTIVE')throw new AppError('Kegiatan sudah dimulai',409);

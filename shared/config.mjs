@@ -2,6 +2,7 @@ import { CODE_CONFIG_GROUPS } from './coding.mjs';
 import { OPERATIONAL_CONFIG_GROUPS } from './operational-policy.mjs';
 import {parseAuditItems} from './supervision-checklist.mjs';
 import {parseReasonOptions} from './visit-reasons.mjs';
+import {VISIT_REFERENCE_CATALOGS,visitCatalog} from './visit-reference-catalog.mjs';
 import {parseReferenceCatalog} from './reference-catalog.mjs';
 import {evidenceImageFormats} from './evidence-image-policy.mjs';
 import {requiredRegistrationFields} from './registration-fields.mjs';
@@ -448,11 +449,11 @@ export const CONFIG_PARAMS = CONFIG_DEFINITIONS.flatMap(group => group.params);
 export const CONFIG_DEFAULTS = Object.fromEntries(CONFIG_PARAMS.map(param => [param.key, param.defaultValue]));
 export function parseConfigValue(param, raw) {
   if(param.key==='EVIDENCE_IMAGE_FORMATS')return evidenceImageFormats(raw).join(',');
-  if(param.type==='catalog')return parseReferenceCatalog(raw);
+  if(param.type==='catalog')return VISIT_REFERENCE_CATALOGS[param.key]?visitCatalog(param.key,{[param.key]:raw}):parseReferenceCatalog(raw);
   if(Object.hasOwn(REPORT_PRESENTATION,param.key))return reportSelection(param.key,raw).join(',');
   if(param.type==='checklist')return parseAuditItems(raw);
   if(param.type==='reference')return parseReasonOptions(raw).join('\n');
-  if(param.type==='field-requirements')return requiredRegistrationFields(raw).join(',');
+  if(param.type==='field-requirements')return requiredRegistrationFields(raw,param.optionLabels).join(',');
   if (param.type === 'boolean') {
     if (![true, false, 'true', 'false'].includes(raw)) throw new Error(`${param.label}: pilih aktif atau nonaktif`);
     return raw === true || raw === 'true';

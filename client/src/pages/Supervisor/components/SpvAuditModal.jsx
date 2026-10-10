@@ -65,6 +65,7 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                     className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
             </div>
+            {policyValues.FOLLOW_UP_AUTO_ENABLED&&<p className="app-notice">Temuan sesuai aturan Admin dapat menghasilkan tugas otomatis saat disimpan. PIC awal: {policyValues.FOLLOW_UP_AUTO_OWNER==='CLUSTER_SALES'?'Sales utama cluster':'Sales pemilik PJP'}. Pilihan tugas manual mengesampingkan otomatisasi; tugas lama tidak ditimpa.</p>}
             {followUp && followUpAllowed(user,'assign') && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||stop.followUpReadOnly||followUp.completed||(settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE')}>
                 <legend className="font-bold text-sm">Tindak lanjut sales</legend>
                 {stop.followUpReadOnly&&<p>Target tidak berada di PJP saat ini. Audit aktif tetap dapat diselesaikan; penugasan tindak lanjut mengikuti wilayah dan tim terbaru melalui menu Tindak lanjut.</p>}

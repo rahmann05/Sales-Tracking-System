@@ -10,5 +10,11 @@ export async function attachRouteWorkflows(db,rows){
  if(!rows.length)return rows;
  const configs=await db.systemConfig.findMany({where:{key:{in:rows.map(r=>routeWorkflowKey(r.id))}}});
  const map=new Map(configs.map(c=>[c.key,c.value]));
- return rows.map(row=>({...row,workflow:map.get(routeWorkflowKey(row.id))||null}));
+ const ids=configs.map(c=>c.value?.revisit?.stopId).filter(Boolean);
+ const stops=ids.length?await db.pjpStop.findMany({where:{id:{in:ids}},include:{attendances:true}}):[];
+ const lookup=new Map(stops.map(s=>[s.id,s]));
+ return rows.map(row=>{const workflow=map.get(routeWorkflowKey(row.id))||null,revisit=workflow?.revisit,stop=revisit&&lookup.get(revisit.stopId);
+  const state=!revisit?null:!stop?'UNAVAILABLE':stop.visitSession?.state==='INCOMPLETE'?'INCOMPLETE':stop.visitSession?.state==='FINISHED'||stop.attendances.some(a=>a.type==='OUT')?'COMPLETED':stop.status==='SKIPPED'?'SKIPPED':Date.parse(revisit.effectiveAt)<Date.now()?'OVERDUE':'SCHEDULED';
+  return {...row,decisionAction:workflow?.decisionAction||workflow?.proposal?.action||row.type,workflow,revisit:revisit?{...revisit,state}:null};
+ });
 }

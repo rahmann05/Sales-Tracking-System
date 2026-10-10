@@ -21,6 +21,7 @@ export function serviceCatalog(values={}){
  return parseReferenceCatalog(values.VEHICLE_SERVICE_CATALOG??DEFAULT_SERVICE_CATALOG);
 }
 export function retainServiceCodes(next,previous={}){
+ for(const key of ['VISIT_PURPOSE_CATALOG','COLLECTION_RESULT_CATALOG','VISIT_OBSTACLE_CATALOG'])if(next[key]!==undefined&&previous[key]!==undefined)parseReferenceCatalog(next[key],parseReferenceCatalog(previous[key],[]).map(r=>r.code));
  if(next.VEHICLE_SERVICE_CATALOG!==undefined)parseReferenceCatalog(next.VEHICLE_SERVICE_CATALOG,serviceCatalog(previous).map(r=>r.code));
 }
 export function serviceRecordLabel(record){

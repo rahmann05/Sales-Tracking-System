@@ -9,10 +9,11 @@ export function parseAuditItems(raw){
  if(!Array.isArray(value)||value.length>30)throw new Error('Checklist maksimal 30 pertanyaan.');
  const keys=new Set();
  return value.map(item=>{
-  if(!item||typeof item!=='object'||Object.keys(item).some(k=>!['key','label','required','type','options','min','max','failureBelow','failedValues','requireFailureReason','requireFailurePhoto'].includes(k))||!/^([a-zA-Z][a-zA-Z0-9_]{0,63})$/.test(item.key)||['constructor','prototype','__proto__','state','startKind','finishKind','finishedAt'].includes(item.key)||keys.has(item.key)||typeof item.label!=='string'||item.label.trim().length<3||item.label.length>200||typeof item.required!=='boolean')throw new Error('Setiap pertanyaan harus memiliki kode unik, label 3–200 karakter, dan pilihan wajib jawab.');
+  if(!item||typeof item!=='object'||Object.keys(item).some(k=>!['key','label','required','type','options','min','max','failureBelow','failedValues','requireFailureReason','requireFailurePhoto','autoFollowUp'].includes(k))||!/^([a-zA-Z][a-zA-Z0-9_]{0,63})$/.test(item.key)||['constructor','prototype','__proto__','state','startKind','finishKind','finishedAt'].includes(item.key)||keys.has(item.key)||typeof item.label!=='string'||item.label.trim().length<3||item.label.length>200||typeof item.required!=='boolean')throw new Error('Setiap pertanyaan harus memiliki kode unik, label 3–200 karakter, dan pilihan wajib jawab.');
   const type=item.type||'BOOLEAN';
   if(!['BOOLEAN','TEXT','NUMBER','SELECT'].includes(type))throw new Error('Tipe pertanyaan tidak dikenal.');
-  for(const flag of ['requireFailureReason','requireFailurePhoto'])if(item[flag]!==undefined&&typeof item[flag]!=='boolean')throw new Error('Kewajiban bukti harus berupa pilihan aktif/nonaktif.');
+  for(const flag of ['requireFailureReason','requireFailurePhoto','autoFollowUp'])if(item[flag]!==undefined&&typeof item[flag]!=='boolean')throw new Error('Kewajiban bukti/pemicu harus berupa pilihan aktif/nonaktif.');
+  if(item.autoFollowUp&&(type==='TEXT'||type==='NUMBER'&&item.failureBelow===undefined||type==='SELECT'&&!item.failedValues?.length))throw new Error('Pemicu tugas memerlukan kondisi gagal yang terdefinisi.');
   if(type==='TEXT'&&(item.requireFailureReason||item.requireFailurePhoto))throw new Error('Jawaban teks tidak mempunyai kondisi gagal otomatis.');
   if(type==='SELECT'){
    if(!Array.isArray(item.options)||item.options.length<2||item.options.length>20||item.options.some(v=>typeof v!=='string'||!v.trim()||v!==v.trim()||v.length>100)||new Set(item.options).size!==item.options.length)throw new Error('Pilihan jawaban harus 2–20 nilai unik, maksimal 100 karakter.');

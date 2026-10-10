@@ -1,3 +1,4 @@
+import {workspaceChoice} from '../../../../../shared/workspace-presentation.mjs';
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import {useApp} from '../../../context/AppContext';
@@ -12,11 +13,11 @@ import {OutletValidationDetail} from './OutletValidationDetail';
 import {ValidationOutletPicker} from './ValidationOutletPicker';
 import {OutletValidationJobs} from './OutletValidationJobs';
 export function OutletValidationPanel(){
- const feature=useFeaturePolicy('OUTLET_REVIEW'),{user}=useApp();
- const [stage,setStage]=useWorkspaceState('outletReviewStage','ALL'),[search,setSearch]=useWorkspaceState('outletReviewSearch',''),[selected,setSelected]=useWorkspaceState('outletReview',''),[issue,setIssue]=useWorkspaceState('outletReviewIssue','ALL');
+ const feature=useFeaturePolicy('OUTLET_REVIEW'),{user,settings}=useApp();
+ const [stage,setStage]=useWorkspaceState('outletReviewStage',workspaceChoice('OUTLET_REVIEW_DEFAULT_STAGE',settings.OUTLET_REVIEW_DEFAULT_STAGE)),[search,setSearch]=useWorkspaceState('outletReviewSearch',''),[selected,setSelected]=useWorkspaceState('outletReview',''),[issue,setIssue]=useWorkspaceState('outletReviewIssue','ALL');
  const [page,setPage]=useState(1),[rows,setRows]=useState([]),[pagination,setPagination]=useState({total:0,totalPages:1}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[detail,setDetail]=useState(null),[picker,setPicker]=useState(false);
  const debounced=useDebounce(search,250),version=useRef(0);
- const load=useCallback(async()=>{const v=++version.current;setLoading(true);setError('');try{if(selected){const r=await outletValidationApi.review(selected);if(v===version.current)setDetail(r.data);}else{const r=await outletValidationApi.reviews({status:'ALL',stage,search:debounced,page,issue});if(v===version.current){setRows(r.data);setPagination(r.pagination);}}}catch(e){if(v===version.current)setError(e.message);}finally{if(v===version.current)setLoading(false);}},[selected,stage,debounced,page,issue]);
+ const load=useCallback(async()=>{const v=++version.current;setLoading(true);setError('');try{if(selected){const r=await outletValidationApi.review(selected);if(v===version.current)setDetail(r.data);}else{const r=await outletValidationApi.reviews({status:'ALL',stage,search:debounced,page,issue,limit:settings.WORKSPACE_PAGE_SIZE||25});if(v===version.current){setRows(r.data);setPagination(r.pagination);}}}catch(e){if(v===version.current)setError(e.message);}finally{if(v===version.current)setLoading(false);}},[selected,stage,debounced,page,issue,settings.WORKSPACE_PAGE_SIZE]);
  useEffect(()=>{load();return()=>{version.current++;};},[load]);
  const select=id=>{if(confirmWorkspaceNavigation()){setDetail(null);setSelected(id);}};
  const filter=(setter,value)=>{setter(value);setPage(1);};

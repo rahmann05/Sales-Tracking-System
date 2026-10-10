@@ -1,3 +1,4 @@
+import {RegistrationAdditionalFields} from './RegistrationAdditionalFields';
 import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import { RegistrationIdentitySection } from './RegistrationIdentitySection';
 import { RegistrationLocationSection } from './RegistrationLocationSection';
@@ -168,7 +169,7 @@ export const PhysicalDocumentForm = ({
       <RegistrationTaxSection cardTypeLabel={cardTypeLabel} formData={formData} setIsKtpCameraOpen={setIsKtpCameraOpen} settings={settings} updateField={updateField} />
 
       {/* ─── BOX 4: AREA & WILAYAH ────────────────────────────────────────────── */}
-      </section><section id="registration-plan" className="sales-registration-group"><h3>3. Wilayah & rencana kunjungan</h3><RegistrationTerritorySection clusters={clusters} formData={formData} updateField={updateField} />
+      </section><section id="registration-plan" className="sales-registration-group"><h3>3. Wilayah & rencana kunjungan</h3><RegistrationAdditionalFields formData={formData} updateField={updateField} settings={settings}/><RegistrationTerritorySection clusters={clusters} formData={formData} updateField={updateField} />
 
       {/* ─── BOX 5: CHANNEL & SUB CHANNEL ─────────────────────────────────────── */}
       <RegistrationChannelSection GT_SUB_CHANNELS={GT_SUB_CHANNELS} MT_SUB_CHANNELS={MT_SUB_CHANNELS} TIERS={TIERS} formData={formData} updateField={updateField} />

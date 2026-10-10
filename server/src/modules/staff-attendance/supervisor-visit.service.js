@@ -1,3 +1,4 @@
+import {prepareAutomaticFollowUp} from './automatic-follow-up.service.js';
 import {assertEvidenceImages} from '../../utils/evidence-images.js';
 import {freshDomainActor} from '../../middlewares/domain-permission.middleware.js';
 import {gpsEvidence} from '../../utils/gps-evidence.js';
@@ -76,7 +77,7 @@ async function perform(db,user, data) {
   if(data.action==='AUDIT')await assertEvidenceImages({photos:Object.values(data.auditEvidence||{})},{entity:existing});
   const questions=parseAuditItems(await processValue(existing,'SPV_AUDIT_ITEMS',DEFAULT_AUDIT_ITEMS));
   let answers;try{answers=auditAnswers(questions,data.action==='AUDIT'?data.checklist:existing.checklist,data.action==='AUDIT'?data.auditEvidence||{}:existing.checklist?._evidence||{});}catch(error){throw new AppError(error.message,422);}
-  let followUp;
+  let followUp,blockedAuto;
   if(data.action==='AUDIT' && data.followUp) {
     if(await getDynamicConfig('FEATURE_FOLLOW_UP_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Tugas baru dijeda oleh Admin; tugas sebelumnya tetap dapat diselesaikan',409);
     await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
@@ -85,7 +86,7 @@ async function perform(db,user, data) {
     existing=await db.staffActivity.findUnique({where});
     await assertSalesAccess(user,data.followUp.ownerId,db);
     const owner=people.find(p=>p.id===data.followUp.ownerId);
-    assertFollowUpOwner(owner,actor,people,await processValue(existing,'FOLLOW_UP_REQUIRE_REVIEW',true));
+    assertFollowUpOwner(owner,actor,people,await processValue(existing,'FOLLOW_UP_REQUIRE_REVIEW',true),await processValue(existing,'FOLLOW_UP_REVIEWER_MODE','BOTH'));
     if(!data.followUp.note?.trim()||data.followUp.note.trim().length>4000)throw new AppError('Instruksi tindak lanjut wajib diisi, maksimal 4000 karakter',400);
     data.followUp.dueDate ||= wibDateKey(Date.now()+(await getDynamicConfig('FOLLOW_UP_DEFAULT_DAYS',1))*86400000);
     const due=new Date(`${data.followUp.dueDate}T12:00:00Z`);
@@ -93,12 +94,14 @@ async function perform(db,user, data) {
     if(existing.followUp?.status==='DONE')throw new AppError('Tindak lanjut sudah selesai dan tidak dapat ditimpa',409);
     if(existing.followUp?.status==='SUBMITTED')throw new AppError('Periksa hasil yang sudah dikirim sebelum mengubah penugasan',409);
     if(existing.followUp&&(existing.followUp.revision||0)!==data.followUp.revision)throw new AppError('Penugasan berubah. Muat ulang sebelum menyimpan audit.',409);
-    followUp={...data.followUp,revision:(existing.followUp?.revision||0)+1,note:data.followUp.note.trim(),ownerName:owner.name,status:'OPEN',createdBy:existing.followUp?.createdBy||user.id,createdAt:existing.followUp?.createdAt||new Date().toISOString(),history:[...(existing.followUp?.history||[]),{action:'ASSIGNED',actorId:user.id,at:new Date().toISOString(),before:existing.followUp?{ownerId:existing.followUp.ownerId,dueDate:existing.followUp.dueDate,note:existing.followUp.note}:null,after:{ownerId:owner.id,dueDate:data.followUp.dueDate,note:data.followUp.note.trim()}}]};
+    followUp={...data.followUp,reviewerMode:await processValue(existing,'FOLLOW_UP_REVIEWER_MODE','BOTH'),revision:(existing.followUp?.revision||0)+1,note:data.followUp.note.trim(),ownerName:owner.name,status:'OPEN',createdBy:existing.followUp?.createdBy||user.id,createdAt:existing.followUp?.createdAt||new Date().toISOString(),history:[...(existing.followUp?.history||[]),{action:'ASSIGNED',actorId:user.id,at:new Date().toISOString(),before:existing.followUp?{ownerId:existing.followUp.ownerId,dueDate:existing.followUp.dueDate,note:existing.followUp.note}:null,after:{ownerId:owner.id,dueDate:data.followUp.dueDate,note:data.followUp.note.trim()}}]};
   }
+  if(!data.followUp)try{followUp=await prepareAutomaticFollowUp(db,user,existing,questions,answers);}catch(error){if(!error.isOperational)throw error;blockedAuto={status:'BLOCKED',message:error.message,at:new Date().toISOString()};}
   const activeMode=await processValue(existing,'SPV_ATTENDANCE_MODE','IN_OUT');
   const metadata=Object.fromEntries(Object.entries(existing.checklist||{}).filter(([key])=>key!=='_evidence'&&!questions.some(item=>item.key===key)));
-  const patch = data.action === 'AUDIT'  ? { checklist: {...metadata,...answers}, notes: data.notes, ...(followUp?{followUp}:{}) } : { ...(activeMode==='IN_OUT'?{checkOutAt:new Date()}:{}),checklist:{...existing.checklist,state:'FINISHED',finishedAt:new Date().toISOString(),finishKind:activeMode==='IN_OUT'?'CHECK_OUT':'BUSINESS_RESULT'} };
-  const updated = await db.staffActivity.updateMany({ where: { id: existing.id, checkOutAt: null }, data: patch });
+  delete metadata.autoFollowUp;if(blockedAuto)metadata.autoFollowUp=blockedAuto;
+  const patch = data.action === 'AUDIT'  ? { checklist: {...metadata,...answers}, notes: data.notes, ...(followUp?{followUp}:{}) } : { ...(activeMode==='IN_OUT'?{checkOutAt:new Date()}:{}),checklist:{...metadata,...answers,state:'FINISHED',finishedAt:new Date().toISOString(),finishKind:activeMode==='IN_OUT'?'CHECK_OUT':'BUSINESS_RESULT'} };
+  const updated = await db.staffActivity.updateMany({ where: { id: existing.id, checkOutAt: null }, data: {...patch,...(followUp?{followUp}:{})} });
   if (!updated.count) throw new AppError('Kunjungan sudah diselesaikan', 409);
   const result = await db.staffActivity.findUnique({ where });
   if (followUp) await notifyFollowUp(db, result, 'ASSIGNED', user.id);

@@ -7,9 +7,13 @@ import {listPolicyLibrary,savePolicyLibrary,copyPolicyLibrary} from './services/
 import {listSystemAudit} from '../notifications/services/history-retention.service.js';
 import {listMigrationCandidates,previewProcessMigration,migrateProcesses} from './services/process-migration.service.js';
 import {assignmentScheduleOptions,assignmentSchedulePreview,listAssignmentSchedules,createAssignmentSchedule,cancelAssignmentSchedule,retryAssignmentSchedule} from './services/assignment-schedules.service.js';
+import {autoDelegationCenter,saveAutoDelegation,retryAutoDelegation} from './services/auto-delegation.service.js';
 const router=Router();
 router.use(authorize('ADMIN'));
 const run=fn=>async(req,res,next)=>{try{res.set('Cache-Control','no-store').json({data:await fn(req)});}catch(error){next(error);}};
+router.get('/auto-delegation',run(req=>autoDelegationCenter(req.user,req.query)));
+router.put('/auto-delegation',run(req=>saveAutoDelegation(req.body,req.user)));
+router.post('/auto-delegation/retry',run(req=>retryAutoDelegation(req.body.key,req.body.reason,req.user)));
 router.get('/assignments',run(req=>listAssignmentSchedules(req.user)));
 router.get('/assignments/options',run(req=>assignmentScheduleOptions(req.query.kind,req.user)));
 router.get('/assignments/preview',run(req=>assignmentSchedulePreview(req.query.kind,req.query.entityId,req.user)));

@@ -1,3 +1,4 @@
+import {MasterImportPanel} from '../../../shared/components/common/MasterImportPanel';
 import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
 import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import React, { useState, useEffect } from 'react';
@@ -27,6 +28,7 @@ export function ProductCatalogManager() {
     catch (err) { setError(err.message); } finally { setBusy(false); }
   };
   return <section className="bg-surface rounded-2xl border border-border-glass p-4 sm:p-5 space-y-4">
+    {canCreate&&canManage&&featurePolicy.canStart&&<MasterImportPanel kind="products" onImported={load}/>}
     <div className="flex flex-wrap justify-between items-start gap-3"><div><h2 className="font-bold text-lg">Katalog produk / SKU</h2><p className="text-sm text-on-surface-variant">Kelola produk untuk order dan hasil kunjungan. Izin penambahan oleh sales ada di Kebijakan Operasional.</p></div><button className="btn btn-primary min-h-11" disabled={!featurePolicy.canStart||!canCreate} title={featurePolicy.reason} onClick={() => setEditing(null)}>Tambah produk</button></div>
     {editing !== undefined && <ProductForm key={editing?.id || 'new'} product={editing} onCancel={() => setEditing(undefined)} onSaved={p => { setProducts(prev => [...prev.filter(x => x.id !== p.id), p]); setEditing(undefined); }} />}
     <label className="block text-sm">Cari produk<input type="search" className="form-input w-full mt-1" value={search} onChange={e => setSearch(e.target.value)} placeholder="Nama produk atau SKU" /></label>

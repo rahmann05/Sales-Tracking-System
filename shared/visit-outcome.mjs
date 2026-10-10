@@ -8,6 +8,7 @@ export function validVisitAttachment(value){
   (value.startsWith('data:image/jpeg;base64,/9j/')||value.startsWith('data:image/png;base64,iVBORw0KGgo'));
 }
 export function visitResultPolicyError(value,values={},notes=''){
+ if(values.VISIT_RESULT_OBSTACLE_MODE==='DISABLED'&&value?.obstacleCode)return 'Klasifikasi kendala dinonaktifkan oleh aturan kunjungan ini. Hapus pilihan sebelum mengirim.';
  const mandatory=['VISIT_RESULT_OFFER_MODE','VISIT_RESULT_OBSTACLE_MODE','VISIT_RESULT_ATTACHMENT_MODE'].some(k=>values[k]==='REQUIRED');
  if((values.SALES_REQUIRE_VISIT_RESULT||mandatory)&&!value?.purpose)return 'Pilih tujuan dan hasil kunjungan.';
  if(values.VISIT_RESULT_REQUIRE_NOTE&&!(value?.note||notes)?.trim())return 'Catatan hasil kunjungan wajib diisi.';
@@ -31,5 +32,5 @@ export function visitOutcomeError(value) {
 }
 export function visitOutcomeText(value) {
   if(!value)return '';
-  return [visitPurposes[value.purpose],includesCollection(value.purpose)?`Referensi: ${value.reference}`:null,collectionResults[value.result],value.promiseDate?`Janji: ${value.promiseDate}`:null,value.note,value.offer?`Penawaran: ${value.offer}`:null,value.obstacle?`Kendala: ${value.obstacle}`:null,value.attachments?.length?`${value.attachments.length} lampiran`:null].filter(Boolean).join(' · ');
+  return [value.referenceLabels?.purpose||visitPurposes[value.purpose],includesCollection(value.purpose)?`Referensi: ${value.reference}`:null,value.referenceLabels?.result||collectionResults[value.result],value.referenceLabels?.obstacleCode,value.promiseDate?`Janji: ${value.promiseDate}`:null,value.note,value.offer?`Penawaran: ${value.offer}`:null,value.obstacle?`Kendala: ${value.obstacle}`:null,value.attachments?.length?`${value.attachments.length} lampiran`:null].filter(Boolean).join(' · ');
 }

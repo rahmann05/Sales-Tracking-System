@@ -1,6 +1,8 @@
 import {z} from 'zod';
 import {visitOutcomeError,includesCollection,validVisitAttachment,VISIT_ATTACHMENT_LIMIT} from '../../../../shared/visit-outcome.mjs';
 export const visitOutcomeSchema=z.object({
+  referenceLabels:z.object({purpose:z.string().max(100).optional(),result:z.string().max(100).optional(),obstacleCode:z.string().max(100).optional()}).optional(),
+  obstacleCode:z.string().regex(/^[A-Z][A-Z0-9_]{0,47}$/).optional(),
   purpose:z.enum(['ORDER','COLLECTION','BOTH','OTHER']),
   reference:z.string().trim().max(500).optional(),
   result:z.enum(['DISCUSSED','PROMISED','REPORTED_PAID','UNAVAILABLE','DISPUTED']).optional(),

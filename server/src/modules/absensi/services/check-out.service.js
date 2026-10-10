@@ -18,6 +18,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
 
 
 const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = null, payload = {}) => {
+  payload={...payload};
   const {
     notes,
     earlyReason,

@@ -237,7 +237,7 @@ export const useOutletRegistrationForm = onSuccess => {
       const docName = formData.taxType === 'PKP' ? 'NPWP' : 'KTP';
       validationErrors.push(`Foto dokumen ${docName} wajib diambil langsung dari kamera.`);
     }
-    if (!formData.visitDays || formData.visitDays.length === 0) {
+    if ((rules.REGISTRATION_SUBMIT_REQUIRED_FIELDS||'').split(',').includes('visitDays')&&(!formData.visitDays || formData.visitDays.length === 0)) {
       validationErrors.push('Pilih minimal satu hari rencana kunjungan (PJP).');
     }
     if (validationErrors.length > 0) {

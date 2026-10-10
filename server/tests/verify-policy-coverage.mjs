@@ -3,6 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {CONFIG_PARAMS,CONFIG_DEFINITIONS} from '../../shared/config.mjs';
 import {requestFeature,TAB_FEATURES} from '../../shared/feature-policy.mjs';
+import {endpointSemantics} from '../../shared/operation-semantics.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url)),files=[];
 function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())walk(file);else if(/\.(?:js|jsx|mjs)$/.test(file))files.push(file);}}
 for(const dir of ['server/src','client/src','shared'])walk(path.join(root,dir));
@@ -45,7 +46,7 @@ function router(file,prefix){
   const module=prefix.split('/')[1];
   const classification=feature?{feature:feature[0],intent:feature[1]?'NEW_WORK':'READ_OR_EXISTING_WORK'}:governance.has(module)?{feature:'CORE',intent:'GOVERNANCE_OR_READ'}:null;
   if(!classification)errors.push(`Endpoint unclassified: ${match[1]} ${url}`);
-  endpoints.push({method:match[1].toUpperCase(),url,...classification});
+  endpoints.push({method:match[1].toUpperCase(),url,...classification,semantics:endpointSemantics(url,match[1].toUpperCase())});
  }
  const children=new Map([...text.matchAll(/import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g)].map(m=>[m[1],m[2]]));
  for(const match of text.matchAll(/router\.use\(\s*['"]([^'"]+)['"],\s*(\w+)\)/g))if(children.has(match[2]))router(path.resolve(path.dirname(file),children.get(match[2])),prefix+match[1]);

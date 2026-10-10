@@ -8,7 +8,7 @@ import {AppError} from '../../../utils/errors.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 import {inTransaction} from '../../../utils/in-transaction.js';
 import {assertOrderOperation} from './order-operation-permissions.js';
-import {readReviewDefinitions,reviewIdentity} from '../../config/services/approval-readiness.service.js';
+import {readReviewDefinitions,reviewIdentity,reviewPeople} from '../../config/services/approval-readiness.service.js';
 const keyFor=id=>`_ORDER_REVIEW:${id}`;
 export function salesOrderHistory(history=[]){return history.filter(event=>!['ASSIGN_REVIEWER','RELEASE_REVIEWER'].includes(event.action)).map(event=>Object.fromEntries(Object.entries(event).filter(([name])=>!['assignmentRevision','assignedOwnerId','overrideReason'].includes(name))));}
 const schema=z.object({ownerId:z.string().uuid().nullable(),dueAt:z.string().datetime().nullable(),revision:z.number().int().min(0),reason:z.string().trim().min(5).max(2000)}).strict();
@@ -18,6 +18,9 @@ export async function saveOrderReviewAssignment(orderId,raw,actor,{db=prisma,val
   assertOrderOperation(actor,'ASSIGN_REVIEW');const parsed=schema.safeParse(raw);if(!parsed.success)throw new AppError('PIC, tenggat, versi dan alasan penugasan tidak valid',400);
   const data=parsed.data;if(Boolean(data.ownerId)!==Boolean(data.dueAt))throw new AppError('PIC dan tenggat wajib diisi bersama, atau keduanya kosong untuk melepas penugasan',400);
   return inTransaction(db,async tx=>{
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+    actor=(await reviewPeople(tx)).find(person=>person.id===actor?.id);
+    assertOrderOperation(actor,'ASSIGN_REVIEW');
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
     const order=await tx.order.findUnique({where:{id:orderId}});if(!order||order.deletedAt||order.status!=='PENDING_APPROVAL')throw new AppError('Order sudah diputuskan atau tidak aktif',409);
     const key=keyFor(orderId),previous=(await tx.systemConfig.findUnique({where:{key}}))?.value||null;
@@ -60,6 +63,7 @@ export async function loadOrderReviewAssignments(orders){
 }
 // Call only after taking the same order lock used for assignment and decisions.
 export async function assertOrderReviewDecision(tx,order,actor,options={}){
+  if(actor)actor=reviewIdentity(actor,await readReviewDefinitions(tx));
   if(!actor||actor.deletedAt||!['ADMIN','SUPERVISOR'].includes(actor.role)||actor.permissions?.can_approve_order===false||actor.id===order.createdBy)throw new AppError('Tidak berwenang memeriksa order',403);
   const mode=await assertApprovalRole(order,'ORDER_APPROVAL_MODE',actor.role);
   const required=orderReviewRole(order,{ORDER_APPROVAL_MODE:mode});

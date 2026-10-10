@@ -59,6 +59,7 @@ enum VisitStatus {
 
 enum RouteChangeType {
   REROUTE
+  REVISIT
   SKIP
   OFF_PJP_REQUEST
 }

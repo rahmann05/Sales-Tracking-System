@@ -1,3 +1,4 @@
+import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ActiveRoutesList } from './components/ActiveRoutesList';
@@ -9,7 +10,7 @@ import { googlePlacesService } from '../../services/googlePlacesService';
 import '../../styles/pages/Dashboard.css';
 
 export const DashboardPage = () => {
-  const { user, activeRoutes = [], salesStops = [] } = useApp();
+  const { user, settings,activeRoutes = [], salesStops = [] } = useApp();
   const {
     setMapMode,
     setMarkers,
@@ -24,6 +25,8 @@ export const DashboardPage = () => {
   } = useMap();
   const { outlets = [], clusters: mapClusters = [], error: mapDataError, refetchAll } = useMapData();
 
+  const [clusterLayer,setClusterLayer]=useWorkspaceState('mapClusters',settings.MAP_DEFAULT_SHOW_CLUSTERS===false?'OFF':'ON');
+  const [outletLayer,setOutletLayer]=useWorkspaceState('mapOutlets',settings.MAP_DEFAULT_SHOW_OUTLETS===false?'OFF':'ON');
   const isSalesRole = user?.role === 'SALES';
 
   // Stops & rute difilter ke jadwal HARI INI
@@ -90,7 +93,8 @@ export const DashboardPage = () => {
   }, [mapClusters, outlets]);
 
   useEffect(() => {
-    if (!isMapReady || clusterPolygons.length === 0) return;
+    if(!isMapReady)return;
+    if(clusterLayer==='OFF'||clusterPolygons.length===0){clearPolygons();return;}
 
     // Highlight cluster if selected route or filtered sales belongs to it
     const activeClusterName = selectedRoute?.clusterName;
@@ -106,11 +110,12 @@ export const DashboardPage = () => {
     });
 
     setPolygons(styledPolygons);
-  }, [isMapReady, clusterPolygons, selectedRoute, setPolygons]);
+  }, [isMapReady, clusterPolygons, selectedRoute, setPolygons,clusterLayer,clearPolygons]);
 
   // ─── 2. Outlet Markers ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isMapReady || outlets.length === 0) return;
+    if(!isMapReady)return;
+    if(outletLayer==='OFF'||outlets.length===0){clearMarkers();return;}
 
     let visibleOutlets = outlets;
 
@@ -182,7 +187,7 @@ export const DashboardPage = () => {
       });
 
     setMarkers(markersData);
-  }, [isMapReady, outlets, selectedRoute, selectedSalesName, todayRoutes, mapClusters, setMarkers]);
+  }, [isMapReady, outlets, selectedRoute, selectedSalesName, todayRoutes, mapClusters, setMarkers,outletLayer,clearMarkers]);
 
   // ─── 3. Selected Route Polyline (Jalur Rute) ────────────────────────────────
   useEffect(() => {
@@ -239,7 +244,7 @@ export const DashboardPage = () => {
       <div className="dashboard-overlay">
         <div className="dashboard-left-col">
           {mapDataError && <div role="alert" className="app-error pointer-events-auto"><p>Data peta belum berhasil diperbarui: {mapDataError}</p><button type="button" className="app-button" onClick={refetchAll}>Coba lagi</button></div>}
-          <ActiveRoutesList
+          <div className="app-actions" aria-label="Lapisan peta"><label><input type="checkbox" checked={clusterLayer!=='OFF'} onChange={e=>setClusterLayer(e.target.checked?'ON':'OFF')}/> Wilayah cluster</label><label><input type="checkbox" checked={outletLayer!=='OFF'} onChange={e=>setOutletLayer(e.target.checked?'ON':'OFF')}/> Titik outlet</label></div><ActiveRoutesList
             routes={routes}
             salesStops={displayStops}
             selectedRoute={selectedRoute}

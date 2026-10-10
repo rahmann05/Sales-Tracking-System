@@ -1,6 +1,7 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const routeChangesApi = {
+  revisit:(id,body)=>request(`/route-changes/${id}/revisit`,{method:'POST',body:JSON.stringify(body)}),
   replacements:(id,query={})=>request(`/route-changes/${id}/replacements?${queryString(query)}`),
   assignmentOptions:id=>request(`/route-changes/${id}/assignment`),
   assignReview:(id,body)=>request(`/route-changes/${id}/assignment`,{method:'PUT',body:JSON.stringify(body)}),
