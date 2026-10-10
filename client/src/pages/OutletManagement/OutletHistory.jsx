@@ -3,7 +3,7 @@ import React from 'react';
 import {stamp,point,resultLabels,reviewLabels} from './outletPresentation';
 
 const fields={name:'Nama outlet',address:'Alamat',latitude:'Latitude',longitude:'Longitude',clusterId:'Wilayah',ownerName:'Pemilik',phone:'Telepon',outletCode:'Kode outlet',channel:'Channel',subChannel:'Jenis outlet',radiusMeters:'Radius presensi',taxType:'Status pajak',taxNumber:'NIK / NPWP',taxName:'Nama dokumen',taxAddress:'Alamat dokumen',deletedAt:'Waktu penonaktifan',registrationId:'Referensi pengajuan',itineraryCode:'Interval kunjungan'};
-const decisions={KEEP:'Data dipertahankan',CORRECTED:'Data dikoreksi',WAITING_FIELD:'Pengecekan lapangan diminta',DIGITAL_KEEP:'Identitas dikonfirmasi melalui Google',FIELD_KEEP:'Bukti lapangan diterima',INTERNAL_KEEP:'Dipertahankan berdasarkan bukti internal',CANCEL:'Ditutup tanpa verifikasi'};
+const decisions={KEEP:'Data dipertahankan',CORRECTED:'Data dikoreksi',WAITING_FIELD:'Pengecekan lapangan diminta',DIGITAL_KEEP:'Identitas dikonfirmasi melalui Google',ADMIN_DIGITAL_KEEP:'Kandidat Google diterima dengan pertimbangan Admin',FIELD_KEEP:'Bukti lapangan diterima',INTERNAL_KEEP:'Dipertahankan berdasarkan bukti internal',CANCEL:'Ditutup tanpa verifikasi'};
 
 export function OutletHistory({outlet}) {
 

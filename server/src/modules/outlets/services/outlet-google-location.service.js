@@ -15,7 +15,7 @@ import {reserveOutletProviderCall} from './outlet-provider-budget.service.js';
 import {evaluateDigitalOutlet} from './outlet-digital-evaluator.service.js';
 import {invalidateOutletCache} from './outlets.helpers.js';
 
-export async function acceptGoogleLocation(db,outlet,run,actor,reason){
+export async function acceptGoogleLocation(db,outlet,run,actor,reason,{adminReview=false}={}){
  if(await getDynamicConfig('OUTLET_GOOGLE_LOCATION_ENABLED',true)===false)throw new AppError('Lokasi operasional Google dinonaktifkan. Gunakan bukti internal/lapangan.',409);
  if(nativeOutletPointTrusted(outlet)){
   if(!outlet.googleLocation||outlet.googleLocation.status==='SUPERSEDED')return undefined;
@@ -30,6 +30,7 @@ export async function acceptGoogleLocation(db,outlet,run,actor,reason){
  const now=new Date(),days=await getDynamicConfig('OUTLET_GOOGLE_LOCATION_CACHE_DAYS',7);
  const expiresAt=new Date(Math.min(+run.providerExpiresAt,+now+Math.min(30,days)*86400000));
  const googleLocation={source:'GOOGLE',status:'ACTIVE',placeId:point.placeId,latitude:point.latitude,longitude:point.longitude,basis:outletLocationBasis(outlet),cachedAt:now.toISOString(),expiresAt:expiresAt.toISOString(),nextRefreshAt:googleLocationRefreshAt(now,expiresAt,await getDynamicConfig('OUTLET_GOOGLE_LOCATION_REFRESH_HOURS',24)),revision:(outlet.googleLocation?.revision||0)+1,approvedBy:actorSnapshot(actor),policyContext:{id:actor.id,role:actor.role,supervisorId:actor.supervisorId||null},runId:run.id,lastError:null,problemSince:null};
+ if(adminReview){googleLocation.approvalMode='ADMIN_REVIEW';googleLocation.nextRefreshAt=expiresAt.toISOString();}
  await db.clusterRoute.deleteMany({where:{clusterId:outlet.clusterId}});
  await db.auditEvent.create({data:{entityType:'OUTLET_LOCATION',entityId:outlet.id,action:'GOOGLE_ACCEPT',actorId:actor.id,actorName:actor.name,before:{source:outletOperationalPoint(outlet).source},after:{placeId:point.placeId,expiresAt:googleLocation.expiresAt,runId:run.id,reason}}});
  return googleLocation;
@@ -47,6 +48,7 @@ export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(
  const outlet=automatic?await prisma.outlet.findFirst({where:{id,deletedAt:null}}):await reviewOutlet(prisma,actor,id);
  let g=outlet?.googleLocation;
  if(!g||g.status==='SUPERSEDED')throw new AppError('Belum ada lokasi Google yang disetujui.',409);
+ if(g.approvalMode==='ADMIN_REVIEW')throw new AppError('Lokasi ini diterima melalui pertimbangan Admin. Buka pemeriksaan outlet baru untuk meninjau ulang kandidat sebelum memperbarui lokasi.',409);
  const values=(automatic?await effectivePolicy(g.policyContext||{}):currentPolicy()||await effectivePolicy(actor)).values;
  if(values.FEATURE_OUTLET_REVIEW_MODE!=='ACTIVE'||values.OUTLET_GOOGLE_LOCATION_ENABLED===false||values.OUTLET_MAP_COMPARISON_ENABLED===false||values.FEATURE_MAPS_MODE!=='ACTIVE'||automatic&&values.OUTLET_GOOGLE_LOCATION_AUTO_REFRESH===false)throw new AppError('Pembaruan Google dinonaktifkan.',409);
  if(g.status!=='ACTIVE'||Date.parse(g.expiresAt)<=+now)throw new AppError('Lokasi perlu pemeriksaan dan persetujuan baru.',409);
@@ -71,7 +73,7 @@ export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(
   const r=await fetcher(`https://places.googleapis.com/v1/places/${encodeURIComponent(g.placeId)}?languageCode=id`,{headers:{'X-Goog-Api-Key':key,'X-Goog-FieldMask':'id,displayName,formattedAddress,location,businessStatus,movedPlaceId,addressComponents,nationalPhoneNumber'},signal:AbortSignal.timeout((values.OUTLET_REVIEW_TIMEOUT_SECONDS||10)*1000)});
   if(!r.ok)throw new Error(`HTTP_${r.status}`);
   const p=await r.json();if(!p.id||!knownPoint(p.location?{latitude:p.location.latitude,longitude:p.location.longitude}:null))throw new Error('INVALID_PROVIDER_RESPONSE');
-  candidate={placeId:p.id,name:p.displayName?.text||'',address:p.formattedAddress||'',latitude:p.location.latitude,longitude:p.location.longitude,phone:p.nationalPhoneNumber,businessStatus:p.businessStatus,movedPlaceId:p.movedPlaceId,city:p.addressComponents?.find(c=>c.types?.includes('administrative_area_level_2'))?.longText};
+  candidate={placeId:p.id,detailsConfirmed:true,name:p.displayName?.text||'',address:p.formattedAddress||'',latitude:p.location.latitude,longitude:p.location.longitude,phone:p.nationalPhoneNumber,businessStatus:p.businessStatus,movedPlaceId:p.movedPlaceId,city:p.addressComponents?.find(c=>c.types?.includes('administrative_area_level_2'))?.longText};
  }catch(e){technicalError=['SERVER_KEY_MISSING','MAP_LOCAL_QUOTA_LIMIT'].includes(e.message)?e.message:'PROVIDER_UNAVAILABLE';}
  const result=await prisma.$transaction(async db=>{
   await lockOutlet(db,id);if(actor)await reviewActor(db,user,'can_run_outlet_review');

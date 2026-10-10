@@ -21,7 +21,7 @@ export async function validateOutlet(id,raw,user){
  if(body.candidatePlaceId){const previous=await prisma.outletValidationRun.findFirst({where:{reviewId:review.id},orderBy:{createdAt:'desc'}});if(!previous?.result?.candidateIds?.includes(body.candidatePlaceId))throw new AppError('Kandidat tidak berasal dari pemeriksaan terakhir. Muat ulang.',422);}
  const key=await getDynamicConfig('MAPS_API_KEY','')||config.googleMapsApiKey;
  const snapshot=await capturePolicySnapshot(),values=snapshot.values,policy=await outletComparisonPolicy();
- const search=key?await searchGoogleOutlet({...outlet,cluster:{...outlet.cluster,region:[outlet.cluster?.region,body.hint].filter(Boolean).join(' ')}},key,values,policy.providerLimits,fetch,body.candidatePlaceId):{candidates:[],steps:[{kind:'CONFIG',strategy:'SERVER_KEY',state:'ERROR',called:false,error:'Kunci Google pada server belum tersedia'}]};
+ const search=key?await searchGoogleOutlet({...outlet,searchHint:body.hint},key,values,policy.providerLimits,fetch,body.candidatePlaceId):{candidates:[],steps:[{kind:'CONFIG',strategy:'SERVER_KEY',state:'ERROR',called:false,error:'Kunci Google pada server belum tersedia'}]};
  const result=evaluateDigitalOutlet(outlet,search.candidates,search.steps,values,body.candidatePlaceId),durable=durableDigitalResult(result),now=new Date();
  await prisma.$transaction(async db=>{
   await lockOutlet(db,id);await reviewActor(db,user,'can_run_outlet_review');const current=await reviewOutlet(db,actor,id);

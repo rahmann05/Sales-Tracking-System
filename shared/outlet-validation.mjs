@@ -1,11 +1,11 @@
 import {outletOperationalPoint} from './outlet-location.mjs';
-export const OUTLET_DIGITAL_VERSION='2026-10-10.2';
+export const OUTLET_DIGITAL_VERSION='2026-10-10.3';
 export const OUTLET_RESULT_LABELS={UNEXAMINED:'Belum diperiksa',STRONG:'Identitas dan lokasi kuat',REVIEW:'Kandidat perlu ditinjau',ADDRESS_ONLY:'Hanya alamat ditemukan',AMBIGUOUS:'Kandidat ambigu',NOT_FOUND:'Tidak ditemukan di Google',INCOMPLETE:'Petunjuk belum cukup',ERROR:'Layanan belum berhasil'};
 export const OUTLET_STAGE_LABELS={OPEN:'Belum diperiksa',REVIEW:'Siap ditinjau',NEEDS_FIELD:'Perlu lapangan',WAITING_FIELD:'Tugas lapangan berjalan',SUBMITTED:'Bukti menunggu pemeriksaan',COMPLETED:'Selesai',CANCELLED:'Dibatalkan'};
 export const knownPoint=p=>Number.isFinite(p?.latitude)&&Number.isFinite(p?.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180;
 export const outletNameUnusable=name=>!name?.trim()||/^(toko|warung|outlet|customer|pelanggan|unknown|[-?.\d\s]+)$/i.test(name.trim());
 export function outletIssues(o){
- const q=o.validationDetails?.qualityConfirmed,confirmed=['FIELD','DIGITAL'].includes(q?.source)&&q.name===o.name&&q.address===o.address&&!o.validationDetails?.stale;
+ const q=o.validationDetails?.qualityConfirmed,confirmed=['FIELD','DIGITAL','ADMIN_DIGITAL'].includes(q?.source)&&q.name===o.name&&q.address===o.address&&!o.validationDetails?.stale;
  const operational=outletOperationalPoint(o),issues=[];if(!knownPoint(operational))issues.push('MISSING_POINT');
  if(!confirmed&&(!o.name?.trim()||/^\S+$/.test(o.name.trim())||/^(toko|warung|outlet|customer|pelanggan|unknown|[-?.\d\s]+)$/i.test(o.name.trim())))issues.push('UNCLEAR_NAME');
  const address=o.address?.trim()||'',parts=address.split(/\s+/),specific=/\b(jl\.?|jalan|gg\.?|gang|kp\.?|kampung|komplek|kompleks|perum|pasar|ruko|rt|rw|no\.?|nomor|dusun|blok|depan|belakang|sebelah|dekat|patokan)\b/i.test(address);

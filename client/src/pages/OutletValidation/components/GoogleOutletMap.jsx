@@ -2,22 +2,28 @@ import React,{useEffect,useRef,useState} from 'react';
 import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import {loadGoogleMapsScript} from '../../../services/googleMapsLoader';
 import {knownPoint} from '../../../../../shared/outlet-validation.mjs';
-export function GoogleOutletMap({outlet,candidate,fieldPoints=[],approved=false}){
- const policy=useFeaturePolicy('MAPS'),ref=useRef(null),[error,setError]=useState('');
+import {outletComparisonPoints,mountOutletComparisonMap} from './outletComparisonMap';
+export function GoogleOutletMap({outlet,candidate,recommended=candidate,fieldPoints=[],approved=false}){
+ const policy=useFeaturePolicy('MAPS'),ref=useRef(null),controls=useRef(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
  const key=policy.settings.MAPS_BROWSER_API_KEY||import.meta.env.VITE_GOOGLE_MAPS_API_KEY||'';
+ const mapId=policy.settings.MAPS_MAP_ID||'DEMO_MAP_ID';
+ const pointSignature=JSON.stringify(outletComparisonPoints({previous:outlet?.nativeLocation||outlet,recommended,candidate,fieldPoints}));
+ const points=JSON.parse(pointSignature);
  useEffect(()=>{
-  let active=true,markers=[];
-  if(!policy.canStart||!key||!knownPoint(candidate))return;
-  setError('');loadGoogleMapsScript(key).then(maps=>{
+  let active=true,controller;
+  const currentPoints=JSON.parse(pointSignature);
+  if(!policy.canStart||!key||!currentPoints.length)return;
+  const onAuthFailure=()=>{if(active){setError('Google menolak kunci browser. Periksa Maps JavaScript API, billing, dan pembatasan domain pada konfigurasi kunci.');setLoading(false);}};
+  window.addEventListener('google-maps-auth-failure',onAuthFailure);
+  setError('');setLoading(true);loadGoogleMapsScript(key).then(async maps=>{
    if(!active||!ref.current)return;
-   const map=new maps.Map(ref.current,{center:{lat:candidate.latitude,lng:candidate.longitude},zoom:15,streetViewControl:false,mapTypeControl:false}),bounds=new maps.LatLngBounds();
-   const points=[{...outlet,label:'M',title:'Master internal'}, {...candidate,label:'G',title:approved?'Lokasi Google disetujui':'Kandidat Google'},...fieldPoints.filter(knownPoint).map(p=>({...p,label:'L',title:'Bukti lapangan'}))].filter(knownPoint);
-   markers=points.map(p=>{const position={lat:p.latitude,lng:p.longitude};bounds.extend(position);return new maps.Marker({map,position,label:p.label,title:p.title});});
-   if(points.length>1)map.fitBounds(bounds,45);
-  }).catch(()=>{if(active)setError('Peta Google belum dapat dimuat. Gunakan tautan kandidat di bawah.');});
-  return()=>{active=false;markers.forEach(m=>m.setMap(null));};
- },[outlet,candidate,fieldPoints,key,policy.canStart,approved]);
+   controller=await mountOutletComparisonMap(maps,ref.current,currentPoints,{mapId,isActive:()=>active});
+   if(!active){controller.destroy();return;}controls.current=controller;setLoading(false);
+  }).catch(()=>{if(active){setError('Peta Google belum dapat dimuat. Periksa koneksi serta kunci browser/Maps JavaScript API, lalu coba lagi.');setLoading(false);}});
+  return()=>{active=false;controller?.destroy();controls.current=null;window.removeEventListener('google-maps-auth-failure',onAuthFailure);};
+ },[pointSignature,key,mapId,policy.canStart,retry]);
  if(!policy.canStart)return <p className="ov-muted">{policy.reason}</p>;
- if(!key)return <p className="ov-muted">Pratinjau memerlukan kunci Google Maps browser. Kandidat tetap dapat dibuka melalui tautan Google Maps.</p>;
- return <><div ref={ref} className="ov-google-map" role="img" aria-label="Perbandingan titik master, kandidat Google dan bukti lapangan"/><p className="ov-muted">M: master internal · G: {approved?'lokasi Google disetujui':'kandidat Google'} · L: bukti lapangan. Titik yang belum tersedia tidak ditampilkan.</p>{error&&<p role="status" className="ov-muted">{error}</p>}</>;
+ if(!key)return <p className="ov-notice">Peta perbandingan memerlukan kunci browser di Parameter → Integrasi &amp; keamanan → Integrasi Peta. Aktifkan Maps JavaScript API untuk kunci tersebut. Koordinat dan tautan Google Maps tetap tersedia.</p>;
+ if(!points.length)return <p className="ov-notice">Belum ada titik yang dapat dipetakan. Jalankan pemeriksaan Google untuk mencari kandidat.</p>;
+ return <div className="ov-map-comparison"><div className="ov-map-tools"><button type="button" className="app-button" disabled={loading||!!error} onClick={()=>controls.current?.fit()}>Tampilkan semua titik</button>{points.filter(p=>p.kind!=='field').map(p=><button type="button" className="app-button" key={p.key} disabled={loading||!!error} onClick={()=>controls.current?.focus(p.key)}>Fokus {p.label}</button>)}</div><div ref={ref} className="ov-google-map" role="region" aria-label="Peta perbandingan titik master sebelumnya, rekomendasi Google dan bukti lapangan" aria-busy={loading}/>{loading&&<p role="status">Memuat peta perbandingan…</p>}<p className="ov-map-legend"><span>M: titik sebelumnya</span><span>G: {approved?'lokasi Google disetujui':'rekomendasi Google terkuat'}</span><span>P: kandidat lain yang ditinjau</span><span>L: GPS lapangan</span></p>{!knownPoint(outlet?.nativeLocation||outlet)&&<p className="ov-muted">Koordinat sebelumnya kosong; tidak ada penanda M.</p>}<p className="ov-muted">Penanda pada koordinat yang sama digabung. Garis penghubung menunjukkan perbedaan titik, bukan rute jalan.</p>{error&&<div role="status"><p className="app-error">{error}</p><button type="button" className="app-button" onClick={()=>setRetry(n=>n+1)}>Coba muat peta lagi</button></div>}</div>;
 }

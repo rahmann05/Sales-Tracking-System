@@ -5,7 +5,7 @@ import {knownPoint,outletEvidenceCurrent,outletIssues,fieldTaskGaps} from '../..
 import {calculateDistanceMeters} from '../../src/utils/geolocation.js';
 import {searchGoogleOutlet} from '../../src/modules/outlets/services/google-outlet-search.service.js';
 const o={name:'Toko Sumber Berkah',address:'Jl Melati No 12, Kota Bandung',latitude:null,longitude:null,clusterId:'cluster'};
-const c={placeId:'a',name:o.name,address:o.address,latitude:-6.9,longitude:107.6,businessStatus:'OPERATIONAL',city:'Kota Bandung'};
+const c={placeId:'a',detailsConfirmed:true,name:o.name,address:o.address,latitude:-6.9,longitude:107.6,businessStatus:'OPERATIONAL',city:'Kota Bandung'};
 const steps=[{kind:'TEXT',state:'SUCCESS',called:true}];
 test('missing and suspect master coordinates do not veto trustworthy identity',()=>{
  assert.equal(evaluateDigitalOutlet(o,[c],steps).code,'STRONG');
@@ -15,7 +15,7 @@ test('missing and suspect master coordinates do not veto trustworthy identity',(
 });
 test('same name branches, house number, city and phone conflicts never become strong',()=>{
  for(const candidate of [{...c,name:'Toko Sumber Berkah 2'},{...c,address:'Jl Melati No 13, Kota Bandung'},{...c,city:'Kabupaten Bogor'},{...c,phone:'08111',businessStatus:'CLOSED_PERMANENTLY'}]){
-  const result=evaluateDigitalOutlet({...o,name:candidate.name.includes('2')?'Toko Sumber Berkah 1':o.name,phone:'08222'},[candidate],steps);assert.notEqual(result.code,'STRONG');assert.ok(result.candidates[0].conflicts.length);
+  const result=evaluateDigitalOutlet({...o,name:candidate.name.includes('2')?'Toko Sumber Berkah 1':o.name,phone:'08222'},[candidate],steps);assert.notEqual(result.code,'STRONG');assert.ok(result.candidates[0].conflicts.length+result.candidates[0].hardConflicts.length);
  }
  assert.equal(evaluateDigitalOutlet(o,[c,{...c,placeId:'b'}],steps).code,'AMBIGUOUS');
 });
@@ -42,7 +42,7 @@ test('field proof currentness and readiness reject stale identity, denied and fo
 test('adaptive Google queries never bias missing/suspect coordinates and enforce call caps',async()=>{
  const calls=[],fetcher=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>({places:[{id:'a',displayName:{text:c.name},formattedAddress:c.address,location:{latitude:c.latitude,longitude:c.longitude}}]})};};
  const result=await searchGoogleOutlet({...o,latitude:0,longitude:0,source:'IMPORT'},'fixture-key',{OUTLET_REVIEW_MAX_CALLS:2},{},fetcher);
- assert.equal(calls.length,2);assert.equal(JSON.parse(calls[0].options.body).locationBias,undefined);assert.equal(JSON.parse(calls[0].options.body).regionCode,'ID');assert.ok(calls[0].options.headers['X-Goog-FieldMask']);assert.equal(result.candidates.length,1);assert.ok(result.steps.some(s=>s.state==='SKIPPED'));
+ assert.equal(calls.length,2);assert.equal(JSON.parse(calls[0].options.body).locationBias.circle,undefined);assert.ok(JSON.parse(calls[0].options.body).locationBias.rectangle);assert.equal(JSON.parse(calls[0].options.body).regionCode,'ID');assert.ok(calls[0].options.headers['X-Goog-FieldMask']);assert.equal(result.candidates.length,1);assert.ok(result.steps.some(s=>s.state==='SKIPPED'));
 });
 test('Google malformed/failed response remains a technical problem with no fabricated candidates',async()=>{
  const result=await searchGoogleOutlet(o,'fixture-key',{OUTLET_REVIEW_MAX_CALLS:2},{},async()=>({ok:true,json:async()=>({places:{bad:'payload'}})}));

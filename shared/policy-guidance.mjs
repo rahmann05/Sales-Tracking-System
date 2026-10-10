@@ -32,6 +32,7 @@ export function parameterGuidance(key,values){
  return '';
 }
 export function policyTiming(key){
+ if(/^OUTLET_REVIEW_ADMIN_/.test(key))return 'Dibaca ulang saat Admin menyimpan keputusan. Nilai dan peringatan saat keputusan disimpan dalam audit; hasil standar tidak diubah menjadi kuat.';
  if(/^OUTLET_GOOGLE_LOCATION_/.test(key))return 'Berlaku pada penerapan/pembaruan titik berikutnya. Cache kedaluwarsa tidak digunakan, walaupun layanan dijeda.';
  if(/^OUTLET_FIELD_/.test(key))return key==='OUTLET_FIELD_ENABLED'?'Berlaku segera untuk penugasan baru; bukti tugas terbuka tetap dapat dikirim dan diperiksa.':'Dibekukan saat penugasan terbaru; perubahan parameter tidak mengubah tugas berjalan sampai ditugaskan ulang.';
  if(/^OUTLET_REVIEW_(AUTO_CLOSE|MAX_CALLS|MAX_CANDIDATES|EXPAND_SEARCH|STRONG_|CANDIDATE_GAP)/.test(key))return 'Berlaku pada pemeriksaan Google berikutnya; hasil lama mempertahankan ambang awal.';

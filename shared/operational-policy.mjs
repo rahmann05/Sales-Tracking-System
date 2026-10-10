@@ -111,6 +111,13 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('OUTLET_REVIEW_CANDIDATE_GAP','Selisih minimum kandidat kuat',15,5,40,'poin'),
   num('OUTLET_REVIEW_EVIDENCE_DAYS','Masa berlaku hasil perbandingan peta',comparison.evidenceDays,0,3650,'hari','Nol tanpa kedaluwarsa penilaian berdasarkan umur. Cache koordinat Google tetap maksimal 30 hari; setelah cache berakhir pemeriksaan ulang wajib untuk keputusan digital.'),
  ]),
+ group('OUTLET_REVIEW_ADMIN','Validasi outlet · pertimbangan Admin','Admin berizin dapat menerima kandidat di bawah syarat standar setelah meninjau peta dan mencatat alasan. Skor asli tetap tercatat. Kandidat tanpa detail/titik sah, tutup/pindah, hasil kedaluwarsa atau master berubah tetap perlu pemeriksaan baru.',[
+  bool('OUTLET_REVIEW_ADMIN_ENABLED','Izinkan konfirmasi dengan pertimbangan Admin',true,'Hanya role Admin dengan izin menyimpan keputusan. Tidak berlaku untuk persetujuan otomatis atau Supervisor.'),
+  num('OUTLET_REVIEW_ADMIN_NAME_PERCENT','Kemiripan nama minimum untuk Admin',70,0,100,'%','Minimal nama atau alamat memenuhi ambang Admin, atau telepon usaha cocok. Nol mengabaikan ambang sinyal ini.'),
+  num('OUTLET_REVIEW_ADMIN_ADDRESS_PERCENT','Kemiripan alamat minimum untuk Admin',60,0,100,'%','Dipakai sebagai alternatif kecocokan nama. Nilai lebih rendah membantu tinjauan alamat lama yang tidak lengkap; alasan keputusan tetap wajib.'),
+  bool('OUTLET_REVIEW_ADMIN_ALLOW_AMBIGUOUS','Admin boleh memilih kandidat ambigu',true,'Wajib memeriksa ulang kandidat yang dipilih dan menyatakan sudah meninjau perbedaannya.'),
+  bool('OUTLET_REVIEW_ADMIN_ALLOW_CONFLICTS','Admin boleh menerima konflik data',false,'Meliputi perbedaan telepon, nomor/cabang, kota, atau jarak dari GPS terpercaya. Profil tutup/pindah dan titik tidak sah tetap tidak dapat diterima.'),
+ ]),
  group('OUTLET_FIELD_POLICY','Validasi outlet · tugas Sales','Bukti lapangan terpisah dari presensi. Persyaratan dibekukan saat tugas dibuat.',[
   bool('OUTLET_FIELD_ENABLED','Izinkan tugas pemeriksaan Sales',true),
   bool('OUTLET_FIELD_REQUIRE_GPS','Wajib GPS hasil lapangan',true),

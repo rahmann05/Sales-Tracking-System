@@ -1,0 +1,33 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import pg from 'pg';
+import {BUILT_IN_ROLES} from '../src/modules/roles/roles.constants.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname), 'Local database required');
+const db = new pg.Client({connectionString: process.env.DATABASE_URL});
+const sql = fs.readFileSync(new URL('../prisma/migrations/202610100008_outlet_role_permissions/migration.sql',import.meta.url),'utf8');
+const keys = ['can_run_outlet_review','can_propose_outlet_review','can_apply_outlet_review','can_assign_outlet_review','can_submit_outlet_field','can_review_outlet_field'];
+let checks=0;
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
+await db.connect();
+try {
+ await db.query('BEGIN');
+ const legacy=BUILT_IN_ROLES.map(r=>({...r,defaultPermissions:Object.fromEntries(Object.entries(r.defaultPermissions).filter(([k])=>!keys.includes(k)))}));
+ legacy.find(r=>r.code==='ADMIN').defaultPermissions.can_run_outlet_review=false;
+ legacy.push({code:'CUSTOM_REVIEWER',baseRole:'SUPERVISOR',isSystem:false,defaultPermissions:{can_validate_outlet:true}});
+ const current=(await db.query(`SELECT key FROM "SystemConfig" WHERE key='ROLE_DEFINITIONS' FOR UPDATE`)).rows[0];
+ assert.ok(current);
+ await db.query('UPDATE "SystemConfig" SET value=$1::jsonb WHERE key=$2',[JSON.stringify(legacy),current.key]);
+ const usersBefore=(await db.query('SELECT id,permissions FROM "User" ORDER BY id')).rows;
+ const auditBefore=(await db.query('SELECT count(*)::int n FROM "AuditEvent"')).rows[0].n;
+ await db.query(sql);
+ const upgraded=(await db.query('SELECT value FROM "SystemConfig" WHERE key=$1',[current.key])).rows[0].value;
+ for (const role of BUILT_IN_ROLES) for (const key of keys) eq(upgraded.find(r=>r.code===role.code).defaultPermissions[key],role.code==='ADMIN'&&key==='can_run_outlet_review'?false:role.defaultPermissions[key]);
+ eq(upgraded.at(-1),legacy.at(-1));
+ eq((await db.query('SELECT id,permissions FROM "User" ORDER BY id')).rows,usersBefore);
+ eq((await db.query('SELECT count(*)::int n FROM "AuditEvent"')).rows[0].n,auditBefore+1);
+ await db.query(sql);
+ eq((await db.query('SELECT value FROM "SystemConfig" WHERE key=$1',[current.key])).rows[0].value,upgraded);
+ eq((await db.query('SELECT count(*)::int n FROM "AuditEvent"')).rows[0].n,auditBefore+1);
+ console.log(`Outlet role permission migration: ${checks} checks passed; defaults, explicit denial, custom roles, individual permissions and idempotence. All fixture changes rolled back.`);
+} finally {await db.query('ROLLBACK');await db.end();}

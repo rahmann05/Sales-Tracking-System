@@ -68,6 +68,12 @@ export const getAllRoles = async () => {
 
   return rolesList.map((r) => ({
     ...r,
+    // Stored built-in templates may predate newly registered permissions.
+    // Keep explicit overrides, including false, consistent with resolveIdentity.
+    defaultPermissions: {
+      ...(r.isSystem ? BUILT_IN_ROLES.find(role => role.code === r.code)?.defaultPermissions : {}),
+      ...r.defaultPermissions,
+    },
     baseRole: r.isSystem ? r.code : r.baseRole || 'SALES',
     userCount: countMap[r.code] || 0,
   }));
