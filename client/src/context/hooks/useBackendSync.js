@@ -1,3 +1,4 @@
+import {outletOperationalPoint} from '../../../../shared/outlet-location.mjs';
 import { mapSalesPjpStops, formatTimeWib, resolveStopStatus } from './mapSalesPjpStops';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import { useEffect, useState } from 'react';
@@ -163,7 +164,7 @@ export const useBackendSync = ({
                   owner: s.outlet?.ownerName || s.outlet?.owner || '',
                   phone: s.outlet?.phone || '',
                   address: s.outlet?.address || '',
-                  latitude: s.outlet?.latitude != null ? Number(s.outlet.latitude) : (s.latitude != null ? Number(s.latitude) : null),
+                  googleMapsOnly:outletOperationalPoint(s.outlet).googleMapsOnly,latitude: s.outlet?.latitude != null ? Number(s.outlet.latitude) : (s.latitude != null ? Number(s.latitude) : null),
                   longitude: s.outlet?.longitude != null ? Number(s.outlet.longitude) : (s.longitude != null ? Number(s.longitude) : null),
                   outletId: s.outletId || s.outlet?.id,
                   outlet: s.outlet,

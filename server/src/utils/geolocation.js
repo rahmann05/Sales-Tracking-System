@@ -1,3 +1,4 @@
+import {outletOperationalPoint} from '../../../shared/outlet-location.mjs';
 /**
  * Calculate distance between two coordinates in meters using the Haversine formula
  */
@@ -16,3 +17,5 @@ export const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
 
   return R * c; // Distance in meters
 };
+
+export const distanceToOutlet=(latitude,longitude,outlet)=>{const point=outletOperationalPoint(outlet);return calculateDistanceMeters(latitude,longitude,point.latitude,point.longitude);};

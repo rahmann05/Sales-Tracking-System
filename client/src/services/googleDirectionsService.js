@@ -34,7 +34,7 @@ export const googleDirectionsService = {
    */
   fetchDirectionsRoute: async (origin, waypoints = []) => {
     if((origin?.lat??origin?.latitude)==null||(origin?.lng??origin?.longitude)==null||waypoints.some(w=>(w?.lat??w?.latitude)==null||(w?.lng??w?.longitude)==null))throw new Error('Koordinat sebagian tujuan belum tersedia. Periksa data lokasi sebelum menghitung rute.');
-    const rawOrigin = { lat: Number(origin?.lat ?? origin?.latitude), lng: Number(origin?.lng ?? origin?.longitude) };
+    const rawOrigin = { googleMapsOnly:origin.googleMapsOnly,outletId:origin.outletId,lat: Number(origin?.lat ?? origin?.latitude), lng: Number(origin?.lng ?? origin?.longitude) };
     const directPath = [rawOrigin];
 
     const validWaypoints = [];
@@ -42,7 +42,7 @@ export const googleDirectionsService = {
       const lat = Number(wp?.lat ?? wp?.latitude);
       const lng = Number(wp?.lng ?? wp?.longitude);
       if (!isNaN(lat) && !isNaN(lng)) {
-        directPath.push({ lat, lng });
+        directPath.push({ lat, lng,googleMapsOnly:wp.googleMapsOnly,outletId:wp.outletId });
         validWaypoints.push({ lat, lng });
       }
     });
@@ -63,8 +63,8 @@ export const googleDirectionsService = {
         const result = await Promise.race([new Promise((resolve, reject) => {
           directionsService.route(
             {
-              origin: rawOrigin,
-              destination: dest,
+              origin: {lat:rawOrigin.lat,lng:rawOrigin.lng},
+              destination: {lat:dest.lat,lng:dest.lng},
               waypoints: midPoints,
               travelMode: window.google.maps.TravelMode.DRIVING,
             },

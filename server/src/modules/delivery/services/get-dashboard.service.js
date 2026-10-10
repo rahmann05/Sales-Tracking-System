@@ -22,7 +22,7 @@ export const getDashboard = async (query = {}) => {
       stops: {
         orderBy: { sequence: 'asc' },
         include: {
-          outlet: { select: { id: true, name: true, latitude: true, longitude: true } },
+          outlet: { select: { id: true, name: true, googleLocation:true,phone:true,clusterId:true,address:true,latitude:true, longitude: true } },
           packingList: { select: { id: true, code: true, totalCartons: true } },
         },
       },

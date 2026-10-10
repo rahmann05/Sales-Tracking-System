@@ -117,9 +117,17 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('OUTLET_FIELD_REQUIRE_PHOTO','Wajib foto hasil lapangan',true),
   num('OUTLET_FIELD_GPS_MAX_AGE_MINUTES','Umur maksimal GPS lapangan',15,1,120,'menit'),
   num('OUTLET_FIELD_GPS_MAX_ACCURACY','Akurasi maksimal GPS lapangan',100,5,1000,'meter'),
+
   select('OUTLET_FIELD_PJP_MODE','PJP tugas validasi','TODAY_ONLY',['TODAY_ONLY','UNTIL_COMPLETE'],'Dibekukan saat ditugaskan. Riwayat hari yang belum dikerjakan tetap ditandai; tidak mengubah template kunjungan rutin.',{optionLabels:{TODAY_ONLY:'Hanya hari ditugaskan',UNTIL_COMPLETE:'Tetap muncul sampai validasi selesai'}}),
   num('OUTLET_FIELD_REVIEW_SLA_HOURS','Tenggat pemeriksaan bukti Sales',24,0,720,'jam','Dimulai saat bukti dikirim. Nol tanpa tenggat otomatis; kalender dibekukan pada tugas.'),
   num('OUTLET_FIELD_SLA_HOURS','Tenggat tugas lapangan',48,1,720,'jam'),
+ ]),
+ group('OUTLET_GOOGLE_LOCATION','Validasi outlet · lokasi operasional','Titik Google disetujui terpisah dari koordinat internal dan hanya dipakai selama cache berlaku.',[
+  bool('OUTLET_GOOGLE_LOCATION_ENABLED','Terapkan / perbarui titik Google',true,'Keputusan digital kuat dapat memakai cache titik Google untuk rute dan radius. Mematikan menghentikan penerapan/pembaruan berikutnya; titik yang sudah disetujui tetap berlaku sampai kedaluwarsa. Tidak menimpa bukti GPS.'),
+  bool('OUTLET_GOOGLE_LOCATION_AUTO_REFRESH','Perbarui titik Google otomatis',true,'Perbarui referensi yang telah disetujui sebelum kedaluwarsa. Konflik memerlukan pemeriksaan ulang; kegagalan layanan tidak memperpanjang masa berlaku.'),
+  num('OUTLET_GOOGLE_LOCATION_CACHE_DAYS','Masa berlaku titik Google',7,1,30,'hari','Maksimal 30 hari. Dibekukan ketika titik disetujui atau berhasil diperbarui.'),
+  num('OUTLET_GOOGLE_LOCATION_REFRESH_HOURS','Perbarui sebelum kedaluwarsa',24,1,168,'jam','Pembaruan dibatasi kuota Google bersama. Waktu awal paling cepat separuh masa cache untuk menghindari panggilan berulang yang tidak perlu.'),
+  num('OUTLET_GOOGLE_LOCATION_MAX_DRIFT_METERS','Pergeseran yang perlu tinjauan ulang',30,0,1000,'m','Titik Google yang berubah melebihi batas tidak diterapkan otomatis.'),
  ]),
  group('OUTLET_REVIEW_LEGACY','Validasi outlet · referensi metode lama','Nilai kompatibilitas metode terdahulu. Pemeriksaan baru memakai kelompok kecukupan bukti; histori tidak dihitung ulang.',[
   num('OUTLET_REVIEW_NAME_MATCH_PERCENT','Kemiripan minimum nama kandidat',comparison.nameMatchPercent,50,100,'%'),

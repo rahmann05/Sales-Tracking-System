@@ -28,7 +28,7 @@ export async function getOutletReviews(query,actor) {
   if(query.stage&&query.stage!=='ALL')where.workflow={path:['stage'],equals:z.enum(['OPEN','REVIEW','NEEDS_FIELD','WAITING_FIELD','SUBMITTED','COMPLETED','CANCELLED']).parse(query.stage)};
   if(query.issue&&query.issue!=='ALL'){
     const issue=z.enum(['MISSING_POINT','UNCLEAR_NAME','INCOMPLETE_ADDRESS','UNCONFIRMED_POINT','CHANGED']).parse(query.issue);
-    const candidates=await prisma.outlet.findMany({where:where.outlet,select:{id:true,name:true,address:true,latitude:true,longitude:true,source:true,locationEvidence:true,validationDetails:true}});
+    const candidates=await prisma.outlet.findMany({where:where.outlet,select:{id:true,name:true,googleLocation:true,phone:true,clusterId:true,address:true,latitude:true,longitude:true,source:true,locationEvidence:true,validationDetails:true}});
     where.outlet={...where.outlet,id:{in:candidates.filter(o=>outletIssues(o).includes(issue)).map(o=>o.id)}};
   }
   if(query.ownerId)where.ownerId=String(query.ownerId);

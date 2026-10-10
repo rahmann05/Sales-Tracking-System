@@ -1,3 +1,4 @@
+import {projectOperationalData,outletOperationalPoint} from '../../../../shared/outlet-location.mjs';
 export const formatTimeWib = (ts) => {
   if (!ts) return null;
   const d = new Date(ts);
@@ -16,6 +17,7 @@ export const resolveStopStatus = (s, inAtt, outAtt) => {
 
 
 export const mapSalesPjpStops = (pjpData, user) => {
+pjpData=projectOperationalData(pjpData);
 const cluster = pjpData.user?.cluster;
           const mappedStops = pjpData.stops.map((s, idx) => {
             const stopCluster = s.outlet?.cluster || cluster;
@@ -28,7 +30,7 @@ const cluster = pjpData.user?.cluster;
             const intervalWeeks=pjpData.reportingContext?.planning?.rules?.find(rule=>rule.outletId===(s.outletId||s.outlet?.id))?.intervalWeeks;
 
             return {
-              id: s.id,validationTask:s.validationTask,validationOnly:s.validationOnly,validationResult:s.validationResult,
+              googleMapsOnly:outletOperationalPoint(s.outlet).googleMapsOnly,operationalPoint:outletOperationalPoint(s.outlet),id: s.id,validationTask:s.validationTask,validationOnly:s.validationOnly,validationResult:s.validationResult,
               policySnapshot:s.policySnapshot,visitSession:s.visitSession,
               pjpId: pjpData.id,
               sequence: s.sequence || idx + 1,

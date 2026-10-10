@@ -166,7 +166,7 @@ export const DashboardPage = () => {
         const baseColor = getOutletColor(o);
 
         return {
-          id: o.id,
+          id: o.id,googleMapsOnly:o.googleMapsOnly,
           lat: Number(o.latitude),
           lng: Number(o.longitude),
           title: o.name,
@@ -197,7 +197,7 @@ export const DashboardPage = () => {
         setPolylines([
           {
             id: `route-polyline-${selectedRoute.id}`,
-            path: pathPoints,
+            googleMapsOnly:selectedRoute.stops.some(s=>s.googleMapsOnly),path: pathPoints,
             color: '#2563eb',
             strokeWeight: 4,
             strokeOpacity: 0.95,

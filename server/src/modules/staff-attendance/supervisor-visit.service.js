@@ -5,7 +5,7 @@ import {assertSalesAccess} from '../../utils/team-scope.js';
 import { randomUUID } from 'node:crypto';
 import {withUserTransaction} from '../../utils/user-transaction.js';
 import { AppError } from '../../utils/errors.js';
-import { calculateDistanceMeters } from '../../utils/geolocation.js';
+import { distanceToOutlet } from '../../utils/geolocation.js';
 import { getDynamicConfig } from '../config/config.service.js';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import { notifyFollowUp } from './follow-up-notification.service.js';
@@ -41,6 +41,7 @@ async function perform(db,user, data) {
       },
     });
   }
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
   if (!data.stopId) throw new AppError('Pilih toko PJP', 400);
   const stop = await db.pjpStop.findUnique({ where: { id: data.stopId }, include: { pjp: true, outlet: { include: { cluster: true } } } });
   if (!stop || wibDateKey(stop.pjp.date) !== dateKey) throw new AppError('PJP hari ini tidak ditemukan', 404);
@@ -54,7 +55,7 @@ async function perform(db,user, data) {
     if(await getDynamicConfig('SPV_ENFORCE_VISIT_LIMIT',false)){const limit=await getDynamicConfig(visitMode==='JOINT_VISIT'?'SPV_JOINT_VISIT_LIMIT':'SPV_AUDIT_LIMIT',3);const count=await db.staffActivity.count({where:{userId:user.id,dateKey,kind:'VISIT',visitMode}});if(count>=limit)throw new AppError('Batas kunjungan mode ini tercapai',409);}
     if (mode!=='OPTIONAL'&&(requiredGps&&(!Number.isFinite(data.latitude)||!Number.isFinite(data.longitude))||requiredPhoto&&!data.photoUrl)) throw new AppError('Foto dan GPS wajib diisi', 400);
     const radius = stop.outlet.radiusMeters || await getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50);
-    const distance=calculateDistanceMeters(data.latitude,data.longitude,stop.outlet.latitude,stop.outlet.longitude);
+    const distance=distanceToOutlet(data.latitude,data.longitude,stop.outlet);
     if(mode!=='OPTIONAL'&&await getDynamicConfig('SPV_ENFORCE_GEOFENCE',true)&&(distance===null||distance>radius))throw new AppError(distance===null?'GPS atau koordinat master outlet belum tersedia.':`Posisi di luar radius toko (${radius}m)`,422);
     return db.staffActivity.create({ data: { userId: user.id, dateKey, activityKey: data.stopId, kind: 'VISIT',gpsEvidence:await gpsEvidence(data), policySnapshot:await capturePolicySnapshot(),checklist:{startKind:mode==='OPTIONAL'?'BUSINESS_START':'CHECK_IN'},visitMode, outletName: stop.outlet.name, notes: data.notes, latitude: data.latitude, longitude: data.longitude, photoUrl: data.photoUrl } });
   }

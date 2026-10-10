@@ -1,3 +1,4 @@
+import {acceptGoogleLocation} from './outlet-google-location.service.js';
 import {z} from 'zod';
 import {prisma} from '../../../config/prisma.js';
 import {config} from '../../../config/index.js';
@@ -32,7 +33,8 @@ export async function validateOutlet(id,raw,user){
   const tasks=await db.outletFieldTask.count({where:{reviewId:review.id,status:{in:['OPEN','SUBMITTED']}}});
   const auto=values.OUTLET_REVIEW_AUTO_CLOSE===true&&result.aligned&&result.technical==='READY'&&!tasks;
   await db.outletReview.update({where:{id:review.id},data:{revision:{increment:1},workflow:{...live.workflow,stage:auto?'COMPLETED':tasks?live.workflow?.stage||'WAITING_FIELD':'REVIEW',resultCode:result.code,runId:run.id,technical:result.code==='ERROR'?'ERROR':result.technical},...(auto?{status:'COMPLETED',closedAt:now,decision:{action:'DIGITAL_KEEP',note:'Master selaras menurut syarat bukti kuat.',actor:actorSnapshot(actor),at:now.toISOString(),runId:run.id}}:{})}});
-  if(result.code!=='ERROR')await db.outlet.update({where:{id},data:{validationStatus:auto?'VALID':result.code==='STRONG'?'LIKELY_VALID':result.code==='INCOMPLETE'?'INCOMPLETE':'UNVALIDATED',validationConfidence:null,validatedAt:now,validationDetails:{method:result.method,code:result.code,identity:result.identity,location:result.location,reviewId:review.id,checkedAt:result.checkedAt,expiresAt:result.expiresAt,stale:false,...(auto?{decisionSource:'DIGITAL',placeId:result.selectedPlaceId,runId:run.id}:{})}}});
+  const googleLocation=auto&&values.OUTLET_GOOGLE_LOCATION_ENABLED!==false?await acceptGoogleLocation(db,current,run,actor,'Master selaras dengan bukti digital kuat'):undefined;
+  if(result.code!=='ERROR')await db.outlet.update({where:{id},data:{...(googleLocation?{googleLocation}:{}),validationStatus:auto?'VALID':result.code==='STRONG'?'LIKELY_VALID':result.code==='INCOMPLETE'?'INCOMPLETE':'UNVALIDATED',validationConfidence:null,validatedAt:now,validationDetails:{method:result.method,code:result.code,identity:result.identity,location:result.location,reviewId:review.id,checkedAt:result.checkedAt,expiresAt:result.expiresAt,stale:false,...(auto?{decisionSource:'DIGITAL',qualityConfirmed:{source:'DIGITAL',name:outlet.name,address:outlet.address},placeId:result.selectedPlaceId,runId:run.id}:{})}}});
  });
  invalidateOutletCache();return result;
 }

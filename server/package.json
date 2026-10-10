@@ -59,7 +59,11 @@
     "verify:destination-policy": "node tests/destination-policy.integration.mjs",
     "verify:shift-corrections": "node tests/shift-correction.integration.mjs",
     "verify:supervision-checklist": "node tests/supervision-checklist.integration.mjs",
-    "verify:order-price-policy": "node tests/order-price-policy.integration.mjs"
+    "verify:order-price-policy": "node tests/order-price-policy.integration.mjs",
+    "verify:outlet-google": "node tests/outlet-google-location.integration.mjs",
+    "verify:outlet-retention": "node tests/outlet-legacy-cleanup.integration.mjs",
+    "verify:outlet-google-live": "node tests/verify-belfoods-google-live.mjs",
+    "outlets:migration-preflight": "node prisma/outletMigrationPreflight.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

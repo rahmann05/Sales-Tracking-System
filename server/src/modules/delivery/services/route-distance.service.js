@@ -1,3 +1,4 @@
+import {operationalWaypoint} from '../../../../../shared/outlet-location.mjs';
 import { resolveRoadRoute } from '../../routing/routing.service.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { AppError } from '../../../utils/errors.js';
@@ -7,7 +8,7 @@ export async function routeDistance(route, override) {
   if (stored != null) return stored;
   try {
     const [lat,lng] = await Promise.all([getDynamicConfig('DEFAULT_OFFICE_LATITUDE',-6.8582),getDynamicConfig('DEFAULT_OFFICE_LONGITUDE',107.5123)]);
-    const {legs} = await resolveRoadRoute([{lat,lng},...route.stops.map(s=>({lat:s.outlet.latitude,lng:s.outlet.longitude})),{lat,lng}]);
+    const {legs} = await resolveRoadRoute([{lat,lng},...route.stops.map(s=>operationalWaypoint(s.outlet)),{lat,lng}]);
     const distance = legs.reduce((sum,leg)=>sum+(leg.distanceKm || 0),0);
     if (!Number.isFinite(distance) || distance<=0) throw new Error('Jarak rute kosong');
     return distance;

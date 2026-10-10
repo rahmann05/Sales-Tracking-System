@@ -36,7 +36,7 @@ export const getDeliveryRoutes = async (query, userId, userRole) => {
         stops: {
           orderBy: { sequence: 'asc' },
           include: {
-            outlet: { select: { id: true, name: true, address: true, latitude: true, longitude: true } },
+            outlet: { select: { id: true, name: true, googleLocation:true,phone:true,clusterId:true,address:true,latitude:true, longitude: true } },
             packingList: { include: { invoices:true } },
             attendances: {orderBy:{timestamp:'asc'}},
           },

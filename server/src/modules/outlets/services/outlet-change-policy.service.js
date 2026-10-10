@@ -1,3 +1,4 @@
+import {assertGoogleLocationIdle} from './outlet-google-location.service.js';
 import { AppError } from '../../../utils/errors.js';
 import { actorSnapshot } from './outlet-review-policy.service.js';
 export const editableKeys=['name','address','latitude','longitude','clusterId','outletCode','ownerName','phone','radiusMeters','channel','type','subChannel','itineraryCode','taxType','taxNumber','taxName','taxAddress','deletedAt'];
@@ -7,15 +8,17 @@ export async function recordOutletChange(db,before,data,{actor,reason,source='MA
   if(!keys.length)return {};
   if(keys.includes('clusterId')&&db.outletFieldTask&&await db.outletFieldTask.count({where:{review:{outletId:before.id},status:{in:['OPEN','SUBMITTED']}}}))throw new AppError('Selesaikan atau batalkan tugas pemeriksaan outlet sebelum memindahkan wilayah, termasuk melalui impor.',409);
   const locationChanged=keys.some(k=>['latitude','longitude'].includes(k));
+  const basisChanged=keys.some(k=>['name','address','latitude','longitude','clusterId','phone','deletedAt'].includes(k));
+  if(basisChanged&&before.googleLocation&&before.googleLocation.status!=='SUPERSEDED')await assertGoogleLocationIdle(db,before.id);
   if(locationChanged) {
     const active=await db.pjpStop.count({where:{outletId:before.id,attendances:{some:{type:'IN'},none:{type:'OUT'}},status:{notIn:['VISITED','SKIPPED','CLOSED_REPORTED']}}});
     const deliveries=await db.deliveryStop.count({where:{outletId:before.id,arrivedAt:{not:null},completedAt:null,deliveryRoute:{status:'IN_TRANSIT',cancelledAt:null}}});
     if(active||deliveries)throw new AppError('Lokasi sedang dipakai kunjungan atau pengiriman aktif. Selesaikan pekerjaan tersebut sebelum mengubah titik master.',409);
   }
   await db.outletChange.create({data:{outletId:before.id,actor:actorSnapshot(actor),reason:reason || 'Pembaruan sumber data',source,before:Object.fromEntries(keys.map(k=>[k,before[k] ?? null])),after:Object.fromEntries(keys.map(k=>[k,data[k]]))}});
-  if(keys.some(k=>['name','address','latitude','longitude'].includes(k))) {
+  if(basisChanged) {
     await db.clusterRoute.deleteMany({where:{clusterId:before.clusterId}});
-    return {validationStatus:'UNVALIDATED',validationConfidence:null,googleSuggestedLat:null,googleSuggestedLng:null,validationDetails:{...before.validationDetails,stale:true},...(locationChanged?{locationEvidence:{source:locationEvidence?.source || source,accuracyMeters:locationEvidence?.accuracyMeters ?? null,capturedAt:locationEvidence?.capturedAt || null,actor:actorSnapshot(actor),at:new Date().toISOString()}}:{})};
+    return {...(before.googleLocation?{googleLocation:{source:'GOOGLE',status:'CONFLICT',placeId:before.googleLocation.placeId,basis:before.googleLocation.basis,lastError:'MASTER_CHANGED',revision:(before.googleLocation.revision||0)+1}}:{}),validationStatus:'UNVALIDATED',validationConfidence:null,googleSuggestedLat:null,googleSuggestedLng:null,validationDetails:{...before.validationDetails,stale:true},...(locationChanged?{locationEvidence:{source:locationEvidence?.source || source,accuracyMeters:locationEvidence?.accuracyMeters ?? null,capturedAt:locationEvidence?.capturedAt || null,actor:actorSnapshot(actor),at:new Date().toISOString()}}:{})};
   }
   return {};
 }

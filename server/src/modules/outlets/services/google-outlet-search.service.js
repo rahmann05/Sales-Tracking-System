@@ -4,7 +4,7 @@ import {knownPoint,outletIssues,outletNameUnusable} from '../../../../../shared/
 import {normalizeIndonesianStoreName} from './normalize-indonesian-store-name.service.js';
 import {evaluateDigitalOutlet} from './outlet-digital-evaluator.service.js';
 const fields='places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.businessStatus,places.types,places.googleMapsUri,places.attributions';
-const normalize=p=>({placeId:p.id,name:p.displayName?.text||'',address:p.formattedAddress||'',latitude:p.location?.latitude??null,longitude:p.location?.longitude??null,businessStatus:p.businessStatus||'UNKNOWN',types:p.types||[],mapsUrl:p.googleMapsUri||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text||'')}&query_place_id=${encodeURIComponent(p.id)}`,attributions:p.attributions||[],movedPlaceId:p.movedPlaceId||null,phone:p.internationalPhoneNumber||p.nationalPhoneNumber||null,city:p.addressComponents?.find(c=>c.types?.includes('administrative_area_level_2'))?.longText||null});
+const normalize=p=>({detailsConfirmed:false,placeId:p.id,name:p.displayName?.text||'',address:p.formattedAddress||'',latitude:p.location?.latitude??null,longitude:p.location?.longitude??null,businessStatus:p.businessStatus||'UNKNOWN',types:p.types||[],mapsUrl:p.googleMapsUri||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text||'')}&query_place_id=${encodeURIComponent(p.id)}`,attributions:p.attributions||[],movedPlaceId:p.movedPlaceId||null,phone:p.internationalPhoneNumber||p.nationalPhoneNumber||null,city:p.addressComponents?.find(c=>c.types?.includes('administrative_area_level_2'))?.longText||null});
 export async function searchGoogleOutlet(outlet,key,values,providerLimits={},fetcher=fetch,chosenId){
  const steps=[],found=new Map(),max=Number(values.OUTLET_REVIEW_MAX_CALLS??6),limit=Number(values.OUTLET_REVIEW_MAX_CANDIDATES??5),timeout=Number(values.OUTLET_REVIEW_TIMEOUT_SECONDS??10)*1000;
  const call=async(kind,strategy,url,options={})=>{
@@ -30,6 +30,6 @@ export async function searchGoogleOutlet(outlet,key,values,providerLimits={},fet
  }
  // Refresh the two best candidates rather than treating repeated search results as independent proof.
  const top=evaluateDigitalOutlet(outlet,[...found.values()],steps,values).candidates.slice(0,2);
- for(const placeId of [...new Set([chosenId,...top.map(c=>c.placeId)].filter(Boolean))]){const data=await call('DETAILS','CANDIDATE_DETAILS',`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?languageCode=id`,{headers:{'X-Goog-Api-Key':key,'X-Goog-FieldMask':fields.replaceAll('places.','')+',movedPlaceId'+(outlet.phone?',internationalPhoneNumber,nationalPhoneNumber':'')}});if(data?.id)found.set(data.id,normalize(data));}
+ for(const placeId of [...new Set([chosenId,...top.map(c=>c.placeId)].filter(Boolean))]){const data=await call('DETAILS','CANDIDATE_DETAILS',`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?languageCode=id`,{headers:{'X-Goog-Api-Key':key,'X-Goog-FieldMask':fields.replaceAll('places.','')+',movedPlaceId'+(outlet.phone?',internationalPhoneNumber,nationalPhoneNumber':'')}});if(data?.id)found.set(data.id,{...normalize(data),detailsConfirmed:true});}
  return {candidates:[...found.values()].slice(0,limit*2),steps};
 }

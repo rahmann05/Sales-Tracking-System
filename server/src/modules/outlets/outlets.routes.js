@@ -1,3 +1,4 @@
+import {refreshGoogleLocation} from './services/outlet-google-location.service.js';
 import {outletFieldVisitReport} from './services/outlet-field-report.service.js';
 import { correctCoordinates } from './services/correct-coordinates.service.js';
 import {assertOutletAccess} from '../../utils/team-scope.js';
@@ -72,6 +73,7 @@ router.patch(
 router.get('/', outletController.getAll);
 router.post('/', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'), validate(createOutletSchema), outletController.create);
 
+router.post('/:id/google-location/refresh',action(req=>refreshGoogleLocation(req.params.id,req.user)));
 router.patch('/:id/coordinates',directoryAccess,async(req,res,next)=>{try{res.json({data:await correctCoordinates(req.params.id,req.body,req.user)});}catch(e){next(e);}});
 router.get('/:id/profile',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'),action(req=>outletProfile(req.params.id,req.user)));
 router.patch('/:id/reviews/:reviewId/assignment',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>assignOutletReview(req.params.id,req.params.reviewId,req.body,req.user)));

@@ -1,3 +1,4 @@
+import {projectOperationalOutlet} from '../../../../../shared/outlet-location.mjs';
 /** getNearestOutlets - single-responsibility service (extracted from clusters.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { haversineKm } from '../cluster-generator.service.js';
@@ -11,7 +12,7 @@ export const getNearestOutlets = async (lat, lng, count, type = null, actor,supe
   });
 
   // Filter outlet yang tidak memiliki lat/lng valid dan sesuai type (jika diberikan)
-  let validOutlets = allOutlets.filter(o =>
+  let validOutlets = allOutlets.map(o=>projectOperationalOutlet(o)).filter(o =>
     (actor?.role !== 'SUPERVISOR' || o.cluster?.supervisorId === actor.id || o.cluster?.name === 'Belum Ditugaskan') &&
     o.latitude != null &&
     o.longitude != null &&

@@ -20,6 +20,7 @@ export const actionFeature=(group,action)=>{
  const rule=BUSINESS_ACTIONS[group]?.[action];return rule?[rule.feature,rule.intent==='NEW_WORK']:null;
 };
 export const BACKGROUND_CONTRACTS={
+ OUTLET_GOOGLE_LOCATION:{purpose:'Lokasi Google disetujui dan retensi cache',consumer:'server/src/modules/outlets/services/outlet-google-location.service.js',rule:'OUTLET_GOOGLE_LOCATION_*; no expiry extension on failure; retention continues when disabled'},
  OUTLET_FIELD_PJP:{purpose:'Agenda tugas validasi berulang',consumer:'server/src/modules/outlets/services/outlet-field-pjp.service.js',rule:'Frozen OUTLET_FIELD_PJP_MODE; existing assignment continues without changing recurring templates or fabricating attendance; manual PJP codes remain required'},
  OUTLET_VALIDATION:{purpose:'Antrean Google dan retensi cache koordinat',consumer:'server/src/modules/outlets/services/outlet-validation-job.service.js',rule:'Effective OUTLET_REVIEW / MAPS availability, actor permission, provider budgets; expired provider cache is purged even when disabled'},
  HISTORY_RETENTION:{purpose:'Retensi histori',consumer:'server/src/modules/notifications/services/history-retention.service.js',rule:'NOTIFY_READ_RETENTION_DAYS / AUDIT_ACTIVE_RETENTION_DAYS; cleanup remains available when a feature is paused'},

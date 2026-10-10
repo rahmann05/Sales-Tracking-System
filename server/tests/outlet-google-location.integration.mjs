@@ -1,0 +1,87 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {Prisma} from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import {prisma} from '../src/config/prisma.js';
+import {config} from '../src/config/index.js';
+import {httpServer} from '../src/app.js';
+import {cache} from '../src/config/cache.js';
+import {invalidateConfigCache} from '../src/modules/config/services/dynamic-config.service.js';
+import {refreshGoogleLocation,maintainGoogleLocations} from '../src/modules/outlets/services/outlet-google-location.service.js';
+import {outletOperationalPoint} from '../../shared/outlet-location.mjs';
+import {distanceToOutlet} from '../src/utils/geolocation.js';
+import {checkIn} from '../src/modules/absensi/services/check-in.service.js';
+import {wibDateKey} from '../../shared/visit-metrics.mjs';
+import {resolveRoadRoute} from '../src/modules/routing/routing.service.js';
+import {withPolicy} from '../src/modules/config/services/policy-context.service.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
+const tag=`google-point-${randomUUID()}`,users=[],outlets=[],clusters=[];
+const values={MAPS_API_KEY:'mock-only',OUTLET_REVIEW_EXPAND_SEARCH:false,OUTLET_REVIEW_AUTO_CLOSE:false,ATTENDANCE_REQUIRE_ACTIVE_SHIFT:false,SALES_REQUIRE_PHOTO_IN:false,SALES_REQUIRE_GPS:true,ATTENDANCE_ENFORCE_GEOFENCE:true};
+const originalFind=prisma.systemConfig.findMany,realFetch=globalThis.fetch;
+prisma.systemConfig.findMany=async()=>Object.entries(values).map(([key,value])=>({key,value}));invalidateConfigCache();
+const place={id:'mock-operational-place',displayName:{text:'Toko Melati Bandung'},formattedAddress:'Jl Melati No 12, Kota Bandung',location:{latitude:-6.9,longitude:107.6},businessStatus:'OPERATIONAL'};
+let mode='OK',checks=0,calls=0;
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
+globalThis.fetch=async(url,options)=>{
+ if(new URL(url).hostname==='places.googleapis.com'){calls++;if(mode==='ERROR')return {ok:false,status:503};const p=mode==='DRIFT'?{...place,location:{latitude:-6.91,longitude:107.6}}:place;return {ok:true,json:async()=>String(url).includes(':searchText')?{places:[p]}:p};}
+ assert.ok(new URL(url).hostname==='127.0.0.1','No external HTTP in integration tests');return realFetch(url,options);
+};
+await new Promise(resolve=>httpServer.listen(0,'127.0.0.1',resolve));
+const api=async(path,actor,method='GET',body)=>{const r=await fetch(`http://127.0.0.1:${httpServer.address().port}/api/v1${path}`,{method,headers:{Authorization:`Bearer ${jwt.sign({id:actor.id},config.jwtSecret)}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};};
+const person=async(role,extra={})=>{const u=await prisma.user.create({data:{name:tag,email:`${randomUUID()}@example.invalid`,password:'unused',role,...extra}});users.push(u.id);return u;};
+try{
+ const spv=await person('SUPERVISOR'),sales=await person('SALES',{supervisorId:spv.id}),foreign=await person('SUPERVISOR');
+ const c=await prisma.cluster.create({data:{name:tag,region:'Bandung',supervisorId:spv.id,assignedSalesId:sales.id}});clusters.push(c.id);
+ const outlet=await prisma.outlet.create({data:{name:place.displayName.text,address:place.formattedAddress,latitude:-6.2,longitude:106.8,source:'IMPORT',clusterId:c.id}});outlets.push(outlet.id);
+ const open=async()=>{const r=await api(`/outlets/${outlet.id}/reviews`,spv,'POST',{reason:'Periksa koordinat lama yang tidak sesuai lokasi usaha'});eq(r.status,200);return r.body.data;};
+ const inspect=async r=>{const search=await api(`/outlets/${outlet.id}/validate`,spv,'POST',{reviewId:r.id,revision:r.revision});eq(search.body.data.code,'STRONG');return (await api(`/outlets/reviews/${r.id}`,spv)).body.data;};
+ const decide=r=>api(`/outlets/${outlet.id}/reviews/${r.id}/digital`,spv,'PATCH',{action:'DIGITAL_KEEP',revision:r.revision,runId:r.runs[0].id,reason:'Konfirmasi Google sesuai identitas dan alamat lengkap'});
+ let review=await inspect(await open());
+ const pjp=await prisma.pjp.create({data:{userId:sales.id,type:'SALES',date:new Date(`${wibDateKey()}T05:00:00Z`),stops:{create:{outletId:outlet.id,sequence:1,visitSession:{state:'ACTIVE'}}}},include:{stops:true}}),stop=pjp.stops[0];
+ eq((await decide(review)).status,409); // Logical visit has no attendance and still protects the point.
+ await prisma.pjpStop.update({where:{id:stop.id},data:{visitSession:Prisma.DbNull}});
+ eq((await decide(review)).status,200);
+ let current=await prisma.outlet.findUnique({where:{id:outlet.id}});
+ eq(current.latitude,-6.2);eq(current.longitude,106.8);eq(current.locationEvidence,null);eq(outletOperationalPoint(current).latitude,-6.9);eq(distanceToOutlet(-6.9,107.6,current),0);
+ eq((await api(`/outlets/${outlet.id}/google-location/refresh`,sales,'POST')).status,403);eq((await api(`/outlets/${outlet.id}/google-location/refresh`,foreign,'POST')).status,403);
+ eq((await api(`/routing/road-route`,foreign,'POST',{waypoints:[{lat:-6.9,lng:107.6,outletId:outlet.id},{lat:-6.8,lng:107.5}]})).status,403);
+ const incoming=await checkIn(stop.id,sales.id,-6.9,107.6,'fixture-photo');eq(incoming.deviationMeters,0);
+ await assert.rejects(()=>refreshGoogleLocation(outlet.id,spv),{statusCode:409});checks++;
+ await prisma.attendance.deleteMany({where:{pjpStopId:stop.id}});await prisma.pjpStop.update({where:{id:stop.id},data:{visitSession:Prisma.DbNull,policySnapshot:Prisma.DbNull}});
+ // Clear any fixture lease before independent refresh cases.
+ current=await prisma.outlet.findUnique({where:{id:outlet.id}});await prisma.outlet.update({where:{id:outlet.id},data:{googleLocation:{...current.googleLocation,refreshLeaseUntil:null,refreshLeaseToken:null}}});
+ eq((await refreshGoogleLocation(outlet.id,spv)).status,'ACTIVE');
+ current=await prisma.outlet.findUnique({where:{id:outlet.id}});const expiry=current.googleLocation.expiresAt;
+ mode='ERROR';const failed=await refreshGoogleLocation(outlet.id,spv);eq(failed.status,'ACTIVE');eq(failed.lastError,'PROVIDER_UNAVAILABLE');eq(failed.expiresAt,expiry);
+ await assert.rejects(()=>withPolicy({values:{ROUTING_PROVIDER:'OSRM',FEATURE_MAPS_MODE:'ACTIVE'}},()=>resolveRoadRoute([{lat:-6.9,lng:107.6,googleMapsOnly:true},{lat:-6.8,lng:107.5}])) ,{statusCode:503});checks++;
+ let started,release;const ready=new Promise(r=>{started=r;}),gate=new Promise(r=>{release=r;});
+ const first=refreshGoogleLocation(outlet.id,spv,{fetcher:async()=>{calls++;started();await gate;return {ok:true,json:async()=>place};}});
+ await ready;
+ await assert.rejects(()=>refreshGoogleLocation(outlet.id,spv),{statusCode:409});checks++;
+ release();eq((await first).status,'ACTIVE');
+ mode='DRIFT';eq((await refreshGoogleLocation(outlet.id,spv)).status,'CONFLICT');current=await prisma.outlet.findUnique({where:{id:outlet.id}});eq(current.googleLocation.latitude,null);eq(outletOperationalPoint(current).latitude,null);
+ mode='OK';review=await inspect(await open());eq((await decide(review)).status,200);
+ await prisma.outlet.update({where:{id:outlet.id},data:{address:'Jl Melati No 14, Kota Bandung'}});
+ const beforeChangedRefresh=calls;eq((await refreshGoogleLocation(outlet.id,spv)).status,'CONFLICT');eq(calls,beforeChangedRefresh);
+ await prisma.outlet.update({where:{id:outlet.id},data:{address:place.formattedAddress}});
+ review=await inspect(await open());eq((await decide(review)).status,200);
+ current=await prisma.outlet.findUnique({where:{id:outlet.id}});
+ await prisma.outlet.update({where:{id:outlet.id},data:{deletedAt:new Date(),googleLocation:{...current.googleLocation,expiresAt:new Date(Date.now()-1000).toISOString()}}});
+ values.OUTLET_GOOGLE_LOCATION_ENABLED=false;values.FEATURE_OUTLET_REVIEW_MODE='OFF';invalidateConfigCache();
+ await maintainGoogleLocations();current=await prisma.outlet.findUnique({where:{id:outlet.id}});eq(current.googleLocation.status,'EXPIRED');eq(current.googleLocation.latitude,null);eq(current.googleLocation.longitude,null);eq(current.latitude,-6.2);
+ const audit=await prisma.auditEvent.findMany({where:{entityType:'OUTLET_LOCATION',entityId:outlet.id}});eq(audit.some(a=>a.action==='GOOGLE_EXPIRED'),true);eq(audit.every(a=>!JSON.stringify(a.after).includes('latitude')),true);
+ values.OUTLET_GOOGLE_LOCATION_ENABLED=true;values.FEATURE_OUTLET_REVIEW_MODE='ACTIVE';invalidateConfigCache();
+ await prisma.outlet.update({where:{id:outlet.id},data:{deletedAt:null,latitude:-6.9,longitude:107.6,locationEvidence:{source:'FIELD',capturedAt:new Date().toISOString()}}});
+ review=await inspect(await open());eq((await decide(review)).status,200);current=await prisma.outlet.findUnique({where:{id:outlet.id}});
+ eq(current.googleLocation.status,'SUPERSEDED');eq(current.googleLocation.latitude,undefined);eq(outletOperationalPoint(current).source,'FIELD');eq(outletOperationalPoint(current).googleMapsOnly,false);eq(current.latitude,-6.9);
+ console.log(`Google operational location integration passed: ${checks} assertions; ${calls} mocked provider calls; no external HTTP.`);
+}finally{
+ globalThis.fetch=realFetch;prisma.systemConfig.findMany=originalFind;invalidateConfigCache();
+ await prisma.notification.deleteMany({where:{userId:{in:users}}});await prisma.auditEvent.deleteMany({where:{OR:[{actorId:{in:users}},{entityId:{in:outlets}}]}});
+ await prisma.staffActivity.deleteMany({where:{userId:{in:users}}});await prisma.pjp.deleteMany({where:{userId:{in:users}}});
+ await prisma.outletValidationRun.deleteMany({where:{review:{outletId:{in:outlets}}}});await prisma.outletReview.deleteMany({where:{outletId:{in:outlets}}});await prisma.outletChange.deleteMany({where:{outletId:{in:outlets}}});
+ await prisma.outlet.deleteMany({where:{id:{in:outlets}}});await prisma.cluster.deleteMany({where:{id:{in:clusters}}});
+ await prisma.user.updateMany({where:{id:{in:users}},data:{clusterId:null,supervisorId:null}});await prisma.user.deleteMany({where:{id:{in:users}}});
+ await new Promise(resolve=>httpServer.close(resolve));cache.close();await prisma.$disconnect();
+}

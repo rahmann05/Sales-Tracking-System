@@ -105,12 +105,11 @@ export const getDailyCallReport = async (query = {}) => {
       const outletLng = outlet.longitude ?? null;
 
       let devMeters = null;
-      if ([checkIn?.latitude,checkIn?.longitude,outletLat,outletLng].every(Number.isFinite)) {
+      if(checkIn?.deviationMeters!=null)devMeters=Math.round(checkIn.deviationMeters);
+      else if ([checkIn?.latitude,checkIn?.longitude,outletLat,outletLng].every(Number.isFinite)) {
         devMeters = Math.round(
           calculateDistanceMeters(checkIn.latitude, checkIn.longitude, outletLat, outletLng)
         );
-      } else if (checkIn?.deviationMeters!=null) {
-        devMeters = Math.round(checkIn.deviationMeters);
       }
 
       const maxAllowedRadius = policy.ATTENDANCE_USE_OUTLET_RADIUS===false?(policy.ATTENDANCE_RADIUS_METERS??GLOBAL_RADIUS):(outlet.radiusMeters||policy.ATTENDANCE_RADIUS_METERS||GLOBAL_RADIUS);

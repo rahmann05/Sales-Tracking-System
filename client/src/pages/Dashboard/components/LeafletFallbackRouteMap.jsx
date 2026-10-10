@@ -40,6 +40,7 @@ export const LeafletFallbackRouteMap = ({
   clusterBaseColor = '#2563eb'
 }) => {
  const mapPolicy=useFeaturePolicy('MAPS');
+  if(markers.some(p=>p.googleMapsOnly)||routes.some(p=>p.googleMapsOnly)||systemStops.some(p=>p.googleMapsOnly)||selectedOutlet?.googleMapsOnly)return <p className="app-notice" role="status">Tujuan ini memakai lokasi Google. Aktifkan peta Google atau gunakan navigasi Google Maps; peta cadangan tidak tersedia untuk titik ini.</p>;
   if(!mapPolicy.canStart)return <p className="app-notice" role="status">{mapPolicy.reason}</p>;
   const centerLat = Number(center?.lat || salesLocation?.lat || -6.8849);
   const centerLng = Number(center?.lng || salesLocation?.lng || 107.4899);

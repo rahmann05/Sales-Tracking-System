@@ -1,3 +1,6 @@
+import {DIGITAL_OUTLET_VERSION} from './outlet-digital-evaluator.service.js';
+import {getDynamicConfig} from '../../config/config.service.js';
+import {acceptGoogleLocation,assertGoogleLocationIdle} from './outlet-google-location.service.js';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
 import {updateFieldPjpResult,finishFieldPjpAgenda} from './outlet-field-pjp.service.js';
 import {z} from 'zod';
@@ -35,17 +38,18 @@ export async function decideDigitalOutlet(outletId,id,raw,user){
   }else{
    if(r.fieldTasks.some(t=>t.status==='SUBMITTED'))throw new AppError('Periksa bukti Sales yang sudah dikirim sebelum menutup kasus.',409);
    if(b.action==='DIGITAL_KEEP'){
-    const run=r.runs.find(x=>x.id===b.runId);if(!outletEvidenceCurrent(run,outlet)||!run.providerContent||+run.providerExpiresAt<=Date.now())throw new AppError('Bukti Google tidak tersedia, kedaluwarsa atau master berubah. Periksa ulang.',409);
+    const run=r.runs.find(x=>x.id===b.runId);if(run?.result?.version!==DIGITAL_OUTLET_VERSION||!outletEvidenceCurrent(run,outlet)||!run.providerContent||+run.providerExpiresAt<=Date.now())throw new AppError('Bukti Google tidak tersedia, kedaluwarsa atau master berubah. Periksa ulang.',409);
     const selectedPlaceId=b.placeId||run.result.selectedPlaceId;
     if(run.result.code!=='STRONG'||selectedPlaceId!==run.result.selectedPlaceId)throw new AppError('Bukti kandidat ini belum cukup kuat. Periksa ulang atau gunakan bukti internal/lapangan.',422);
-    // Persist the permitted Place ID; provider coordinates stay in expiring providerContent, never masquerade as field GPS.
-    await db.outlet.update({where:{id:outletId},data:{validationStatus:'VALID',validationDetails:{...outlet.validationDetails,code:'STRONG',decisionSource:'DIGITAL',placeId:selectedPlaceId,runId:run.id,expiresAt:run.result.expiresAt,stale:false}}});
+    const googleLocation=await getDynamicConfig('OUTLET_GOOGLE_LOCATION_ENABLED',true)?await acceptGoogleLocation(db,outlet,run,actor,b.reason):undefined;
+    await db.outlet.update({where:{id:outletId},data:{...(googleLocation?{googleLocation}:{}),validationStatus:'VALID',validationDetails:{...outlet.validationDetails,qualityConfirmed:{source:'DIGITAL',name:outlet.name,address:outlet.address},code:'STRONG',decisionSource:'DIGITAL',placeId:selectedPlaceId,runId:run.id,expiresAt:run.result.expiresAt,stale:false}}});
     event.runId=run.id;event.placeId=selectedPlaceId;
    }else if(b.action==='FIELD_KEEP'){
+    if(outlet.googleLocation)await assertGoogleLocationIdle(db,outletId);
     const task=await db.outletFieldTask.findFirst({where:{reviewId:id,status:'DONE'},orderBy:{updatedAt:'desc'}});
     if(!task||!task.evidence)throw new AppError('Bukti lapangan yang diterima belum tersedia.',422);
     if(task.evidence.outcome==='FOUND'&&!['name','address','latitude','longitude'].every(k=>task.evidence[k]==null||task.evidence[k]===outlet[k]))throw new AppError('Terapkan usulan koreksi lapangan sebelum menyelesaikan sebagai terverifikasi.',409);
-    await db.outlet.update({where:{id:outletId},data:{validationStatus:task.evidence.outcome==='FOUND'?'VALID':'WARNING',validationDetails:{method:'FIELD_REVIEW_V1',code:task.evidence.outcome,decisionSource:'FIELD',taskId:task.id,stale:false,...(task.evidence.outcome==='FOUND'?{qualityConfirmed:{source:'FIELD',name:outlet.name,address:outlet.address}}:{})},...(task.evidence.outcome==='FOUND'&&Number.isFinite(task.evidence.latitude)&&Number.isFinite(task.evidence.longitude)?{locationEvidence:{source:'FIELD',taskId:task.id,accuracyMeters:task.evidence.accuracyMeters,capturedAt:task.evidence.capturedAt,actor:actorSnapshot(actor),at:event.at}}:{})}});event.taskId=task.id;
+    await db.outlet.update({where:{id:outletId},data:{...(outlet.googleLocation?{googleLocation:{source:'GOOGLE',status:'SUPERSEDED',placeId:outlet.googleLocation.placeId}}:{}),validationStatus:task.evidence.outcome==='FOUND'?'VALID':'WARNING',validationDetails:{method:'FIELD_REVIEW_V1',code:task.evidence.outcome,decisionSource:'FIELD',taskId:task.id,stale:false,...(task.evidence.outcome==='FOUND'?{qualityConfirmed:{source:'FIELD',name:outlet.name,address:outlet.address}}:{})},...(task.evidence.outcome==='FOUND'&&Number.isFinite(task.evidence.latitude)&&Number.isFinite(task.evidence.longitude)?{locationEvidence:{source:'FIELD',taskId:task.id,accuracyMeters:task.evidence.accuracyMeters,capturedAt:task.evidence.capturedAt,actor:actorSnapshot(actor),at:event.at}}:{})}});event.taskId=task.id;
    }else if(b.action==='INTERNAL_KEEP'){
     if(!b.reference||b.reference.length<10)throw new AppError('Referensi bukti internal wajib diisi.',422);
     await db.outlet.update({where:{id:outletId},data:{validationDetails:{...outlet.validationDetails,decisionSource:'INTERNAL',reference:b.reference,stale:false},validationStatus:'LIKELY_VALID'}});event.reference=b.reference;

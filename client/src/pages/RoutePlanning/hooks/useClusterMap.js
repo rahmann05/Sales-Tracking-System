@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useMap } from '../../../context/MapContext';
 import { routingService } from '../../../services/routingService';
 
-const coordinates=outlet=>({lat:Number(outlet.latitude),lng:Number(outlet.longitude)});
+const coordinates=outlet=>({lat:Number(outlet.latitude),lng:Number(outlet.longitude),googleMapsOnly:outlet.googleMapsOnly,outletId:outlet.id});
 export function useClusterMap({step,allOutlets,selectedOutlets,centerPoint,routes,activeRouteIndex,draft,selectCenter,toggleOutlet,busy,saving}) {
   const {setMapMode,setMarkers,clearMarkers,setPolylines,clearPolylines,addClickListener,removeClickListener,isMapReady,panTo}=useMap();
   useEffect(()=>{setMapMode('create-cluster');return()=>{setMapMode('hidden');clearMarkers();clearPolylines();removeClickListener();};},[setMapMode,clearMarkers,clearPolylines,removeClickListener]);
@@ -27,7 +27,7 @@ export function useClusterMap({step,allOutlets,selectedOutlets,centerPoint,route
     const outlets=new Map(selectedOutlets.map(outlet=>[outlet.id,outlet]));
     const points=route.outletOrder.map(item=>outlets.get(item.id)).filter(Boolean).map(coordinates);
     if(points.length<2)return;
-    const draw=path=>setPolylines([{id:'cluster-preview',path,color:draft.colorHex,isActive:true}]);
+    const draw=path=>setPolylines([{id:'cluster-preview',googleMapsOnly:points.some(p=>p.googleMapsOnly),path,color:draft.colorHex,isActive:true}]);
     draw(points);
     routingService.fetchRoadRoute(points).then(result=>{if(current){const path=result.legs.flatMap(leg=>leg.path || []);if(path.length)draw(path);}}).catch(()=>{});
     return()=>{current=false;};

@@ -10,7 +10,7 @@ export const getPackingListById = async (id) => {
   const pl = await prisma.packingList.findUnique({
     where: { id },
     include: {
-      outlet: { select: { id: true, name: true, address: true, outletCode: true, latitude: true, longitude: true } },
+      outlet: { select: { id: true, name: true, outletCode: true, googleLocation:true,phone:true,clusterId:true,address:true,latitude:true, longitude: true } },
       invoices: true,
       createdBy: { select: { id: true, name: true } },
       deliveryStops: {

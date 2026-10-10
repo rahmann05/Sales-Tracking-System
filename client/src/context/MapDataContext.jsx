@@ -1,3 +1,4 @@
+import {projectOperationalOutlet} from '../../../shared/outlet-location.mjs';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from './AppContext';
 import { collectPages, outletsApi, clustersApi, usersApi } from '../services/api';
@@ -43,7 +44,7 @@ export const MapDataProvider = ({ children }) => {
     if(!user?.id)return;
     const socketUrl = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? 'https://sinar-anugrah-production.up.railway.app' : undefined);
     const socket = io(socketUrl, { auth: { token: localStorage.getItem('token') }, transports: import.meta.env.PROD?['websocket']:['polling','websocket'], reconnectionAttempts: 2, reconnectionDelay: 8000, timeout: 10000 });
-    socket.on('cache:invalidate',event=>{if(event.dataType==='pjp'){window.dispatchEvent(new Event('operational-data-changed'));return;}if(['policies','config','configs'].includes(event.dataType))window.dispatchEvent(new Event('policy:changed'));else if(hasFetchedRef.current)fetchAllData();});
+    socket.on('cache:invalidate',event=>{if(['pjp','outlets'].includes(event.dataType))window.dispatchEvent(new Event('operational-data-changed'));if(event.dataType==='pjp')return;if(['policies','config','configs'].includes(event.dataType))window.dispatchEvent(new Event('policy:changed'));else if(hasFetchedRef.current)fetchAllData();});
     socket.on('notification',()=>window.dispatchEvent(new Event('notifications:changed')));
     socket.on('connect',()=>window.dispatchEvent(new Event('notifications:changed')));
     socket.io.on('reconnect_attempt',()=>{socket.auth={token:localStorage.getItem('token')};});
@@ -52,7 +53,7 @@ export const MapDataProvider = ({ children }) => {
   const invalidate=useCallback(()=>{hasFetchedRef.current=false;fetchAllData();},[fetchAllData]);
 
   const contextValue = useMemo(() => ({
-    outlets,
+    outlets:outlets.map(o=>projectOperationalOutlet(o)),
     clusters,
     salesUsers,
     dataVersion,

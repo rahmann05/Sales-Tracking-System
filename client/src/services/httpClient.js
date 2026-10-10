@@ -1,3 +1,4 @@
+import {projectOperationalData} from '../../../shared/outlet-location.mjs';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 const REQUEST_TIMEOUT_MS=30000;
 let sessionRevision=0;
@@ -86,7 +87,7 @@ async function perform(endpoint,options,revision) {
     const error=failure(result.data.message || result.data.errors?.[0]?.message || `Request gagal (${result.response.status})`,result.response.status);
     error.data=result.data;throw error;
   }
-  return result.data;
+  return /^\/(pjp|delivery|packing|clusters|staff-attendance)(?:[/?]|$)/.test(endpoint)?projectOperationalData(result.data):result.data;
 }
 export function request(endpoint,options={}) {
   const revision=sessionRevision;

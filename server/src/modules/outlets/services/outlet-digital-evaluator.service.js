@@ -1,8 +1,9 @@
 import {calculateNameSimilarity} from './calculate-name-similarity.service.js';
 import {calculateAddressSimilarity} from './calculate-address-similarity.service.js';
 import {calculateDistanceMeters} from '../../../utils/geolocation.js';
-import {knownPoint,outletIssues,outletNameUnusable} from '../../../../../shared/outlet-validation.mjs';
+import {knownPoint,outletIssues,outletNameUnusable,OUTLET_DIGITAL_VERSION as DIGITAL_OUTLET_VERSION} from '../../../../../shared/outlet-validation.mjs';
 import {extractAddressTokens} from './outlet-validation.helpers.js';
+export {DIGITAL_OUTLET_VERSION};
 const digits=s=>String(s||'').match(/\d+/g)?.join(',')||'';
 const house=s=>String(s||'').match(/\b(?:no\.?|nomor)\s*(\d+[a-z]?)/i)?.[1]?.toLowerCase();
 const locality=s=>String(s||'').toLowerCase().replace(/\b(kota|kabupaten|kab)\b/g,'').replace(/[^a-z0-9]/g,'');
@@ -28,10 +29,12 @@ export function evaluateDigitalOutlet(outlet,candidates,steps,values={},chosenId
  if(candidate){
   const unique=!other||candidate.score-other.score>=Number(values.OUTLET_REVIEW_CANDIDATE_GAP??15);
   const specific=[...extractAddressTokens(outlet.address||'')].filter(t=>/[a-z]/i.test(t)&&t.length>=3).length>=2;
-  const strong=specific&&candidate.nameScore>=Number(values.OUTLET_REVIEW_STRONG_NAME_PERCENT??90)&&candidate.addressScore>=Number(values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT??80)&&knownPoint(candidate)&&!candidate.conflicts.length;
+  const strong=candidate.detailsConfirmed!==false&&specific&&!issues.includes('INCOMPLETE_ADDRESS')&&(!issues.includes('UNCLEAR_NAME')||candidate.phoneMatch===true)&&candidate.nameScore>=Number(values.OUTLET_REVIEW_STRONG_NAME_PERCENT??90)&&candidate.addressScore>=Number(values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT??80)&&knownPoint(candidate)&&!candidate.conflicts.length;
   identity=strong?'STRONG':'REVIEW';location=knownPoint(candidate)?'CANDIDATE':'UNKNOWN';code=!unique?'AMBIGUOUS':strong?'STRONG':'REVIEW';
   reasons.push(`Kemiripan nama ${candidate.nameScore}%; alamat ${candidate.addressScore}%.`);
   if(!unique)reasons.push('Ada kandidat alternatif dengan kekuatan bukti yang mendekati.');
+  if(issues.includes('INCOMPLETE_ADDRESS'))reasons.push('Alamat master belum cukup spesifik untuk mengonfirmasi outlet.');
+  if(issues.includes('UNCLEAR_NAME')&&candidate.phoneMatch!==true)reasons.push('Nama master belum jelas dan tidak ada kecocokan telepon usaha yang mendukung.');
   if(candidate.distanceMeters!=null&&candidate.distanceMeters>Number(values.VALIDATION_DISTANCE_SUSPECT??500))reasons.push('Kandidat jauh dari master; jarak tidak menggugurkan identitas ketika titik lama diragukan.');
   reasons.push(...candidate.conflicts);
   if(strong&&!knownPoint(outlet))reasons.push('Identitas/lokasi Google ditemukan tanpa koordinat master.');
@@ -39,6 +42,6 @@ export function evaluateDigitalOutlet(outlet,candidates,steps,values={},chosenId
  else if(failures.length)code='ERROR';else if(steps.every(s=>s.state==='SKIPPED'))code='INCOMPLETE';
  const aligned=code==='STRONG'&&candidate.distanceMeters!=null&&candidate.distanceMeters<=Number(values.VALIDATION_DISTANCE_WARNING??200)&&!issues.includes('UNCONFIRMED_POINT');
  const checkedAt=new Date().toISOString(),days=Number(values.OUTLET_REVIEW_EVIDENCE_DAYS??7);
- return {method:'GOOGLE_ADAPTIVE_V3',version:'2026-10-10.1',code,identity,location,aligned,selectedPlaceId:candidate?.placeId||null,reasons,issues,technical:failures.length?'PARTIAL':'READY',steps,checkedAt,expiresAt:days>0?new Date(Date.now()+days*86400000).toISOString():null,providerExpiresAt:new Date(Date.now()+Math.min(days||30,30)*86400000).toISOString(),calls:steps.filter(s=>s.called).length,candidates:ranked,comparisonPolicy:{strongName:values.OUTLET_REVIEW_STRONG_NAME_PERCENT??90,strongAddress:values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT??80,candidateGap:values.OUTLET_REVIEW_CANDIDATE_GAP??15}};
+ return {method:'GOOGLE_ADAPTIVE_V3',version:DIGITAL_OUTLET_VERSION,code,identity,location,aligned,selectedPlaceId:candidate?.placeId||null,reasons,issues,technical:failures.length?'PARTIAL':'READY',steps,checkedAt,expiresAt:days>0?new Date(Date.now()+days*86400000).toISOString():null,providerExpiresAt:new Date(Date.now()+Math.min(days||30,30)*86400000).toISOString(),calls:steps.filter(s=>s.called).length,candidates:ranked,comparisonPolicy:{strongName:values.OUTLET_REVIEW_STRONG_NAME_PERCENT??90,strongAddress:values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT??80,candidateGap:values.OUTLET_REVIEW_CANDIDATE_GAP??15}};
 }
 export function durableDigitalResult(result){const {candidates,...rest}=result;return {...rest,candidateIds:candidates.map(c=>c.placeId),assessments:candidates.map(({placeId,nameScore,addressScore,phoneMatch,score,conflicts})=>({placeId,nameScore,addressScore,phoneMatch,score,conflicts}))};}

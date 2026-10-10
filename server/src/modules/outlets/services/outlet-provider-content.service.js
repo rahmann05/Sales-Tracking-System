@@ -13,5 +13,6 @@ export function presentOutletRun(run){
  return {...run,providerContent:{candidates}};
 }
 export async function purgeOutletProviderContent(db){
+ for(const [id,row] of descriptions)if(row.until<=Date.now())descriptions.delete(id);
  return db.outletValidationRun.updateMany({where:{providerExpiresAt:{lte:new Date()}},data:{providerContent:Prisma.DbNull,providerExpiresAt:null}});
 }

@@ -5,7 +5,7 @@ import { requireActiveShift, attendanceException } from './attendance-policy.ser
 /** checkIn - single-responsibility service (extracted from absensi.service.js). */
 import {withUserTransaction} from '../../../utils/user-transaction.js';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
-import { calculateDistanceMeters } from '../../../utils/geolocation.js';
+import { distanceToOutlet } from '../../../utils/geolocation.js';
 import { AppError } from '../../../utils/errors.js';
 import { ATTENDANCE_TYPE, VISIT_STATUS, PJP_STATUS } from '../../../utils/constants.js';
 import { getDynamicConfig } from '../../config/config.service.js';
@@ -46,7 +46,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   // Geolocation calculation & validation
   const hasGps=Number.isFinite(latitude)&&Number.isFinite(longitude);
   if(visit.mode!=='OPTIONAL'&&visit.snapshot.values.SALES_REQUIRE_GPS!==false&&!hasGps)throw new AppError('GPS presensi masuk wajib diisi',422);
-  const distance = hasGps?calculateDistanceMeters(latitude, longitude, stop.outlet.latitude, stop.outlet.longitude):null;
+  const distance = hasGps?distanceToOutlet(latitude, longitude, stop.outlet):null;
   const deviationMeters = distance==null?null:Math.round(distance);
 
   // Read dynamic radius from SystemConfig cache

@@ -2,7 +2,7 @@ import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {processValue} from '../../config/services/process-policy.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { calculateDistanceMeters } from '../../../utils/geolocation.js';
+import { distanceToOutlet } from '../../../utils/geolocation.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { recordStopResult } from './update-stop-status.service.js';
 import {lockDestinationRoute,assertDestinationStart,flagIncompleteDestinations} from './destination-policy.service.js';
@@ -21,7 +21,7 @@ export const submitDriverAttendance = async(stopId,data,driverId)=>{
   if(await processValue(stop.deliveryRoute,'DELIVERY_REQUIRE_PHOTO',true)&&!data.photoUrl)throw new AppError('Foto bukti wajib',400);
   if(stop.attendances.some(a=>a.type===data.type))throw new AppError('Absensi sudah tercatat',409);
   if(data.type==='OUT'&&!stop.attendances.some(a=>a.type==='IN'))throw new AppError('Absen masuk terlebih dahulu',409);
-  const distance=calculateDistanceMeters(data.latitude,data.longitude,stop.outlet.latitude,stop.outlet.longitude);
+  const distance=distanceToOutlet(data.latitude,data.longitude,stop.outlet);
   if(await processValue(stop.deliveryRoute,'DELIVERY_REQUIRE_GEOFENCE',false)&&(distance===null||distance>(stop.outlet.radiusMeters||await getDynamicConfig('ATTENDANCE_RADIUS_METERS',50))))throw new AppError(distance===null?'GPS atau koordinat master outlet belum tersedia untuk pemeriksaan radius.':'Posisi di luar radius toko',422);
   const incomplete=data.type==='IN'?await assertDestinationStart(tx,stop):[];
   const attendance=await tx.deliveryAttendance.create({data:{gpsEvidence:await gpsEvidence(data,(key,fallback)=>processValue(stop.deliveryRoute,key,fallback)),deliveryStopId:stopId,driverId,type:data.type,latitude:data.latitude??null,longitude:data.longitude??null,photoUrl:data.photoUrl,notes:data.notes}});

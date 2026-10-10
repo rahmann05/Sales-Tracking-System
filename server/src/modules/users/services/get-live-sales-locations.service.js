@@ -3,7 +3,7 @@ import {salesScope} from '../../../utils/team-scope.js';
 import {wibDayRange,wibDateKey} from '../../../../../shared/visit-metrics.mjs';
 /** getLiveSalesLocations - single-responsibility service (extracted from users.service.js). */
 import { prisma } from '../../../config/prisma.js';
-import { calculateDistanceMeters } from '../../../utils/geolocation.js';
+import { distanceToOutlet } from '../../../utils/geolocation.js';
 import {locationExpired} from '../../../../../shared/location-retention.mjs';
 import { getDynamicConfig } from '../../config/config.service.js';
 
@@ -47,7 +47,7 @@ export const getLiveSalesLocations = async (currentUser) => {
                   id: true,
                   name: true,
                   address: true,
-                  latitude: true,
+                  googleLocation:true,phone:true,clusterId:true,latitude:true,
                   longitude: true,
                 },
               },
@@ -141,7 +141,7 @@ export const getLiveSalesLocations = async (currentUser) => {
     let distanceToNextStopMeters = null;
     if ([nextPendingStop?.outlet?.latitude,nextPendingStop?.outlet?.longitude,lat,lng].every(Number.isFinite)) {
       distanceToNextStopMeters = Math.round(
-        calculateDistanceMeters(lat, lng, nextPendingStop.outlet.latitude, nextPendingStop.outlet.longitude)
+        distanceToOutlet(lat, lng, nextPendingStop.outlet)
       );
     }
 

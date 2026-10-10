@@ -1,3 +1,4 @@
+import {maintainGoogleLocations} from '../modules/outlets/services/outlet-google-location.service.js';
 import {rollOutletFieldPjps} from '../modules/outlets/services/outlet-field-pjp.service.js';
 import {remindVehicleServices} from '../modules/vehicles/services/service-reminders.service.js';
 import {retainSystemHistory} from '../modules/notifications/services/history-retention.service.js';
@@ -13,6 +14,8 @@ import {purgeOutletProviderContent} from '../modules/outlets/services/outlet-pro
 import {prisma} from '../config/prisma.js';
 
 export const initScheduler = () => {
+  schedulerMonitor.register('OUTLET_GOOGLE_LOCATION','Lokasi operasional Google',Date.now()+60000,60000);
+  setInterval(()=>{schedulerMonitor.run('OUTLET_GOOGLE_LOCATION',maintainGoogleLocations,now=>now+60000).catch(()=>console.error('[Scheduler]: Google location maintenance failed.'));},60000).unref();
   schedulerMonitor.register('OUTLET_FIELD_PJP','Agenda validasi outlet',Date.now()+60000,60000);
   setInterval(()=>{schedulerMonitor.run('OUTLET_FIELD_PJP',rollOutletFieldPjps,now=>now+60000).catch(()=>console.error('[Scheduler]: Outlet field agenda failed.'));},60000).unref();
   schedulerMonitor.register('OUTLET_VALIDATION','Pemeriksaan Google terjadwal',Date.now()+15000,15000);

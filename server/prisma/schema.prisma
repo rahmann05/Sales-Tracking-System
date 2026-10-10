@@ -361,6 +361,7 @@ model Outlet {
   validationConfidence Float?
   validatedAt          DateTime?
   validationDetails    Json?
+  googleLocation       Json?
   googleSuggestedLat   Float?
   googleSuggestedLng   Float?
 
