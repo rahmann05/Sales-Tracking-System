@@ -1,6 +1,6 @@
 import {DIGITAL_OUTLET_VERSION} from './outlet-digital-evaluator.service.js';
 import {getDynamicConfig} from '../../config/config.service.js';
-import {acceptGoogleLocation,assertGoogleLocationIdle} from './outlet-google-location.service.js';
+import {acceptGoogleLocation,assertOutletLocationIdle} from './outlet-google-location.service.js';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
 import {updateFieldPjpResult,finishFieldPjpAgenda} from './outlet-field-pjp.service.js';
 import {z} from 'zod';
@@ -45,7 +45,7 @@ export async function decideDigitalOutlet(outletId,id,raw,user){
     await db.outlet.update({where:{id:outletId},data:{...(googleLocation?{googleLocation}:{}),validationStatus:'VALID',validationDetails:{...outlet.validationDetails,qualityConfirmed:{source:'DIGITAL',name:outlet.name,address:outlet.address},code:'STRONG',decisionSource:'DIGITAL',placeId:selectedPlaceId,runId:run.id,expiresAt:run.result.expiresAt,stale:false}}});
     event.runId=run.id;event.placeId=selectedPlaceId;
    }else if(b.action==='FIELD_KEEP'){
-    if(outlet.googleLocation)await assertGoogleLocationIdle(db,outletId);
+    if(outlet.googleLocation)await assertOutletLocationIdle(db,outletId);
     const task=await db.outletFieldTask.findFirst({where:{reviewId:id,status:'DONE'},orderBy:{updatedAt:'desc'}});
     if(!task||!task.evidence)throw new AppError('Bukti lapangan yang diterima belum tersedia.',422);
     if(task.evidence.outcome==='FOUND'&&!['name','address','latitude','longitude'].every(k=>task.evidence[k]==null||task.evidence[k]===outlet[k]))throw new AppError('Terapkan usulan koreksi lapangan sebelum menyelesaikan sebagai terverifikasi.',409);

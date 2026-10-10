@@ -82,7 +82,7 @@ export const getLiveSalesLocations = async (currentUser) => {
   });
 
   const nowMs = Date.now();
-  
+
   const PING_TIMEOUT = await getDynamicConfig('LIVE_TRACKING_PING_TIMEOUT_MINUTES', 15);
 
   return Promise.all(salesUsers.map(async(sales) => {
@@ -138,12 +138,8 @@ export const getLiveSalesLocations = async (currentUser) => {
     }
 
     // Calculate distance to next stop if coordinates available
-    let distanceToNextStopMeters = null;
-    if ([nextPendingStop?.outlet?.latitude,nextPendingStop?.outlet?.longitude,lat,lng].every(Number.isFinite)) {
-      distanceToNextStopMeters = Math.round(
-        distanceToOutlet(lat, lng, nextPendingStop.outlet)
-      );
-    }
+    const nextDistance=nextPendingStop?.outlet?distanceToOutlet(lat,lng,nextPendingStop.outlet):null;
+    const distanceToNextStopMeters=nextDistance==null?null:Math.round(nextDistance);
 
     return {
       salesId: sales.id,

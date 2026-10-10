@@ -1,3 +1,4 @@
+import {recordOutletChange} from '../src/modules/outlets/services/outlet-change-policy.service.js';
 import 'dotenv/config';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -39,6 +40,7 @@ try{
  const decide=r=>api(`/outlets/${outlet.id}/reviews/${r.id}/digital`,spv,'PATCH',{action:'DIGITAL_KEEP',revision:r.revision,runId:r.runs[0].id,reason:'Konfirmasi Google sesuai identitas dan alamat lengkap'});
  let review=await inspect(await open());
  const pjp=await prisma.pjp.create({data:{userId:sales.id,type:'SALES',date:new Date(`${wibDateKey()}T05:00:00Z`),stops:{create:{outletId:outlet.id,sequence:1,visitSession:{state:'ACTIVE'}}}},include:{stops:true}}),stop=pjp.stops[0];
+ await assert.rejects(()=>recordOutletChange(prisma,outlet,{latitude:-6.9,longitude:107.6},{actor:spv,reason:'Native correction during logical visit',updatedAt:outlet.updatedAt.toISOString()}),{statusCode:409});checks++;
  eq((await decide(review)).status,409); // Logical visit has no attendance and still protects the point.
  await prisma.pjpStop.update({where:{id:stop.id},data:{visitSession:Prisma.DbNull}});
  eq((await decide(review)).status,200);

@@ -19,14 +19,14 @@ export async function acceptGoogleLocation(db,outlet,run,actor,reason){
  if(await getDynamicConfig('OUTLET_GOOGLE_LOCATION_ENABLED',true)===false)throw new AppError('Lokasi operasional Google dinonaktifkan. Gunakan bukti internal/lapangan.',409);
  if(nativeOutletPointTrusted(outlet)){
   if(!outlet.googleLocation||outlet.googleLocation.status==='SUPERSEDED')return undefined;
-  await assertGoogleLocationIdle(db,outlet.id);
+  await assertOutletLocationIdle(db,outlet.id);
   await db.clusterRoute.deleteMany({where:{clusterId:outlet.clusterId}});
   return {source:'GOOGLE',status:'SUPERSEDED',placeId:run.result.selectedPlaceId};
  }
  const point=run.providerContent?.candidates?.find(c=>c.placeId===run.result.selectedPlaceId);
  if(!knownPoint(point)||!run.providerExpiresAt||+run.providerExpiresAt<=Date.now())throw new AppError('Cache titik Google belum tersedia atau kedaluwarsa. Periksa ulang.',409);
  // Use the same active-work guard as a native location correction, without copying provider coordinates into master/audit.
- await assertGoogleLocationIdle(db,outlet.id);
+ await assertOutletLocationIdle(db,outlet.id);
  const now=new Date(),days=await getDynamicConfig('OUTLET_GOOGLE_LOCATION_CACHE_DAYS',7);
  const expiresAt=new Date(Math.min(+run.providerExpiresAt,+now+Math.min(30,days)*86400000));
  const googleLocation={source:'GOOGLE',status:'ACTIVE',placeId:point.placeId,latitude:point.latitude,longitude:point.longitude,basis:outletLocationBasis(outlet),cachedAt:now.toISOString(),expiresAt:expiresAt.toISOString(),nextRefreshAt:googleLocationRefreshAt(now,expiresAt,await getDynamicConfig('OUTLET_GOOGLE_LOCATION_REFRESH_HOURS',24)),revision:(outlet.googleLocation?.revision||0)+1,approvedBy:actorSnapshot(actor),policyContext:{id:actor.id,role:actor.role,supervisorId:actor.supervisorId||null},runId:run.id,lastError:null};
@@ -34,13 +34,13 @@ export async function acceptGoogleLocation(db,outlet,run,actor,reason){
  await db.auditEvent.create({data:{entityType:'OUTLET_LOCATION',entityId:outlet.id,action:'GOOGLE_ACCEPT',actorId:actor.id,actorName:actor.name,before:{source:outletOperationalPoint(outlet).source},after:{placeId:point.placeId,expiresAt:googleLocation.expiresAt,runId:run.id,reason}}});
  return googleLocation;
 }
-export async function assertGoogleLocationIdle(db,outletId){
+export async function assertOutletLocationIdle(db,outletId){
  const [visits,deliveries,supervision]=await Promise.all([
   db.pjpStop.count({where:{outletId,OR:[{visitSession:{path:['state'],equals:'ACTIVE'}},{attendances:{some:{type:'IN'},none:{type:'OUT'}},status:{notIn:['VISITED','SKIPPED','CLOSED_REPORTED']}}]}}),
   db.deliveryStop.count({where:{outletId,arrivedAt:{not:null},completedAt:null,deliveryRoute:{status:'IN_TRANSIT',cancelledAt:null}}}),
   db.staffActivity.findMany({where:{kind:'VISIT',checkOutAt:null,activityKey:{in:(await db.pjpStop.findMany({where:{outletId},select:{id:true}})).map(s=>s.id)}},select:{checklist:true}}),
  ]);
- if(visits||deliveries||supervision.some(s=>s.checklist?.state!=='FINISHED'))throw new AppError('Lokasi sedang dipakai kunjungan/pengiriman aktif. Selesaikan sebelum menerapkan atau memperbarui titik Google.',409);
+ if(visits||deliveries||supervision.some(s=>s.checklist?.state!=='FINISHED'))throw new AppError('Lokasi sedang dipakai kunjungan/pengiriman aktif. Selesaikan pekerjaan tersebut sebelum mengubah titik.',409);
 }
 export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(),automatic=false}={}){
  const actor=automatic?null:await reviewActor(prisma,user,'can_run_outlet_review');
@@ -58,7 +58,7 @@ export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(
    await db.outlet.update({where:{id},data:{googleLocation:next}});await db.clusterRoute.deleteMany({where:{clusterId:live.clusterId}});
    await db.auditEvent.create({data:{entityType:'OUTLET_LOCATION',entityId:id,action:'GOOGLE_CONFLICT',actorId:actor?.id||null,actorName:actor?.name||'Scheduler',before:{revision:g.revision},after:{status:'CONFLICT',revision:next.revision,placeId:g.placeId,reason:'MASTER_CHANGED'}}});return next;
   }
-  await assertGoogleLocationIdle(db,id);
+  await assertOutletLocationIdle(db,id);
   const next={...g,refreshLeaseToken:randomUUID(),refreshLeaseUntil:new Date(+now+120000).toISOString()};
   await db.outlet.update({where:{id},data:{googleLocation:next}});return next;
  });
@@ -84,7 +84,7 @@ export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(
    const drift=knownPoint(g)?calculateDistanceMeters(g.latitude,g.longitude,candidate.latitude,candidate.longitude):null;
    if(result.code!=='STRONG'||candidate.placeId!==g.placeId||drift==null||drift>Number(values.OUTLET_GOOGLE_LOCATION_MAX_DRIFT_METERS??30))next={...next,status:'CONFLICT',latitude:null,longitude:null,lastError:'REVIEW_REQUIRED'};
    else{
-    await assertGoogleLocationIdle(db,id);
+    await assertOutletLocationIdle(db,id);
     const expiry=new Date(+now+Math.min(30,Number(values.OUTLET_GOOGLE_LOCATION_CACHE_DAYS||7))*86400000);
     next={...next,status:'ACTIVE',latitude:candidate.latitude,longitude:candidate.longitude,cachedAt:now.toISOString(),expiresAt:expiry.toISOString(),nextRefreshAt:googleLocationRefreshAt(now,expiry,values.OUTLET_GOOGLE_LOCATION_REFRESH_HOURS||24),lastError:null};
    }

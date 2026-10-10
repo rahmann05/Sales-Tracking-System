@@ -126,6 +126,7 @@ try {
 } finally {
  globalThis.fetch=realFetch;prisma.systemConfig.findMany=originalConfigs;prisma.notification.create=originalNotification;invalidateConfigCache();
  await prisma.$transaction(async tx=>{
+  await tx.auditEvent.deleteMany({where:{actorId:{in:users}}});
   await tx.notification.deleteMany({where:{OR:[{userId:{in:users}},{payload:{path:['registrationId'],string_starts_with:tag}}]}});
   await tx.outletValidationRun.deleteMany({where:{review:{outletId:{in:outlets}}}});
   await tx.outletReview.deleteMany({where:{outletId:{in:outlets}}});await tx.outletChange.deleteMany({where:{outletId:{in:outlets}}});
