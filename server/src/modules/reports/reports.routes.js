@@ -1,4 +1,5 @@
 import {getDynamicConfig} from '../config/config.service.js';
+import {reportVisibility} from './services/report-visibility.middleware.js';
 import {AppError} from '../../utils/errors.js';
 import { Router } from 'express';
 import * as reportController from './reports.controller.js';
@@ -12,6 +13,7 @@ import { ROLES } from '../../utils/constants.js';
 const router = Router();
 
 router.use(authenticate);
+router.use(reportVisibility);
 router.use(async(req,res,next)=>{try{const key=req.path==='/weekly'?'REPORT_WEEKLY_ENABLED':req.path==='/mtd'?'REPORT_MTD_ENABLED':req.path.startsWith('/archives')&&req.method==='POST'?'REPORT_ARCHIVE_ENABLED':null;if(key&&!await getDynamicConfig(key,true))throw new AppError('Keluaran laporan ini dinonaktifkan Admin',403);next();}catch(error){next(error);}});
 router.get('/archives',authorize(ROLES.ADMIN),async(req,res,next)=>{
   try{return successResponse(res,200,await listReportArchives(req.query,req.user));}catch(error){next(error);}

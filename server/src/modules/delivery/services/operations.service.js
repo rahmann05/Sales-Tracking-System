@@ -1,6 +1,8 @@
+import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {locationExpired} from '../../../../../shared/location-retention.mjs';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
-import {preparationStages,preparationReady,preparationOwnerProblem} from '../../../../../shared/warehouse-policy.mjs';
+import {preparationStages,preparationReady,preparationOwnerProblem,departureChecklist} from '../../../../../shared/warehouse-policy.mjs';
 import {readReviewDefinitions,reviewIdentity} from '../../config/services/approval-readiness.service.js';
 import {processValue} from '../../config/services/process-policy.service.js';
 import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
@@ -14,13 +16,15 @@ import { terminalStop, routeLocation, fulfillment, routeProgress } from '../../.
 import { packingBalance } from '../../../../../shared/packing.mjs';
 import {invoiceReconciliation} from '../../../../../shared/invoice-reconciliation.mjs';
 import { wibDayRange, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import {inTransaction} from '../../../utils/in-transaction.js';
 
 export const operationsInclude = { vehicle: true, driver: { select: { id: true, name: true } }, position: true, stops: { orderBy: { sequence: 'asc' }, include: { outlet: true, attendances: { orderBy: { timestamp: 'asc' } }, packingList: { include: { invoices: true } } } } };
 const fail = message => { throw new AppError(message, 409); };
 export const routeEvent = (route, action, actor, detail) => [...(route.history || []), { action, actorId: actor.id, actorName: actor.name, at: new Date().toISOString(), detail }];
 
-export async function routeAction(id, data, user, attempt=0) {
-  return prisma.$transaction(async tx => {
+export async function routeAction(id, data, user, attempt=0,{db=prisma,validateOnly=false}={}) {
+  if(!canTripAction(user,data.action))throw new AppError('Anda tidak memiliki izin untuk tindakan trip ini.',403);
+  return inTransaction(db,async tx => {
     if(['ASSIGN_PREPARATION','PICK','CHECK','LOAD','START','RESCHEDULE','RESUME'].includes(data.action))await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`route:${id}`}))`;
     const r = await tx.deliveryRoute.findUnique({ where: { id }, include: operationsInclude });
@@ -55,13 +59,17 @@ export async function routeAction(id, data, user, attempt=0) {
       const problem=preparationOwnerProblem(owner&&reviewIdentity(owner,await readReviewDefinitions(tx)),r,data.stage);
       if(problem)throw new AppError(problem,400);
       if(note.trim().length<5)throw new AppError('Alasan penugasan minimal 5 karakter',400);
+      if(validateOnly)return r;
       change.preparation={...r.preparation,tasks:{...r.preparation?.tasks,[data.stage]:{revision:(previous?.revision||0)+1,ownerId:owner.id,ownerName:owner.name,dueAt:data.dueAt,assignedAt:new Date().toISOString(),assignedBy:user.id,note}}};
       await policyNotification(tx,{data:{userId:owner.id,type:'DELIVERY_PREPARATION',title:`Tugas persiapan ${r.code}`,message:note,payload:{routeId:id,stage:data.stage,dueAt:data.dueAt}}});
     } else if (action === 'START') {
       if (r.status !== 'READY' || !preparationReady(r) || r.onHold) fail('Loading harus selesai dan trip tidak ditahan');
+      await assertEvidenceImages({photos:Object.values(data.departureAnswers?._evidence||{})},{entity:r});
+      let checklist;
+      try{const values=r.policySnapshot?.values||{TRIP_DEPARTURE_CHECKLIST:await processValue(r,'TRIP_DEPARTURE_CHECKLIST',[]),TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST:await processValue(r,'TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST',true)};checklist=departureChecklist(values,data.departureAnswers||{});}catch(error){throw new AppError(error.message,422);}
       const vehicle = await assertResources(tx, r);
       if (odometerRequired&&(!Number.isFinite(data.odometer) || data.odometer < vehicle.totalKm) || data.odometer!=null&&(!Number.isFinite(data.odometer)||data.odometer<vehicle.totalKm)) fail('Odometer awal harus minimal kilometer kendaraan saat ini');
-      change = { status: 'IN_TRANSIT', departedAt: new Date(), odometerStart: data.odometer??null };
+      change = { status: 'IN_TRANSIT', departedAt: new Date(), odometerStart: data.odometer??null,preparation:{...r.preparation,DEPARTURE:{...checklist,actorId:user.id,actorName:user.name,at:new Date().toISOString(),note}} };
     } else if (action === 'RETURN') {
       if (!r.stops.length || !r.stops.every(s => terminalStop(s.status))) fail('Selesaikan hasil semua toko sebelum kembali gudang');
       if (r.returnedAt) fail('Kembali gudang sudah tercatat');
@@ -103,7 +111,7 @@ export async function routeAction(id, data, user, attempt=0) {
     } else throw new AppError('Aksi tidak dikenal', 400);
     return tx.deliveryRoute.update({ where: { id }, data: { ...change, history: routeEvent(r, action, user, { ...data, ...(action === 'CANCEL' ? { stops: r.stops.map(s=>({id:s.id,packingListId:s.packingListId,allocatedCartons:s.allocatedCartons,allocatedItems:s.allocatedItems,allocatedInvoices:s.allocatedInvoices})) } : {}) }) }, include: operationsInclude });
   }, { isolationLevel: 'Serializable' }).catch(error=>{
-    if(error.code==='P2034'&&attempt<2)return routeAction(id,data,user,attempt+1);
+    if(error.code==='P2034'&&attempt<2&&db===prisma)return routeAction(id,data,user,attempt+1,{db,validateOnly});
     throw error;
   });
 }
@@ -121,7 +129,7 @@ export async function operationsDashboard(date) {
   const backlog = enriched.filter(o => !['FULFILLED','CLOSED_WITH_CANCELLATION'].includes(o.fulfillmentStatus));
   const documents=packings.map(p=>({...packingBalance(p),commercial:invoiceReconciliation(p)}));
   const packingQueue = documents.filter(p => p.status === 'DRAFT' || p.remainingCartons > 0);
-  const commercialQueue=documents.filter(p=>p.status==='RELEASED'&&!['RECONCILED','IN_PROGRESS'].includes(p.commercial.status));
+  const commercialQueue=documents.filter(p=>p.status==='RELEASED'&&!['RECONCILED','IN_PROGRESS','NO_INVOICE'].includes(p.commercial.status));
   const now = Date.now(),policies=new Map();
   for(const driverId of new Set(routes.map(r=>r.driverId))){const actor=await prisma.user.findUnique({where:{id:driverId},select:{id:true,role:true,supervisorId:true}});const values=(await effectivePolicy(actor||{role:'SUPIR'})).values;policies.set(driverId,{retentionHours:values.TRACKING_LOCATION_RETENTION_HOURS,liveSeconds:values.DRIVER_TRACKING_LIVE_SECONDS,enabled:values.DRIVER_TRACKING_MODE!=='OFF'});}
   const definitions=await readReviewDefinitions(prisma),staff=people.map(person=>reviewIdentity(person,definitions));

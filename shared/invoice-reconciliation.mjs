@@ -18,6 +18,7 @@ export function reconciliationFingerprint(packing){
   return JSON.stringify({revision:packing.revision,items:packing.items,invoices:(packing.invoices||[]).map(i=>({id:i.id,items:i.items,totalAmount:i.totalAmount,taxIncluded:i.taxIncluded,taxRatePercent:i.taxRatePercent,taxRoundingMode:i.taxRoundingMode||'NEAREST'})).sort((a,b)=>String(a.id||'').localeCompare(String(b.id||''))),stops:(packing.deliveryStops||[]).map(s=>({id:s.id,status:s.status,allocatedItems:s.allocatedItems,rejectedItems:s.rejectedItems,returnInspection:s.returnInspection,reusableItems:s.reusableItems})).sort((a,b)=>String(a.id||'').localeCompare(String(b.id||'')))});
 }
 export function invoiceReconciliation(packing){
+  if(!(packing.invoices||[]).length&&packing.policySnapshot?.values&&(packing.documentKind==='MANIFEST'?packing.policySnapshot.values.MANIFEST_REQUIRE_INVOICE!==true:packing.policySnapshot.values.PACKING_REQUIRE_INVOICE===false))return {status:'NO_INVOICE',errors:[],accepted:{},invoices:[],fingerprint:reconciliationFingerprint(packing),resolved:false,confirmedAt:null};
   const errors=invoiceMappingErrors(packing),stops=packing.deliveryStops||[];
   const accepted=Object.fromEntries((packing.items||[]).map(i=>[i.lineId,stops.reduce((n,s)=>n+acceptedQuantity(s,i.lineId),0)]));
   const receiptMismatch=(packing.items||[]).some(i=>accepted[i.lineId]>i.quantity);

@@ -6,13 +6,14 @@ import {useApp} from '../../../context/AppContext';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import {followUpAllowed} from '../../../../../shared/follow-up-policy.mjs';
 import {SpvAuditQuestion} from './SpvAuditQuestion';
+import {processPolicyValues} from '../../../../../shared/process-policy.mjs';
 
 /**
  * SpvAuditModal Component
  * Single Responsibility: Modal checklist audit kepatuhan toko & evaluasi sales.
  */
 export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving, followUp, onChangeFollowUp, salesOptions=[] }) => {
-    const {settings,user}=useApp(),items=auditItems({...settings,...stop.policySnapshot?.values});
+    const {settings,user}=useApp(),policyValues=processPolicyValues(stop.policySnapshot,settings),items=auditItems(policyValues);
     return (
     <SpvModalShell error={error} saving={saving}
         title="Form Audit & Evaluasi Supervisi"
@@ -47,7 +48,7 @@ export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, 
                 </h4>
                 <div className="space-y-2">
                     {items.map((item) => (
-                        <SpvAuditQuestion key={item.key} item={item} value={checklist[item.key]} evidence={checklist._evidence?.[item.key]} onChange={value=>onChangeChecklist({...checklist,[item.key]:value})} onEvidence={proof=>onChangeChecklist({...checklist,_evidence:{...checklist._evidence,[item.key]:proof}})}/>
+                        <SpvAuditQuestion policyValues={policyValues} key={item.key} item={item} value={checklist[item.key]} evidence={checklist._evidence?.[item.key]} onChange={value=>onChangeChecklist({...checklist,[item.key]:value})} onEvidence={proof=>onChangeChecklist({...checklist,_evidence:{...checklist._evidence,[item.key]:proof}})}/>
                     ))}
                 </div>
             </div>

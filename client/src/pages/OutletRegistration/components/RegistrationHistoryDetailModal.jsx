@@ -2,6 +2,7 @@ import React from 'react';
 import {NativeDialog} from '../../../shared/components/common/NativeDialog';
 import { LuExternalLink } from 'react-icons/lu';
 import {RegistrationRevisionHistory} from './RegistrationRevisionHistory';
+import {registrationRevisionReadiness} from '../../../../../shared/registration-policy.mjs';
 
 /**
  * RegistrationHistoryDetailModal Component
@@ -9,6 +10,7 @@ import {RegistrationRevisionHistory} from './RegistrationRevisionHistory';
  */
 export const RegistrationHistoryDetailModal = ({ item, onClose,onRevise }) => {
   if (!item) return null;
+  const revision=registrationRevisionReadiness(item);
 
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
 
@@ -87,6 +89,6 @@ export const RegistrationHistoryDetailModal = ({ item, onClose,onRevise }) => {
           </div>}
         </div>
     <RegistrationRevisionHistory history={item.revisionHistory || []}/>
-    {item.registrationStatus==='REJECTED'&&onRevise&&<button type="button" className="app-button app-button-primary" onClick={()=>onRevise(item)}>Perbaiki & ajukan ulang</button>}
+    {item.registrationStatus==='REJECTED'&&<div className="grid gap-2 text-sm"><p>Pengajuan ulang: {revision.count}{revision.limit?` / ${revision.limit} kali`:' kali · tanpa batas jumlah'}</p>{revision.deadline&&<p>Batas perbaikan: {new Date(revision.deadline).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB</p>}{revision.issues.map(issue=><p key={issue}>{issue}</p>)}{onRevise&&<button type="button" disabled={!revision.allowed} className="app-button app-button-primary" onClick={()=>onRevise(item)}>Perbaiki & ajukan ulang</button>}</div>}
   </div></NativeDialog>;
 };

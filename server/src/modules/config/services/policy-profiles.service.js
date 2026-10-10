@@ -10,6 +10,7 @@ import {validateConfigMap,validateConfigRelations} from './validate-config.servi
 import {profileKey,effectivePolicy,invalidatePolicyCache} from './policy-resolver.service.js';
 import {invalidateConfigCache} from './dynamic-config.service.js';
 import {policyImpact} from './policy-impact.service.js';
+import {retainServiceCodes} from '../../../../../shared/reference-catalog.mjs';
 const initial=scope=>({scope,revision:0,draft:{},versions:[]});
 const safeValues=values=>Object.fromEntries(Object.entries(values).filter(([key])=>!POLICY_SECRET_KEYS.includes(key)));
 async function scopeActor(scope,db=prisma){
@@ -76,6 +77,7 @@ export async function publishPolicy(scope,raw,actor){
   const last=[...(profile.versions||[])].filter(v=>!v.cancelledAt).sort((a,b)=>b.revision-a.revision)[0];
   if(last&&+at<+new Date(last.effectiveAt))throw new AppError('Ada versi terjadwal. Waktu versi baru harus setelah versi tersebut.',409);
   const nextValues={...(last?.values||{}),...profile.draft};for(const [key,value] of Object.entries(nextValues))if(value===null)delete nextValues[key];
+  try{retainServiceCodes({...parent.values,...nextValues},{...parent.values,...last?.values});}catch(e){throw new AppError(e.message,400);}
   const version={id:randomUUID(),revision:profile.revision+1,values:nextValues,reason:profile.reason,actorId:actor.id,actorName:actor.name,effectiveAt:at.toISOString(),publishedAt:new Date().toISOString()};
   const next={...profile,revision:version.revision,draft:{},versions:[...(profile.versions||[]),version]};
   const readiness=await publicationReadiness(tx,{scope,at:+at,values:profile.draft,override:{scope,profile:next}});

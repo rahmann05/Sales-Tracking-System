@@ -2,7 +2,7 @@ import React from 'react';
 import {auditFailed} from '../../../../../shared/supervision-checklist.mjs';
 import {DeviceCameraCapture} from '../../../shared/components/camera/DeviceCameraCapture';
 
-export function SpvAuditQuestion({item,value,evidence={},onChange,onEvidence}){
+export function SpvAuditQuestion({item,value,evidence={},onChange,onEvidence,policyValues=null}){
  const type=item.type||'BOOLEAN',id=`audit-${item.key}`,failed=auditFailed(item,value);
  return <fieldset className="grid gap-3 p-4 rounded-xl bg-surface-variant/30 border border-border-glass text-sm">
   <legend className="font-semibold px-1">{item.label}{item.required?' · wajib':''}</legend>
@@ -14,7 +14,7 @@ export function SpvAuditQuestion({item,value,evidence={},onChange,onEvidence}){
   {failed&&<>
    <p className="text-sm font-medium text-amber-700">Kondisi perlu perbaikan</p>
    <label className="grid gap-2">Alasan / penjelasan{item.requireFailureReason?' · wajib':' · opsional'}<textarea className="config-input" rows={2} maxLength={2000} value={evidence.reason||''} onChange={e=>onEvidence({...evidence,reason:e.target.value})}/></label>
-   {item.requireFailurePhoto&&<DeviceCameraCapture requireGps={false} photoRequired capturedPhoto={evidence.photoUrl} onCapture={photoUrl=>onEvidence({...evidence,photoUrl})} onRetake={()=>onEvidence({...evidence,photoUrl:undefined})}/>}
+   {item.requireFailurePhoto&&<DeviceCameraCapture policyValues={policyValues} requireGps={false} photoRequired capturedPhoto={evidence.photoUrl} onCapture={photoUrl=>onEvidence({...evidence,photoUrl})} onRetake={()=>onEvidence({...evidence,photoUrl:undefined})}/>}
   </>}
   {!failed&&(evidence.reason||evidence.photoUrl)&&<p className="text-xs text-on-surface-variant">Bukti sebelumnya tetap disertakan pada catatan audit.</p>}
  </fieldset>;

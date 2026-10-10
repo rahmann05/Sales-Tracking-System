@@ -21,10 +21,10 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
   const featurePolicy=useFeaturePolicy('ORDERS');
   const { products = [], setProducts, settings } = useApp(); // Produk dari PostgreSQL via context
   const {user}=useApp();
-  const requestKey=`order-request:${user.id}:${stop?.id}`;
+  const requestKey=`order-request:${user.id}:${stop?.id||stop?.outletId}`;
   const [addingProduct, setAddingProduct] = useState(false);
   const [search,setSearch]=useState('');
-  const draft=useFormDraft(`order:${stop?.id}`,()=>{let pending=null;try{const saved=JSON.parse(sessionStorage.getItem(requestKey));if(saved?.items)pending=saved;}catch{}return {code:'',orderItems:[],priceOverrideReason:'',paymentType:stop?.outlet?.paymentType||settings.DEFAULT_PAYMENT_TYPE||'CASH',pending};});
+  const draft=useFormDraft(`order:${stop?.id||stop?.outletId}`,()=>{let pending=null;try{const saved=JSON.parse(sessionStorage.getItem(requestKey));if(saved?.items)pending=saved;}catch{}return {code:'',orderItems:[],priceOverrideReason:'',contextReason:'',paymentType:stop?.outlet?.paymentType||settings.DEFAULT_PAYMENT_TYPE||'CASH',pending};});
   const pending=draft.value.pending,setPending=draft.field('pending');
   const code=pending?.code??draft.value.code,setCode=draft.field('code');
   const [saving, setSaving] = useState(false);
@@ -56,6 +56,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
   const hasPriceOverride=orderItems.some(item=>{const current=products.find(p=>p.id===item.product.id);return current&&item.product.price!==current.price;});
   const approval=orderApprovalDecision({totalValue:pricing.totalValue,hasPriceOverride},settings);
   const priceOverrideReason=pending?.priceOverrideReason??draft.value.priceOverrideReason??'';
+  const contextReason=pending?.contextReason??draft.value.contextReason??'';
   const terms=pending?.expectedTermDays??orderTerms(paymentType,stop.outlet,settings.DEFAULT_TERM_OF_PAYMENT_DAYS??30);
 
   const handleSubmit = async () => {
@@ -66,6 +67,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
     }
 
     if(!pending&&hasPriceOverride&&settings.ORDER_PRICE_OVERRIDE_REQUIRE_REASON&&priceOverrideReason.trim().length<5){setError('Jelaskan alasan perubahan harga minimal 5 karakter.');return;}
+    if(!pending&&!stop.id&&settings.ORDER_OUTSIDE_PJP_REQUIRE_REASON!==false&&contextReason.trim().length<5){setError('Isi alasan order tanpa PJP minimal 5 karakter.');return;}
     if(!pending)for(const item of orderItems){const current=products.find(p=>p.id===item.product.id);if(!current){setError('Produk tidak tersedia di katalog. Muat ulang dahulu.');return;}const issue=priceOverrideError(current.price,item.product.price,settings);if(issue){setError(`${current.name}: ${issue}`);return;}}
 
     const itemsPayload = orderItems.map((item) => ({
@@ -81,6 +83,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
 
     const payload=pending||{
       stopId: stop.id,
+      ...(stop.id?{}:{outletId:stop.outletId,contextReason:contextReason.trim()||undefined}),
       requestId:crypto.randomUUID(),
       code,
       items: itemsPayload,
@@ -95,7 +98,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
     setSaving(true); setError('');
     try { await onSubmitOrder(payload);sessionStorage.removeItem(requestKey);setPending(null);draft.clear(); } catch (err) { setError(err.message); } finally { setSaving(false); }
   };
-  const resumeEditing=async()=>{setSaving(true);setError('');try{const result=await ordersApi.findRequest(pending.requestId);if(result.data){setError('Order sudah tersimpan. Kirim ulang order yang sama untuk mengambil hasilnya.');return;}draft.setValue({code:pending.code,orderItems,paymentType:pending.paymentType,priceOverrideReason:pending.priceOverrideReason||''});sessionStorage.removeItem(requestKey);setPending(null);}catch(e){setError(e.message);}finally{setSaving(false);}};
+  const resumeEditing=async()=>{setSaving(true);setError('');try{const result=await ordersApi.findRequest(pending.requestId);if(result.data){setError('Order sudah tersimpan. Kirim ulang order yang sama untuk mengambil hasilnya.');return;}draft.setValue({code:pending.code,orderItems,paymentType:pending.paymentType,priceOverrideReason:pending.priceOverrideReason||'',contextReason:pending.contextReason||''});sessionStorage.removeItem(requestKey);setPending(null);}catch(e){setError(e.message);}finally{setSaving(false);}};
 
   const visibleProducts=products.filter(p=>`${p.name} ${p.code||p.sku||''}`.toLocaleLowerCase('id-ID').includes(search.trim().toLocaleLowerCase('id-ID')));
   return <SalesDialog title="Buat order" description={`${stop.outletName} · ${stop.outletCode||'Kode belum tersedia'}`} onClose={onClose} busy={saving} dirty={draft.dirty||!!pending} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError} wide>
@@ -112,6 +115,7 @@ export const InputOrderModal = ({ stop, onClose, onSubmitOrder }) => {
           <label>Syarat order<select value={paymentType} onChange={e=>setPaymentType(e.target.value)}><option value="CASH">Tunai (CASH)</option><option value="TOP">Tempo (TOP)</option><option value="TRANSFER">Transfer</option></select></label>
           <p className="sales-note">Pembulatan pajak: {TAX_ROUNDING_LABELS[pricing.taxRoundingMode||'NEAREST']}.{settings.ORDER_PRICE_OVERRIDE_LIMIT_ENABLED&&settings.SALES_ALLOW_PRICE_OVERRIDE?` Batas harga: turun ${settings.ORDER_PRICE_OVERRIDE_MAX_DISCOUNT_PERCENT??100}%, naik ${settings.ORDER_PRICE_OVERRIDE_MAX_MARKUP_PERCENT??100}% dari katalog.`:''}</p>
           <p className="sales-note">Termin: {terms} hari{stop.outlet?.paymentType&&paymentType!==stop.outlet.paymentType?' · Berbeda dari syarat pelanggan':''}. Pembayaran dilakukan di luar aplikasi.</p>
+          {!stop.id&&<><label>Alasan order tanpa PJP {settings.ORDER_OUTSIDE_PJP_REQUIRE_REASON!==false?'(wajib)':'(opsional)'}<textarea maxLength={2000} value={contextReason} onChange={e=>draft.field('contextReason')(e.target.value)}/></label><p className="sales-note">Order ini tidak menambah kunjungan atau bukti presensi.</p></>}
           {hasPriceOverride&&<label>Alasan perubahan harga {settings.ORDER_PRICE_OVERRIDE_REQUIRE_REASON?'(wajib)':'(opsional)'}<textarea maxLength={2000} minLength={settings.ORDER_PRICE_OVERRIDE_REQUIRE_REASON?5:undefined} value={priceOverrideReason} onChange={e=>draft.field('priceOverrideReason')(e.target.value)}/></label>}
           <p className="sales-note">{pending?'Pengiriman ulang mengambil order yang sama jika sudah tersimpan.':`Perkiraan persetujuan: ${POLICY_OPTION_LABELS[approval.mode]}. ${approval.source==='AMOUNT'?'Mengikuti batas nominal.':approval.source==='PRICE_OVERRIDE'?'Mengikuti perubahan harga.':'Mengikuti aturan dasar.'} Alur akhir ditetapkan saat order dibuat.`}</p>
           <div className="sales-order-totals"><p><span>Subtotal</span><span>Rp {pricing.subtotal.toLocaleString('id-ID')}</span></p><p><span>Pajak {pricing.taxRatePercent}%</span><span>Rp {pricing.taxAmount.toLocaleString('id-ID')}</span></p><small className="sales-note">Pajak {pricing.taxIncluded?'sudah termasuk dalam harga':'ditambahkan ke subtotal'}.</small><p><span>Total</span><strong>Rp {calculateTotal().toLocaleString('id-ID')}</strong></p></div>

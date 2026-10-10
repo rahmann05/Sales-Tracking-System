@@ -6,22 +6,24 @@ import {z} from 'zod';
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
+import {inTransaction} from '../../../utils/in-transaction.js';
 const keyFor=id=>`_ORDER_REVIEW:${id}`;
 export function salesOrderHistory(history=[]){return history.filter(event=>!['ASSIGN_REVIEWER','RELEASE_REVIEWER'].includes(event.action)).map(event=>Object.fromEntries(Object.entries(event).filter(([name])=>!['assignmentRevision','assignedOwnerId','overrideReason'].includes(name))));}
 const schema=z.object({ownerId:z.string().uuid().nullable(),dueAt:z.string().datetime().nullable(),revision:z.number().int().min(0),reason:z.string().trim().min(5).max(2000)}).strict();
 function adminOnly(actor){if(actor?.role!=='ADMIN'||actor.permissions?.can_approve_order===false)throw new AppError('Penugasan pemeriksa hanya untuk Admin dengan izin approval order',403);}
 const allowedOwner=(owner,order,sales,mode='BOTH')=>reviewRoleAllowed(orderReviewRole(order,{ORDER_APPROVAL_MODE:mode}),owner?.role)&&owner&&!owner.deletedAt&&owner.permissions?.can_approve_order!==false&&owner.id!==order.createdBy&&(owner.role==='ADMIN'||owner.role==='SUPERVISOR'&&!sales?.deletedAt&&sales?.supervisorId===owner.id);
 export function orderReviewConflict(error){if(error?.code==='P2034')throw new AppError('Order atau penugasan berubah bersamaan. Muat ulang sebelum melanjutkan.',409);throw error;}
-export async function saveOrderReviewAssignment(orderId,raw,actor){
+export async function saveOrderReviewAssignment(orderId,raw,actor,{db=prisma,validateOnly=false}={}){
   adminOnly(actor);const parsed=schema.safeParse(raw);if(!parsed.success)throw new AppError('PIC, tenggat, versi dan alasan penugasan tidak valid',400);
   const data=parsed.data;if(Boolean(data.ownerId)!==Boolean(data.dueAt))throw new AppError('PIC dan tenggat wajib diisi bersama, atau keduanya kosong untuk melepas penugasan',400);
-  return prisma.$transaction(async tx=>{
+  return inTransaction(db,async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
     const order=await tx.order.findUnique({where:{id:orderId}});if(!order||order.deletedAt||order.status!=='PENDING_APPROVAL')throw new AppError('Order sudah diputuskan atau tidak aktif',409);
     const key=keyFor(orderId),previous=(await tx.systemConfig.findUnique({where:{key}}))?.value||null;
     if((previous?.revision||0)!==data.revision)throw new AppError('Penugasan sudah berubah. Muat ulang sebelum menyimpan.',409);
     const sales=await tx.user.findUnique({where:{id:order.createdBy}}),owner=data.ownerId?await tx.user.findUnique({where:{id:data.ownerId}}):null;
     if(data.ownerId&&!allowedOwner(owner,order,sales,await processValue(order,'ORDER_APPROVAL_MODE','BOTH')))throw new AppError('PIC harus Admin aktif atau SPV tim sales saat ini dengan izin approval; pemohon tidak dapat memeriksa sendiri',400);
+    if(validateOnly)return previous||{revision:0,ownerId:null,dueAt:null};
     const value={...data,orderId,ownerName:owner?.name||null,ownerRole:owner?.role||null,revision:data.revision+1,assignedAt:new Date().toISOString(),assignedBy:actor.id,assignedByName:actor.name||null};
     await tx.systemConfig.upsert({where:{key},create:{key,value},update:{value}});
     await tx.auditEvent.create({data:{entityType:'ORDER_REVIEW_ASSIGNMENT',entityId:orderId,action:data.ownerId?'ASSIGN_REVIEWER':'RELEASE_REVIEWER',actorId:actor.id,actorName:actor.name||null,before:previous||{},after:value}});

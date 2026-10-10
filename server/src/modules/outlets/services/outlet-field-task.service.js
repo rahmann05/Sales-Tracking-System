@@ -1,3 +1,4 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
@@ -63,6 +64,7 @@ export async function actOutletField(id,raw,user){
    if(t.status!=='OPEN'||!b.evidence)throw new AppError('Tugas tidak menerima hasil baru.',409);
    if(t.schedule?.assignedOn&&!fieldScheduleActive(t))throw new AppError('Penugasan hanya untuk hari sebelumnya. Minta SPV menugaskan ulang agar masuk PJP hari ini.',409);
    const e=b.evidence,v=t.policySnapshot.values,hasGps=Number.isFinite(e.latitude)&&Number.isFinite(e.longitude);
+   await assertEvidenceImages({photo:e.photo},{values:v});
    if((e.latitude==null)!==(e.longitude==null))throw new AppError('Koordinat harus berpasangan.',422);
    if(v.OUTLET_FIELD_REQUIRE_GPS!==false&&!hasGps)throw new AppError('GPS lapangan wajib diambil.',422);
    if(hasGps&&(!e.capturedAt||!e.accuracyMeters||e.accuracyMeters>(v.OUTLET_FIELD_GPS_MAX_ACCURACY||100)||Date.now()-Date.parse(e.capturedAt)>(v.OUTLET_FIELD_GPS_MAX_AGE_MINUTES||15)*60000||Date.parse(e.capturedAt)>Date.now()+30000))throw new AppError('GPS terlalu lama, tidak akurat atau waktunya tidak valid. Ambil ulang di lokasi.',422);

@@ -27,7 +27,7 @@ function attendanceDb(t, { ageMs = 60000, active = false, sequence = 1, radius =
     pjpStop: {findUnique:async () => stop, update:async () => ({}),findMany:async () => active ? [{...stop,id:'active',attendances:[{type:'IN',timestamp:new Date()}]}] : []},
     attendance: {findFirst:async () => active ? {id:'active'} : null,create:async ({data}) => {created.push(data);return data;}},
     user: {findUnique:async () => ({email:'sales@example.test'})},
-    outletUnlockRequest: {findFirst:async () => null},
+    outletUnlockRequest: {findMany:async () => []},
     pjp: {update:async () => ({})},
   };
   mock(t, prisma, '$transaction', async fn => fn(db));

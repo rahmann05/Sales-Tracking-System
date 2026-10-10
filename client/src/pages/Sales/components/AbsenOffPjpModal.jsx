@@ -31,7 +31,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
           <label className="text-xs font-bold text-on-surface block">
             Bukti kunjungan · Foto {form.settings.OFF_PJP_REQUIRE_PHOTO?'wajib':'opsional'} · GPS {form.settings.OFF_PJP_REQUIRE_GPS?'wajib':'opsional'}
           </label>
-          <DeviceCameraCapture
+          <DeviceCameraCapture policyValues={form.settings}
             photoRequired={form.settings.OFF_PJP_REQUIRE_PHOTO}
             capturedPhoto={form.capturedPhoto}
             onCapture={form.handleCapture}
@@ -65,7 +65,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
         {form.lookupError&&<p role="status" className="text-sm">{form.lookupError}</p>}
         {!form.lookupEnabled&&<p className="text-sm">Pencarian alamat tidak tersedia. Isi alamat secara manual.</p>}
         <AttendanceSalesInput value={form.salesResult} onChange={form.setSalesResult} />
-        <VisitOutcomeInput value={form.visitOutcome} onChange={form.setVisitOutcome} allowCollection={form.settings.FEATURE_COLLECTION_MODE==='ACTIVE'}/>
+        <VisitOutcomeInput policy={form.settings} value={form.visitOutcome} onChange={form.setVisitOutcome} allowCollection={form.settings.FEATURE_COLLECTION_MODE==='ACTIVE'}/>
         <AbsenNotesInput
           notes={form.notes}
           onChangeNotes={form.setNotes}

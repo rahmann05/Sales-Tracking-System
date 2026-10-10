@@ -1,6 +1,6 @@
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import { useApp } from '../../../context/AppContext';
-import {visitOutcomeError} from '../../../../../shared/visit-outcome.mjs';
+import {visitResultPolicyError} from '../../../../../shared/visit-outcome.mjs';
 import { useState, useRef } from 'react';
 import { useGeofence } from '../../../shared/hooks/useGeofence';
 import {useAddressLookup} from '../../../shared/hooks/useAddressLookup';
@@ -48,7 +48,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
             finally { sending.current = false; setSaving(false); }
             return;
         }
-        const outcomeError=visitOutcome.purpose&&visitOutcomeError(visitOutcome);
+        const outcomeError=visitResultPolicyError(visitOutcome.purpose?visitOutcome:null,settings,notes);
         if(outcomeError){setError(outcomeError);return;}
         const gps = capturedGps || userLocation;
         if (settings.OFF_PJP_REQUIRE_GPS&&(!gps || !Number.isFinite(gps.lat) || !Number.isFinite(gps.lng))) { setError('GPS belum tersedia. Ambil ulang foto.'); return; }

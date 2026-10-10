@@ -3,6 +3,7 @@ import {InvoiceLinesEditor} from './InvoiceLinesEditor';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 import { LuPlus, LuTrash2, LuTriangleAlert, LuCircleCheck, LuFileText } from 'react-icons/lu';
 export function PackingInvoicesSection({
+  invoiceRequired=true,
   items,orderLinked,
   addInvoice,
   doc,
@@ -14,6 +15,7 @@ export function PackingInvoicesSection({
   totalInvoiceCartons
 }) {
   return <div className="space-y-3">
+          <p className="text-sm">Faktur {invoiceRequired?'wajib sebelum dokumen dilepas':'opsional sesuai aturan dokumen'}. Faktur yang dilampirkan harus lengkap dan sesuai muatan. Ini bukan pencatatan pembayaran.</p>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <label className="text-xs font-black uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
@@ -32,12 +34,12 @@ export function PackingInvoicesSection({
           </div>
 
           {/* Validation Balance Indicator */}
-          <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 border ${isCartonBalanced ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'}`}>
+          {(invoiceRequired||invoices.length>0)&&<div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 border ${isCartonBalanced ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'}`}>
             {isCartonBalanced ? <LuCircleCheck className="text-emerald-600 dark:text-emerald-400 text-sm shrink-0" /> : <LuTriangleAlert className="text-amber-600 dark:text-amber-400 text-sm shrink-0" />}
             <span className="font-semibold">
               {isCartonBalanced ? `Total karton faktur (${totalInvoiceCartons}) seimbang dengan dokumen (${totalCartonsNum}). Periksa juga pemetaan barang dan nominal faktur.` : `Total karton faktur (${totalInvoiceCartons}) belum sama dengan total karton dokumen (${totalCartonsNum}). Syarat rilis gudang memerlukan kesamaan karton.`}
             </span>
-          </div>
+          </div>}
 
           {invoices.length > 0 && <div className="space-y-2">
               {invoices.map((inv, index) => <div key={index} className="p-3 rounded-xl bg-surface-container/30 border border-border-glass grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">

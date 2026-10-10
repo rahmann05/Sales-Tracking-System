@@ -1,3 +1,4 @@
+import {UNLOCK_KIND_LABELS} from '../../../../../shared/unlock-policy.mjs';
 import React from 'react';
 import { LuKey, LuCheck, LuX, LuUser, LuMapPin, LuClock } from 'react-icons/lu';
 
@@ -40,8 +41,9 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
             {request.address || 'Alamat outlet'}
           </p>
           <p className="text-on-surface ">
-            <strong>Alasan Unlock:</strong> {request.reason}
+            <strong>{UNLOCK_KIND_LABELS[request.kind]||'Pengecualian kunjungan'}:</strong> {request.reason}
           </p>
+          <p>{request.maxVisits>0?`Batas ${request.maxVisits} kunjungan · terpakai ${request.usedVisits||0} · sisa ${request.remainingVisits??request.maxVisits}`:'Tanpa batas jumlah kunjungan selama izin berlaku'}. Masuk–keluar pada stop yang sama dihitung sekali.</p>
           {request.activeVisitingOutlet && (
             <p className="text-[11px] text-amber-700 ">
               Outlet aktif sebelumnya: {request.activeVisitingOutlet}
@@ -59,7 +61,7 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
               className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98]"
             >
               <LuCheck className="text-sm" />
-              <span>Setujui & Buka Kunci (Unlock)</span>
+              <span>Setujui pengecualian</span>
             </button>
             <button
               type="button"
@@ -72,7 +74,7 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
           </div>
         ) : (
           <div className="text-center text-xs font-bold py-1 text-emerald-600">
-            Status: {request.status === 'APPROVED' ? 'Telah Di-Unlock' : 'Ditolak'}
+            Status: {request.status === 'APPROVED' ? 'Pengecualian disetujui' : 'Ditolak'}
           </div>
         )}
       </div>

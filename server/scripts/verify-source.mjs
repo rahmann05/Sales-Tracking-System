@@ -8,6 +8,9 @@ const {parse}=require('@babel/parser');const traverse=require('@babel/traverse')
 const globals=new Set(('Array Object Boolean Number String BigInt Symbol Function Promise Map Set WeakMap WeakSet Date Math JSON Intl RegExp Error TypeError RangeError SyntaxError URIError AggregateError Reflect Proxy NaN Infinity undefined console global setImmediate clearImmediate window document navigator localStorage sessionStorage fetch URL URLSearchParams Blob File FileReader FormData AbortController AbortSignal Headers Request Response HTMLElement HTMLInputElement HTMLCanvasElement HTMLVideoElement IntersectionObserver ResizeObserver MutationObserver Image Audio ImageData Event CustomEvent MouseEvent TouchEvent KeyboardEvent EventTarget Node DOMException TextEncoder TextDecoder atob btoa alert confirm prompt performance crypto structuredClone queueMicrotask requestAnimationFrame cancelAnimationFrame setTimeout clearTimeout setInterval clearInterval self globalThis process Buffer parseInt parseFloat isNaN isFinite encodeURI decodeURI encodeURIComponent decodeURIComponent PromiseRejectionEvent google JSX').split(' '));
 const files=[];const walk=dir=>{for(const e of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,e.name);if(e.isDirectory())walk(file);else if(/\.(m?js|jsx|css)$/.test(file))files.push(file);}};
 for(const dir of ['client/src','server/src','shared'])walk(path.join(root,dir));
+// Service workers are independent browser entry points, outside Vite's graph.
+const workerEntries=['client/public/driver-evidence-worker.mjs'].map(file=>path.join(root,file));
+files.push(...workerEntries);
 const modules=new Map();const errors=[];let checked=0;
 function resolve(source,file){
  if(!source.startsWith('.'))return null;
@@ -21,6 +24,7 @@ for(const file of files){
  traverse(ast,{ImportDeclaration(p){for(const spec of p.node.specifiers)if(spec.local.name!=='React'&&!p.scope.getBinding(spec.local.name)?.referenced)errors.push(`Unused import: ${path.relative(root,file)}:${p.node.loc.start.line} ${spec.local.name}`);const target=resolve(p.node.source.value,file);if(p.node.source.value.startsWith('.')&&!target)errors.push(`Missing import: ${file} -> ${p.node.source.value}`);if(target)refs.push(target);},ExportNamedDeclaration(p){if(p.node.source){const target=resolve(p.node.source.value,file);if(target)refs.push(target);else if(p.node.source.value.startsWith('.'))errors.push(`Missing export: ${file}`);}},CallExpression(p){if(p.node.callee.type==='Import'&&p.node.arguments[0]?.type==='StringLiteral'){const target=resolve(p.node.arguments[0].value,file);if(target)refs.push(target);else errors.push(`Missing dynamic import: ${file}`);}},ReferencedIdentifier(p){if(!p.scope.hasBinding(p.node.name)&&!globals.has(p.node.name))errors.push(`Unbound: ${path.relative(root,file)}:${p.node.loc.start.line} ${p.node.name}`);}});
 }
 const reached=new Set();function visit(file){if(reached.has(file))return;reached.add(file);for(const child of modules.get(file)||[])visit(child);}
+for(const file of workerEntries)visit(file);
 // Each Vite HTML entry owns an import graph, including the isolated design preview.
 const clientRoot=path.join(root,'client');
 for(const entry of fs.readdirSync(clientRoot).filter(name=>name.endsWith('.html'))){

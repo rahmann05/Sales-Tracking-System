@@ -46,14 +46,14 @@ export const useSupervisorActions = ({
       const incident = incidents.find(i=>i.id===incidentId);
       if (!incident) throw new Error('Kendala tidak ditemukan. Muat ulang data.');
 
-      await routeChangesApi.skip(incidentId);
+      const res=await routeChangesApi.skip(incidentId),pending=res.data.routeChangeRequest.status==='PENDING_APPROVAL';
 
       setIncidents((prev) =>
-        prev.map((i) => (i.id === incidentId ? { ...i, status: 'RESOLVED_SKIP', spvName: user?.name || 'Supervisor' } : i))
+        prev.map((i) => (i.id === incidentId ? { ...i, status:pending?'PENDING_ADMIN':'RESOLVED_SKIP', spvName: user?.name || 'Supervisor' } : i))
       );
 
       setSalesStops((prev) =>
-        prev.map((s) => (s.id === incident.stopId ? { ...s, status: 'SKIPPED' } : s))
+        prev.map((s) => (s.id === incident.stopId ? { ...s, status:pending?'CLOSED_REPORTED':'SKIPPED' } : s))
       );
 
       addNotification({

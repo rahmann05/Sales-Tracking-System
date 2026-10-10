@@ -3,7 +3,7 @@ import {unitDescription} from '../../../../../shared/product-units.mjs';
 import {orderStatusLabel,fulfillmentLabel,stampWib} from '../salesPresentation';
 export function SalesOrderDetail({order:o}){
   return <div className="sales-visit-detail">
-    <div><span className="admin-eyebrow">{o.code||o.id}</span><h3>{o.pjpStop?.outlet?.name||o.customerSnapshot?.name||'Pelanggan'}</h3></div>
+    <div><span className="admin-eyebrow">{o.code||o.id}</span><h3>{o.pjpStop?.outlet?.name||o.customerSnapshot?.name||'Pelanggan'}</h3><p>{o.pjpStopId?'Order dari kunjungan PJP':'Order tanpa kunjungan PJP'}</p>{o.history?.find(h=>h.contextReason)?.contextReason&&<p>Alasan: {o.history.find(h=>h.contextReason).contextReason}</p>}</div>
     <dl><div><dt>Persetujuan</dt><dd>{orderStatusLabel(o.status)}</dd></div><div><dt>Pemenuhan</dt><dd>{fulfillmentLabel(o.fulfillmentStatus)}</dd></div><div><dt>Dibuat</dt><dd>{stampWib(o.createdAt)}</dd></div><div><dt>Janji pengiriman</dt><dd>{o.promisedAt?stampWib(o.promisedAt):'Belum ditetapkan'}</dd></div><div><dt>Nilai order</dt><dd>Rp {Number(o.totalValue||0).toLocaleString('id-ID')}</dd></div><div><dt>Syarat order</dt><dd>{({TOP:'Tempo (TOP)',CASH:'Tunai',TRANSFER:'Transfer'})[o.paymentType]||o.paymentType||'Belum tersedia'}{o.paymentType==='TOP'?` · ${o.termOfPaymentDays??'—'} hari`:''}</dd></div></dl>
     {o.rejectionReason&&<p role="note" className="app-error">Alasan ditolak: {o.rejectionReason}</p>}
     <p className="sales-note">Persetujuan order dan penerimaan barang dipantau terpisah. Syarat order bukan bukti pembayaran.</p>

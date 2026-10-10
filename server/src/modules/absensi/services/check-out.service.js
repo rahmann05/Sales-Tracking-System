@@ -1,10 +1,12 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {visitSettings,validateVisitResult} from './visit-session.service.js';
 import {withProcessPolicy} from '../../config/services/process-policy.service.js';
 import {reconcilePjp} from '../../route-changes/services/route-decision.service.js';
 import {visitOutcomeSchema} from '../visit-outcome.schema.js';
 import {createCollectionFollowUp} from './collection-follow-up.service.js';
-import { attendanceException } from './attendance-policy.service.js';
+import { findAttendanceException } from './attendance-policy.service.js';
+import {earlyReasonError} from '../../../../../shared/visit-reasons.mjs';
 /** checkOut - single-responsibility service (extracted from absensi.service.js). */
 import {withUserTransaction} from '../../../utils/user-transaction.js';
 import { resolveSalesResult } from './resolve-sales-result.service.js';
@@ -34,6 +36,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   }
 
   const visit=await visitSettings(stop);
+  await assertEvidenceImages({photoUrl});
   await validateVisitResult(payload);
   const existingIn = stop.attendances.find((a) => a.userId === userId && a.type === ATTENDANCE_TYPE.IN);
   if (!existingIn && visit.requireIn) throw new AppError('Absen OUT gagal. Anda belum melakukan Absen IN pada outlet ini', 400);
@@ -75,7 +78,10 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   const distanceWarning = distance==null?'UNAVAILABLE':distance > maxRadius ? 'WARNING' : 'OK';
 
   // Enforce Geofence: Block checkout if outside radius, except for an explicitly configured exception
-  const hasException = await attendanceException(stop.outlet.id,userId,db);
+  const radiusException = await findAttendanceException(stop.outlet.id,userId,db,'GEOFENCE',pjpStopId);
+  const hasException=Boolean(radiusException);
+  const exceptionIds=new Set(stop.visitSession?.exceptionIds||[]);
+  if(radiusException&&!isBypassUser&&await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE',true)&&(distance===null&&hasGps||distance>maxRadius))exceptionIds.add(radiusException.id);
   if(hasGps&&distance===null&&await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE',true)&&!isBypassUser&&!hasException)throw new AppError('Koordinat master outlet belum tersedia. Minta koreksi lokasi atau pengecualian presensi resmi.',422);
   if (await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE', true) && !isBypassUser && !hasException && distance > maxRadius) {
     throw new AppError(
@@ -96,6 +102,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   const allowEarly = await getDynamicConfig('ATTENDANCE_ALLOW_EARLY_CHECKOUT', true);
   const cleanEarlyReason = typeof earlyReason === 'string' ? earlyReason.trim() : '';
   if (isEarlyCheckout && !allowEarly) throw new AppError(`Checkout harus menunggu durasi minimum ${MINIMUM_DURATION_MINS} menit.`, 422);
+  if(isEarlyCheckout){const error=earlyReasonError(cleanEarlyReason,visit.snapshot.values);if(error)throw new AppError(error,422);}
 
   if (isEarlyCheckout && !cleanEarlyReason) {
     throw new AppError(
@@ -128,7 +135,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
       },
     });
     await createCollectionFollowUp(db,{...attendance,outletName:stop.outlet.name},'PJP');
-    await db.pjpStop.update({where:{id:pjpStopId},data:{status:VISIT_STATUS.VISITED,visitSession:{...stop.visitSession,state:'FINISHED',finishedAt:new Date().toISOString(),attendanceMode:visit.mode}}});
+    await db.pjpStop.update({where:{id:pjpStopId},data:{status:VISIT_STATUS.VISITED,visitSession:{...stop.visitSession,state:'FINISHED',finishedAt:new Date().toISOString(),attendanceMode:visit.mode,exceptionIds:[...exceptionIds]}}});
 
   await reconcilePjp(db,stop.pjpId);
 

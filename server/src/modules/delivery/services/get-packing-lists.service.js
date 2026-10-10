@@ -3,6 +3,7 @@ import {invoiceReconciliation} from '../../../../../shared/invoice-reconciliatio
 /** getPackingLists - single-responsibility service (extracted from delivery.service.js). */
 import { parsePagination } from '../../../utils/pagination.js';
 import { prisma } from '../../../config/prisma.js';
+import {shipmentReady} from '../../../../../shared/shipment-document.mjs';
 
 /**
  * List packing lists with filters
@@ -43,7 +44,7 @@ export const getPackingLists = async (query, role) => {
     prisma.packingList.count({ where }),
   ]);
 
-  const all = await prisma.packingList.findMany({where,select:{status:true,totalCartons:true,items:true,invoices:{select:{totalCartons:true}}}});
-  const metrics = {total,draftCount:all.filter(p=>p.status==='DRAFT').length,releasedCount:all.filter(p=>p.status==='RELEASED').length,incompleteCount:all.filter(p=>p.status==='DRAFT'&&(!p.items.length||!p.totalCartons||!p.invoices.length||p.invoices.reduce((n,i)=>n+i.totalCartons,0)!==p.totalCartons)).length};
+  const all = await prisma.packingList.findMany({where,select:{status:true,documentKind:true,policySnapshot:true,totalCartons:true,items:true,invoices:{select:{totalCartons:true}}}});
+  const metrics = {total,draftCount:all.filter(p=>p.status==='DRAFT').length,releasedCount:all.filter(p=>p.status==='RELEASED').length,incompleteCount:all.filter(p=>p.status==='DRAFT'&&!shipmentReady(p)).length};
   return { items: items.map(p=>({...packingBalance(p),commercial:invoiceReconciliation(p)})), total, metrics, page: parseInt(page), limit: parseInt(limit) };
 };

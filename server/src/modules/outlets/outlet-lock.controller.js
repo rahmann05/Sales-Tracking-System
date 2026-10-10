@@ -27,8 +27,8 @@ export const handleUnlockOutletDirect = async (req, res, next) => {
 
 export const handleRequestUnlock = async (req, res, next) => {
   try {
-    const request = await requestOutletUnlock(req.params.id, req.user.id, req.body.reason);
-    return successResponse(res, 201, request, 'Permintaan buka kunci outlet terkirim, menunggu persetujuan Supervisor');
+    const request = await requestOutletUnlock(req.params.id, req.user.id, req.body.reason, req.body.kind);
+    return successResponse(res, 201, request, 'Permintaan buka kunci outlet terkirim, menunggu keputusan pemeriksa');
   } catch (err) {
     next(err);
   }

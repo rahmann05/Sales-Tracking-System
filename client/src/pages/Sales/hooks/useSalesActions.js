@@ -179,12 +179,12 @@ export const useSalesActions = ({
   }, [user?.name, salesStops, setSalesStops, setIncidents, addNotification]);
 
   // Sales Action: Request Unlock Outlet
-  const handleRequestUnlockOutlet = useCallback(async ({ stopId, reason }) => {
+  const handleRequestUnlockOutlet = useCallback(async ({ stopId, reason, kind }) => {
     try {
       const outletId = salesStops.find(s => s.id === stopId)?.outletId;
       if (!outletId) throw new Error('Outlet tidak ditemukan');
 
-      const res = await outletsApi.requestUnlock(outletId, reason);
+      const res = await outletsApi.requestUnlock(outletId, reason, kind);
       const newRequest = mapServerUnlockRequest(res.data);
 
       setIncidents((prev) => [newRequest, ...prev]);

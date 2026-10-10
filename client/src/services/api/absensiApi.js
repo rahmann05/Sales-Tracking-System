@@ -9,20 +9,10 @@ export const absensiApi = {
       note
     })
   }),
-  checkIn: async (pjpStopId, {
-    latitude,
-    longitude,
-    photoUrl,
-    notes
-  }) => {
+  checkIn: async (pjpStopId, payload = {}) => {
     return await request(`/absensi/${pjpStopId}/in`, {
       method: 'POST',
-      body: JSON.stringify({
-        latitude,
-        longitude,
-        photoUrl,
-        notes
-      })
+      body: JSON.stringify(payload)
     });
   },
   checkOut: async (pjpStopId, payload = {}) => {

@@ -1,6 +1,10 @@
 import { CODE_CONFIG_GROUPS } from './coding.mjs';
 import { OPERATIONAL_CONFIG_GROUPS } from './operational-policy.mjs';
 import {parseAuditItems} from './supervision-checklist.mjs';
+import {parseReasonOptions} from './visit-reasons.mjs';
+import {parseReferenceCatalog} from './reference-catalog.mjs';
+import {evidenceImageFormats} from './evidence-image-policy.mjs';
+import {requiredRegistrationFields} from './registration-fields.mjs';
 import {REPORT_PRESENTATION,reportSelection} from './report-presentation.mjs';
 export const CONFIG_DEFINITIONS = [
   ...OPERATIONAL_CONFIG_GROUPS,
@@ -42,6 +46,10 @@ export const CONFIG_DEFINITIONS = [
     { key: 'PACKING_AUTO_RELEASE', label: 'Kirim otomatis ketika dokumen siap', description: 'Dokumen lengkap yang disimpan admin langsung masuk antrean gudang.', type: 'boolean', defaultValue: false },
     { key: 'PACKING_ALLOW_PENDING_ORDER', label: 'Izinkan referensi order belum disetujui', description: 'Wajib alasan override admin. Tidak mengubah approval order atau nilai penjualan.', type: 'boolean', defaultValue: false },
     { key: 'PACKING_ALLOW_SPLIT', label: 'Izinkan pembagian ke beberapa kendaraan', description: 'Alokasi sebagian produk dan karton; sisa tetap berada di antrean gudang.', type: 'boolean', defaultValue: true },
+    {key:'PACKING_ALLOW_MERGE_ORDERS',label:'Izinkan beberapa order dalam satu dokumen',description:'Hanya untuk outlet yang sama. Baris dan harga tetap terhubung ke order asal; faktur dengan aturan pajak berbeda harus dipisahkan.',type:'boolean',defaultValue:false},
+    {key:'PACKING_ALLOW_MANIFEST',label:'Izinkan manifest tanpa dokumen packing',description:'Admin dapat menyusun manifest barang langsung untuk alokasi perjalanan. Tidak membuat bukti packing atau pemeriksaan fiktif; tahap persiapan trip tetap mengikuti aturan gudang.',type:'boolean',defaultValue:false},
+    {key:'PACKING_REQUIRE_INVOICE',label:'Wajib faktur pada packing list',description:'Jika nonaktif, packing dapat dilepas tanpa faktur. Faktur yang dilampirkan tetap harus sesuai jumlah barang dan karton.',type:'boolean',defaultValue:true},
+    {key:'MANIFEST_REQUIRE_INVOICE',label:'Wajib faktur pada manifest',description:'Aturan dokumen manifest, dibekukan saat pembuatan. Tidak memaksa pencatatan pembayaran.',type:'boolean',defaultValue:false},
     { key: 'PACKING_ALLOW_REVISION', label: 'Izinkan penarikan untuk revisi', description: 'Hanya dokumen yang belum dialokasikan. Riwayat perubahan disimpan.', type: 'boolean', defaultValue: true },
   ] },
   { groupKey: "OPERATIONS", groupLabel: "Kebijakan Operasional", groupDescription: "Izin sales, absensi, supervisi, dan shift.", groupIcon: "LuShieldCheck", groupColor: "blue", params: [{"key": "SALES_ALLOW_PRODUCT_CREATE", "label": "Sales boleh menambah produk", "description": "Produk yang dibuat sales masuk katalog bersama.", "type": "boolean", "defaultValue": false},{"key": "ATTENDANCE_ALLOW_MANUAL_SALES", "label": "Input nominal dan SKU saat absen", "description": "Input hasil penjualan opsional saat absen keluar. Tidak membuat pesanan pengiriman.", "type": "boolean", "defaultValue": true},{"key": "MANUAL_SALES_REPORT_MODE", "label": "Perlakuan hasil manual di laporan", "description": "NOTES_ONLY: catatan saja tanpa nominal/SKU. REQUIRE_APPROVAL: wajib disetujui aktor berwenang.", "type": "select", "defaultValue": "NOTES_ONLY", "options": ["NOTES_ONLY", "REQUIRE_APPROVAL"]},{"key": "SALES_ALLOW_PRICE_OVERRIDE", "label": "Sales boleh mengubah harga order", "description": "Jika dimatikan, harga order wajib mengikuti katalog admin.", "type": "boolean", "defaultValue": false},{"key": "OFF_PJP_ENABLED", "label": "Izinkan kunjungan luar PJP", "description": "Sales dapat mengirim kunjungan luar jadwal untuk divalidasi.", "type": "boolean", "defaultValue": true},{"key": "SPV_JOINT_VISIT_LIMIT", "label": "Batas pendampingan SPV per hari", "description": "Batas kunjungan pendampingan per Supervisor per hari ketika pembatasan diaktifkan.", "type": "number", "defaultValue": 4, "min": 1, "max": 100},{"key": "SPV_AUDIT_LIMIT", "label": "Batas audit supervisor", "description": "Batas kunjungan audit per Supervisor per hari ketika pembatasan diaktifkan.", "type": "number", "defaultValue": 3, "min": 1, "max": 100},{"key": "SHIFT_START_TIME", "label": "Jam masuk kerja (WIB)", "description": "Waktu acuan ketepatan jam masuk shift.", "type": "text", "defaultValue": "08:00"},{"key": "DEFAULT_PAYMENT_TYPE", "label": "Pembayaran default order", "description": "Pilihan awal pada form order sales.", "type": "select", "defaultValue": "CASH", "options": ["CASH", "TOP", "TRANSFER"]}] },
@@ -439,8 +447,12 @@ for(let index=CONFIG_DEFINITIONS.length-1;index>=0;index--)if(!CONFIG_DEFINITION
 export const CONFIG_PARAMS = CONFIG_DEFINITIONS.flatMap(group => group.params);
 export const CONFIG_DEFAULTS = Object.fromEntries(CONFIG_PARAMS.map(param => [param.key, param.defaultValue]));
 export function parseConfigValue(param, raw) {
+  if(param.key==='EVIDENCE_IMAGE_FORMATS')return evidenceImageFormats(raw).join(',');
+  if(param.type==='catalog')return parseReferenceCatalog(raw);
   if(Object.hasOwn(REPORT_PRESENTATION,param.key))return reportSelection(param.key,raw).join(',');
   if(param.type==='checklist')return parseAuditItems(raw);
+  if(param.type==='reference')return parseReasonOptions(raw).join('\n');
+  if(param.type==='field-requirements')return requiredRegistrationFields(raw).join(',');
   if (param.type === 'boolean') {
     if (![true, false, 'true', 'false'].includes(raw)) throw new Error(`${param.label}: pilih aktif atau nonaktif`);
     return raw === true || raw === 'true';
@@ -453,8 +465,8 @@ export function parseConfigValue(param, raw) {
   }
   if (typeof raw !== 'string' || raw.length > 2000) throw new Error(`${param.label}: teks tidak valid`);
   if (param.options && !param.options.includes(raw)) throw new Error(`${param.label}: pilihan tidak valid`);
-  if (['PJP_WORKING_DAYS','SLA_WORKING_DAYS'].includes(param.key) && !/^[0-6](,[0-6])*$/.test(raw)) throw new Error('Hari kerja harus daftar 0–6 dipisahkan koma');
-  if (['SHIFT_START_TIME','SHIFT_DAY_CUTOFF_TIME','SLA_WORK_START','SLA_WORK_END'].includes(param.key) && !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) throw new Error('Jam masuk harus HH:mm');
+  if (['PJP_WORKING_DAYS','SHIFT_WORKING_DAYS','SLA_WORKING_DAYS'].includes(param.key) && !/^[0-6](,[0-6])*$/.test(raw)) throw new Error('Hari kerja harus daftar 0–6 dipisahkan koma');
+  if (['SHIFT_START_TIME','SHIFT_END_TIME','SHIFT_DAY_CUTOFF_TIME','SLA_WORK_START','SLA_WORK_END'].includes(param.key) && !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) throw new Error('Jam harus HH:mm');
   if(param.key==='SLA_HOLIDAYS'&&raw.split(',').filter(Boolean).some(day=>!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day))throw new Error('Tanggal libur harus YYYY-MM-DD valid dipisahkan koma');
   if (param.key.startsWith('JWT_') && !/^[1-9]\d*[smhd]$/.test(raw)) throw new Error('Durasi token harus seperti 12h atau 7d');
   return raw;

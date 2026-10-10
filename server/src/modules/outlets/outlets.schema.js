@@ -48,6 +48,7 @@ export const unlockRequestSchema = z.object({
     id: z.string().trim().min(1).max(128),
   }),
   body: z.object({
-    reason: z.string().min(3, 'Alasan permohonan unlock minimal 3 karakter'),
+    reason: z.string().trim().min(3, 'Alasan permohonan unlock minimal 3 karakter').max(2000),
+    kind:z.enum(['GEOFENCE','OUTLET_LOCK','BOTH']).default('BOTH'),
   }),
 });

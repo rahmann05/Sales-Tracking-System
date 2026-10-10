@@ -1,16 +1,17 @@
 import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
-import {POLICY_SECRET_KEYS,DRIVER_EVIDENCE_KEYS} from '../../../../../shared/operational-policy.mjs';
+import {DRIVER_EVIDENCE_KEYS} from '../../../../../shared/operational-policy.mjs';
 import {currentPolicy,withPolicy} from './policy-context.service.js';
 import {getDynamicConfig} from './dynamic-config.service.js';
 import {effectivePolicy} from './policy-resolver.service.js';
+import {isProcessPolicyKey,processPolicyValues} from '../../../../../shared/process-policy.mjs';
 export function policySnapshot(policy=currentPolicy()){
  const p=policy||{values:CONFIG_DEFAULTS,versions:[],at:new Date().toISOString()};
- return {values:Object.fromEntries(Object.entries(p.values).filter(([key])=>!POLICY_SECRET_KEYS.includes(key)&&!key.startsWith('FEATURE_')&&!key.includes('TRACKING_'))),versions:p.versions,at:p.at};
+ return {values:Object.fromEntries(Object.entries(p.values).filter(([key])=>isProcessPolicyKey(key))),versions:p.versions,at:p.at};
 }
 export const capturePolicySnapshot=async()=>policySnapshot(currentPolicy()||await effectivePolicy());
-export const processValue=(entity,key,fallback)=>entity?.policySnapshot?.values?.[key]??getDynamicConfig(key,fallback);
+export const processValue=(entity,key,fallback)=>entity?.policySnapshot?.values&&isProcessPolicyKey(key)?entity.policySnapshot.values[key]??CONFIG_DEFAULTS[key]??fallback:getDynamicConfig(key,fallback);
 export function withProcessPolicy(entity,fn){
- const live=currentPolicy();return entity?.policySnapshot?withPolicy({...live,values:{...live?.values,...entity.policySnapshot.values}},fn):fn();
+ const live=currentPolicy();return entity?.policySnapshot?withPolicy({...live,values:processPolicyValues(entity.policySnapshot,live?.values)},fn):fn();
 }
 // Freeze pre-existing open work before its first configuration change. Never backfill evidence.
 export async function freezeOpenWork(db,scope='GLOBAL'){

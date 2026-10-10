@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {locationEvidenceSchema} from '../outlets/outlets.schema.js';
+import {REGISTRATION_FIELDS} from '../../../../shared/registration-fields.mjs';
 
 export const createRegistrationSchema = z.object({
   body: z.object({
@@ -32,8 +33,8 @@ export const createRegistrationSchema = z.object({
     subAreaKecamatan: z.string().optional().nullable(),
     kelurahan: z.string().optional().nullable(),
     city: z.string().default('CIMAHI'),
-    latitude: z.number().finite().min(-90).max(90),
-    longitude: z.number().finite().min(-180).max(180),
+    latitude: z.number().finite().min(-90).max(90).nullable().optional(),
+    longitude: z.number().finite().min(-180).max(180).nullable().optional(),
     placeId: z.string().optional().nullable(),
     placeDetails: z.any().optional().nullable(),
     photoUrl: z.string().optional().nullable(),
@@ -89,7 +90,8 @@ export const rejectRegistrationSchema = z.object({
 
 export const finalizeRegistrationSchema = z.object({
   body: z.object({
-    latitude:z.number().finite().min(-90).max(90).optional(),longitude:z.number().finite().min(-180).max(180).optional(),
+    registrationFields:z.object(Object.fromEntries(Object.keys(REGISTRATION_FIELDS).map(key=>[key,z.string().trim().max(2000).optional()]))).strict().optional(),
+    latitude:z.number().finite().min(-90).max(90).nullable().optional(),longitude:z.number().finite().min(-180).max(180).nullable().optional(),
     duplicateReason:z.string().trim().min(10).max(1000).optional(),
     customerCode: z.string().trim().max(128).optional(),
     clusterId: z.string().optional().nullable(),

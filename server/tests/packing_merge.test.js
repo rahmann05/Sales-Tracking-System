@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mapInvoiceCommercial} from '../src/modules/delivery/services/invoice-mapping.service.js';
+import {packingOrderIds,packingSourceIds} from '../../shared/packing-orders.mjs';
+import {fulfillment} from '../../shared/delivery-operations.mjs';
+test('Merged packing preserves separate order prices and rejects incompatible tax in one invoice',()=>{
+ const orders=[{id:'a',taxIncluded:true,taxRatePercent:0,items:[{id:'x',quantity:3,subtotal:300,unitPrice:100}]},{id:'b',taxIncluded:true,taxRatePercent:0,items:[{id:'y',quantity:2,subtotal:400,unitPrice:200}]}];
+ const items=[{lineId:'lx',sourceOrderItemId:'x',quantity:1},{lineId:'ly',sourceOrderItemId:'y',quantity:2}];
+ const invoice={items:[{lineId:'lx',quantity:1},{lineId:'ly',quantity:2}]};
+ assert.deepEqual(mapInvoiceCommercial(invoice,items,orders).items.map(i=>i.unitPrice),[100,200]);
+ orders[1].taxRatePercent=11;
+ assert.throws(()=>mapInvoiceCommercial(invoice,items,orders),/pajak/);
+ assert.equal(mapInvoiceCommercial({items:[invoice.items[1]]},items,orders).taxRatePercent,11);
+ assert.throws(()=>mapInvoiceCommercial({items:[]},items,orders),/memetakan/);
+ const packing={sourceOrderIds:['a','b'],items,deliveryStops:[{status:'DELIVERED',allocatedItems:[{lineId:'lx',quantity:1},{lineId:'ly',quantity:2}]}]};
+ assert.equal(fulfillment(orders[0],[packing]).fulfillmentLines[0].accepted,1);
+ assert.equal(fulfillment(orders[1],[packing]).fulfillmentLines[0].accepted,2);
+ assert.deepEqual(packingOrderIds({sourceOrderId:'a',sourceOrderIds:['a','b']}),['a','b']);
+ assert.deepEqual(packingSourceIds({sourceOrderId:'a'}),['a']);
+ assert.throws(()=>packingSourceIds({sourceOrderIds:['a','a']}),/dua kali/);
+});

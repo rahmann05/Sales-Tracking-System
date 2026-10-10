@@ -6,9 +6,16 @@ import {notificationDeliveryStatus,retryNotificationDelivery} from '../notificat
 import {listPolicyLibrary,savePolicyLibrary,copyPolicyLibrary} from './services/policy-library.service.js';
 import {listSystemAudit} from '../notifications/services/history-retention.service.js';
 import {listMigrationCandidates,previewProcessMigration,migrateProcesses} from './services/process-migration.service.js';
+import {assignmentScheduleOptions,assignmentSchedulePreview,listAssignmentSchedules,createAssignmentSchedule,cancelAssignmentSchedule,retryAssignmentSchedule} from './services/assignment-schedules.service.js';
 const router=Router();
 router.use(authorize('ADMIN'));
 const run=fn=>async(req,res,next)=>{try{res.set('Cache-Control','no-store').json({data:await fn(req)});}catch(error){next(error);}};
+router.get('/assignments',run(req=>listAssignmentSchedules(req.user)));
+router.get('/assignments/options',run(req=>assignmentScheduleOptions(req.query.kind,req.user)));
+router.get('/assignments/preview',run(req=>assignmentSchedulePreview(req.query.kind,req.query.entityId,req.user)));
+router.post('/assignments',run(req=>createAssignmentSchedule(req.body,req.user)));
+router.post('/assignments/:id/cancel',run(req=>cancelAssignmentSchedule(req.params.id,req.body.reason,req.user)));
+router.post('/assignments/:id/retry',run(req=>retryAssignmentSchedule(req.params.id,req.body.reason,req.user)));
 router.get('/',run(req=>getPolicyProfile(req.query.scope||'GLOBAL')));
 router.get('/library',run(()=>listPolicyLibrary()));
 router.get('/audit',run(req=>listSystemAudit(req.query)));

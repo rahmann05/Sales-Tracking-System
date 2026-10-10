@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import {downloadOperationalFile} from '../../../services/operationalExportService';
 import { MtdMetrics } from './MtdMetrics';
 import { mtdCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
@@ -5,7 +6,8 @@ import { ReportBasisNote } from './ReportBasisNote';
 import { ReportCalendarEditor } from './ReportCalendarEditor';
 import { ReportArchivePanel } from './ReportArchivePanel';
 import { MtdSalesTable } from './MtdSalesTable';
-import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import {reportFilterDefaults} from '../../../../../shared/report-filter-defaults.mjs';
+import {useApp} from '../../../context/AppContext';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { collectPages, reportsApi, usersApi } from '../../../services/api';
 import { MtdReportPdfView } from './MtdReportPdfView';
@@ -53,8 +55,9 @@ const MONTH_OPTIONS = [{
  * Single Responsibility: Month-to-Date (MTD) Target Achievement, LMA Comparison & Channel Performance ala ND6.
  */
 export const MtdReportView = () => {
-  const [month, setMonth] = useState(() => Number(wibDateKey().slice(5, 7)));
-  const [year, setYear] = useState(() => Number(wibDateKey().slice(0, 4)));
+  const {settings}=useApp();
+  const [month, setMonth] = useState(() => reportFilterDefaults(settings).month);
+  const [year, setYear] = useState(() => reportFilterDefaults(settings).year);
   const [salesmanId, setSalesmanId] = useState('');
   const [search, setSearch] = useState('');
   const [salesTeam, setSalesTeam] = useState([]);
@@ -182,7 +185,7 @@ export const MtdReportView = () => {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between text-xs text-on-surface-variant font-mono">
-                  <span>Nilai order disetujui: <strong>Rp {(c.mtdOmzet || 0).toLocaleString('id-ID')}</strong></span>
+                  <span>Nilai order disetujui: <strong>{reportMoney(c.mtdOmzet)}</strong></span>
                   <span>{c.mtdEc} EC ({c.mtdVisits} kunjungan; channel saat ini)</span>
                 </div>
               </div>)}

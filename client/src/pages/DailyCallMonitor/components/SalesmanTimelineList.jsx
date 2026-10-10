@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import React from 'react';
 import { LuClock, LuMapPin, LuChevronDown, LuChevronUp, LuNavigation, LuCheck, LuPlus, LuHourglass, LuShieldAlert } from 'react-icons/lu';
 import { FiAlertTriangle } from 'react-icons/fi';
@@ -49,7 +50,7 @@ export function SalesmanTimelineList({
                       </span>
                       <span>•</span>
                       <span className="font-bold text-emerald-600">
-                        Rp {(sales.totalOmzet || 0).toLocaleString('id-ID')} ({sales.totalSkuSold} SKU)
+                        {reportMoney(sales.totalOmzet)} ({sales.totalSkuSold} SKU)
                       </span>
                     </div>
                   </div>
@@ -135,7 +136,7 @@ export function SalesmanTimelineList({
                                         <LuHourglass className="text-[9px]" /> Belum Dikunjungi
                                       </span>}
                                     {stop.effectiveCall === 'Y' && <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-700 text-[10px] font-black inline-flex items-center gap-0.5">
-                                        <LuCheck className="text-[9px]" /> EC (Rp {(stop.orderAmount || 0).toLocaleString('id-ID')})
+                                        <LuCheck className="text-[9px]" /> EC ({reportMoney(stop.orderAmount)})
                                       </span>}
                                   </div>
 

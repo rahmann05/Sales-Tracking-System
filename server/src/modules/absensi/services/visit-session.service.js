@@ -1,8 +1,10 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {AppError} from '../../../utils/errors.js';
 import {getDynamicConfig} from '../../config/config.service.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
 import {reconcilePjp} from '../../route-changes/services/route-decision.service.js';
+import {visitResultPolicyError} from '../../../../../shared/visit-outcome.mjs';
 export async function visitSettings(stop){
  const snapshot=stop?.policySnapshot||await capturePolicySnapshot();
  return {...visitPolicy(snapshot.values),snapshot};
@@ -27,7 +29,10 @@ export async function settlePreviousVisit(db,userId,excludeId){
  return settled;
 }
 export async function validateVisitResult(payload){
+ await assertEvidenceImages({attachments:payload.visitOutcome?.attachments});
  if(['COLLECTION','BOTH'].includes(payload.visitOutcome?.purpose)&&await getDynamicConfig('FEATURE_COLLECTION_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Pencatatan penagihan baru dinonaktifkan oleh Admin',409);
- if(await getDynamicConfig('SALES_REQUIRE_VISIT_RESULT',false)&&!payload.visitOutcome)throw new AppError('Hasil kunjungan wajib dicatat',422);
- if(await getDynamicConfig('VISIT_RESULT_REQUIRE_NOTE',false)&&!(payload.visitOutcome?.note||payload.notes)?.trim())throw new AppError('Catatan hasil kunjungan wajib diisi',422);
+ const keys=['SALES_REQUIRE_VISIT_RESULT','VISIT_RESULT_REQUIRE_NOTE','VISIT_RESULT_OFFER_MODE','VISIT_RESULT_OBSTACLE_MODE','VISIT_RESULT_ATTACHMENT_MODE'];
+ const values=Object.fromEntries(await Promise.all(keys.map(async k=>[k,await getDynamicConfig(k)])));
+ const error=visitResultPolicyError(payload.visitOutcome,values,payload.notes);
+ if(error)throw new AppError(error,422);
 }

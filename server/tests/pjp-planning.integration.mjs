@@ -16,7 +16,7 @@ import {createClusterFull} from '../src/modules/clusters/services/create-cluster
 import {previewRjpImport} from '../src/modules/clusters/services/rjp-import-preview.service.js';
 import {importRjp} from '../src/modules/clusters/services/import-rjp.service.js';
 import {planDayStatus} from '../src/modules/pjp/services/plan-day-status.service.js';
-import {wibDateKey} from '../../shared/visit-metrics.mjs';
+import {wibDateKey,wibDayRange} from '../../shared/visit-metrics.mjs';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
 const tag=`planner-test-${randomUUID()}`,users=[],clusters=[],outlets=[],plans=[];
 const original=prisma.systemConfig.findMany;
@@ -65,10 +65,24 @@ try{
  const updated=await clusterImpact({clusterId:another.id,outletIds:[outlets[1],outlets[2]]},spv);await updateClusterOutlets(another.id,[outlets[1],outlets[2]],spv,updated.token);eq((await prisma.cluster.findUnique({where:{id:another.id}})).outletCount,2);
  const rows=[{clusterName:c.name,outletCode:`${tag}-1`,customerName:'Imported test',address:'Test',area:'Test',latitude:-6.91,longitude:107.61,callFrequency:'F4'}];const imported=await previewRjpImport(rows,spv);eq(imported.summary.moved,1);await reject(()=>importRjp(rows,spv),409);await importRjp(rows,spv,imported.token);eq((await prisma.cluster.findUnique({where:{id:another.id}})).outletCount,1);eq((await prisma.cluster.findUnique({where:{id:c.id}})).outletCount,2);
  // Publication revalidates a saved draft after territory ownership changes.
+ settings.PJP_ALLOW_TEMPORARY_SUBSTITUTION=true;invalidateConfigCache();
+ const offset=days=>new Date(Date.parse(date)+days*86400000).toISOString().slice(0,10),subStart=offset(28),subEnd=offset(49);
+ const substituteRule={...body.rules[0],intervalWeeks:1,anchorDate:subStart,reason:'Interval khusus periode pengganti',substitute:{userId:b.id,startsOn:offset(35),endsOn:offset(42),reason:'Sales utama cuti sementara'}};
+ const substitution=await savePlan(null,{...body,requestId:randomUUID(),name:'Pengganti sementara',startsOn:subStart,endsOn:subEnd,rules:[substituteRule]},spv);plans.push(substitution.id);
+ const subReview=await previewPlan(substitution,spv);eq(subReview.problems.length,0);eq(subReview.summary.visits,4);
+ const subCodes=Object.fromEntries(subReview.days.filter(d=>d.outletIds.length).map((d,i)=>[`${d.userId}:${d.date}`,`${tag}-SUB-${i}`]));
+ const subPublished=await publishPlan(substitution.id,{revision:1,note:'Pengganti sementara diperiksa',acknowledgeWarnings:true,codes:subCodes},spv);eq(subPublished.count,4);
+ const subRoutes=await prisma.pjp.findMany({where:{userId:{in:[a.id,b.id]},date:{gte:wibDayRange(subStart).gte,lte:wibDayRange(subEnd).lte}},orderBy:{date:'asc'},include:{stops:true}});
+ eq(subRoutes.map(r=>r.userId),[a.id,b.id,b.id,a.id]);eq(subRoutes.every(r=>r.stops.length===1),true);
+ eq(subRoutes[1].reportingContext.planning.rules[0].userId,a.id);eq(subRoutes[1].reportingContext.planning.rules[0].substitute.userId,b.id);
+ eq((await planDayStatus(offset(35),a.id,spv)).state,'NOT_DUE');eq((await planDayStatus(offset(35),b.id,spv)).state,'PUBLISHED');
+ settings.PJP_ALLOW_TEMPORARY_SUBSTITUTION=false;invalidateConfigCache();
+ const disabledSub=await previewPlan({...substitution,status:'DRAFT'},spv);eq(disabledSub.problems.some(p=>p.code==='SUBSTITUTION_DISABLED'),true);
  const movedDraft=await savePlan(null,{...body,requestId:randomUUID(),startsOn:next,endsOn:next,rules:[{...body.rules[0],anchorDate:next}]},spv);plans.push(movedDraft.id);
  await prisma.cluster.update({where:{id:c.id},data:{supervisorId:foreign.id}});r=await previewPlan(movedDraft,spv);eq(r.problems.some(p=>p.code==='OUTLET_UNAVAILABLE'),true);await reject(()=>publishPlan(movedDraft.id,{revision:1,note:'Uji perpindahan wilayah',acknowledgeWarnings:true},spv),409);
  settings.PJP_WORKING_DAYS='1,2,3,4,5,6';invalidateConfigCache();eq((await planDayStatus('2026-10-11',a.id,spv)).state,'NON_WORKING_DAY');
  console.log(`PJP planning integration passed: ${checks} checks for read-only GET, drafts/revisions, publication replay, cadence, scope, conflicts, impact tokens, multiple clusters and consistent import.`);
 }finally{
+ await prisma.auditEvent.deleteMany({where:{entityType:'RJP_IMPORT',actorId:{in:users}}});
  httpServer.close();httpServer.closeAllConnections();await prisma.pjpPlan.deleteMany({where:{id:{in:plans}}});await prisma.pjp.deleteMany({where:{userId:{in:users}}});await prisma.outletChange.deleteMany({where:{outletId:{in:outlets}}});await prisma.outlet.deleteMany({where:{id:{in:outlets}}});await prisma.user.updateMany({where:{id:{in:users}},data:{clusterId:null}});await prisma.cluster.deleteMany({where:{id:{in:clusters}}});await prisma.user.deleteMany({where:{id:{in:users}}});prisma.systemConfig.findMany=original;invalidateConfigCache();await prisma.$disconnect();
 }

@@ -1,3 +1,4 @@
+import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
 import { AppError } from '../../../utils/errors.js';
 import { scheduleWindow } from '../../../../../shared/delivery-operations.mjs';
 import {readReviewDefinitions,reviewIdentity} from '../../config/services/approval-readiness.service.js';
@@ -11,7 +12,8 @@ export async function assertResources(tx, candidate) {
   const driver = await tx.user.findUnique({ where: { id: candidate.driverId } });
   if (!vehicle || vehicle.deletedAt || !vehicle.isActive || vehicle.condition !== 'AVAILABLE') throw new AppError('Kendaraan tidak siap beroperasi', 409);
   if (!driver || driver.deletedAt || driver.role !== 'SUPIR') throw new AppError('Supir tidak aktif', 409);
-  if(reviewIdentity(driver,await readReviewDefinitions(tx)).permissions.can_access_driver_map===false)throw new AppError('Driver tidak mempunyai akses tugas pengiriman. Perbaiki izin atau pilih Driver lain.',409);
+  const identity=reviewIdentity(driver,await readReviewDefinitions(tx));
+  if(identity.permissions.can_access_driver_map===false||!canTripAction(identity,'RETURN'))throw new AppError('Driver tidak mempunyai akses tugas pengiriman. Perbaiki izin atau pilih Driver lain.',409);
   const { start, end } = scheduleWindow(candidate);
   if (!Number.isFinite(+start) || !Number.isFinite(+end) || end <= start) throw new AppError('Jadwal akhir harus setelah jadwal berangkat', 400);
   const others = await tx.deliveryRoute.findMany({ where: { id: { not: candidate.id || '' }, closedAt: null, cancelledAt: null, OR: [{ driverId: candidate.driverId }, { vehicleId: candidate.vehicleId }] } });

@@ -16,10 +16,12 @@ export const createOrderSchema = z.object({
     expectedTotal:z.number().nonnegative().optional(),
     expectedTermDays:z.number().int().nonnegative().optional(),
     code: z.string().trim().max(128).optional(),
-    pjpStopId: z.string().uuid('pjpStopId harus berformat UUID'),
+    pjpStopId: z.string().uuid('pjpStopId harus berformat UUID').optional(),
+    outletId:z.string().uuid().optional(),
+    contextReason:z.string().trim().max(2000).optional(),
     paymentType: z.enum(['CASH', 'TOP', 'TRANSFER']).optional(),
     items: z
       .array(orderItemSchema)
       .min(1, 'Minimal harus ada 1 item dalam order'),
-  }),
+  }).refine(data=>Boolean(data.pjpStopId)!==Boolean(data.outletId),{message:'Pilih satu konteks: kunjungan PJP atau outlet langsung.'}),
 });

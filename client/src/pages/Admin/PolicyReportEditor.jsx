@@ -1,6 +1,6 @@
 import React from 'react';
 import {REPORT_PRESENTATION,reportSelection} from '../../../../shared/report-presentation.mjs';
-const labels={calls:'Kunjungan',ec:'Kunjungan efektif',revenue:'Nilai order disetujui',anomalies:'Bukti dan anomali',calendar:'Kalender kerja',target:'Target dan pencapaian',comparison:'Perbandingan bulan lalu',cluster:'Klaster',days:'Rincian per hari',callRate:'Persentase kunjungan',ecRate:'Persentase kunjungan efektif',achievement:'Pencapaian target',lastMonth:'Nilai bulan lalu',sku:'Jumlah SKU'};
+const labels={totalPlanCalls:'Kunjungan terencana',totalActualCalls:'Kunjungan aktual',totalEffectiveCalls:'Kunjungan efektif',totalAnomalies:'Indikasi perlu diperiksa',calls:'Kunjungan',ec:'Kunjungan efektif',revenue:'Nilai order disetujui',anomalies:'Bukti dan anomali',calendar:'Kalender kerja',target:'Target dan pencapaian',comparison:'Perbandingan bulan lalu',cluster:'Klaster',days:'Rincian per hari',callRate:'Persentase kunjungan',ecRate:'Persentase kunjungan efektif',achievement:'Pencapaian target',lastMonth:'Nilai bulan lalu',sku:'Jumlah SKU'};
 export function PolicyReportEditor({id,value,onChange,disabled}){
  let selected;try{selected=reportSelection(id,value||'');}catch{selected=[];}
  const reorder=id.endsWith('_WIDGETS');

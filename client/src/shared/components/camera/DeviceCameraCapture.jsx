@@ -1,4 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
+import {cameraInputPolicy} from '../../../../../shared/camera-input-policy.mjs';
+import {evidenceImageError,evidenceImageFormats} from '../../../../../shared/evidence-image-policy.mjs';
 import { useGeofence } from '../../hooks/useGeofence';
 import { useDeviceCamera } from '../../hooks/useDeviceCamera';
 import { useLiveClock } from '../../hooks/useLiveClock';
@@ -33,13 +35,17 @@ export const DeviceCameraCapture = ({
   maxRadiusMeters = 50,
   outletName = '',
   buttonLabel = 'Jepret Foto Presensi (GPS Terverifikasi)',
+  policyValues=null,
 }) => {
   const canvasRef = useRef(null);
   const [cameraRequested,setCameraRequested]=useState(false);
   const { user, settings, incidents } = useApp();
+  const inputPolicy=cameraInputPolicy((policyValues||settings).CAMERA_INPUT_MODE);
+  const evidenceValues=policyValues||settings;
+  const [fileError,setFileError]=useState('');
 
   // Only the current account’s administrator-configured exception permits bypass.
-  const hasException = (incidents||[]).some(r=>r.type==='UNLOCK_REQUEST'&&r.outletId===outletId&&r.requestedBy===user?.id&&r.status==='APPROVED'&&new Date(r.expiresAt)>new Date());
+  const hasException = (incidents||[]).some(r=>r.type==='UNLOCK_REQUEST'&&r.outletId===outletId&&r.requestedBy===user?.id&&r.status==='APPROVED'&&['BOTH','GEOFENCE'].includes(r.kind||'BOTH')&&new Date(r.expiresAt)>new Date());
   const isBypassUser = hasException || settings.ATTENDANCE_GEOFENCE_BYPASS_ALLOWED === true;
 
   // 1. Dedicated Live Clock Hook
@@ -53,7 +59,7 @@ export const DeviceCameraCapture = ({
     cameraError,
     stopCamera,
     toggleFacingMode,
-  } = useDeviceCamera(facingModeDefault, !capturedPhoto&&(photoRequired||cameraRequested));
+  } = useDeviceCamera(facingModeDefault, inputPolicy.live&&!capturedPhoto&&(photoRequired||cameraRequested));
 
   // 3. Dedicated GPS & Geofence Hook
   const {
@@ -92,9 +98,12 @@ export const DeviceCameraCapture = ({
       facingMode,
       userLocation,
       outletName,
+      outputMime:`image/${evidenceImageFormats(evidenceValues.EVIDENCE_IMAGE_FORMATS)[0].toLowerCase()}`,
     });
 
     if (dataUrl) {
+      const error=evidenceImageError(dataUrl,evidenceValues);if(error){setFileError(error);return;}
+      setFileError('');
       stopCamera();
       onCapture(dataUrl, userLocation);
     }
@@ -102,6 +111,8 @@ export const DeviceCameraCapture = ({
 
   // Fallback native file capture handler using nativeFileCaptureService
   const handleNativeFileInput = async (e) => {
+    if(!inputPolicy.native)return;
+    setFileError('');
     if (requireGps && !isGpsLocked) {
       alert('GPS belum terdeteksi. Harap aktifkan izin lokasi.');
       return;
@@ -115,8 +126,10 @@ export const DeviceCameraCapture = ({
     }
 
     const file = e.target.files?.[0];
-    const dataUrl = await nativeFileCaptureService.readFileAsDataUrl(file);
+    let dataUrl;
+    try{if(file?.size>(evidenceValues.EVIDENCE_IMAGE_MAX_KB??2000)*1024)throw new Error(`Ukuran foto maksimal ${evidenceValues.EVIDENCE_IMAGE_MAX_KB??2000} KB.`);dataUrl=await nativeFileCaptureService.readFileAsDataUrl(file);}catch(error){setFileError(error.message);return;}finally{e.target.value='';}
     if (dataUrl) {
+      const error=evidenceImageError(dataUrl,evidenceValues);if(error){setFileError(error);return;}
       stopCamera();
       onCapture(dataUrl, userLocation);
     }
@@ -130,6 +143,7 @@ export const DeviceCameraCapture = ({
   return (
     <div className="space-y-3 w-full">
       <canvas ref={canvasRef} className="hidden" />
+      {fileError&&<p role="alert" className="text-sm text-red-600">{fileError}</p>}
 
       {/* 1. GPS Status Badge */}
       {requireGps && (
@@ -151,7 +165,7 @@ export const DeviceCameraCapture = ({
       {/* 2. Live Camera View or Captured Photo Preview */}
       {capturedPhoto ? (
         <CapturedPhotoPreview capturedPhoto={capturedPhoto} onRetake={handleRetakePhoto} />
-      ) : photoRequired||cameraRequested ? (
+      ) : !inputPolicy.live ? <div className="rounded-xl border border-border-glass p-4 text-sm">Gunakan kamera perangkat di bawah. {photoRequired?'Foto wajib dilampirkan.':'Foto opsional.'}</div> : photoRequired||cameraRequested ? (
         <div className="relative rounded-2xl overflow-hidden aspect-video bg-slate-950 border border-border-glass shadow-inner flex items-center justify-center">
           <CameraLiveVideoFeed
             videoRef={videoRef}
@@ -161,6 +175,7 @@ export const DeviceCameraCapture = ({
           />
 
           <CameraErrorDisplay
+            allowNative={inputPolicy.native} allowUpload={inputPolicy.upload}
             cameraError={cameraError}
             facingMode={facingMode}
             requireGps={requireGps}
@@ -178,9 +193,9 @@ export const DeviceCameraCapture = ({
       ) : <div className="rounded-xl border border-border-glass p-4 space-y-2"><p className="text-sm">Foto opsional. Anda dapat melanjutkan tanpa membuka kamera.</p><button type="button" className="config-button min-h-11" onClick={()=>setCameraRequested(true)}>Tambahkan foto</button></div>}
 
       {/* 3. Action Capture Button & Fallback */}
-      {!capturedPhoto && (photoRequired||cameraRequested) && (
+      {!capturedPhoto && (photoRequired||cameraRequested||!inputPolicy.live) && (
         <div className="space-y-2">
-          <CameraCaptureButton
+          {inputPolicy.live&&<CameraCaptureButton
             requireGps={requireGps}
             isGpsLocked={isGpsLocked}
             isBlockedByGeofence={isBlockedByGeofence}
@@ -188,13 +203,13 @@ export const DeviceCameraCapture = ({
             maxRadiusMeters={maxRadiusMeters}
             onCapture={handleCaptureSnapshot}
             label={buttonLabel}
-          />
-          <CameraNativeFileTrigger
+          />}
+          {inputPolicy.native&&<CameraNativeFileTrigger allowUpload={inputPolicy.upload}
             facingMode={facingMode}
             requireGps={requireGps}
             isGpsLocked={isGpsLocked}
             onNativeFileInput={handleNativeFileInput}
-          />
+          />}
         </div>
       )}
     </div>

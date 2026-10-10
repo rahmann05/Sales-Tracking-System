@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import { DataTable } from '../../../shared/components/common/DataTable';
 import {useApp} from '../../../context/AppContext';
 import {selectedReportItems,reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
@@ -140,7 +141,7 @@ export function MtdSalesTable({
                     {s.target?.status!=='COMPARISON_ONLY'&&<SalesTargetEditor sales={s} kind="MONTH" period={`${reportData.period?.year}-${String(reportData.period?.month).padStart(2,'0')}`} onSaved={loadData}/>}
                   </td>
                   <td hidden={hidden('revenue')} data-label="MTD Actual" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
-                    Rp {(s.mtdActualAmount || 0).toLocaleString('id-ID')}
+                    {reportMoney(s.mtdActualAmount)}
                   </td>
                   <td hidden={hidden('achievement')} data-label="% Achv" className="text-center font-mono font-bold text-purple-600">
                     <span className="px-2 py-0.5 rounded-md bg-purple-500/10">
@@ -148,7 +149,7 @@ export function MtdSalesTable({
                     </span>
                   </td>
                   <td hidden={hidden('lastMonth')} data-label="LMA" className="text-right font-mono text-on-surface-variant whitespace-nowrap">
-                    Rp {(s.lastMonthActual || 0).toLocaleString('id-ID')}
+                    {reportMoney(s.lastMonthActual)}
                   </td>
                   <td hidden={hidden('comparison')} data-label="% MTD/LMA" className="text-center font-mono font-bold text-emerald-600">
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/10">
@@ -186,13 +187,13 @@ export function MtdSalesTable({
                     {formatTarget(summary.monthlyTargetAmount)}
                   </td>
                   <td hidden={hidden('revenue')} className="text-right font-mono font-black text-on-surface whitespace-nowrap">
-                    Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')}
+                    {reportMoney(summary.mtdActualAmount)}
                   </td>
                   <td hidden={hidden('achievement')} className="text-center font-mono text-purple-700">
                     {summary.overallAchievementRate}
                   </td>
                   <td hidden={hidden('lastMonth')} className="text-right font-mono whitespace-nowrap text-on-surface-variant">
-                    Rp {(summary.lastMonthActual || 0).toLocaleString('id-ID')}
+                    {reportMoney(summary.lastMonthActual)}
                   </td>
                   <td hidden={hidden('comparison')} className="text-center font-mono text-emerald-700">
                     {summary.mtdToLmaRate}

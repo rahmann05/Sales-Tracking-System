@@ -21,6 +21,7 @@ import {changeOutletActivation} from './services/outlet-activation.service.js';
 import {duplicateOutlets} from './services/outlet-duplicates.service.js';
 import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
+import {queueOutletChange,listOutletChanges,cancelOutletChange} from './services/outlet-change-queue.service.js';
 
 import {assignOutletReview} from './services/outlet-review-assignment.service.js';
 import {decideDigitalOutlet} from './services/outlet-digital-decision.service.js';
@@ -76,6 +77,9 @@ router.post('/', authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outl
 router.post('/:id/google-location/refresh',action(req=>refreshGoogleLocation(req.params.id,req.user)));
 router.patch('/:id/coordinates',directoryAccess,async(req,res,next)=>{try{res.json({data:await correctCoordinates(req.params.id,req.body,req.user)});}catch(e){next(e);}});
 router.get('/:id/profile',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'),action(req=>outletProfile(req.params.id,req.user)));
+router.get('/:id/change-queue',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'),action(req=>listOutletChanges(req.params.id,req.user)));
+router.post('/:id/change-queue',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'),action(req=>queueOutletChange(req.params.id,req.body,req.user)));
+router.post('/:id/change-queue/:jobId/cancel',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_manage_outlets'),action(req=>cancelOutletChange(req.params.id,req.params.jobId,req.body.reason,req.user)));
 router.patch('/:id/reviews/:reviewId/assignment',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>assignOutletReview(req.params.id,req.params.reviewId,req.body,req.user)));
 router.post('/:id/reviews',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>openOutletReview(req.params.id,req.body,req.user)));
 router.patch('/:id/reviews/:reviewId',authorizeWithPermission(['ADMIN','SUPERVISOR'],'can_validate_outlet'),action(req=>decideOutletReview(req.params.id,req.params.reviewId,req.body,req.user)));

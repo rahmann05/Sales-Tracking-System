@@ -4,6 +4,7 @@ import {prisma} from '../../../config/prisma.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
 import {VEHICLE_SERVICE_TYPES,VEHICLE_SERVICE_RULE_KEYS} from '../../../../../shared/vehicle-service-policy.mjs';
 import {validateMaintenanceInput} from './maintenance-input-policy.service.js';
+import {serviceCatalog} from '../../../../../shared/reference-catalog.mjs';
 
 export const recordMaintenance=async(id,data,actor={})=>{
  const normalized={vehicleId:id,serviceType:data.serviceType,odometerAtService:data.odometerAtService,cost:data.cost??0,workshopName:data.workshopName?.trim()||'',notes:data.notes?.trim()||null,serviceDate:data.serviceDate||null};
@@ -19,9 +20,10 @@ export const recordMaintenance=async(id,data,actor={})=>{
     return {record:existing,updatedVehicle:vehicle};
    }
   }
-  const captured=await capturePolicySnapshot(),keys=[...VEHICLE_SERVICE_RULE_KEYS,...VEHICLE_SERVICE_TYPES.map(type=>type.config)];
+  const captured=await capturePolicySnapshot(),keys=[...VEHICLE_SERVICE_RULE_KEYS,...VEHICLE_SERVICE_TYPES.map(type=>type.config),'VEHICLE_SERVICE_CATALOG'];
   const policySnapshot={...captured,values:Object.fromEntries(keys.map(key=>[key,captured.values[key]])),requestHash,maintenancePolicy:vehicle.maintenancePolicy};
   const serviceDate=validateMaintenanceInput(data,policySnapshot.values);
+  policySnapshot.serviceReference=serviceCatalog(policySnapshot.values).find(r=>r.code===data.serviceType);
   const change={totalKm:Math.max(vehicle.totalKm,data.odometerAtService)},type=VEHICLE_SERVICE_TYPES.find(t=>t.key===data.serviceType);
   if(type)change[type.field]=Math.max(vehicle[type.field],data.odometerAtService);
   const record=await tx.vehicleServiceRecord.create({data:{...normalized,serviceDate,requestId:data.requestId,policySnapshot}});

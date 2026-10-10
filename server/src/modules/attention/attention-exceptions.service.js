@@ -1,5 +1,7 @@
 import { prisma } from '../../config/prisma.js';
 import {operationalExceptionRows} from './operational-exceptions.service.js';
+import {attachRouteWorkflows} from '../route-changes/services/route-workflow.service.js';
+import {routeChangeWorkflow} from '../../../../shared/route-change-workflow.mjs';
 
 // Match the live authorization scope of the decision endpoints, rather than historical report scope.
 export async function exceptionAttentionRows(actor){
@@ -27,6 +29,6 @@ export async function exceptionAttentionRows(actor){
   for(const r of manual)add(r,'MANUAL_PJP',r.user,r.pjpStop.outlet.name,r.createdAt,{orderAmount:r.orderAmount,skuSold:r.skuSold});
   for(const r of manualOff)add(r,'MANUAL_OFF_PJP',r.user,r.outletName,r.validatedAt||r.createdAt,{orderAmount:r.orderAmount,skuSold:r.skuSold});
   for(const r of unlocks)add(r,'UNLOCK',r.requestedByUser,r.outlet.name,r.createdAt);
-  for(const r of changes){const pendingAdmin=r.type==='REROUTE'&&Boolean(r.handledBy)&&Boolean(r.replacementOutletId);add(r,'ROUTE_CHANGE',r.reportedByUser,r.pjpStop.outlet.name,pendingAdmin?r.updatedAt:r.createdAt,{pendingAdmin,replacementOutletId:r.replacementOutletId,replacementOutletName:r.replacementOutlet?.name},pendingAdmin);}
+  for(const r of await attachRouteWorkflows(prisma,changes)){const flow=routeChangeWorkflow(r),pendingAdmin=Boolean(flow.proposal);add(r,'ROUTE_CHANGE',r.reportedByUser,r.pjpStop.outlet.name,pendingAdmin?r.updatedAt:r.createdAt,{pendingAdmin,decisionStage:flow.stage,proposedAction:flow.proposal?.action,decisionMode:flow.mode,replacementOutletId:r.replacementOutletId,replacementOutletName:r.replacementOutlet?.name},flow.stage==='ADMIN');const row=rows[rows.length-1];row.canDecide=flow.canDecide(actor);row.nextAction=pendingAdmin?'Putuskan usulan skip/reroute Supervisor':`Putuskan toko tutup melalui ${flow.stage==='ADMIN'?'Admin':'Supervisor'}`;}
   return [...rows,...await operationalExceptionRows(actor)];
 }

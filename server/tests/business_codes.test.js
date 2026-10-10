@@ -121,10 +121,12 @@ test('repeated RJP import preserves external outlet codes while new clusters use
   db.outlet.findFirst=async()=>null;
   db.outlet.create=async({data})=>{created++;outlet={id:'outlet',type:'GENERAL_TRADE',cluster,updatedAt:new Date(),...data};return outlet;};
   db.outletChange={create:async()=>({})};
+  db.auditEvent={findFirst:async()=>null,create:async()=>({})};
   db.outlet.update=async({data})=>{outlet={...outlet,...data};return outlet;};
   mock(t,prisma,'$transaction',async fn=>fn(db));
   const rows=[{clusterName:'Area',outletCode:'EXTERNAL-99',customerName:'Toko',address:'Alamat',area:'Bandung',latitude:-6,longitude:107}];
-  await importRjp(rows,{id:'admin',role:'ADMIN'});
+  const initial=await previewRjpImport(rows,{id:'admin',role:'ADMIN'},db);
+  await importRjp(rows,{id:'admin',role:'ADMIN'},initial.token);
   const review=await previewRjpImport(rows,{id:'admin',role:'ADMIN'},db);
   await importRjp(rows,{id:'admin',role:'ADMIN'},review.token);
   assert.equal(created,1);

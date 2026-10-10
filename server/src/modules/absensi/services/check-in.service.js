@@ -1,7 +1,8 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {withProcessPolicy} from '../../config/services/process-policy.service.js';
 import {visitSettings,settlePreviousVisit} from './visit-session.service.js';
-import { requireActiveShift, attendanceException } from './attendance-policy.service.js';
+import { requireActiveShift, findAttendanceException } from './attendance-policy.service.js';
 /** checkIn - single-responsibility service (extracted from absensi.service.js). */
 import {withUserTransaction} from '../../../utils/user-transaction.js';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
@@ -33,8 +34,11 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
 
   if (wibDateKey(stop.pjp.date) !== wibDateKey()) throw new AppError('Absensi hanya untuk PJP hari ini', 400);
   if (['VISITED', 'SKIPPED', 'CLOSED_REPORTED'].includes(stop.status)) throw new AppError('Toko sudah selesai atau ditutup pada rute ini', 409);
-  const hasException = await attendanceException(stop.outlet.id,userId,db);
-  if (['LOCKED','UNLOCK_REQUESTED'].includes(stop.outlet.lockStatus) && !hasException) {
+  const radiusException = await findAttendanceException(stop.outlet.id,userId,db,'GEOFENCE',pjpStopId);
+  const hasException=Boolean(radiusException),exceptionIds=[];
+  const locked=['LOCKED','UNLOCK_REQUESTED'].includes(stop.outlet.lockStatus);
+  const lockException=locked?await findAttendanceException(stop.outlet.id,userId,db,'OUTLET_LOCK',pjpStopId):null;
+  if (locked && !lockException) {
     throw new AppError('Outlet sedang terkunci. Ajukan permintaan unlock kepada supervisor sebelum dapat melakukan kunjungan.', 403);
   }
   await requireActiveShift(userId,db);
@@ -55,6 +59,8 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   const useOutletRadius = await getDynamicConfig('ATTENDANCE_USE_OUTLET_RADIUS', true);
   const maxRadius = useOutletRadius ? (stop.outlet.radiusMeters || globalRadius) : globalRadius;
   const distanceWarning = distance==null?'UNAVAILABLE':distance > maxRadius ? 'WARNING' : 'OK';
+  if(lockException)exceptionIds.push(lockException.id);
+  if(radiusException&&visit.mode!=='OPTIONAL'&&!isBypassUser&&await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE',true)&&(distance===null&&hasGps||distance>maxRadius))exceptionIds.push(radiusException.id);
 
   // Enforce Geofence: Block attendance if outside radius, except for an explicitly configured exception
   if(visit.mode!=='OPTIONAL'&&hasGps&&distance===null&&await getDynamicConfig('ATTENDANCE_ENFORCE_GEOFENCE',true)&&!isBypassUser&&!hasException)throw new AppError('Koordinat master outlet belum tersedia. Minta koreksi lokasi atau pengecualian presensi resmi.',422);
@@ -68,6 +74,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   // Duplicate IN check
   const existingIn = stop.attendances.find((a) => a.userId === userId && a.type === ATTENDANCE_TYPE.IN);
   if (existingIn) throw new AppError('Anda sudah melakukan Absen IN pada outlet ini', 409);
+  await assertEvidenceImages({photoUrl});
   if (visit.mode!=='OPTIONAL' && visit.photoIn && !photoUrl?.trim()) throw new AppError('Foto absen masuk wajib dilampirkan', 422);
 
   const settledVisits=await settlePreviousVisit(db,userId,pjpStopId);
@@ -92,7 +99,7 @@ const perform = async (db, pjpStopId, userId, latitude, longitude, photoUrl = nu
   }
 
   const evidence=await gpsEvidence({latitude,longitude,...metadata});
-  const session={state:'ACTIVE',startedAt:new Date().toISOString(),attendanceMode:visit.mode};
+  const session={state:'ACTIVE',startedAt:new Date().toISOString(),attendanceMode:visit.mode,exceptionIds:[...new Set(exceptionIds)]};
   await db.pjpStop.update({where:{id:pjpStopId},data:{policySnapshot:visit.snapshot,visitSession:session}});
   const attendance = visit.mode==='OPTIONAL'?{logical:true,visitSession:session,policySnapshot:visit.snapshot}:await db.attendance.create({
       data: {

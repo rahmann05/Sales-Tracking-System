@@ -7,15 +7,22 @@ import { deliveryApi, outletsApi } from '../../../services/api';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 import {useApp} from '../../../context/AppContext';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
+import {packingOrderIds} from '../../../../../shared/packing-orders.mjs';
+import {shipmentInvoiceRequired} from '../../../../../shared/shipment-document.mjs';
 import { LuCircleAlert, LuRefreshCw, LuPackage, LuX } from 'react-icons/lu';
 export function PackingDraftForm({
   document: doc,
   order,
+  orders,
+  documentKind:initialKind='PACKING',
   onSaved,
   onCancel
 }) {
   const featurePolicy=useFeaturePolicy('PACKING');
   const {settings,user}=useApp();
+  const selectedOrders=orders|| (order?[order]:[]);
+  const [documentKind,setDocumentKind]=useState(doc?.documentKind||initialKind);
+  const invoiceRequired=shipmentInvoiceRequired({documentKind},doc?.policySnapshot?.values||settings);
   const formRef=useRef(null);
   useEffect(()=>{if(user?.role==='ADMIN'){formRef.current?.closest('main')?.scrollTo({top:0});return;}formRef.current?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});},[]);
   const [code, setCode] = useState(doc?.code || '');
@@ -23,21 +30,23 @@ export function PackingDraftForm({
   const [search, setSearch] = useState('');
   const [outlets, setOutlets] = useState([]);
   const [searchingOutlets, setSearchingOutlets] = useState(false);
-  const [items, setItems] = useState(doc?.items || (order?.fulfillmentLines || order?.items)?.filter(i=>(i.unpacked ?? i.quantity)>0).map(i => ({
+  const [items, setItems] = useState(doc?.items || (selectedOrders.length?selectedOrders.flatMap(source=>(source.fulfillmentLines||source.items||[]).filter(i=>(i.unpacked??i.quantity)>0).map(i=>({...i,sourceOrderId:source.id,sourceOrderCode:source.code}))).map(i => ({
     lineId: i.id,
     sourceOrderItemId: i.id,
-    sku: i.product?.sku || '',
-    name: i.product?.name || '',
+    sourceOrderId:i.sourceOrderId,
+    sourceOrderCode:i.sourceOrderCode,
+    sku: i.productSku??i.product?.sku??'',
+    name: i.productName??i.product?.name??'',
     quantity: i.unpacked ?? i.quantity,
     unitPrice:i.unitPrice,
     unit:i.unit||'unit',baseUnit:i.baseUnit??null,unitsPerUnit:i.unitsPerUnit??null
-  })) || [{
+  })): [{
     lineId:crypto.randomUUID(),
     name: '',
     sku: '',
     unit: '',
     quantity: 1
-  }]);
+  }]));
   const [invoices, setInvoices] = useState(doc?.invoices?.map(i=>({invoiceNumber:i.invoiceNumber,totalCartons:i.totalCartons,totalAmount:i.totalAmount,items:i.items||[],taxRatePercent:i.taxRatePercent??undefined,taxIncluded:i.taxIncluded??undefined,taxRoundingMode:i.taxRoundingMode||'NEAREST'})) || []);
   const [cartons, setCartons] = useState(doc?.totalCartons || 0);
   const [weight, setWeight] = useState(doc?.totalWeight || 0);
@@ -45,7 +54,7 @@ export function PackingDraftForm({
   const [reason, setReason] = useState(doc?.overrideReason || '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const snapshot=JSON.stringify([code,outlet?.id,items,invoices,cartons,weight,notes,reason]);
+  const snapshot=JSON.stringify([documentKind,code,outlet?.id,items,invoices,cartons,weight,notes,reason]);
   const initialSnapshot=useRef(snapshot);
   const dirty=snapshot!==initialSnapshot.current;
   useUnsavedNavigation(dirty,busy);
@@ -79,7 +88,9 @@ export function PackingDraftForm({
       clearTimeout(timer);
     };
   }, [search]);
-  const sourceOrderId = doc?.sourceOrderId || order?.id || null;
+  const candidateOrderIds=doc?packingOrderIds(doc):selectedOrders.map(item=>item.id);
+  const sourceOrderIds=candidateOrderIds.filter(id=>items.some(item=>item.sourceOrderId===id||(!item.sourceOrderId&&candidateOrderIds.length===1)));
+  const sourceOrderId=sourceOrderIds[0]||null;
 
   // Real-time carton match calculation
   const totalCartonsNum = Number(cartons) || 0;
@@ -100,9 +111,11 @@ export function PackingDraftForm({
     setError('');
     try {
       const data = {
+        documentKind,
         code,
         outletId: outlet.id,
-        sourceOrderId,
+        sourceOrderId:sourceOrderIds.length===1?sourceOrderIds[0]:null,
+        sourceOrderIds,
         items,
         invoices: invoices.map(i => ({
           ...i,
@@ -122,9 +135,9 @@ export function PackingDraftForm({
         await deliveryApi.createPackingList(data);
       }
       initialSnapshot.current=snapshot;
-      onSaved(doc ? 'Draft packing list berhasil diperbarui!' : 'Draft packing list berhasil dibuat!');
+      onSaved(`Draft ${documentKind==='MANIFEST'?'manifest pengiriman':'packing list'} berhasil ${doc?'diperbarui':'dibuat'}!`);
     } catch (e) {
-      setError(e.message || 'Gagal menyimpan draft packing list');
+      setError(e.message || 'Gagal menyimpan draft dokumen pengiriman');
     } finally {
       setBusy(false);
     }
@@ -161,11 +174,11 @@ export function PackingDraftForm({
               <LuPackage className="text-lg" />
             </span>
             <h2 className="text-lg font-black tracking-tight text-on-surface">
-              {doc ? `Edit Dokumen: ${doc.code}` : 'Buat Draft Packing List Admin'}
+              {doc ? `Edit Dokumen: ${doc.code}` : documentKind==='MANIFEST'?'Buat manifest pengiriman':'Buat draft packing list'}
             </h2>
           </div>
           <p className="text-xs text-on-surface-variant">
-            {sourceOrderId ? `Terhubung dengan referensi pesanan sales (${sourceOrderId.slice(0, 8)}...)` : 'Penyusunan dokumen muatan manual tanpa keterikatan order sales.'}
+            {sourceOrderId ? `Terhubung dengan ${sourceOrderIds.length} order. Asal barang dan harga setiap order tetap dipertahankan.` : 'Penyusunan dokumen muatan manual tanpa keterikatan order sales.'}
           </p>
         </div>
 
@@ -180,7 +193,9 @@ export function PackingDraftForm({
         </div>}
 
       <fieldset disabled={busy} className="space-y-6">
-        <BusinessCodeInput entity="PACKING_LIST" value={code} onChange={setCode} existing={Boolean(doc)} />
+        <label className="block text-sm">Jenis dokumen<select className="form-input block" disabled={!!doc} value={documentKind} onChange={e=>{setDocumentKind(e.target.value);setCode('');}}><option value="PACKING">Packing list</option>{(settings.PACKING_ALLOW_MANIFEST||documentKind==='MANIFEST')&&<option value="MANIFEST">Manifest pengiriman tanpa dokumen packing</option>}</select></label>
+        {documentKind==='MANIFEST'&&<p className="text-sm">Manifest mencatat muatan dan tujuan langsung. Dokumen ini tidak menyatakan barang sudah dipacking atau diperiksa. Bukti persiapan dan pengiriman tetap mengikuti aturan trip.</p>}
+        <BusinessCodeInput entity={documentKind==='MANIFEST'?'SHIPPING_MANIFEST':'PACKING_LIST'} value={code} onChange={setCode} existing={Boolean(doc)} />
         {/* ── Outlet Selection Section ── */}
         <PackingOutletSection doc={doc} outlet={outlet} outlets={outlets} search={search} searchingOutlets={searchingOutlets} setOutlet={setOutlet} setOutlets={setOutlets} setSearch={setSearch} sourceOrderId={sourceOrderId} />
 
@@ -211,7 +226,7 @@ export function PackingDraftForm({
         </div>
 
         {/* ── Invoices Section ── */}
-        <PackingInvoicesSection items={items} orderLinked={!!sourceOrderId} addInvoice={addInvoice} doc={doc} invoices={invoices} isCartonBalanced={isCartonBalanced} removeInvoice={removeInvoice} setInvoices={setInvoices} totalCartonsNum={totalCartonsNum} totalInvoiceCartons={totalInvoiceCartons} />
+        <PackingInvoicesSection invoiceRequired={invoiceRequired} items={items} orderLinked={!!sourceOrderId} addInvoice={addInvoice} doc={doc} invoices={invoices} isCartonBalanced={isCartonBalanced} removeInvoice={removeInvoice} setInvoices={setInvoices} totalCartonsNum={totalCartonsNum} totalInvoiceCartons={totalInvoiceCartons} />
 
         {/* ── Additional Notes & Reason ── */}
         <div className="space-y-3">
@@ -237,7 +252,7 @@ export function PackingDraftForm({
           </button>
           <button type="submit" disabled={busy || !outlet || !doc?.id&&!featurePolicy.canStart} title={!doc?.id?featurePolicy.reason:undefined} className="px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer">
             <LuRefreshCw className={`text-xs ${busy ? 'animate-spin' : ''}`} />
-            <span>{busy ? 'Menyimpan Dokumen…' : doc ? 'Simpan Perubahan' : 'Simpan Draft Packing List'}</span>
+            <span>{busy ? 'Menyimpan Dokumen…' : doc ? 'Simpan Perubahan' : documentKind==='MANIFEST'?'Simpan Draft Manifest':'Simpan Draft Packing List'}</span>
           </button>
         </div>
       </fieldset>

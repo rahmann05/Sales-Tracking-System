@@ -12,10 +12,12 @@ import {SuspiciousAttendanceTable} from '../DailyCallMonitor/components/Suspicio
 import {DailyCallDetailModal} from '../DailyCallMonitor/components/DailyCallDetailModal';
 import {LiveSalesGpsTrackingTab} from '../TeamTracking/components/LiveSalesGpsTrackingTab';
 import {ReportBasisNote} from '../Reports/components/ReportBasisNote';
+import {selectedReportItems} from '../../../../shared/report-presentation.mjs';
 
 export function SupervisorMonitorPage(){
-  const {user,setActiveTab}=useApp();
-  const [view,setView]=useWorkspaceState('spvView','visits');
+  const {user,setActiveTab,settings}=useApp();
+  const [view,setView]=useWorkspaceState('spvView',settings.REPORT_SPV_DEFAULT_VIEW||'visits');
+  const widgets=selectedReportItems(settings,'REPORT_SPV_WIDGETS');
   const canReport=user.permissions?.can_view_daily_call!==false;
   const report=useDailyCallMonitor({enabled:canReport});
   const isMap=view==='map';
@@ -29,7 +31,7 @@ export function SupervisorMonitorPage(){
     {effectiveView==='map'?<LiveSalesGpsTrackingTab/>:<>
       <div className="spv-toolbar"><label>Tanggal kunjungan (WIB)<input type="date" value={report.date} onChange={e=>e.target.value&&report.setDate(e.target.value)}/></label><label>Sales<select value={report.salesmanId} onChange={e=>report.setSalesmanId(e.target.value)}><option value="">Seluruh tim</option>{report.salesTeam.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label className="spv-search">Cari outlet<input type="search" placeholder="Nama atau kode outlet…" value={report.search} onChange={e=>report.setSearch(e.target.value,{replace:true})}/></label><button type="button" className="app-button" disabled={report.isLoading} onClick={report.refreshData}><LuRefreshCw/>{report.isLoading?'Memuat…':'Perbarui'}</button></div>
       {report.error&&<p className="app-error" role="alert">Data belum berhasil dimuat: {report.error}</p>}
-      <div className="spv-metrics" aria-label="Ringkasan tanggal terpilih">{[['Kunjungan terencana','totalPlanCalls'],['Kunjungan aktual','totalActualCalls'],['Kunjungan efektif','totalEffectiveCalls'],['Indikasi perlu diperiksa','totalAnomalies']].map(([label,key])=><div key={key}><span>{label}</span><strong>{report.isLoading||report.error?'—':summary?.[key]??'—'}</strong></div>)}</div>
+      <div className="spv-metrics" aria-label="Ringkasan tanggal terpilih">{widgets.map(key=>[({totalPlanCalls:'Kunjungan terencana',totalActualCalls:'Kunjungan aktual',totalEffectiveCalls:'Kunjungan efektif',totalAnomalies:'Indikasi perlu diperiksa'})[key],key]).map(([label,key])=><div key={key}><span>{label}</span><strong>{report.isLoading||report.error?'—':summary?.[key]??'—'}</strong></div>)}</div>
       <ReportBasisNote basis={report.reportData?.basis}/>
       {!report.error&&<section className="spv-panel spv-report-content">
         {effectiveView==='visits'&&<SupervisorVisitList rows={report.reportData?.rows||[]} loading={report.isLoading} onSelect={report.setSelectedRow}/>}

@@ -12,6 +12,7 @@ import {PolicyVersionHistory} from './PolicyVersionHistory';
 import {PolicySimulator} from './PolicySimulator';
 import {SystemAuditPanel} from './SystemAuditPanel';
 import {ProcessPolicyMigration} from './ProcessPolicyMigration';
+import {AssignmentScheduleCenter} from './AssignmentScheduleCenter';
 import {PolicyLibrary} from './PolicyLibrary';
 import {PolicyTransfer} from './PolicyTransfer';
 import {NotificationDeliveryPanel} from './NotificationDeliveryPanel';
@@ -48,6 +49,7 @@ export const AdminConfigPage=()=>{
  {groups.some(g=>g.groupKey==='REPORTING_POLICY')&&<NotificationDeliveryPanel/>}
  </>}
  </>}
+ {data&&view==='edit'&&!query&&(!selected||selected.key==='planning')&&<AssignmentScheduleCenter/>}
  {data&&(dirty||changeCount>0||view==='history')&&<footer className="policy-draft-bar"><div><strong>{dirty?'Ada perubahan lokal':changeCount?`${changeCount} aturan dalam draf`:'Aturan sudah dimuat'}</strong><span>Draf tidak mengubah proses sampai diterbitkan.</span></div><label className="policy-field">Alasan perubahan<input className="config-input" value={editor.reason} disabled={busy} onChange={e=>editor.setReason(e.target.value)} placeholder="Contoh: presensi masuk saja untuk Sales"/></label><div><button className="config-button" disabled={busy||!dirty} onClick={editor.discard}>Batalkan lokal</button><button className="config-button config-button-primary" disabled={busy||(!dirty&&!changeCount)||editor.reason.trim().length<5} onClick={editor.save}>{busy?'Memproses…':'Simpan draf'}</button></div></footer>}
  </div>;
 };

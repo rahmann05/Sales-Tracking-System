@@ -132,7 +132,7 @@ test('B01: Finalize outlet requires SPV_APPROVED and valid GPS coordinates', asy
 test('B05: checkIn blocks attendance when outlet status is LOCKED', async t => {
   mockPrismaMethod(t,prisma,'$transaction',async fn=>fn(prisma));
   mockPrismaMethod(t,prisma,'$executeRaw',async()=>0);
-  mockPrismaMethod(t, prisma.outletUnlockRequest, 'findFirst', async () => null);
+  mockPrismaMethod(t, prisma.outletUnlockRequest, 'findMany', async () => []);
   mockPrismaMethod(t, prisma.pjpStop, 'findUnique', async () => ({
     id: 'stop-locked',
     pjpId: 'pjp-1',

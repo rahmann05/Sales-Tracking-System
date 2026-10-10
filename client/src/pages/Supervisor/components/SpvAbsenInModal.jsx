@@ -40,7 +40,7 @@ export const SpvAbsenInModal = ({ stop, spvMode, onChangeSpvMode, inputNotes, on
         }
     >
         <div className="space-y-4 py-3">
-            {!optional&&<DeviceCameraCapture photoRequired={photoRequired} capturedPhoto={capture?.photoUrl} onCapture={(photoUrl, gps) => setCapture({ photoUrl, gps })} onLocationChange={photoRequired?undefined:gps=>setCapture(c=>({...c,gps}))} onRetake={() => setCapture(null)} requireGps={gpsRequired} enforceGeofence={settings.SPV_ENFORCE_GEOFENCE} targetLat={stop.latitude} targetLng={stop.longitude} maxRadiusMeters={stop.radiusMeters} outletName={stop.outletName} />}
+            {!optional&&<DeviceCameraCapture policyValues={settings} photoRequired={photoRequired} capturedPhoto={capture?.photoUrl} onCapture={(photoUrl, gps) => setCapture({ photoUrl, gps })} onLocationChange={photoRequired?undefined:gps=>setCapture(c=>({...c,gps}))} onRetake={() => setCapture(null)} requireGps={gpsRequired} enforceGeofence={settings.SPV_ENFORCE_GEOFENCE} targetLat={stop.latitude} targetLng={stop.longitude} maxRadiusMeters={stop.radiusMeters} outletName={stop.outletName} />}
             <p className="text-sm">{optional?'Presensi foto dan GPS tidak diwajibkan. Aktivitas supervisi tetap dicatat.':`Foto ${photoRequired?'wajib':'opsional'} · GPS ${gpsRequired?'wajib':'opsional'}`}</p>
             <div className="space-y-1.5">
                 <label className="text-xs font-bold text-on-surface block">Jenis Kunjungan Supervisi:</label>

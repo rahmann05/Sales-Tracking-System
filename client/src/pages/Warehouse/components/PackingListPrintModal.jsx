@@ -63,7 +63,7 @@ export function PackingListPrintModal({ document: doc, onClose }) {
                 Distribusi & Logistik Terpadu
               </p>
               <p className="text-xs text-slate-600">
-                Surat Perintah Muat / Packing List Muatan
+                {doc.documentKind==='MANIFEST'?'Manifest Pengiriman':'Surat Perintah Muat / Packing List Muatan'}
               </p>
             </div>
             <div className="text-right">
@@ -108,7 +108,7 @@ export function PackingListPrintModal({ document: doc, onClose }) {
                 </p>
                 <p>
                   Sumber Dokumen: <strong className="text-slate-950">{doc.source || 'MANUAL'}</strong>
-                  {doc.sourceOrderId && ` (Ref Order: ${doc.sourceOrderId.slice(0, 8)})`}
+                  {doc.sourceOrderIds?.length>1?' (Ref '+doc.sourceOrderIds.length+' order: '+doc.sourceOrderIds.map(id=>id.slice(0,8)).join(', ')+')':doc.sourceOrderId?' (Ref Order: '+doc.sourceOrderId.slice(0,8)+')':''}
                 </p>
               </div>
             </div>

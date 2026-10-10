@@ -27,11 +27,13 @@ const cluster = pjpData.user?.cluster;
             const inAtt = s.attendances?.find((a) => a.type === 'IN');
             const outAtt = s.attendances?.find((a) => a.type === 'OUT');
             const stopStatus = resolveStopStatus(s, inAtt, outAtt);
-            const intervalWeeks=pjpData.reportingContext?.planning?.rules?.find(rule=>rule.outletId===(s.outletId||s.outlet?.id))?.intervalWeeks;
+            const planningRule=pjpData.reportingContext?.planning?.rules?.find(rule=>rule.outletId===(s.outletId||s.outlet?.id));
+            const intervalWeeks=planningRule?.intervalWeeks;
 
             return {
               googleMapsOnly:outletOperationalPoint(s.outlet).googleMapsOnly,operationalPoint:outletOperationalPoint(s.outlet),id: s.id,validationTask:s.validationTask,validationOnly:s.validationOnly,validationResult:s.validationResult,
               policySnapshot:s.policySnapshot,visitSession:s.visitSession,
+              temporaryAssignment:planningRule?.substitute&&planningRule.substitute.userId===(pjpData.userId||user?.id)?{...planningRule.substitute,primarySalesName:planningRule.primarySalesName||null}:null,
               pjpId: pjpData.id,
               sequence: s.sequence || idx + 1,
               customerName: s.outlet?.name || '',

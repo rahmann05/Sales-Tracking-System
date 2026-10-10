@@ -1,5 +1,10 @@
 import { request } from "../httpClient";
 export const configApi = {
+  assignmentSchedules:()=>request('/config/policies/assignments'),
+  assignmentScheduleOptions:kind=>request('/config/policies/assignments/options?'+new URLSearchParams({kind})),
+  scheduleAssignment:body=>request('/config/policies/assignments',{method:'POST',body:JSON.stringify(body)}),
+  cancelAssignmentSchedule:(id,reason)=>request(`/config/policies/assignments/${encodeURIComponent(id)}/cancel`,{method:'POST',body:JSON.stringify({reason})}),
+  retryAssignmentSchedule:(id,reason)=>request(`/config/policies/assignments/${encodeURIComponent(id)}/retry`,{method:'POST',body:JSON.stringify({reason})}),
   migrationCandidates:kind=>request('/config/policies/migration?'+new URLSearchParams({kind})),
   previewMigration:body=>request('/config/policies/migration/preview',{method:'POST',body:JSON.stringify(body)}),
   migrateProcesses:body=>request('/config/policies/migration',{method:'POST',body:JSON.stringify(body)}),

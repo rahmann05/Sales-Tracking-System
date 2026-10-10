@@ -1,12 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {planDates,ruleDue,buildPlanCalendar,validPlanDate} from '../../shared/pjp-planning.mjs';
+import {planDates,ruleDue,buildPlanCalendar,validPlanDate,ruleSalesAt} from '../../shared/pjp-planning.mjs';
 import {parseSpreadsheetCsv} from '../../client/src/services/spreadsheetImportService.js';
 import {mapSalesPjpStops} from '../../client/src/context/hooks/mapSalesPjpStops.js';
 const sales=[{id:'a',name:'Sales A',supervisorId:'s'},{id:'b',name:'Sales B',supervisorId:'s'}];
 const outlets=[{id:'o',name:'Outlet',itineraryCode:'F2',cluster:{supervisorId:'s',assignedSalesId:'a'}}];
 const rule={userId:'a',outletId:'o',intervalWeeks:2,anchorDate:'2026-10-05'};
 const plan={startsOn:'2026-10-01',endsOn:'2026-11-01',rules:[rule]};
+test('temporary substitution keeps original cadence, covers inclusive dates and returns to primary',()=>{
+ const r={...rule,intervalWeeks:1,substitute:{userId:'b',startsOn:'2026-10-12',endsOn:'2026-10-19',reason:'Sales utama cuti'}};
+ const result=buildPlanCalendar({...plan,rules:[r]},sales,outlets,undefined,{PJP_ALLOW_TEMPORARY_SUBSTITUTION:true});
+ assert.deepEqual(result.problems.filter(p=>p.code.startsWith('SUBSTITUTE')),[]);
+ assert.equal(ruleSalesAt(r,'2026-10-05'),'a');assert.equal(ruleSalesAt(r,'2026-10-12'),'b');assert.equal(ruleSalesAt(r,'2026-10-19'),'b');assert.equal(ruleSalesAt(r,'2026-10-26'),'a');
+ assert.deepEqual(result.days.filter(d=>d.outletIds.length).map(d=>[d.date,d.userId]),[['2026-10-05','a'],['2026-10-12','b'],['2026-10-19','b'],['2026-10-26','a']]);
+ assert.equal(result.days.find(d=>d.date==='2026-10-12'&&d.userId==='a').outletIds.length,0);
+});
+test('temporary substitute rejects disabled policy, foreign team, invalid period and missing reason',()=>{
+ const r={...rule,substitute:{userId:'foreign',startsOn:'2026-09-01',endsOn:'2026-10-19',reason:''}};
+ const result=buildPlanCalendar({...plan,rules:[r]},sales,outlets);
+ for(const code of ['SUBSTITUTION_DISABLED','SUBSTITUTE_UNAVAILABLE','SUBSTITUTE_PERIOD','SUBSTITUTE_REASON'])assert.ok(result.problems.some(p=>p.code===code));
+ const empty={...rule,substitute:{userId:'b',startsOn:'2026-10-06',endsOn:'2026-10-10',reason:'Cuti sementara'}};
+ assert.ok(buildPlanCalendar({...plan,rules:[empty]},sales,outlets,undefined,{PJP_ALLOW_TEMPORARY_SUBSTITUTION:true}).warnings.some(w=>w.code==='SUBSTITUTE_NOT_DUE'));
+});
 test('frequency repeats across months and years from a fixed anchor',()=>{assert.equal(ruleDue(rule,'2026-10-05'),true);assert.equal(ruleDue(rule,'2026-10-12'),false);assert.equal(ruleDue(rule,'2026-10-19'),true);assert.equal(ruleDue(rule,'2026-11-02'),true);assert.equal(ruleDue({...rule,intervalWeeks:4,anchorDate:'2026-12-21'},'2027-01-18'),true);assert.equal(ruleDue(rule,'2026-09-21'),false);});
 test('dates reject impossible dates, inverted and excessive periods',()=>{assert.equal(validPlanDate('2026-02-30'),false);assert.equal(validPlanDate('2028-02-29'),true);assert.throws(()=>planDates('2026-11-01','2026-10-01'));assert.throws(()=>planDates('2026-01-01','2026-04-01'));assert.equal(planDates('2026-10-01','2026-10-01').length,1);});
 test('calendar distinguishes not due from no rules and reports uncovered outlets',()=>{const r=buildPlanCalendar(plan,sales,[...outlets,{id:'other',name:'Other',cluster:{supervisorId:'s'}}]);assert.equal(r.summary.visits,2);assert.equal(r.days.find(d=>d.userId==='a'&&d.date==='2026-10-12').state,'NOT_DUE');assert.equal(r.days.find(d=>d.userId==='b').state,'UNPLANNED');assert.equal(r.uncovered.length,1);});

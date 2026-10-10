@@ -37,10 +37,16 @@ try{
  for(const owner of [denied,hidden,driver,custom,deniedAdmin])eq((await assign('PICK',owner)).status,400);
  eq((await assign('LOAD',picker)).status,400);
  eq((await assign('PICK',picker,0,deniedAdmin)).status,403);
+ await prisma.user.update({where:{id:checker.id},data:{permissions:{can_trip_pick:false}}});
+ eq((await assign('PICK',checker)).status,400);
+ await prisma.user.update({where:{id:checker.id},data:{permissions:{}}});
+ const deniedAction=await person('ADMIN',{permissions:{can_trip_assign_preparation:false}});
+ eq((await assign('PICK',picker,0,deniedAction)).status,403);
  eq((await assign('PICK',picker)).status,200);
  eq((await assign('CHECK',picker)).status,400);
  eq((await assign('CHECK',checker)).status,200);
  eq((await assign('PICK',picker)).status,409);
+ await rejects(()=>updateUser(picker.id,{permissions:{can_trip_pick:false}}),409);
  await rejects(()=>updateUser(picker.id,{permissions:{can_manage_delivery_routes:false}}),409);
  await rejects(()=>updateUser(picker.id,{permissions:{can_monitor_delivery:false}}),409);
  await rejects(()=>updateUser(picker.id,{role:'SALES'}),409);

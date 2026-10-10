@@ -1,3 +1,5 @@
+import {reviewPeople} from './approval-readiness.service.js';
+import {followUpOwnerEligible,followUpReviewers} from '../../../../../shared/follow-up-policy.mjs';
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {prisma} from '../../../config/prisma.js';
@@ -11,15 +13,18 @@ import {policySnapshot} from './process-policy.service.js';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
 import {resolveIdentity} from '../../roles/role-assignment.service.js';
 const definitions={
+ VISIT:{model:'pjpStop',owner:row=>row.pjp.userId,include:{pjp:true,outlet:{select:{name:true}},attendances:true},open:{status:'PENDING',validationOnly:false},key:k=>['SALES_OUT_PHOTO','SALES_REQUIRE_VISIT_RESULT','VISIT_RESULT_REQUIRE_NOTE','VISIT_RESULT_OFFER_MODE','VISIT_RESULT_OBSTACLE_MODE','VISIT_RESULT_ATTACHMENT_MODE'].includes(k)},
+ SHIFT:{model:'staffActivity',owner:'userId',include:{user:{select:{name:true}}},time:'checkInAt',open:{kind:'SHIFT',checkOutAt:null},key:k=>['SHIFT_OUT_PHOTO','SHIFT_ALLOW_OPEN_VISITS','SHIFT_EARLY_FINISH_POLICY'].includes(k)},
+ FOLLOW_UP:{model:'staffActivity',owner:'userId',include:{user:{select:{name:true}}},time:'checkInAt',open:{followUp:{path:['status'],equals:'OPEN'}},key:k=>['FOLLOW_UP_REQUIRE_EVIDENCE','FOLLOW_UP_REQUIRE_REVIEW'].includes(k)},
  ORDER:{model:'order',owner:'createdBy',open:{deletedAt:null,status:'PENDING_APPROVAL'},key:k=>k.startsWith('ORDER_APPROVAL_')||k==='ORDER_PRICE_OVERRIDE_APPROVAL_MODE'},
  REGISTRATION:{model:'customerRegistration',owner:'salesmanId',open:{registrationStatus:{in:['SUBMITTED','SPV_APPROVED']}},key:k=>['REGISTRATION_APPROVAL_MODE','REGISTRATION_ACTIVATOR','REGISTRATION_ALLOW_REVISION'].includes(k)},
  PACKING:{model:'packingList',owner:'createdById',open:{status:'DRAFT'},key:k=>k.startsWith('PACKING_')},
  TRIP:{model:'deliveryRoute',owner:'createdById',open:{closedAt:null,cancelledAt:null},key:k=>k.startsWith('WAREHOUSE_')||k.startsWith('TRIP_')||DRIVER_EVIDENCE_KEYS.includes(k)},
 };
-const request=z.object({kind:z.enum(['ORDER','REGISTRATION','PACKING','TRIP']),ids:z.array(z.string().min(1)).min(1).max(20)}).strict();
+const request=z.object({kind:z.enum(['ORDER','REGISTRATION','PACKING','TRIP','VISIT','SHIFT','FOLLOW_UP']),ids:z.array(z.string().min(1)).min(1).max(20)}).strict();
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 async function candidate(db,kind,row){
- const d=definitions[kind],actor=await db.user.findUnique({where:{id:row[d.owner]}});
+ const d=definitions[kind],actor=await db.user.findUnique({where:{id:typeof d.owner==='function'?d.owner(row):row[d.owner]}});
  if(!actor||actor.deletedAt)return {reason:'Pembuat tidak aktif; perbaiki penanggung jawab terlebih dahulu.'};
  if(!row.policySnapshot?.values)return {reason:'Snapshot awal belum tersedia; pertahankan aturan proses lama.'};
  const resolved=await effectivePolicy(actor,Date.now(),{fresh:true});
@@ -53,21 +58,28 @@ async function candidate(db,kind,row){
   next.driver={id:driver.id,versions:p.versions,at:old.driver?.at||old.at};
   if(Object.keys(row.preparation?.tasks||{}).some(stage=>!preparationStages(values).includes(stage)))return {reason:'Ada penugasan tahap yang dihapus oleh aturan baru. Selesaikan pengalihan penugasan dahulu.'};
  }
+ if(kind==='VISIT'&&row.visitSession?.finishedAt)return {reason:'Kunjungan sudah selesai; hasil dan aturan tetap.'};
+ if(kind==='SHIFT'&&row.checklist?.state==='FINISHED')return {reason:'Shift sudah selesai; aturan historis tetap.'};
+ if(kind==='FOLLOW_UP'){
+  const people=await reviewPeople(db),owner=people.find(p=>p.id===row.followUp?.ownerId);
+  if(!followUpOwnerEligible(owner))return {reason:'PIC tindak lanjut tidak lagi memenuhi izin. Alihkan tugas terlebih dahulu.'};
+  if(values.FOLLOW_UP_REQUIRE_REVIEW&&!followUpReviewers(owner,people).length)return {reason:'Aturan baru memerlukan pemeriksa aktif berizin pada tim PIC.'};
+ }
  const conflicts=policyConflicts(values);if(conflicts.length)return {reason:conflicts.join(' ')};
  const changes=Object.entries(values).filter(([key,value])=>d.key(key)&&!same(value,old.values?.[key]??CONFIG_DEFAULTS[key])).map(([key,after])=>({key,before:old.values?.[key]??CONFIG_DEFAULTS[key],after}));
  return {next,versions:resolved.versions,changes,reason:changes.length?null:'Tidak ada aturan proses yang berubah.'};
 }
-function view(row,result){return {id:row.id,label:row.code||row.name||row.customerCode||row.id,status:row.status||row.registrationStatus,updatedAt:row.updatedAt,eligible:!result.reason,reason:result.reason||null,changes:result.changes||[],versions:result.versions||[],snapshotAt:row.policySnapshot?.at||null};}
+function view(row,result){return {id:row.id,label:row.code||row.name||row.customerCode||(row.user?`${row.user.name} · ${row.outletName||row.kind} · ${row.dateKey}`:row.outlet?.name)||row.id,status:row.followUp?.status||row.status||row.registrationStatus||(row.checkOutAt||row.checklist?.state==='FINISHED'?'FINISHED':'ACTIVE'),updatedAt:row.updatedAt||row.checkInAt,eligible:!result.reason,reason:result.reason||null,changes:result.changes||[],versions:result.versions||[],snapshotAt:row.policySnapshot?.at||null};}
 export async function listMigrationCandidates(kind){
  if(!definitions[kind])throw new AppError('Jenis proses tidak valid',400);
- const d=definitions[kind],rows=await prisma[d.model].findMany({where:d.open,orderBy:[{createdAt:'desc'},{id:'desc'}],take:101});
+ const d=definitions[kind],rows=await prisma[d.model].findMany({where:d.open,orderBy:[{[d.time||'createdAt']:'desc'},{id:'desc'}],...(d.include?{include:d.include}:{}),take:101});
  const items=[];for(const row of rows.slice(0,100))items.push(view(row,await candidate(prisma,kind,row)));
- return {items,truncated:rows.length>100,note:'Migrasi hanya mengubah aturan langkah berikutnya. Harga, pajak, isi dokumen, bukti dan keputusan lama tetap. Kunjungan/shift aktif serta hasil tugas yang sudah dikirim mempertahankan snapshot awal.'};
+ return {items,truncated:rows.length>100,note:'Migrasi hanya mengubah aturan langkah berikutnya. Harga, pajak, isi dokumen, bukti dan keputusan lama tetap. Kunjungan: hanya foto keluar dan hasil berikutnya. Shift: hanya foto keluar, penutupan kunjungan dan aturan selesai awal. Mode presensi, waktu, GPS dan bukti awal tetap. Tugas SUBMITTED/DONE tidak dimigrasikan.'};
 }
 async function prepare(db,raw){
  const data=request.parse(raw),d=definitions[data.kind];
  if(new Set(data.ids).size!==data.ids.length)throw new AppError('Proses terpilih duplikat',400);
- const rows=await db[d.model].findMany({where:{...d.open,id:{in:data.ids}},orderBy:{id:'asc'}});
+ const rows=await db[d.model].findMany({where:{...d.open,id:{in:data.ids}},orderBy:{id:'asc'},...(d.include?{include:d.include}:{})});
  if(rows.length!==data.ids.length)throw new AppError('Proses sudah berubah atau tidak lagi terbuka; muat ulang',409);
  const results=[];for(const row of rows){const result=await candidate(db,data.kind,row);results.push({row,...result});}
  const fingerprint=createHash('sha256').update(JSON.stringify({kind:data.kind,results:results.map(r=>({row:r.row,next:r.next,versions:r.versions,reason:r.reason}))})).digest('hex');
@@ -84,13 +96,22 @@ export async function migrateProcesses(raw,actor){
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('config:settings'))`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
   for(const id of [...data.ids].sort())await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${data.kind==='TRIP'?'route':data.kind.toLowerCase()}:${id}`}))`;
+  if(data.kind==='VISIT'){
+   const rows=await tx.pjpStop.findMany({where:{id:{in:data.ids}},select:{pjp:{select:{userId:true}}}});
+   for(const userId of [...new Set(rows.map(row=>row.pjp.userId))].sort())await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`staff:${userId}`}))`;
+   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
+  }
+  if(['SHIFT','FOLLOW_UP'].includes(data.kind)){
+   const rows=await tx.staffActivity.findMany({where:{id:{in:data.ids}},select:{id:true,userId:true},orderBy:{userId:'asc'}});
+   for(const row of rows){await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`staff:${row.userId}`}))`;if(data.kind==='FOLLOW_UP')await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${row.id}`}))`;await tx.$queryRaw`SELECT id FROM "StaffActivity" WHERE id=${row.id} FOR UPDATE`;}
+  }
   const prepared=await prepare(tx,{kind:data.kind,ids:data.ids});
   if(prepared.fingerprint!==data.fingerprint)throw new AppError('Proses atau aturan berubah setelah preview. Tinjau ulang.',409);
   if(prepared.results.some(r=>r.reason))throw new AppError('Ada proses yang tidak memenuhi syarat migrasi.',409);
   for(const {row,next,versions,changes} of prepared.results){
-   const at=new Date().toISOString(),snapshot={...next,migrations:[...(row.policySnapshot?.migrations||[]),{at,actorId:actor.id,reason:data.reason,versions,keys:changes.map(c=>c.key)}]};
+   const at=new Date().toISOString(),snapshot={...next,migrations:[...(row.policySnapshot?.migrations||[]),{at,actorId:actor.id,reason:data.reason,versions,keys:changes.map(c=>c.key),beforeValues:Object.fromEntries(changes.map(c=>[c.key,c.before]))}]};
    const patch={policySnapshot:snapshot,...(data.kind==='PACKING'?{revision:{increment:1}}:{}),...(data.kind==='TRIP'?{status:preparationStages(snapshot.values).length?'DRAFT':'READY'}:{})};
-   const changed=await tx[definitions[data.kind].model].updateMany({where:{id:row.id,updatedAt:row.updatedAt},data:patch});
+   const changed=await tx[definitions[data.kind].model].updateMany({where:{id:row.id,...(row.updatedAt?{updatedAt:row.updatedAt}:{})},data:patch});
    if(!changed.count)throw new AppError('Proses berubah bersamaan; tinjau ulang.',409);
    await tx.auditEvent.create({data:{entityType:'PROCESS_POLICY_MIGRATION',entityId:row.id,action:'MIGRATE',actorId:actor.id,actorName:actor.name,before:{kind:data.kind,snapshot:row.policySnapshot||{},status:row.status||row.registrationStatus},after:{kind:data.kind,snapshot,changes,reason:data.reason}}});
   }

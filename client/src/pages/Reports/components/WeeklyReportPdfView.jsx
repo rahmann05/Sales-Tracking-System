@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
 import {useApp} from '../../../context/AppContext';
@@ -104,7 +105,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
           <div>
             <span className="text-gray-500 font-semibold block">Total Nilai order disetujui Mingguan:</span>
             <strong className="text-gray-900 text-[11px]">
-              Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')} ({summary.totalSkuSold} SKU)
+              {reportMoney(summary.totalOrderAmount)} ({summary.totalSkuSold} SKU)
             </strong>
           </div>
         </div>
@@ -180,7 +181,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
                     {s.weeklyTotal?.ecRate}
                   </td>
                   <td className="p-1.5 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
-                    Rp {(s.weeklyTotal?.omzet || 0).toLocaleString('id-ID')}
+                    {reportMoney(s.weeklyTotal?.omzet)}
                   </td>
                 </tr>
               ))}
@@ -205,7 +206,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
                   {summary.effectiveCallRate}
                 </td>
                 <td className="p-1.5 text-right font-mono text-gray-900 whitespace-nowrap">
-                  Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')}
+                  {reportMoney(summary.totalOrderAmount)}
                 </td>
               </tr>
             </tbody>

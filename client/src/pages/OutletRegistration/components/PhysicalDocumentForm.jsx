@@ -104,8 +104,9 @@ export const PhysicalDocumentForm = ({
   const {
     clusters,
     divisions,
-    settings
+    settings:liveSettings
   } = useApp();
+  const settings=formData.revisionId?{...liveSettings,...formData.revisionPolicyValues}:liveSettings;
   const [isKtpCameraOpen, setIsKtpCameraOpen] = useState(false);
   const [isOutletCameraOpen, setIsOutletCameraOpen] = useState(false);
   const debounceTimerRef = useRef(null);
@@ -203,8 +204,8 @@ export const PhysicalDocumentForm = ({
 
       </section>
       {/* ─── Hardware Camera Modals ───────────────────────────────────────────── */}
-      <IdCardCameraModal isOpen={isKtpCameraOpen} onClose={() => setIsKtpCameraOpen(false)} onCapture={photoDataUrl => updateField('taxDocumentUrl', photoDataUrl)} cardType={cardTypeLabel} outletName={formData.name} division={formData.division} />
+      <IdCardCameraModal policyValues={settings} isOpen={isKtpCameraOpen} onClose={() => setIsKtpCameraOpen(false)} onCapture={photoDataUrl => updateField('taxDocumentUrl', photoDataUrl)} cardType={cardTypeLabel} outletName={formData.name} division={formData.division} />
 
-      <OutletCameraModal isOpen={isOutletCameraOpen} onClose={() => setIsOutletCameraOpen(false)} onCapture={photoDataUrl => updateField('photoUrl', photoDataUrl)} outletName={formData.name} latitude={formData.latitude} longitude={formData.longitude} division={formData.division} />
+      <OutletCameraModal policyValues={settings} isOpen={isOutletCameraOpen} onClose={() => setIsOutletCameraOpen(false)} onCapture={photoDataUrl => updateField('photoUrl', photoDataUrl)} outletName={formData.name} latitude={formData.latitude} longitude={formData.longitude} division={formData.division} />
     </div>;
 };

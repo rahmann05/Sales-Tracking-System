@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
+import {useApp} from '../../../context/AppContext';
+import {useConfiguredFilters} from '../../../shared/hooks/useConfiguredFilters';
+import {reportDateRange} from '../../../../../shared/report-filter-defaults.mjs';
 import {
   exportCustomerExcel,
   exportCustomerNd6Txt,
@@ -12,19 +15,19 @@ import {
  * Single Responsibility: Manage data filtering, Admin activation, and Excel/CSV/TXT file exports.
  */
 export const useOutletRegistrationReport = () => {
+  const {settings}=useApp();
   const [data, setData] = useState([]);
   const [statusCounts, setStatusCounts] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters
-  const [filters, setFilters] = useState({
-    status: 'ALL',
+  const [filters, updateFilter] = useConfiguredFilters({
+    status: settings.REPORT_REGISTRATION_DEFAULT_STATUS||'ALL',
     area: 'ALL',
     channel: 'ALL',
     division: 'ALL',
     search: '',
-    startDate: '',
-    endDate: '',
+    ...reportDateRange(settings.REPORT_REGISTRATION_DEFAULT_PERIOD||'ALL'),
   });
 
   // Modal states
@@ -34,9 +37,6 @@ export const useOutletRegistrationReport = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
 
-  const updateFilter = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
 
   const loadReportData = useCallback(async () => {
     setIsLoading(true);
@@ -69,10 +69,10 @@ export const useOutletRegistrationReport = () => {
   }, [loadReportData]);
 
   // Admin Finalize Action
-  const handleFinalize = async (id, customerCode, clusterId,duplicateReason) => {
+  const handleFinalize = async (id, customerCode, clusterId,duplicateReason,point={}) => {
     setIsProcessing(true);
     try {
-      const result=await customerRegistrationsApi.finalize(id, { customerCode, clusterId,duplicateReason:duplicateReason||undefined });
+      const result=await customerRegistrationsApi.finalize(id, { customerCode, clusterId,...point,duplicateReason:duplicateReason||undefined });
       setFeedbackMsg({
         type: 'success',
         text: `Outlet berhasil diinput ke sistem aktif dengan Kode Outlet "${result.data?.outlet?.outletCode || customerCode}"!`,

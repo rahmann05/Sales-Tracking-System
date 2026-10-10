@@ -7,6 +7,7 @@ const reads=new Map();
 export const getAuthToken=()=>localStorage.getItem('token') || '';
 export const setAuthToken=token=>token?localStorage.setItem('token',token):localStorage.removeItem('token');
 export function clearSession() {
+  try{const oldToken=getAuthToken();navigator.serviceWorker?.getRegistration('/driver-evidence-worker.mjs').then(r=>r?.active?.postMessage({type:'FORGET_SESSION',token:oldToken})).catch(()=>{});}catch{}
   sessionRevision++;
   for(const key of ['token','refreshToken','authUser'])localStorage.removeItem(key);
   reads.clear();

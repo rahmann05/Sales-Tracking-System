@@ -1,3 +1,5 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
+import {deliveryReceiptError} from '../../../../../shared/delivery-receipt.mjs';
 import {processValue} from '../../config/services/process-policy.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -20,9 +22,14 @@ export async function recordStopResult(tx,stopId,data,driverId) {
     if(typeof data.missingCheckoutReason!=='string'||data.missingCheckoutReason.trim().length<5||data.missingCheckoutReason.trim().length>2000)throw new AppError('Alasan hasil tanpa absen keluar wajib diisi 5–2000 karakter',400);
   }
   const {status,rejectReason,notes,photoUrl}=data;
+  await assertEvidenceImages({photoUrl},{entity:stop.deliveryRoute});
   if(!terminalStop(status))throw new AppError('Hasil tidak valid',400);
   if(await processValue(stop.deliveryRoute,'DELIVERY_REQUIRE_PHOTO',true) && !photoUrl)throw new AppError('Foto bukti pengiriman wajib',400);
   if(status!=='DELIVERED' && !rejectReason?.trim())throw new AppError('Alasan penolakan wajib',400);
+  const receiptPolicy={DELIVERY_RECIPIENT_MODE:await processValue(stop.deliveryRoute,'DELIVERY_RECIPIENT_MODE','OPTIONAL'),DELIVERY_SIGNATURE_MODE:await processValue(stop.deliveryRoute,'DELIVERY_SIGNATURE_MODE','DISABLED')};
+  const receiptError=deliveryReceiptError(status,data,receiptPolicy);
+  if(receiptError)throw new AppError(receiptError,422);
+  const receiptEvidence=(data.recipientName?.trim()||data.signatureDataUrl)?{recipientName:data.recipientName.trim(),signatureDataUrl:data.signatureDataUrl||null,recordedBy:driverId,recordedAt:new Date().toISOString()}:undefined;
   const rejectedCartons=status==='REJECTED'?stop.allocatedCartons:status==='DELIVERED'?0:data.rejectedCartons;
   if(!Number.isInteger(rejectedCartons)||rejectedCartons<0||(status==='PARTIAL_REJECT'&&(!rejectedCartons||rejectedCartons>=stop.allocatedCartons)))throw new AppError('Jumlah karton ditolak tidak valid',400);
   const rejectedItems=status==='REJECTED'?stop.allocatedItems:status==='DELIVERED'?[]:data.rejectedItems||[];
@@ -35,7 +42,7 @@ export async function recordStopResult(tx,stopId,data,driverId) {
     for(const i of rejectedInvoices)if(!Number.isInteger(i.cartons)||i.cartons<=0||i.cartons>((stop.allocatedInvoices||[]).find(a=>a.invoiceId===i.invoiceId)?.cartons||0))throw new AppError('Penolakan faktur melebihi alokasi',400);
   }
   const incomplete=await assertDestinationStart(tx,stop);
-  const changed=await tx.deliveryStop.updateMany({where:{id:stopId,status:'PENDING'},data:{status,rejectReason:status==='DELIVERED'?null:rejectReason.trim(),rejectedCartons,rejectedItems,rejectedInvoices,notes,photoUrl,completedAt:new Date()}});
+  const changed=await tx.deliveryStop.updateMany({where:{id:stopId,status:'PENDING'},data:{status,rejectReason:status==='DELIVERED'?null:rejectReason.trim(),rejectedCartons,rejectedItems,rejectedInvoices,notes,photoUrl,receiptEvidence,completedAt:new Date()}});
   if(!changed.count)throw new AppError('Hasil sudah disimpan',409);
   await flagIncompleteDestinations(tx,stop,incomplete,driverId);
   if(missingOut)await flagMissingCheckout(tx,stop,data.missingCheckoutReason.trim(),driverId);

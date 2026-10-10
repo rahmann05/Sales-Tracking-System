@@ -1,3 +1,4 @@
+import {processPolicyValues} from '../../../../../shared/process-policy.mjs';
 import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {SalesDialog} from './SalesDialog';
@@ -13,7 +14,7 @@ import { AbsenNotesInput } from './AbsenNotesInput';
  */
 export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
   const { settings:runtime,user } = useApp();
-  const settings={...runtime,...stop?.policySnapshot?.values};
+  const settings=processPolicyValues(stop?.policySnapshot,runtime);
   const policy=visitPolicy(settings);
   const requireEvidence=policy.mode!=='OPTIONAL';
   const draft=useFormDraft(`AbsenInModal:${stop?.id}`,{notes:'Kunjungan pelanggan'});
@@ -71,7 +72,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
 
   return <SalesDialog title={requireEvidence?"Absen masuk":"Mulai kegiatan kunjungan"} description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!capturedPhoto} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError} freshEvidence>
         {/* 1. Live Device Camera & GPS Verification (Top Section) */}
-        {requireEvidence && <DeviceCameraCapture outletId={stop.outletId}
+        {requireEvidence && <DeviceCameraCapture policyValues={settings} outletId={stop.outletId}
           photoRequired={policy.photoIn}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}

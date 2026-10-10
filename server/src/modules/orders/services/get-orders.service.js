@@ -5,6 +5,7 @@ import { prisma } from '../../../config/prisma.js';
 import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../../utils/pagination.js';
 import { ROLES } from "../../../utils/constants.js";
 import { fulfillment } from '../../../../../shared/delivery-operations.mjs';
+import {packingOrderWhere} from '../../../../../shared/packing-orders.mjs';
 
 
 export const getOrders = async (currentUser, query = {}) => {
@@ -42,7 +43,7 @@ export const getOrders = async (currentUser, query = {}) => {
     prisma.order.count({ where }),
   ]);
 
-  const packings = await prisma.packingList.findMany({where:{sourceOrderId:{in:data.map(o=>o.id)}},include:{deliveryStops:true}});
+  const packings = await prisma.packingList.findMany({where:packingOrderWhere(data.map(o=>o.id)),include:{deliveryStops:true}});
   const assignments=['ADMIN','SUPERVISOR'].includes(currentUser.role)?await loadOrderReviewAssignments(data):new Map();
   return buildPaginatedResponse(data.map(o=>({...fulfillment(orderSnapshot(o),packings),...(currentUser.role==='SALES'?{history:salesOrderHistory(o.history||[])}:{}),...(['ADMIN','SUPERVISOR'].includes(currentUser.role)?{approvalAssignment:assignments.get(o.id)||null}:{})})), total, page, limit);
 };

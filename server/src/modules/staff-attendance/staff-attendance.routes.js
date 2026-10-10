@@ -36,7 +36,7 @@ router.get('/report', authorize('ADMIN', 'SUPERVISOR', 'KEPALA_GUDANG'), async (
 router.post('/', async (req, res, next) => {
   try {
     const { body } = staffActionSchema.parse({ body: req.body });
-    const data = body.action.startsWith('SHIFT_') ? await recordShift(req.user.id, body.action) : await recordSupervisorVisit(req.user, body);
+    const data = body.action.startsWith('SHIFT_') ? await recordShift(req.user.id, body.action,body) : await recordSupervisorVisit(req.user, body);
     res.status(201).json({ data });
   } catch (error) { next(error); }
 });

@@ -5,6 +5,7 @@ import {assertOrderReviewDecision,orderReviewConflict} from './order-review-assi
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { ORDER_STATUS, NOTIFICATION_TYPES } from "../../../utils/constants.js";
+import {packingOrderWhere} from '../../../../../shared/packing-orders.mjs';
 
 
 export const rejectOrder = async (orderId, adminId, reason = null, options={}) => {
@@ -27,7 +28,7 @@ export const rejectOrder = async (orderId, adminId, reason = null, options={}) =
     const current=await tx.order.findUnique({where:{id:orderId}});
     if(!current||current.deletedAt||current.status!==ORDER_STATUS.PENDING_APPROVAL)throw new AppError('Order sudah diproses atau tidak aktif',409);
     const decision=await assertOrderReviewDecision(tx,current,await tx.user.findUnique({where:{id:adminId}}),options);
-    const released=await tx.packingList.count({where:{sourceOrderId:orderId,OR:[{status:'RELEASED'},{deliveryStops:{some:{}}}]}});
+    const released=await tx.packingList.count({where:{AND:[packingOrderWhere([orderId]),{OR:[{status:'RELEASED'},{deliveryStops:{some:{}}}]}]}});
     if(released)throw new AppError('Order sudah dilepas untuk pengiriman. Selesaikan atau tarik kembali packing sebelum menolak order.',409);
     const result=await tx.order.updateMany({where:{id:orderId,status:'PENDING_APPROVAL'},data:{status:'REJECTED',approvedBy:adminId,approvedAt:new Date(),rejectionReason:reason.trim(),history:[...(current.history||[]),{action:'REJECT',actorId:adminId,at:new Date().toISOString(),note:reason.trim(),...decision}]}});
     if(!result.count)throw new AppError('Order sudah diproses',409);

@@ -10,7 +10,8 @@
  * Expects CSV format with headers:
  * ClusterName,OutletCode,CustomerName,Address,Area,Lat,Lng,Frequency
  */
-export const parseSpreadsheetCsv = (csvText = '') => {
+export const spreadsheetFields = ['ClusterCode','ClusterName','OutletCode','CustomerName','Address','Area','Lat','Lng','Frequency'];
+export const readSpreadsheetRecords = (csvText = '') => {
   if (!csvText || typeof csvText !== 'string') return [];
 
   const records=[];let current=[],cell='',quoted=false;
@@ -23,11 +24,20 @@ export const parseSpreadsheetCsv = (csvText = '') => {
   }
   if(quoted)throw new Error('CSV mengandung tanda kutip yang belum ditutup');
   current.push(cell.trim());if(current.some(Boolean))records.push(current);
-  const headers=records[0]||[],required=['ClusterName','OutletCode','CustomerName','Address','Area','Lat','Lng'];
-  const positions=Object.fromEntries(headers.map((h,i)=>[h.replace(/^\uFEFF/,'').trim(),i]));
+  const headers=(records[0]||[]).map(h=>h.replace(/^\uFEFF/,'').trim());
+  if(headers.some(h=>!h))throw new Error('Header CSV tidak boleh kosong');
+  if(new Set(headers).size!==headers.length)throw new Error('Header CSV duplikat');
+  return {headers,records:records.slice(1)};
+};
+export const parseSpreadsheetCsv = (csvText = '', mapping = {}) => {
+  if(!csvText)return [];
+  const {headers,records}=readSpreadsheetRecords(csvText),required=['ClusterName','OutletCode','CustomerName','Address','Area','Lat','Lng'];
+  const selected=spreadsheetFields.map(h=>mapping[h]??h).filter(h=>headers.includes(h));
+  if(new Set(selected).size!==selected.length)throw new Error('Satu kolom sumber tidak boleh dipakai untuk beberapa field');
+  const positions=Object.fromEntries(spreadsheetFields.map(h=>[h,headers.indexOf(mapping[h]??h)]).filter(([,i])=>i>=0));
   if(required.some(h=>positions[h]===undefined))throw new Error('Header CSV wajib: '+required.join(', '));
   if(new Set(headers).size!==headers.length)throw new Error('Header CSV duplikat');
-  const parsedRecords=records.slice(1).map((source,i)=>{
+  const parsedRecords=records.map((source,i)=>{
     const cols=[...required,'Frequency'].map(h=>source[positions[h]]??'');
     if(required.some(h=>source[positions[h]]===undefined))throw new Error(`Baris ${i+2}: kolom belum lengkap`);
     const latitude=cols[5]===''?null:Number(cols[5]);const longitude=cols[6]===''?null:Number(cols[6]);

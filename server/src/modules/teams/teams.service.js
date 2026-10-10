@@ -5,6 +5,7 @@ import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
 import { getDynamicConfig } from '../config/config.service.js';
 import { invalidateClusterCache } from '../clusters/services/clusters.helpers.js';
+import {inTransaction} from '../../utils/in-transaction.js';
 const selection = {id:true,name:true,email:true,supervisorId:true,updatedAt:true,cluster:{select:{id:true,name:true,deletedAt:true}},supervisor:{select:{id:true,name:true}},assignedClusters:{where:{deletedAt:null},select:{id:true,name:true}}};
 export async function listTeams(actor) {
   const canClaim = await getDynamicConfig('TEAM_SPV_CAN_CLAIM_UNASSIGNED',true);
@@ -14,11 +15,12 @@ export async function listTeams(actor) {
   ]);
   return {sales:sales.map(({cluster,...member})=>({...member,assignedClusters:[...member.assignedClusters,...(cluster&&!cluster.deletedAt&&!member.assignedClusters.some(c=>c.id===cluster.id)?[{id:cluster.id,name:cluster.name}]:[])]})),supervisors,canClaim};
 }
-export async function assignTeam(salesId, raw, actor) {
+export async function assignTeam(salesId, raw, actor,{db=prisma,validateOnly=false}={}) {
   const body = z.object({supervisorId:z.string().min(1).nullable(),updatedAt:z.string().datetime(),reason:z.string().trim().min(5).max(500)}).parse(raw);
   if (actor.role !== 'ADMIN' && actor.role !== 'SUPERVISOR') throw new AppError('Tidak berwenang mengatur tim',403);
   const canClaim = await getDynamicConfig('TEAM_SPV_CAN_CLAIM_UNASSIGNED',true);
-  const result = await prisma.$transaction(async tx => {
+  const result = await inTransaction(db,async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${salesId}`}))`;
     const sales = await tx.user.findFirst({where:{id:salesId,role:'SALES',deletedAt:null},select:{id:true,supervisorId:true,updatedAt:true}});
@@ -29,6 +31,7 @@ export async function assignTeam(salesId, raw, actor) {
     if (sales.supervisorId === body.supervisorId) return {changed:false};
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     await assertReviewersRemain(tx,{patches:{[salesId]:{supervisorId:body.supervisorId}}});
+    if(validateOnly)return {changed:true};
     // Existing PJP and attendance remain immutable. Only future assignments are reset.
     const territories = await tx.cluster.findMany({where:{assignedSalesId:salesId},select:{id:true,supervisorId:true}});
     const released = territories.filter(c=>c.supervisorId !== body.supervisorId || !body.supervisorId).map(c=>c.id);
@@ -38,6 +41,6 @@ export async function assignTeam(salesId, raw, actor) {
     await policyNotification(tx,{data:{userId:salesId,title:'Penugasan tim diperbarui',message:`${body.reason}. Jadwal mendatang perlu ditetapkan kembali; PJP yang sudah terbentuk tetap.`,type:'TEAM_ASSIGNMENT',payload:{previousSupervisorId:sales.supervisorId,supervisorId:body.supervisorId,actorId:actor.id,reason:body.reason,releasedClusterIds:released}}});
     return {changed:true,releasedClusterIds:released};
   });
-  invalidateClusterCache();
+  if(db===prisma&&!validateOnly)invalidateClusterCache();
   return result;
 }

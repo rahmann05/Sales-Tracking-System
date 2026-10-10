@@ -1,8 +1,9 @@
 import {AppError} from '../../../utils/errors.js';
 import {wibDateKey} from '../../../../../shared/visit-metrics.mjs';
+import {serviceCatalog} from '../../../../../shared/reference-catalog.mjs';
 export function validateMaintenanceInput(data,values,now=Date.now()){
  if(!Number.isFinite(data.odometerAtService)||data.odometerAtService<0)throw new AppError('Odometer aktual tidak valid',400);
- if(!['GANTI_OLI','GANTI_FILTER_OLI','GANTI_KANVAS_REM','LAINNYA'].includes(data.serviceType))throw new AppError('Jenis servis tidak valid',400);
+ if(!serviceCatalog(values).some(r=>r.code===data.serviceType&&r.active))throw new AppError('Jenis servis tidak tersedia atau sudah dinonaktifkan. Pilih ulang jenis servis.',422);
  const at=data.serviceDate?Date.parse(data.serviceDate):now;
  if(!Number.isFinite(at)||at>now+60000)throw new AppError('Tanggal servis tidak valid atau berada di masa depan',400);
  const days=Math.round((Date.parse(wibDateKey(now))-Date.parse(wibDateKey(at)))/86400000);

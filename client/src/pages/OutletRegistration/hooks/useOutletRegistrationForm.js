@@ -1,4 +1,6 @@
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
+import {nativeFileCaptureService} from '../../../services/nativeFileCaptureService';
+import {evidenceImageError} from '../../../../../shared/evidence-image-policy.mjs';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import { registrationDefaults } from "./registrationInitialForm";
 import {registrationRevisionFields} from './registrationRevision';
@@ -6,6 +8,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
 import { manualCodeRequired } from '../../../../../shared/coding.mjs';
+import {registrationLocation,registrationRevisionReadiness} from '../../../../../shared/registration-policy.mjs';
+import {registrationFieldError} from '../../../../../shared/registration-fields.mjs';
 // Manages registration drafts, explicit location capture, submission and revisions.
 export const useOutletRegistrationForm = onSuccess => {
   const {settings,settingsReady} = useApp();
@@ -163,26 +167,20 @@ export const useOutletRegistrationForm = onSuccess => {
       [field]: value
     }));
   };
-  const handlePhotoUpload = e => {
+  const uploadEvidence = async (e,field) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateField('photoUrl', reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    e.target.value='';
+    if(!file)return;
+    try{
+      const values=formData.revisionId?formData.revisionPolicyValues||{}:settings;
+      if(file.size>(values.EVIDENCE_IMAGE_MAX_KB??2000)*1024)throw new Error(`Ukuran foto maksimal ${values.EVIDENCE_IMAGE_MAX_KB??2000} KB.`);
+      const dataUrl=await nativeFileCaptureService.readFileAsDataUrl(file);
+      const error=evidenceImageError(dataUrl,values);if(error)throw new Error(error);
+      updateField(field,dataUrl);setSubmitError('');
+    }catch(error){setSubmitError(error.message);}
   };
-  const handleTaxDocUpload = e => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateField('taxDocumentUrl', reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const handlePhotoUpload=e=>uploadEvidence(e,'photoUrl');
+  const handleTaxDocUpload=e=>uploadEvidence(e,'taxDocumentUrl');
   const toggleDay = day => {
     setDirty(true);
     setFormData(prev => {
@@ -208,6 +206,7 @@ export const useOutletRegistrationForm = onSuccess => {
     setSubmitSuccess(null);
   };
   const startRevision=item=>{
+    const readiness=registrationRevisionReadiness(item);if(!readiness.allowed){setSubmitError(readiness.issues.join(' '));return;}
     submissionId.current=crypto.randomUUID();setSubmitError('');setSubmitSuccess(null);setDirty(true);
     setFormData(registrationRevisionFields(item,submissionId.current));
     setVerifiedPlace(item.placeDetails || null);
@@ -220,7 +219,10 @@ export const useOutletRegistrationForm = onSuccess => {
 
     // Detailed Validation & Helpful Error Messages
     const validationErrors = [];
-    if(formData.latitude==null||formData.longitude==null||!Number.isFinite(Number(formData.latitude))||!Number.isFinite(Number(formData.longitude))||Math.abs(Number(formData.latitude))>90||Math.abs(Number(formData.longitude))>180)validationErrors.push('Ambil lokasi GPS outlet sebelum mengajukan.');
+    const rules=formData.revisionId?formData.revisionPolicyValues||{}:settings;
+    const fieldError=registrationFieldError(formData,rules.REGISTRATION_SUBMIT_REQUIRED_FIELDS||'');if(fieldError)validationErrors.push(fieldError);
+    let point;
+    try{point=registrationLocation({latitude:formData.latitude==null||formData.latitude===''?null:Number(formData.latitude),longitude:formData.longitude==null||formData.longitude===''?null:Number(formData.longitude)},rules.REGISTRATION_REQUIRE_LOCATION!==false);}catch(error){validationErrors.push(error.message);}
     if (manualCodeRequired('NOO', settings) && !formData.registrationCode?.trim()) validationErrors.push('Kode pengajuan NOO wajib diisi manual.');
     if (!formData.name || formData.name.trim().length < 2) {
       validationErrors.push('Nama Outlet wajib diisi minimal 2 karakter.');
@@ -228,10 +230,10 @@ export const useOutletRegistrationForm = onSuccess => {
     if (!formData.address || formData.address.trim().length < 3) {
       validationErrors.push('Alamat Outlet wajib diisi.');
     }
-    if (settings.CUSTOMER_REG_REQUIRE_PHOTO && !formData.photoUrl) {
+    if (rules.CUSTOMER_REG_REQUIRE_PHOTO!==false && !formData.photoUrl) {
       validationErrors.push('Foto fisik outlet wajib diambil langsung dari kamera.');
     }
-    if (settings.CUSTOMER_REG_REQUIRE_TAX_DOCUMENT && !formData.taxDocumentUrl) {
+    if (rules.CUSTOMER_REG_REQUIRE_TAX_DOCUMENT!==false && !formData.taxDocumentUrl) {
       const docName = formData.taxType === 'PKP' ? 'NPWP' : 'KTP';
       validationErrors.push(`Foto dokumen ${docName} wajib diambil langsung dari kamera.`);
     }
@@ -248,8 +250,7 @@ export const useOutletRegistrationForm = onSuccess => {
         ...formData,
         requestId:formData.submissionRequestId || submissionId.current,
         visitDays: Array.isArray(formData.visitDays) ? formData.visitDays.join(',') : formData.visitDays,
-        latitude: Number(formData.latitude),
-        longitude: Number(formData.longitude),
+        ...point,
         termOfPaymentDays:formData.paymentType==='TOP'?Number(formData.termOfPaymentDays):0
       };
       const res = formData.revisionId?await customerRegistrationsApi.revise(formData.revisionId,{...payload,updatedAt:formData.revisionUpdatedAt,revisionReason:formData.revisionReason}):await customerRegistrationsApi.create(payload);

@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
 import {useApp} from '../../../context/AppContext';
@@ -84,14 +85,14 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
           <div>
             <span className="text-gray-500 font-semibold block">Realisasi vs Target MTD:</span>
             <strong className="text-gray-900 text-[11px]">
-              Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')} / {formatTarget(summary.monthlyTargetAmount)}
+              {reportMoney(summary.mtdActualAmount)} / {formatTarget(summary.monthlyTargetAmount)}
             </strong>
             <span className="text-blue-700 font-bold block">Pencapaian: {summary.overallAchievementRate}</span>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block">Last Month Actual (LMA):</span>
             <strong className="text-gray-900 text-[11px]">
-              Rp {(summary.lastMonthActual || 0).toLocaleString('id-ID')}
+              {reportMoney(summary.lastMonthActual)}
             </strong>
             <span className="text-emerald-700 font-bold block">% MTD to LMA: {summary.mtdToLmaRate}</span>
           </div>
@@ -115,7 +116,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
                 <div key={c.channelKey} className="border border-gray-200 p-1.5 rounded-xs bg-white">
                   <div className="font-bold text-gray-800">{c.channelName}</div>
                   <div className="flex items-center justify-between text-gray-600 mt-0.5 font-mono">
-                    <span>Nilai order disetujui: Rp {(c.mtdOmzet || 0).toLocaleString('id-ID')}</span>
+                    <span>Nilai order disetujui: {reportMoney(c.mtdOmzet)}</span>
                     <strong className="text-purple-700">{c.contributionRate}</strong>
                   </div>
                 </div>
@@ -164,13 +165,13 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
                     {formatTarget(s.monthlyTarget,s.target?.status)}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
-                    Rp {(s.mtdActualAmount || 0).toLocaleString('id-ID')}
+                    {reportMoney(s.mtdActualAmount)}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-center font-mono font-bold text-blue-700">
                     {s.achievementRate}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-right font-mono whitespace-nowrap text-gray-600">
-                    Rp {(s.lastMonthActual || 0).toLocaleString('id-ID')}
+                    {reportMoney(s.lastMonthActual)}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-center font-mono font-bold text-emerald-700">
                     {s.mtdToLmaRate}
@@ -199,13 +200,13 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
                   {formatTarget(summary.monthlyTargetAmount)}
                 </td>
                 <td className="p-1.5 border-r border-black text-right font-mono whitespace-nowrap">
-                  Rp {(summary.mtdActualAmount || 0).toLocaleString('id-ID')}
+                  {reportMoney(summary.mtdActualAmount)}
                 </td>
                 <td className="p-1.5 border-r border-black text-center font-mono text-blue-800">
                   {summary.overallAchievementRate}
                 </td>
                 <td className="p-1.5 border-r border-black text-right font-mono whitespace-nowrap">
-                  Rp {(summary.lastMonthActual || 0).toLocaleString('id-ID')}
+                  {reportMoney(summary.lastMonthActual)}
                 </td>
                 <td className="p-1.5 border-r border-black text-center font-mono text-emerald-800">
                   {summary.mtdToLmaRate}

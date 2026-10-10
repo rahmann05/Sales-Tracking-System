@@ -9,7 +9,7 @@ import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
 import {previewProcessMigration,migrateProcesses} from '../src/modules/config/services/process-migration.service.js';
 import {profileKey,invalidatePolicyCache} from '../src/modules/config/services/policy-resolver.service.js';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
-const tag='migration-'+randomUUID(),users=[],routes=[],packings=[],orders=[],registrations=[],outlets=[],clusters=[],pjps=[];
+const tag='migration-'+randomUUID(),users=[],routes=[],packings=[],orders=[],registrations=[],outlets=[],clusters=[],pjps=[],activities=[];
 let key,checks=0;const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
 const rejects=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
 const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
@@ -44,9 +44,20 @@ try{
  await prisma.deliveryRoute.update({where:{id:route.id},data:{preparation:{PICK:{actorId:warehouse.id,at:new Date().toISOString()}}}});eq((await previewProcessMigration({kind:'TRIP',ids:[route.id]})).ready,false);
  eq(await prisma.auditEvent.count({where:{entityType:'PROCESS_POLICY_MIGRATION',actorId:admin.id}}),4);
  eq((await api('/draft',admin,'PUT',{scope:`TEAM:${spv.id}`,revision:0,reason:body.reason,values:{AUDIT_ACTIVE_RETENTION_DAYS:30}})).status,400);
- console.log(`C00 process migration passed: ${checks} assertions; Admin-only, stale preview blocked, four processes migrated, commercial/evidence history preserved.`);
+ await set({SALES_OUT_PHOTO:'OPTIONAL',SHIFT_OUT_PHOTO:'REQUIRED',FOLLOW_UP_REQUIRE_EVIDENCE:false});
+ await prisma.pjpStop.update({where:{id:pjp.stops[0].id},data:{policySnapshot:snapshot,visitSession:{state:'ACTIVE',startedAt:new Date().toISOString()}}});
+ const shift=await prisma.staffActivity.create({data:{userId:sales.id,dateKey:'2026-10-10',activityKey:tag+'-SHIFT',kind:'SHIFT',policySnapshot:snapshot,photoUrl:'https://example.invalid/original-in.jpg',checklist:{startKind:'CHECK_IN'}}});activities.push(shift.id);
+ const task=await prisma.staffActivity.create({data:{userId:spv.id,dateKey:'2026-10-10',activityKey:tag+'-TASK',kind:'VISIT',policySnapshot:snapshot,followUp:{status:'OPEN',ownerId:sales.id,note:'Tugas uji'}}});activities.push(task.id);
+ for(const [kind,id] of [['VISIT',pjp.stops[0].id],['SHIFT',shift.id],['FOLLOW_UP',task.id]]){const p=await previewProcessMigration({kind,ids:[id]});eq(p.ready,true);eq((await migrateProcesses({kind,ids:[id],fingerprint:p.fingerprint,reason:body.reason},admin)).count,1);}
+ const shifted=await prisma.staffActivity.findUnique({where:{id:shift.id}});eq(shifted.photoUrl,shift.photoUrl);eq(shifted.checkInAt,shift.checkInAt);eq(shifted.checkOutAt,null);eq(shifted.policySnapshot.values.SHIFT_OUT_PHOTO,'REQUIRED');eq(shifted.policySnapshot.migrations[0].beforeValues.SHIFT_OUT_PHOTO,'OPTIONAL');
+ const visited=await prisma.pjpStop.findUnique({where:{id:pjp.stops[0].id}});eq(visited.policySnapshot.values.SALES_ATTENDANCE_MODE,snapshot.values.SALES_ATTENDANCE_MODE);eq(visited.visitSession.state,'ACTIVE');
+ const movedTask=await prisma.staffActivity.findUnique({where:{id:task.id}});eq(movedTask.followUp,task.followUp);eq(movedTask.policySnapshot.values.FOLLOW_UP_REQUIRE_EVIDENCE,false);
+ await prisma.staffActivity.update({where:{id:task.id},data:{followUp:{...task.followUp,status:'SUBMITTED'}}});
+ await rejects(()=>previewProcessMigration({kind:'FOLLOW_UP',ids:[task.id]}),409);
+ console.log(`C00 process migration passed: ${checks} assertions; Admin-only, stale preview blocked, seven process groups migrated, commercial/evidence history preserved.`);
 }finally{
  server.closeAllConnections();await new Promise(r=>server.close(r));
+ await prisma.staffActivity.deleteMany({where:{id:{in:activities}}});
  await prisma.auditEvent.deleteMany({where:{actorId:{in:users}}});
  if(key)await prisma.systemConfig.deleteMany({where:{key}});
  await prisma.deliveryRoute.deleteMany({where:{id:{in:routes}}});await prisma.packingList.deleteMany({where:{id:{in:packings}}});await prisma.order.deleteMany({where:{id:{in:orders}}});await prisma.customerRegistration.deleteMany({where:{id:{in:registrations}}});await prisma.pjp.deleteMany({where:{id:{in:pjps}}});await prisma.outlet.deleteMany({where:{id:{in:outlets}}});await prisma.cluster.deleteMany({where:{id:{in:clusters}}});await prisma.user.deleteMany({where:{id:{in:users}}});invalidatePolicyCache();await prisma.$disconnect();

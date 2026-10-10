@@ -1,3 +1,4 @@
+import {assertEvidenceImages} from '../../utils/evidence-images.js';
 import {gpsEvidence} from '../../utils/gps-evidence.js';
 import {capturePolicySnapshot,processValue} from '../config/services/process-policy.service.js';
 import {requireActiveShift} from '../absensi/services/attendance-policy.service.js';
@@ -20,6 +21,7 @@ async function perform(db,user, data) {
   if(data.visitMode==='PRIORITY_AUDIT'&&!await getDynamicConfig('SPV_ALLOW_PRIORITY_AUDIT',true))throw new AppError('Audit prioritas dinonaktifkan',403);
   const requiredGps=await getDynamicConfig('SPV_REQUIRE_GPS',true),requiredPhoto=await getDynamicConfig('SPV_REQUIRE_PHOTO',true),mode=await getDynamicConfig('SPV_ATTENDANCE_MODE','IN_OUT');
   if (data.action === 'OFF_PJP') {
+    await assertEvidenceImages({photoUrl:data.photoUrl});
     if(!await getDynamicConfig('SPV_ALLOW_OFF_PJP',true))throw new AppError('Kunjungan SPV luar PJP dinonaktifkan',403);
     if (!data.outletName?.trim() || !data.notes?.trim()) throw new AppError('Nama toko dan alasan wajib diisi', 400);
     if (mode!=='OPTIONAL'&&(requiredGps&&(!Number.isFinite(data.latitude)||!Number.isFinite(data.longitude))||requiredPhoto&&!data.photoUrl)) {
@@ -49,6 +51,7 @@ async function perform(db,user, data) {
   const where = { userId_dateKey_activityKey: { userId: user.id, dateKey, activityKey: data.stopId } };
   let existing = await db.staffActivity.findUnique({ where });
   if (data.action === 'VISIT_IN') {
+    await assertEvidenceImages({photoUrl:data.photoUrl});
     if (existing) throw new AppError('Kunjungan sudah dimulai', 409);
     if((await db.staffActivity.findMany({where:{userId:user.id,kind:'VISIT',checkOutAt:null}})).some(row=>row.checklist?.state!=='FINISHED'))throw new AppError('Selesaikan kunjungan aktif terlebih dahulu',409);
     const visitMode=data.visitMode||'JOINT_VISIT';
@@ -60,6 +63,7 @@ async function perform(db,user, data) {
     return db.staffActivity.create({ data: { userId: user.id, dateKey, activityKey: data.stopId, kind: 'VISIT',gpsEvidence:await gpsEvidence(data), policySnapshot:await capturePolicySnapshot(),checklist:{startKind:mode==='OPTIONAL'?'BUSINESS_START':'CHECK_IN'},visitMode, outletName: stop.outlet.name, notes: data.notes, latitude: data.latitude, longitude: data.longitude, photoUrl: data.photoUrl } });
   }
   if (!existing || existing.checkOutAt || existing.checklist?.state==='FINISHED') throw new AppError('Kunjungan belum dimulai atau sudah selesai', 409);
+  if(data.action==='AUDIT')await assertEvidenceImages({photos:Object.values(data.auditEvidence||{})},{entity:existing});
   const questions=parseAuditItems(await processValue(existing,'SPV_AUDIT_ITEMS',DEFAULT_AUDIT_ITEMS));
   let answers;try{answers=auditAnswers(questions,data.action==='AUDIT'?data.checklist:existing.checklist,data.action==='AUDIT'?data.auditEvidence||{}:existing.checklist?._evidence||{});}catch(error){throw new AppError(error.message,422);}
   let followUp;

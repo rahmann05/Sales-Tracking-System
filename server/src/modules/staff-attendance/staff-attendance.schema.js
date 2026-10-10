@@ -11,7 +11,7 @@ export const staffActionSchema = z.object({ body: z.object({
     observedAt:z.string().datetime().nullable().optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
-  photoUrl: z.string().optional(),
+  photoUrl: z.string().max(2800000).optional(),
   checklist: z.record(z.union([z.boolean(),z.number().finite(),z.string().max(4000)]).nullable()).optional(),
   auditEvidence: z.record(z.object({reason:z.string().max(2000).optional(),photoUrl:z.string().max(2800000).optional()}).strict()).optional(),
 }).strict() });

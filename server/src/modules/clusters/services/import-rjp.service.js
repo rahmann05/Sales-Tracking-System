@@ -1,4 +1,5 @@
 import {assertClusterTrade} from './cluster-trade-policy.service.js';
+import {createHash} from 'node:crypto';
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {getDynamicConfig} from '../../config/config.service.js';
@@ -14,15 +15,23 @@ import {recordOutletChange} from '../../outlets/services/outlet-change-policy.se
 import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service.js';
 export async function importRjp(raw,user,impactToken){
   const rows=importRows.parse(raw);
+  if(!['ADMIN','SUPERVISOR'].includes(user.role))throw new AppError('Tidak berwenang mengimpor wilayah',403);
   if(new Set(rows.map(r=>r.outletCode)).size!==rows.length)throw new AppError('Kode outlet duplikat dalam berkas',400);
   const radius=await getDynamicConfig('DEFAULT_OUTLET_RADIUS_METERS',50);
   const result=await prisma.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
+    const requestHash=createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+    const receipt=impactToken?await tx.auditEvent.findFirst({where:{entityType:'RJP_IMPORT',entityId:impactToken,actorId:user.id||null,action:'RJP_IMPORT_APPLIED'},orderBy:{createdAt:'desc'}}):null;
+    if(receipt){
+      if(receipt.after.requestHash!==requestHash)throw new AppError('Pratinjau ini sudah diterapkan untuk isian berbeda. Periksa kembali berkas impor.',409);
+      return receipt.after.result;
+    }
     const preview=await previewRjpImport(rows,user,tx);
-    if(preview.summary.updated&&preview.token!==impactToken)throw new AppError('Tinjau kembali perubahan impor sebelum menerapkan. Data mungkin sudah berubah.',409);
+    if(preview.token!==impactToken)throw new AppError('Tinjau kembali perubahan impor sebelum menerapkan. Data atau pilihan impor mungkin sudah berubah.',409);
     const affected=new Set();
     let clusterCount=0;
     for(const r of rows){
+      if(preview.changes.find(c=>c.outletCode===r.outletCode)?.action==='SKIP')continue;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`import-cluster:${r.clusterName}`}))`;
       let cluster=await tx.cluster.findFirst({where:{...(r.clusterCode?{code:r.clusterCode}:{name:r.clusterName}),deletedAt:null}});
       if(cluster&&user.role==='SUPERVISOR'&&cluster.supervisorId!==user.id)throw new AppError('Klaster impor berada di luar tim Anda',403);
@@ -44,7 +53,9 @@ export async function importRjp(raw,user,impactToken){
     }
     await tx.clusterRoute.deleteMany({where:{clusterId:{in:[...affected]}}});
     await synchronizeOutletCounts(tx,[...affected]);
-    return {importedOutletsCount:rows.length,importedClustersCount:clusterCount,summary:preview.summary};
+    const applied={importedOutletsCount:preview.summary.created+preview.summary.updated,importedClustersCount:clusterCount,summary:preview.summary};
+    await tx.auditEvent.create({data:{entityType:'RJP_IMPORT',entityId:preview.token,action:'RJP_IMPORT_APPLIED',actorId:user.id||null,actorName:user.name||null,before:{},after:{requestHash,result:applied,choices:rows.map(r=>({outletCode:r.outletCode,importAction:r.importAction})),changes:preview.changes}}});
+    return applied;
   },{timeout:60000});
   invalidateClusterCache();cacheInvalidate(CACHE_KEYS.ALL_OUTLETS);broadcastCacheInvalidation('outlets');broadcastCacheInvalidation('clusters');return result;
 }

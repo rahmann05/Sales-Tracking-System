@@ -1,0 +1,42 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {prisma} from '../src/config/prisma.js';
+import {reportClosedOutlet} from '../src/modules/route-changes/services/report-closed-outlet.service.js';
+import {decideRoute} from '../src/modules/route-changes/services/route-decision.service.js';
+import {withPolicy} from '../src/modules/config/services/policy-context.service.js';
+import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
+import {wibDateKey} from '../../shared/visit-metrics.mjs';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
+const tag='route-workflow-'+randomUUID(),users=[],outlets=[],requests=[];let c,pjp,checks=0;
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};const reject=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
+const policy=values=>({values:{...CONFIG_DEFAULTS,...values}});
+try{
+ const person=async(role,extra={})=>{const u=await prisma.user.create({data:{name:tag,email:randomUUID()+'@example.invalid',password:'unused',role,...extra}});users.push(u.id);return u;};
+ const admin=await person('ADMIN'),spv=await person('SUPERVISOR'),foreign=await person('SUPERVISOR'),sales=await person('SALES',{supervisorId:spv.id});
+ c=await prisma.cluster.create({data:{name:tag,region:'Bandung',supervisorId:spv.id,assignedSalesId:sales.id}});
+ for(let n=0;n<5;n++)outlets.push((await prisma.outlet.create({data:{name:tag+n,address:'Jalan Uji Bandung nomor '+n,latitude:-6.9,longitude:107.6,clusterId:c.id}})).id);
+ pjp=await prisma.pjp.create({data:{userId:sales.id,type:'SALES',date:new Date(`${wibDateKey()}T05:00:00Z`),stops:{create:outlets.slice(0,4).map((outletId,n)=>({outletId,sequence:n+1}))}},include:{stops:{orderBy:{sequence:'asc'}}}});
+ const report=async(n,mode)=>{const r=await withPolicy(policy({CLOSED_OUTLET_DECISION_MODE:mode}),()=>reportClosedOutlet(sales.id,pjp.stops[n].id,'Toko terkunci saat kunjungan'));requests.push(r.id);return r;};
+ await reject(()=>withPolicy(policy({CLOSED_OUTLET_REQUIRE_PHOTO:true}),()=>reportClosedOutlet(sales.id,pjp.stops[0].id,'Toko terkunci')),422);
+ const seq=await report(0,'SEQUENTIAL');eq(seq.workflow.mode,'SEQUENTIAL');
+ await reject(()=>decideRoute(admin.id,seq.id,'SKIP'),403);
+ await reject(()=>decideRoute(foreign.id,seq.id,'SKIP'),403);
+ const proposed=await decideRoute(spv.id,seq.id,'SKIP');eq(proposed.routeChangeRequest.status,'PENDING_APPROVAL');eq((await prisma.pjpStop.findUnique({where:{id:seq.pjpStopId}})).status,'CLOSED_REPORTED');
+ await reject(()=>decideRoute(spv.id,seq.id,'APPROVE'),403);
+ const accepted=await withPolicy(policy({CLOSED_OUTLET_DECISION_MODE:'ADMIN'}),()=>decideRoute(admin.id,seq.id,'APPROVE'));eq(accepted.routeChangeRequest.status,'ACKNOWLEDGED');
+ const onlyAdmin=await report(1,'ADMIN');await reject(()=>decideRoute(spv.id,onlyAdmin.id,'REROUTE',outlets[4]),403);
+ const changed=await decideRoute(admin.id,onlyAdmin.id,'REROUTE',outlets[4],'Toko alternatif dalam wilayah Sales');eq(changed.createdPjpStop.outletId,outlets[4]);
+ await reject(()=>decideRoute(admin.id,onlyAdmin.id,'REROUTE',outlets[4]),409);
+ const single=await report(2,'SUPERVISOR_OR_ADMIN');eq((await decideRoute(spv.id,single.id,'SKIP')).routeChangeRequest.status,'ACKNOWLEDGED');
+ const legacy=await withPolicy(policy({CLOSED_OUTLET_DECISION_MODE:'INHERIT',REROUTE_REQUIRE_ADMIN_APPROVAL:true}),()=>reportClosedOutlet(sales.id,pjp.stops[3].id,'Toko terkunci saat kunjungan'));requests.push(legacy.id);eq(legacy.workflow.mode,'LEGACY_SEQUENTIAL');
+ eq((await decideRoute(spv.id,legacy.id,'SKIP')).routeChangeRequest.status,'ACKNOWLEDGED');
+ eq(await prisma.auditEvent.count({where:{entityType:'ROUTE_CHANGE',entityId:{in:requests}}}),5);
+ console.log(`Route workflow passed: ${checks} assertions; frozen mode, two-stage skip, Admin route replacement, scope and duplicate decision.`);
+}finally{
+ await prisma.systemConfig.deleteMany({where:{key:{in:requests.map(id=>'_ROUTE_CHANGE_WORKFLOW:'+id)}}});
+ await prisma.auditEvent.deleteMany({where:{actorId:{in:users}}});
+ await prisma.notification.deleteMany({where:{OR:[{userId:{in:users}},{message:{contains:tag}}]}});
+ await prisma.routeChangeRequest.deleteMany({where:{id:{in:requests}}});
+ if(pjp)await prisma.pjp.delete({where:{id:pjp.id}});await prisma.outlet.deleteMany({where:{id:{in:outlets}}});if(c)await prisma.cluster.delete({where:{id:c.id}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
+}

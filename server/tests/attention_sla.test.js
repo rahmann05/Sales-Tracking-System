@@ -44,6 +44,7 @@ test('exception queries scope every source to the current SPV team and avoid dou
   queries.length=0;assert.deepEqual(await exceptionAttentionRows({role:'KEPALA_GUDANG'}),[]);assert.equal(queries.length,0);
 });
 test('reroute waiting for Admin is visible but not actionable by SPV, with a fresh stage anchor',async t=>{
+  replace(t,prisma.systemConfig,'findMany',async()=>[]);
   replace(t,prisma.operationalException,'findMany',async()=>[]);
   const person={id:'sales',name:'Sales',supervisor:{id:'spv',name:'SPV',role:'SUPERVISOR',deletedAt:null}};
   for(const model of ['offPjpAttendance','attendance','outletUnlockRequest'])replace(t,prisma[model],'findMany',async()=>[]);

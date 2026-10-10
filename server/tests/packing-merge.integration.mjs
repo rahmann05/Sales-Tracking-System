@@ -1,0 +1,72 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {prisma} from '../src/config/prisma.js';
+import {savePacking,transitionPacking} from '../src/modules/delivery/services/packing-workflow.service.js';
+import {getOrders} from '../src/modules/orders/services/get-orders.service.js';
+import {cancelOrderRemainder} from '../src/modules/orders/services/cancel-order-remainder.service.js';
+import {withPolicy} from '../src/modules/config/services/policy-context.service.js';
+import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
+import {createDeliveryRoute} from '../src/modules/delivery/services/create-delivery-route.service.js';
+import {updateStopStatus} from '../src/modules/delivery/services/update-stop-status.service.js';
+import {invoiceReconciliation} from '../../shared/invoice-reconciliation.mjs';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
+const tag='merge-'+randomUUID();let admin,product,cluster,outlet,foreign,driver,vehicle,checks=0;const orders=[],routes=[];
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;},reject=async(fn,code)=>{await assert.rejects(fn,e=>e.statusCode===code);checks++;};
+let values={...CONFIG_DEFAULTS,PACKING_SOURCE_MODE:'BOTH',PACKING_ALLOW_MERGE_ORDERS:true,CODE_PACKING_LIST_MODE:'INCREMENT',CODE_INVOICE_MODE:'INCREMENT'};
+const as=fn=>withPolicy({values,versions:[],at:new Date().toISOString()},fn);
+try{
+ admin=await prisma.user.create({data:{name:tag,email:tag+'@example.invalid',password:'unused',role:'ADMIN'}});
+ cluster=await prisma.cluster.create({data:{name:tag,region:'Bandung'}});
+ outlet=await prisma.outlet.create({data:{name:tag,address:'Jl Uji 12 Bandung',clusterId:cluster.id}});
+ foreign=await prisma.outlet.create({data:{name:tag+' other',address:'Jl Uji 14 Bandung',clusterId:cluster.id}});
+ product=await prisma.product.create({data:{name:tag,sku:tag,price:100}});
+ for(let n=0;n<3;n++)orders.push(await prisma.order.create({data:{createdBy:admin.id,outletId:n===2?foreign.id:outlet.id,status:'APPROVED',totalValue:500,taxIncluded:true,taxRatePercent:0,items:{create:{productId:product.id,quantity:5,unitPrice:100,subtotal:500}}},include:{items:true}}));
+ const [a,b,c]=orders,rows=[a,b].map(o=>({lineId:o.items[0].id,sourceOrderItemId:o.items[0].id,name:tag,quantity:2,unit:'unit'}));
+ const payload={outletId:outlet.id,sourceOrderIds:[a.id,b.id],items:rows,totalCartons:2,invoices:[{totalCartons:2,totalAmount:400,items:rows.map(i=>({lineId:i.lineId,quantity:2}))}]};
+ values.PACKING_ALLOW_MERGE_ORDERS=false;await reject(()=>as(()=>savePacking(payload,admin.id)),409);values.PACKING_ALLOW_MERGE_ORDERS=true;
+ await reject(()=>as(()=>savePacking({...payload,sourceOrderIds:[a.id,a.id]},admin.id)),400);
+ await reject(()=>as(()=>savePacking({...payload,sourceOrderIds:[a.id,c.id]},admin.id)),400);
+ await reject(()=>as(()=>savePacking({...payload,items:[rows[0]]},admin.id)),400);
+ const doc=await as(()=>savePacking(payload,admin.id));eq(doc.sourceOrderId,null);eq([...doc.sourceOrderIds].sort(),[a.id,b.id].sort());eq(doc.items.map(i=>i.sourceOrderId),[a.id,b.id]);
+ eq(doc.invoices[0].items.map(i=>i.unitPrice),[100,100]);
+ let data=(await as(()=>getOrders(admin,{limit:100}))).data;
+ for(const o of [a,b]){const line=data.find(x=>x.id===o.id).fulfillmentLines[0];eq(line.prepared,2);eq(line.unpacked,3);}
+ await reject(()=>as(()=>cancelOrderRemainder(b.id,{note:'Too many',lines:[{id:b.items[0].id,quantity:4}]},admin)),409);
+ const changed=await as(()=>cancelOrderRemainder(b.id,{note:'Customer cancelled remainder',lines:[{id:b.items[0].id,quantity:1}]},admin));eq(changed.fulfillmentLines[0].unpacked,2);
+ await reject(()=>as(()=>savePacking({...payload,items:rows.map(i=>({...i,quantity:4}))},admin.id)),409);
+ const pair=await Promise.allSettled([as(()=>savePacking(payload,admin.id)),as(()=>savePacking(payload,admin.id))]);
+ eq(pair.filter(x=>x.status==='fulfilled').length,1);
+ data=(await as(()=>getOrders(admin,{limit:100}))).data;eq(data.find(o=>o.id===b.id).fulfillmentLines[0].unpacked,0);
+ await prisma.order.update({where:{id:b.id},data:{status:'REJECTED'}});
+ await reject(()=>as(()=>transitionPacking(doc.id,'RELEASE',admin.id)),409);
+ await prisma.order.update({where:{id:b.id},data:{status:'APPROVED'}});
+ eq((await as(()=>transitionPacking(doc.id,'RELEASE',admin.id))).status,'RELEASED');
+ const manifestPayload={documentKind:'MANIFEST',outletId:outlet.id,items:[{name:tag,quantity:3,unit:'unit'}],totalCartons:1,invoices:[]};
+ await reject(()=>as(()=>savePacking(manifestPayload,admin.id)),409);
+ values.PACKING_ALLOW_MANIFEST=true;values.MANIFEST_REQUIRE_INVOICE=false;
+ const manifest=await as(()=>savePacking(manifestPayload,admin.id));eq(manifest.documentKind,'MANIFEST');assert.ok(manifest.code.startsWith('MF-'));checks++;
+ await reject(()=>as(()=>savePacking({...manifestPayload,documentKind:'PACKING',revision:manifest.revision},admin.id,manifest.id)),409);
+ values.MANIFEST_REQUIRE_INVOICE=true;
+ eq((await as(()=>transitionPacking(manifest.id,'RELEASE',admin.id))).status,'RELEASED');
+ eq(invoiceReconciliation(manifest).status,'NO_INVOICE');
+ const strict=await as(()=>savePacking(manifestPayload,admin.id));await reject(()=>as(()=>transitionPacking(strict.id,'RELEASE',admin.id)),400);
+ driver=await prisma.user.create({data:{name:tag,email:randomUUID()+'@example.invalid',role:'SUPIR',password:'unused'}});
+ vehicle=await prisma.vehicle.create({data:{code:tag,name:tag,maxCartons:20,maxWeightKg:1000,fuelKmPerLiter:5,fuelType:'DIESEL',fuelPricePerLiter:10000}});
+ const trip=await as(()=>createDeliveryRoute({date:'2026-10-10',vehicleId:vehicle.id,driverId:driver.id,stops:[{packingListId:manifest.id,outletId:outlet.id,sequence:1}]},admin.id));routes.push(trip.id);
+ eq(trip.stops[0].allocatedInvoices,[]);eq(trip.totalCartons,1);eq(trip.stops[0].allocatedItems[0].quantity,3);
+ // Freeze no-attendance mode solely for the disposable manifest-result fixture.
+ await prisma.deliveryRoute.update({where:{id:trip.id},data:{status:'IN_TRANSIT',policySnapshot:{...trip.policySnapshot,values:{...trip.policySnapshot.values,DELIVERY_ATTENDANCE_MODE:'OPTIONAL',DELIVERY_REQUIRE_PHOTO:false}}}});
+ await as(()=>updateStopStatus(trip.stops[0].id,{status:'DELIVERED'},driver.id));
+ eq((await prisma.deliveryRoute.findUnique({where:{id:trip.id}})).status,'COMPLETED');
+ eq(await prisma.invoice.count({where:{packingListId:manifest.id}}),0);
+ eq(invoiceReconciliation(await prisma.packingList.findUnique({where:{id:manifest.id},include:{invoices:true,deliveryStops:true}})).status,'NO_INVOICE');
+ console.log(`C11 merge integration passed: ${checks} assertions; outlet/source isolation, amounts, remainder, concurrent reservation and release revalidation.`);
+}finally{
+ await prisma.deliveryRoute.deleteMany({where:{id:{in:routes}}});
+ if(outlet)await prisma.packingList.deleteMany({where:{outletId:outlet.id}});
+ if(admin){await prisma.notification.deleteMany({where:{userId:admin.id}});await prisma.auditEvent.deleteMany({where:{actorId:admin.id}});await prisma.order.deleteMany({where:{createdBy:admin.id}});}
+ if(product)await prisma.product.delete({where:{id:product.id}});
+ await prisma.outlet.deleteMany({where:{id:{in:[outlet?.id,foreign?.id].filter(Boolean)}}});
+ if(cluster)await prisma.cluster.delete({where:{id:cluster.id}});if(admin)await prisma.user.delete({where:{id:admin.id}});if(driver)await prisma.user.delete({where:{id:driver.id}});if(vehicle)await prisma.vehicle.delete({where:{id:vehicle.id}});await prisma.$disconnect();
+}

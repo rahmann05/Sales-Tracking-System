@@ -5,7 +5,8 @@ import { ReportBasisNote } from './ReportBasisNote';
 import { ReportCalendarEditor } from './ReportCalendarEditor';
 import { ReportArchivePanel } from './ReportArchivePanel';
 import { WeeklySalesTable } from './WeeklySalesTable';
-import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import {reportFilterDefaults} from '../../../../../shared/report-filter-defaults.mjs';
+import {useApp} from '../../../context/AppContext';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { collectPages, reportsApi, usersApi } from '../../../services/api';
 import { WeeklyReportPdfView } from './WeeklyReportPdfView';
@@ -14,13 +15,8 @@ import { WeeklyReportPdfView } from './WeeklyReportPdfView';
  * Single Responsibility: Weekly Performance Analysis (WTD) & 6-Day Work Week Matrix Table ala ND6.
  */
 export const WeeklyReportView = () => {
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date(`${wibDateKey()}T12:00:00Z`);
-    const day = d.getUTCDay();
-    const diff = (day + 6) % 7;
-    d.setUTCDate(d.getUTCDate() - diff);
-    return d.toISOString().split('T')[0];
-  });
+  const {settings}=useApp();
+  const [startDate, setStartDate] = useState(() => reportFilterDefaults(settings).weekStart);
   const [salesmanId, setSalesmanId] = useState('');
   const [search, setSearch] = useState('');
   const [salesTeam, setSalesTeam] = useState([]);

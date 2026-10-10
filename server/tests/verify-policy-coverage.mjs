@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {CONFIG_PARAMS} from '../../shared/config.mjs';
+import {CONFIG_PARAMS,CONFIG_DEFINITIONS} from '../../shared/config.mjs';
 import {requestFeature,TAB_FEATURES} from '../../shared/feature-policy.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url)),files=[];
 function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())walk(file);else if(/\.(?:js|jsx|mjs)$/.test(file))files.push(file);}}
@@ -13,6 +13,11 @@ const source=new Map(files.map(file=>{
  if(/\u00e2[\u20ac\u2020]|\u00c2\u00b7|\ufffd/.test(text))errors.push(`Broken display characters: ${name}`);
  return [name,text];
 }));
+// Every parameter group must be reachable in the Admin editor, not merely searchable in source.
+const configNavigation=source.get('client/src/pages/Admin/AdminConfigNavigation.js')||'';
+const editorGroups=[...configNavigation.matchAll(/groups:\[([^\]]*)\]/g)].flatMap(match=>[...match[1].matchAll(/'([^']+)'/g)].map(item=>item[1]));
+editorGroups.push(...CONFIG_DEFINITIONS.filter(group=>group.groupKey.startsWith('CODING_')).map(group=>group.groupKey));
+for(const group of CONFIG_DEFINITIONS){const count=editorGroups.filter(key=>key===group.groupKey).length;if(count!==1)errors.push(`Admin parameter group must appear exactly once: ${group.groupKey} (${count})`);}
 const dynamicReaders={
  CODE_:'server/src/modules/config/services/business-code.service.js',
  SLA_:'server/src/modules/attention/attention-sla.service.js',

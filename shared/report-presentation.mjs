@@ -1,4 +1,5 @@
 export const REPORT_PRESENTATION={
+ REPORT_SPV_WIDGETS:['totalPlanCalls','totalActualCalls','totalEffectiveCalls','totalAnomalies'],
  REPORT_WEEKLY_WIDGETS:['calls','ec','revenue','anomalies'],
  REPORT_MTD_WIDGETS:['calendar','target','comparison','calls'],
  REPORT_WEEKLY_COLUMNS:['cluster','days','calls','callRate','ecRate','revenue'],

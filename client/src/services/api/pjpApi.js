@@ -7,6 +7,9 @@ export const pjpApi = {
   previewPlan:data=>request('/pjp/planning/preview',{method:'POST',body:JSON.stringify(data)}),
   savePlan:(id,data)=>request(id?`/pjp/planning/${id}`:'/pjp/planning',{method:id?'PUT':'POST',body:JSON.stringify(data)}),
   publishPlan:(id,data)=>request(`/pjp/planning/${id}/publish`,{method:'POST',body:JSON.stringify(data)}),
+  schedulePlan:(id,data)=>request(`/pjp/planning/${id}/schedule`,{method:'POST',body:JSON.stringify(data)}),
+  cancelPlanSchedule:(id,data)=>request(`/pjp/planning/${id}/cancel-schedule`,{method:'POST',body:JSON.stringify(data)}),
+  cancelPublishedPlan:(id,data)=>request(`/pjp/planning/${id}/cancel-published`,{method:'POST',body:JSON.stringify(data)}),
   generate: codes => request('/pjp/generate', {
     method: 'POST',
     body: JSON.stringify({

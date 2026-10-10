@@ -6,11 +6,12 @@ import {processValue} from '../config/services/process-policy.service.js';
 import {followUpScope} from './follow-up.service.js';
 import {followUpActor,assertFollowUpOwner} from './follow-up-access.service.js';
 import {notifyFollowUp} from './follow-up-notification.service.js';
+import {inTransaction} from '../../utils/in-transaction.js';
 const schema=z.object({ownerId:z.string().min(1),revision:z.number().int().nonnegative(),dueDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),reason:z.string().trim().min(5).max(1000)}).strict();
-export const assignFollowUp=(id,user,raw)=>prisma.$transaction(async db=>{
+export const assignFollowUp=(id,user,raw,{db:database=prisma,validateOnly=false,restoreDeadline=false}={})=>inTransaction(database,async db=>{
  const parsed=schema.safeParse(raw);if(!parsed.success)throw new AppError('PIC, revisi, tenggat dan alasan minimal lima karakter wajib diisi.',400);
  const data=parsed.data,date=new Date(`${data.dueDate}T12:00:00Z`);
- if(Number.isNaN(+date)||date.toISOString().slice(0,10)!==data.dueDate||data.dueDate<wibDateKey())throw new AppError('Tenggat harus tanggal valid hari ini atau berikutnya.',400);
+ if(Number.isNaN(+date)||date.toISOString().slice(0,10)!==data.dueDate||!restoreDeadline&&data.dueDate<wibDateKey())throw new AppError('Tenggat harus tanggal valid hari ini atau berikutnya.',400);
  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${id}`}))`;
  const {actor,people}=await followUpActor(db,user,'assign');
@@ -20,6 +21,7 @@ export const assignFollowUp=(id,user,raw)=>prisma.$transaction(async db=>{
  if((f.revision||0)!==data.revision)throw new AppError('Penugasan berubah. Muat ulang tugas.',409);
  const owner=people.find(p=>p.id===data.ownerId);
  assertFollowUpOwner(owner,actor,people,await processValue(record,'FOLLOW_UP_REQUIRE_REVIEW',true));
+ if(validateOnly)return record;
  const at=new Date().toISOString(),followUp={...f,ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate,revision:data.revision+1,history:[...(f.history||[]),{action:'REASSIGNED',actorId:actor.id,at,note:data.reason,before:{ownerId:f.ownerId,ownerName:f.ownerName,dueDate:f.dueDate},after:{ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate}}]};
  const updated=await db.staffActivity.update({where:{id},data:{followUp}});
  await db.auditEvent.create({data:{entityType:'FOLLOW_UP',entityId:id,action:'REASSIGN',actorId:actor.id,actorName:actor.name,before:f,after:followUp}});

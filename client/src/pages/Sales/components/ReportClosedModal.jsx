@@ -1,106 +1,22 @@
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {SalesDialog} from './SalesDialog';
-import React, { useState } from 'react';
-import { LuCamera, LuCheck } from "react-icons/lu";
-
-/**
- * ReportClosedModal Component (Single Responsibility: Modal for Reporting Closed Outlet Incident)
- * 1 File per Component
- */
-export const ReportClosedModal = ({ stop, onClose, onSubmitReport }) => {
-  const draft=useFormDraft(`ReportClosedModal:${stop?.id}`,{closedReason:'Toko Gembok / Tutup Permanen'});
-  const closedReason=draft.value.closedReason,setClosedReason=draft.field('closedReason');
-  const [closedPhoto, setClosedPhoto] = useState(null);
-
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  if (!stop) return null;
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setClosedPhoto(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (saving) return;
-    setSaving(true); setError('');
-    try {
-    await onSubmitReport({
-      stopId: stop.id,
-      reason: closedReason,
-      photoUrl: closedPhoto || null,
-    });
-    draft.clear();
-    } catch (err) { setError(err.message); } finally { setSaving(false); }
-  };
-
-  return <SalesDialog title="Laporkan toko tutup" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!closedPhoto} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError}>
-{error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
-        <div className="space-y-2">
-          <label className="form-label">Alasan Toko Tutup</label>
-          <select
-            value={closedReason}
-            onChange={(e) => setClosedReason(e.target.value)}
-            className="form-select"
-          >
-            <option value="Toko Gembok / Tutup Permanen">Toko Gembok / Tutup Permanen Hari Ini</option>
-            <option value="Pemilik Tidak di Tempat">Pemilik Sedang Keluar Kota</option>
-            <option value="Toko Renovasi">Toko Sedang Renovasi</option>
-            <option value="Akses Terhalang">Akses Jalan Terhalang / Banjir</option>
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="form-label">Foto Bukti Toko Tutup (Kamera / Unggah)</label>
-          {closedPhoto ? (
-            <div className="relative rounded-2xl overflow-hidden aspect-video border border-border-glass">
-              <img src={closedPhoto} alt="Bukti Tutup" className="w-full h-full object-cover" />
-              <div className="absolute top-2 right-2">
-                <button
-                  type="button"
-                  onClick={() => setClosedPhoto(null)}
-                  className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-white text-[11px] font-semibold hover:bg-black/80 transition-all"
-                >
-                  Ubah Foto
-                </button>
-              </div>
-              <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-white text-xs font-semibold flex items-center gap-1.5">
-                <LuCheck className="text-emerald-400 text-sm" /> Foto Bukti Terambil
-              </div>
-            </div>
-          ) : (
-            <label className="border-2 border-dashed border-border-glass hover:border-primary/50 bg-surface-variant/20 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all gap-2 group">
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                <LuCamera className="text-xl" />
-              </div>
-              <div className="text-center">
-                <span className="text-xs font-bold text-on-surface block">Ambil Foto / Unggah Bukti</span>
-                <span className="text-[11px] text-on-surface-variant">Klik untuk membuka kamera HP atau pilih file</span>
-              </div>
-            </label>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={handleSubmit}
-            disabled={saving}
-          className="w-full py-3 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 transition-all shadow-md"
-        >
-          Kirim Laporan ke Supervisor
-        </button>
-  </SalesDialog>;
+import {useApp} from '../../../context/AppContext';
+import {DeviceCameraCapture} from '../../../shared/components/camera/DeviceCameraCapture';
+import React,{useState} from 'react';
+export const ReportClosedModal=({stop,onClose,onSubmitReport})=>{
+ const {settings}=useApp(),draft=useFormDraft('ReportClosedModal:'+stop?.id,{closedReason:'Toko Gembok / Tutup Permanen'});
+ const [photo,setPhoto]=useState(null),[saving,setSaving]=useState(false),[error,setError]=useState('');
+ if(!stop)return null;
+ const submit=async()=>{
+  if(saving)return;setError('');
+  if(settings.CLOSED_OUTLET_REQUIRE_PHOTO&&!photo){setError('Foto toko tutup wajib diambil.');return;}
+  if(settings.CLOSED_OUTLET_REQUIRE_REASON&&draft.value.closedReason.trim().length<5){setError('Alasan toko tutup minimal lima karakter.');return;}
+  setSaving(true);try{await onSubmitReport({stopId:stop.id,reason:draft.value.closedReason,photoUrl:photo||null});draft.clear();}catch(e){setError(e.message);}finally{setSaving(false);}
+ };
+ return <SalesDialog title="Laporkan toko tutup" description={stop.outletName} onClose={onClose} busy={saving} dirty={draft.dirty||!!photo} restored={draft.restored} draftNotice={draft.restored||draft.policyChanged?draft.restoreMessage:''} draftError={draft.storageError}>
+ {error&&<p className="app-error" role="alert">{error}</p>}
+ <p className="sales-note">Laporan ini tidak menonaktifkan outlet dan tidak membuktikan toko tutup permanen. {settings.ALLOW_CONTINUE_PENDING_CLOSED===false?'Tunggu keputusan sebelum melanjutkan kunjungan berikutnya.':'Anda dapat melanjutkan sesuai aturan urutan kunjungan.'}</p>
+ <fieldset disabled={saving} className="app-form"><label className="app-field">Alasan toko tidak dapat dikunjungi<select value={draft.value.closedReason} onChange={e=>draft.field('closedReason')(e.target.value)}><option value="Toko Gembok / Tutup Permanen">Toko terkunci / tutup saat dikunjungi</option><option value="Pemilik Tidak di Tempat">Pemilik tidak di tempat</option><option value="Toko Renovasi">Toko sedang renovasi</option><option value="Akses Terhalang">Akses jalan terhalang</option></select></label>
+ <DeviceCameraCapture onCapture={setPhoto} capturedPhoto={photo} onRetake={()=>setPhoto(null)} requireGps={false} enforceGeofence={false} photoRequired={settings.CLOSED_OUTLET_REQUIRE_PHOTO===true} facingModeDefault="environment" policyValues={settings} outletName={stop.outletName} buttonLabel="Foto kondisi toko"/>
+ <button type="button" className="app-button app-button-primary" onClick={submit}>{saving?'Mengirim…':'Kirim laporan untuk keputusan'}</button></fieldset></SalesDialog>;
 };

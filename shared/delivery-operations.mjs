@@ -1,4 +1,5 @@
 import {locationExpired} from './location-retention.mjs';
+import {packingOrderIds} from './packing-orders.mjs';
 export const terminalStop = status => ['DELIVERED', 'REJECTED', 'PARTIAL_REJECT'].includes(status);
 export const acceptedQuantity = (stop, lineId) => terminalStop(stop.status)
   ? Math.max(0, (stop.allocatedItems || []).filter(i => i.lineId === lineId).reduce((n, i) => n + i.quantity, 0) - (stop.rejectedItems || []).filter(i => i.lineId === lineId).reduce((n, i) => n + i.quantity, 0)) : 0;
@@ -6,7 +7,7 @@ export const acceptedQuantity = (stop, lineId) => terminalStop(stop.status)
 export function fulfillment(order, packings) {
   const lines = order.items.map(item => {
     let prepared = 0, accepted = 0;
-    for (const packing of packings.filter(p => p.sourceOrderId === order.id)) {
+    for (const packing of packings.filter(p => packingOrderIds(p).includes(order.id))) {
       for (const line of packing.items || []) {
         if ((line.sourceOrderItemId || line.lineId) !== item.id) continue;
         const unavailable = (packing.deliveryStops || []).filter(s=>s.returnInspection).reduce((n,s)=>n+(s.rejectedItems||[]).filter(i=>i.lineId===line.lineId).reduce((a,i)=>a+i.quantity,0)-(s.reusableItems||[]).filter(i=>i.lineId===line.lineId).reduce((a,i)=>a+i.quantity,0),0);

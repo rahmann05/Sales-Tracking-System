@@ -4,7 +4,7 @@ export async function outletOperationalImpact(db,id) {
   const [scheduled,activeVisits,orders,packings,deliveries]=await Promise.all([
     db.pjpStop.count({where:{outletId:id,status:{in:['PENDING','CLOSED_REPORTED']},pjp:{date:{gte:wibDayRange().gte}}}}),
     db.pjpStop.count({where:{outletId:id,attendances:{some:{type:'IN'},none:{type:'OUT'}},status:{notIn:['VISITED','SKIPPED','CLOSED_REPORTED']}}}),
-    db.order.findMany({where:{deletedAt:null,pjpStop:{outletId:id},status:{in:['PENDING_APPROVAL','APPROVED']}},include:{items:true}}),
+    db.order.findMany({where:{deletedAt:null,OR:[{outletId:id},{pjpStop:{outletId:id}}],status:{in:['PENDING_APPROVAL','APPROVED']}},include:{items:true}}),
     db.packingList.findMany({where:{outletId:id},include:{deliveryStops:{include:{deliveryRoute:{select:{status:true,cancelledAt:true}}}}}}),
     db.deliveryStop.count({where:{outletId:id,status:'PENDING',deliveryRoute:{cancelledAt:null,status:{not:'COMPLETED'}}}})
   ]);

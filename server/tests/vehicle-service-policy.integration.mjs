@@ -9,6 +9,7 @@ import {recordMaintenance} from '../src/modules/vehicles/services/record-mainten
 import {setMaintenancePolicy} from '../src/modules/vehicles/services/maintenance-policy.service.js';
 import {getVehicleById} from '../src/modules/vehicles/services/get-vehicle-by-id.service.js';
 import {routeAction} from '../src/modules/delivery/services/operations.service.js';
+import {DEFAULT_SERVICE_CATALOG,serviceRecordLabel} from '../../shared/reference-catalog.mjs';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local DB only');
 const prefix=`service-policy-${randomUUID()}`,vehicleIds=[],users=[],routeIds=[];
 let checks=0;
@@ -47,7 +48,15 @@ try{
  await Promise.all([run(()=>routeAction(route.id,{action:'CLOSE',note:'Periksa odometer aktual'},actor)),run(()=>recordMaintenance(vehicle.id,{...input,requestId:randomUUID(),odometerAtService:2900.5},actor))]);
  actual=await prisma.vehicle.findUnique({where:{id:vehicle.id}});eq(actual.totalKm,2900.5);
  eq(Boolean((await prisma.deliveryRoute.findUnique({where:{id:route.id}})).closedAt),true);
- eq((await getVehicleById(vehicle.id)).serviceRecords.length,6);
+ const catalog=[...DEFAULT_SERVICE_CATALOG,{code:'BAN',label:'Penggantian ban',active:true}];
+ const customInput={...input,requestId:randomUUID(),serviceType:'BAN',odometerAtService:3000};
+ const custom=await run(()=>recordMaintenance(vehicle.id,customInput,actor),{VEHICLE_SERVICE_CATALOG:catalog});
+ eq(custom.updatedVehicle.lastOilChangeKm,2900.5);eq(custom.updatedVehicle.lastOilFilterChangeKm,1500.5);eq(custom.updatedVehicle.totalKm,3000);
+ eq(serviceRecordLabel(custom.record),'Penggantian ban');
+ const disabled=catalog.map(r=>({...r,active:r.code!=='BAN'}));
+ await rejects(()=>run(()=>recordMaintenance(vehicle.id,{...customInput,requestId:randomUUID()},actor),{VEHICLE_SERVICE_CATALOG:disabled}),422);
+ const customRetry=await run(()=>recordMaintenance(vehicle.id,customInput,actor),{VEHICLE_SERVICE_CATALOG:disabled});eq(customRetry.record.id,custom.record.id);eq(serviceRecordLabel(customRetry.record),'Penggantian ban');
+ eq((await getVehicleById(vehicle.id)).serviceRecords.length,7);
  console.log(`PASS ${checks} vehicle service policy assertions; no operational configurations changed.`);
 }finally{
  const records=await prisma.vehicleServiceRecord.findMany({where:{vehicleId:{in:vehicleIds}},select:{id:true}});

@@ -7,24 +7,26 @@ import {wibDateKey,wibDayRange} from '../../../../../shared/visit-metrics.mjs';
 import {resolveBusinessCode,getCodePolicy} from '../../config/services/business-code.service.js';
 import {captureReportAssignment} from '../../reports/services/report-assignment.service.js';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
-export async function publishPlan(id,raw,actor){
+import {assertPublicationReview,publicationFingerprint} from './publication-review.service.js';
+import {ruleSalesAt} from '../../../../../shared/pjp-planning.mjs';
+export async function publishPlan(id,raw,actor,scheduled=null){
  const body=publishBody.parse(raw);
  const result=await prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp-plan:${id}`}))`;
   const plan=await getPlan(id,actor,tx);
+  if(scheduled&&(plan.status!=='SCHEDULED'||plan.publicationSchedule?.token!==scheduled.token||plan.revision!==body.revision))return {plan,count:0,skipped:true};
   if(plan.status==='PUBLISHED')return {plan,count:plan.history.findLast(h=>h.action==='PUBLISH')?.count||0,replayed:true};
-  const role=(await teamPlanningPolicy(plan.supervisorId)).values.PJP_PUBLISH_ROLE;
+  if(!scheduled&&plan.status!=='DRAFT')throw new AppError('Batalkan jadwal penerbitan terlebih dahulu sebelum menerbitkan secara manual.',409);
+  if(scheduled&&+plan.scheduledAt>Date.now())throw new AppError('Waktu penerbitan belum tiba.',409);
+  const values=(await teamPlanningPolicy(plan.supervisorId)).values,role=values.PJP_PUBLISH_ROLE;
+  if(scheduled&&values.PJP_ALLOW_SCHEDULED_PUBLISH===false)throw new AppError('Penerbitan terjadwal dinonaktifkan oleh parameter tim. Tinjau ulang rencana.',409);
   if(role!=='BOTH'&&role!==actor.role)throw new AppError('Kebijakan tim ini tidak mengizinkan role Anda menerbitkan PJP',403);
   if(plan.revision!==body.revision)throw new AppError('Draft telah berubah. Tinjau ulang sebelum menerbitkan.',409);
   if(plan.startsOn<wibDateKey())throw new AppError('Penerbitan tidak boleh membuat PJP pada tanggal yang sudah lewat. Ubah periode draft.',400);
-  for(const userId of [...new Set(plan.rules.map(r=>r.userId))].sort())await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
-  const review=await previewPlan(plan,actor,tx),days=review.days.filter(d=>d.outletIds.length);
-  if(review.problems.length)throw new AppError(review.problems.slice(0,5).map(p=>p.message).join(' '),409);
-  if(!days.length)throw new AppError('Tidak ada kunjungan yang jatuh tempo dalam periode ini.',400);
-  if((review.warnings.length||review.uncovered.length)&&!body.acknowledgeWarnings)throw new AppError('Tinjau dan akui peringatan cakupan/frekuensi sebelum menerbitkan.',400);
-  const policy=await getCodePolicy('PJP'),codes=Object.values(body.codes);
-  if(new Set(codes).size!==codes.length)throw new AppError('Kode PJP manual duplikat',400);
+  for(const userId of [...new Set(plan.rules.flatMap(r=>[r.userId,...(r.substitute?[r.substitute.userId]:[])]))].sort())await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
+  const review=await previewPlan(plan,actor,tx),policy=await getCodePolicy('PJP'),days=assertPublicationReview(review,body,policy);
+  if(scheduled&&publicationFingerprint(plan,review,values,policy)!==plan.publicationSchedule.fingerprint)throw new AppError('Kalender, cakupan, kode atau aturan tim berubah sejak dijadwalkan. Tinjau kalender lalu jadwalkan ulang.',409);
   let count=0;
   for(const day of days.sort((a,b)=>`${a.userId}:${a.date}`.localeCompare(`${b.userId}:${b.date}`))){
    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${day.userId}:${day.date}`}))`;
@@ -34,10 +36,10 @@ export async function publishPlan(id,raw,actor){
    const person=review.context.sales.find(s=>s.id===day.userId),code=body.codes[`${day.userId}:${day.date}`];
    if(policy.mode==='MANUAL'&&!code)throw new AppError(`Isi kode PJP ${day.salesName} ${day.date}.`,422);
    const context=captureReportAssignment(person,'PJP_PLAN',new Date());
-   await tx.pjp.create({data:{...context,reportingContext:{...context.reportingContext,planning:{planId:id,revision:plan.revision,rules:plan.rules.filter(r=>r.userId===day.userId&&day.outletIds.includes(r.outletId)),publishedBy:actor.id}},code:await resolveBusinessCode('PJP',code,{db:tx,date:new Date(`${day.date}T05:00:00Z`)}),userId:day.userId,date:wibDayRange(day.date).gte,type:'SALES',status:'SCHEDULED',stops:{create:day.outletIds.map((outletId,i)=>({outletId,sequence:i+1,status:'PENDING'}))}}});count++;
+   await tx.pjp.create({data:{...context,reportingContext:{...context.reportingContext,planning:{planId:id,revision:plan.revision,rules:plan.rules.filter(r=>ruleSalesAt(r,day.date)===day.userId&&day.outletIds.includes(r.outletId)).map(r=>({...r,primarySalesName:review.context.sales.find(s=>s.id===r.userId)?.name||null,...(r.substitute?{substitute:{...r.substitute,salesName:review.context.sales.find(s=>s.id===r.substitute.userId)?.name||null}}:{})})),publishedBy:actor.id}},code:await resolveBusinessCode('PJP',code,{db:tx,date:new Date(`${day.date}T05:00:00Z`)}),userId:day.userId,date:wibDayRange(day.date).gte,type:'SALES',status:'SCHEDULED',stops:{create:day.outletIds.map((outletId,i)=>({outletId,sequence:i+1,status:'PENDING'}))}}});count++;
   }
-  const event={at:new Date().toISOString(),action:'PUBLISH',actorId:actor.id,note:body.note,count,acknowledgeWarnings:body.acknowledgeWarnings,uncovered:review.uncovered.map(o=>o.id),calendar:review.calendar};
-  const published=await tx.pjpPlan.update({where:{id},data:{status:'PUBLISHED',publishedAt:new Date(),updatedBy:actor.id,revision:plan.revision+1,history:[...plan.history,event]}});
+  const event={at:new Date().toISOString(),action:'PUBLISH',actorId:actor.id,note:body.note,count,scheduled:!!scheduled,acknowledgeWarnings:body.acknowledgeWarnings,uncovered:review.uncovered.map(o=>o.id),calendar:review.calendar};
+  const published=await tx.pjpPlan.update({where:{id},data:{status:'PUBLISHED',publishedAt:new Date(),scheduledAt:null,publicationNextAttemptAt:null,...(scheduled?{publicationSchedule:{...plan.publicationSchedule,state:'PUBLISHED'}}:{}),updatedBy:actor.id,revision:plan.revision+1,history:[...plan.history,event]}});
   return {plan:published,count,replayed:false};
  },{timeout:60000});
  broadcastCacheInvalidation('pjp');return result;

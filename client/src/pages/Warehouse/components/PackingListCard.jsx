@@ -27,7 +27,7 @@ export function PackingListCard({
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-mono font-black text-base text-on-surface">
-                        {pl.code}
+                        {pl.code} {pl.documentKind==='MANIFEST'&&<span className="text-xs">· Manifest pengiriman</span>}
                       </h2>
                       <span className="text-on-surface-variant text-sm font-semibold">·</span>
                       <strong className="text-sm font-bold text-on-surface flex items-center gap-1">

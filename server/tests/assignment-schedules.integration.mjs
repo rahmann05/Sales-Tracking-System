@@ -1,0 +1,86 @@
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {prisma} from '../src/config/prisma.js';
+import {CONFIG_DEFAULTS} from '../../shared/config.mjs';
+import {wibDateKey} from '../../shared/visit-metrics.mjs';
+import {assignmentSchedulePreview,assignmentScheduleOptions,createAssignmentSchedule,cancelAssignmentSchedule,runAssignmentSchedules,listAssignmentSchedules} from '../src/modules/config/services/assignment-schedules.service.js';
+import {assignFollowUp} from '../src/modules/staff-attendance/follow-up-assignment.service.js';
+import {updateUser} from '../src/modules/users/services/update-user.service.js';
+import {saveOrderReviewAssignment} from '../src/modules/orders/services/order-review-assignment.service.js';
+import {assignOutletReview} from '../src/modules/outlets/services/outlet-review-assignment.service.js';
+import {routeAction} from '../src/modules/delivery/services/operations.service.js';
+import {assignReturnInspection} from '../src/modules/delivery/services/return-assignment.service.js';
+import {resolveIdentity} from '../src/modules/roles/role-assignment.service.js';
+assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname));
+const tag='schedule-'+randomUUID(),users=[],tasks=[],jobs=[];let checks=0,cluster,outlet,pjp,order,review,vehicle,packing,route;
+const eq=(a,b)=>{assert.deepEqual(a,b);checks++;},reject=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
+const iso=offset=>new Date(Date.now()+offset).toISOString();
+const get=async id=>(await prisma.systemConfig.findUnique({where:{key:'_ASSIGNMENT_SCHEDULE:'+id}})).value;
+try{
+ const person=async role=>{const u=await prisma.user.create({data:{name:tag,email:randomUUID()+'@example.invalid',password:'unused',role}});users.push(u.id);return u;};
+ const admin=await person('ADMIN'),a=await person('SALES'),b=await person('SALES');
+ const task=async()=>{const row=await prisma.staffActivity.create({data:{userId:admin.id,dateKey:wibDateKey(),activityKey:randomUUID(),kind:'VISIT',outletName:tag,policySnapshot:{values:{...CONFIG_DEFAULTS,FOLLOW_UP_REQUIRE_REVIEW:false}},followUp:{status:'OPEN',ownerId:a.id,ownerName:a.name,dueDate:wibDateKey(),note:'Uji delegasi sementara',history:[]}}});tasks.push(row.id);return row;};
+ const schedule=async(row,extra={})=>{const preview=await assignmentSchedulePreview('FOLLOW_UP',row.id,admin);const job=await createAssignmentSchedule({kind:'FOLLOW_UP',entityId:row.id,fingerprint:preview.fingerprint,ownerId:b.id,dueAt:wibDateKey(),startsAt:iso(1000),endsAt:iso(60000),reason:'Petugas pengganti sementara',...extra},admin);jobs.push(job.id);return job;};
+ const first=await task();
+ await reject(()=>assignmentSchedulePreview('FOLLOW_UP',first.id,a),403);
+ const options=await assignmentScheduleOptions('FOLLOW_UP',admin);eq(options.tasks.some(row=>row.id===first.id),true);
+ const job=await schedule(first);
+ eq((await prisma.staffActivity.findUnique({where:{id:first.id}})).followUp.ownerId,a.id);
+ await reject(()=>schedule(first),409);
+ await Promise.all([runAssignmentSchedules(Date.now()+2000,{ids:[job.id]}),runAssignmentSchedules(Date.now()+2000,{ids:[job.id]})]);
+ eq((await get(job.id)).state,'ACTIVE');
+ eq((await prisma.staffActivity.findUnique({where:{id:first.id}})).followUp.ownerId,b.id);
+ eq(await prisma.auditEvent.count({where:{entityType:'FOLLOW_UP',entityId:first.id,action:'REASSIGN'}}),1);
+ await reject(()=>updateUser(a.id,{permissions:{can_complete_follow_up:false}}),409);
+ await runAssignmentSchedules(Date.now()+120000,{ids:[job.id]});
+ eq((await get(job.id)).state,'RESTORED');eq((await prisma.staffActivity.findUnique({where:{id:first.id}})).followUp.ownerId,a.id);
+ const second=await task(),manual=await schedule(second);
+ await runAssignmentSchedules(Date.now()+2000,{ids:[manual.id]});
+ await assignFollowUp(second.id,admin,{ownerId:a.id,revision:1,dueDate:wibDateKey(),reason:'Pengalihan manual terbaru'});
+ await runAssignmentSchedules(Date.now()+120000,{ids:[manual.id]});
+ eq((await get(manual.id)).state,'SUPERSEDED');eq((await prisma.staffActivity.findUnique({where:{id:second.id}})).followUp.revision,2);
+ const third=await task(),cancelled=await schedule(third);
+ await cancelAssignmentSchedule(cancelled.id,'Jadwal tidak lagi diperlukan',admin);
+ await runAssignmentSchedules(Date.now()+2000,{ids:[cancelled.id]});eq((await get(cancelled.id)).state,'CANCELLED');
+ const fourth=await task(),expired=await schedule(fourth);
+ await runAssignmentSchedules(Date.now()+120000,{ids:[expired.id]});eq((await get(expired.id)).state,'EXPIRED');eq((await prisma.staffActivity.findUnique({where:{id:fourth.id}})).followUp.ownerId,a.id);
+ const fifth=await task(),finished=await schedule(fifth);
+ await prisma.staffActivity.update({where:{id:fifth.id},data:{followUp:{...fifth.followUp,status:'SUBMITTED'}}});
+ await runAssignmentSchedules(Date.now()+2000,{ids:[finished.id]});eq((await get(finished.id)).state,'FINISHED');
+ const sixth=await task(),permanent=await schedule(sixth,{endsAt:null});await runAssignmentSchedules(Date.now()+2000,{ids:[permanent.id]});eq((await get(permanent.id)).state,'APPLIED');
+ eq((await listAssignmentSchedules(admin)).filter(row=>jobs.includes(row.id)).length,jobs.length);
+ const admin2=await person('ADMIN'),warehouse=await person('KEPALA_GUDANG'),driver=await person('SUPIR'),spv1=await person('SUPERVISOR'),spv2=await person('SUPERVISOR');
+ cluster=await prisma.cluster.create({data:{name:tag,region:'Test'}});outlet=await prisma.outlet.create({data:{name:tag,address:'Alamat uji',clusterId:cluster.id}});
+ pjp=await prisma.pjp.create({data:{userId:a.id,type:'SALES',date:new Date(),stops:{create:{outletId:outlet.id,sequence:1}}},include:{stops:true}});
+ order=await prisma.order.create({data:{pjpStopId:pjp.stops[0].id,createdBy:a.id,totalValue:100,policySnapshot:{values:{...CONFIG_DEFAULTS,ORDER_APPROVAL_MODE:'BOTH'}}}});
+ await saveOrderReviewAssignment(order.id,{ownerId:admin.id,revision:0,dueAt:iso(3600000),reason:'Penugasan pemeriksa awal'},admin);
+ review=await prisma.outletReview.create({data:{outletId:outlet.id,reason:'Kasus pemeriksaan fixture',requestedBy:{id:admin.id},policySnapshot:{values:CONFIG_DEFAULTS}}});
+ const identity=await resolveIdentity(admin);
+ await assignOutletReview(outlet.id,review.id,{ownerId:admin.id,revision:1,dueAt:iso(3600000),reason:'Penugasan pemeriksa awal'},identity);
+ vehicle=await prisma.vehicle.create({data:{code:tag,name:tag,maxCartons:10,maxWeightKg:100,fuelKmPerLiter:10,fuelType:'SOLAR',fuelPricePerLiter:0}});
+ packing=await prisma.packingList.create({data:{code:tag,outletId:outlet.id,createdById:admin.id,totalCartons:1,items:[],status:'RELEASED'}});
+ route=await prisma.deliveryRoute.create({data:{code:tag,date:new Date(),vehicleId:vehicle.id,driverId:driver.id,createdById:admin.id,totalCartons:1,status:'DRAFT',policySnapshot:{values:{...CONFIG_DEFAULTS,WAREHOUSE_REQUIRE_CHECK:false,WAREHOUSE_REQUIRE_LOAD:false}}}});
+ const stop=await prisma.deliveryStop.create({data:{deliveryRouteId:route.id,packingListId:packing.id,outletId:outlet.id,sequence:1,allocatedCartons:1,allocatedItems:[],rejectedCartons:1}});
+ await routeAction(route.id,{action:'ASSIGN_PREPARATION',stage:'PICK',ownerId:admin.id,assignmentRevision:0,dueAt:iso(3600000),note:'Penugasan penyiapan awal'},identity);
+ await assignReturnInspection(stop.id,{ownerId:admin.id,revision:0,dueAt:iso(3600000),reason:'Penugasan retur awal'},identity);
+ for(const [kind,entityId,ownerId] of [['ORDER_REVIEW',order.id,admin2.id],['OUTLET_REVIEW',review.id,admin2.id],['PREPARATION',`${route.id}:PICK`,warehouse.id],['RETURN',stop.id,warehouse.id]]){
+  const before=await assignmentSchedulePreview(kind,entityId,identity);
+  const item=await createAssignmentSchedule({kind,entityId,fingerprint:before.fingerprint,ownerId,dueAt:iso(3600000),startsAt:iso(1000),endsAt:iso(60000),reason:'Delegasi uji lintas domain'},identity);jobs.push(item.id);
+  await runAssignmentSchedules(Date.now()+2000,{ids:[item.id]});eq((await get(item.id)).state,'ACTIVE');
+  eq((await assignmentSchedulePreview(kind,entityId,identity)).ownerId,ownerId);
+  await runAssignmentSchedules(Date.now()+120000,{ids:[item.id]});eq((await get(item.id)).state,'RESTORED');eq((await assignmentSchedulePreview(kind,entityId,identity)).ownerId,admin.id);
+ }
+ const member=await person('SALES');await prisma.user.update({where:{id:member.id},data:{supervisorId:spv1.id}});
+ const beforeTeam=await assignmentSchedulePreview('TEAM',member.id,identity);
+ const transfer=await createAssignmentSchedule({kind:'TEAM',entityId:member.id,fingerprint:beforeTeam.fingerprint,ownerId:spv2.id,dueAt:null,startsAt:iso(1000),endsAt:null,reason:'Transfer tim efektif bertanggal'},identity);jobs.push(transfer.id);
+ await runAssignmentSchedules(Date.now()+2000,{ids:[transfer.id]});eq((await get(transfer.id)).state,'APPLIED');eq((await prisma.user.findUnique({where:{id:member.id}})).supervisorId,spv2.id);
+ console.log(`Assignment schedules passed: ${checks} assertions; no early assignment, atomic workers, restoration, original owner protection, manual change, completion, expiry and cancellation.`);
+}finally{
+ if(order){await prisma.systemConfig.deleteMany({where:{key:'_ORDER_REVIEW:'+order.id}});await prisma.order.delete({where:{id:order.id}});}
+ if(review)await prisma.outletReview.delete({where:{id:review.id}});
+ if(route){await prisma.deliveryStop.deleteMany({where:{deliveryRouteId:route.id}});await prisma.deliveryRoute.delete({where:{id:route.id}});}
+ if(packing)await prisma.packingList.delete({where:{id:packing.id}});if(vehicle)await prisma.vehicle.delete({where:{id:vehicle.id}});
+ if(pjp){await prisma.pjpStop.deleteMany({where:{pjpId:pjp.id}});await prisma.pjp.delete({where:{id:pjp.id}});}if(outlet)await prisma.outlet.delete({where:{id:outlet.id}});if(cluster)await prisma.cluster.delete({where:{id:cluster.id}});
+ await prisma.systemConfig.deleteMany({where:{key:{in:jobs.map(id=>'_ASSIGNMENT_SCHEDULE:'+id)}}});await prisma.notification.deleteMany({where:{userId:{in:users}}});await prisma.auditEvent.deleteMany({where:{actorId:{in:users}}});await prisma.staffActivity.deleteMany({where:{id:{in:tasks}}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
+}

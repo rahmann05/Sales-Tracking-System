@@ -41,7 +41,7 @@ export async function assertOutletLocationIdle(db,outletId){
   db.deliveryStop.count({where:{outletId,arrivedAt:{not:null},completedAt:null,deliveryRoute:{status:'IN_TRANSIT',cancelledAt:null}}}),
   db.staffActivity.findMany({where:{kind:'VISIT',checkOutAt:null,activityKey:{in:(await db.pjpStop.findMany({where:{outletId},select:{id:true}})).map(s=>s.id)}},select:{checklist:true}}),
  ]);
- if(visits||deliveries||supervision.some(s=>s.checklist?.state!=='FINISHED'))throw new AppError('Lokasi sedang dipakai kunjungan/pengiriman aktif. Selesaikan pekerjaan tersebut sebelum mengubah titik.',409);
+ if(visits||deliveries||supervision.some(s=>s.checklist?.state!=='FINISHED')){const error=new AppError('Lokasi sedang dipakai kunjungan/pengiriman aktif. Selesaikan pekerjaan tersebut sebelum mengubah titik.',409);error.code='OUTLET_BUSY';throw error;}
 }
 export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(),automatic=false}={}){
  const actor=automatic?null:await reviewActor(prisma,user,'can_run_outlet_review');

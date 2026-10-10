@@ -1,3 +1,4 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {processValue} from '../../config/services/process-policy.service.js';
 import { prisma } from '../../../config/prisma.js';
@@ -19,6 +20,7 @@ export const submitDriverAttendance = async(stopId,data,driverId)=>{
   const requireGps=await processValue(stop.deliveryRoute,'DELIVERY_REQUIRE_GPS',true);
   if(!['IN','OUT'].includes(data.type)||requireGps&&(!Number.isFinite(data.latitude)||!Number.isFinite(data.longitude))||data.latitude!=null&&Math.abs(data.latitude)>90||data.longitude!=null&&Math.abs(data.longitude)>180)throw new AppError('Jenis absensi atau GPS tidak valid',400);
   if(await processValue(stop.deliveryRoute,'DELIVERY_REQUIRE_PHOTO',true)&&!data.photoUrl)throw new AppError('Foto bukti wajib',400);
+  await assertEvidenceImages({photoUrl:data.photoUrl},{entity:stop.deliveryRoute});
   if(stop.attendances.some(a=>a.type===data.type))throw new AppError('Absensi sudah tercatat',409);
   if(data.type==='OUT'&&!stop.attendances.some(a=>a.type==='IN'))throw new AppError('Absen masuk terlebih dahulu',409);
   const distance=distanceToOutlet(data.latitude,data.longitude,stop.outlet);

@@ -1,3 +1,4 @@
+import {shipmentReady} from '../../../../../shared/shipment-document.mjs';
 import { PackingWorkspaceView } from './PackingWorkspaceView';
 import React, { useState, useEffect, useCallback, useMemo,useRef } from 'react';
 import { deliveryApi } from '../../../services/api';
@@ -71,11 +72,11 @@ export const PackingListManager = () => {
     if (actionType === 'RELEASE') {
       const totalCartons = pl.totalCartons || 0;
       const invoiceCartons = (pl.invoices || []).reduce((sum, inv) => sum + (Number(inv.totalCartons) || 0), 0);
-      if (totalCartons === 0 || !pl.items?.length || !pl.invoices?.length) {
-        setError(`Dokumen ${pl.code} belum lengkap. Harap isi rincian produk, karton fisik (> 0), dan faktur terlebih dahulu sebelum dikirim ke gudang.`);
+      if (!shipmentReady(pl)) {
+        setError(`Dokumen ${pl.code} belum lengkap. Isi barang, karton fisik (> 0) dan faktur yang diwajibkan aturan dokumen.`);
         return;
       }
-      if (invoiceCartons !== totalCartons) {
+      if (pl.invoices?.length&&invoiceCartons !== totalCartons) {
         setError(`Total karton faktur (${invoiceCartons}) tidak sama dengan total karton packing list (${totalCartons}). Harap edit draft untuk menyamakan karton.`);
         return;
       }
@@ -136,7 +137,7 @@ export const PackingListManager = () => {
     items.forEach(pl => {
       if (pl.status === 'DRAFT') {
         draftCount++;
-        if (pl.totalCartons === 0 || !pl.invoices?.length) {
+        if (!shipmentReady(pl)) {
           incompleteCount++;
         }
       } else if (pl.status === 'RELEASED') {

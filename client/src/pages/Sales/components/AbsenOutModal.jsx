@@ -1,22 +1,19 @@
+import {EarlyReasonInput} from './EarlyReasonInput';
+import {earlyReasonError} from '../../../../../shared/visit-reasons.mjs';
+import {processPolicyValues} from '../../../../../shared/process-policy.mjs';
 import {visitPolicy} from '../../../../../shared/operational-policy.mjs';
 import {useFormDraft} from '../../../shared/hooks/useFormDraft';
 import {SalesDialog} from './SalesDialog';
 import { AttendanceSalesInput } from './AttendanceSalesInput';
 import {VisitOutcomeInput} from './VisitOutcomeInput';
-import {visitOutcomeError} from '../../../../../shared/visit-outcome.mjs';
+import {visitResultPolicyError} from '../../../../../shared/visit-outcome.mjs';
 import { useApp } from '../../../context/AppContext';
 import React, { useState, useEffect } from 'react';
 import { FiCheckCircle, FiAlertTriangle, FiClock } from 'react-icons/fi';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { AbsenNotesInput } from './AbsenNotesInput';
 
-const EARLY_REASON_OPTIONS = [
-  'Pemilik Toko Sedang Terburu-buru / Sibuk',
-  'Toko Tutup / Sedang Istirahat Siang',
-  'Hanya Mengantar Nota / Tagihan Pembayaran',
-  'Pelanggan belum membutuhkan order',
-  'Kendala Teknis / Darurat Lapangan Lainnya',
-];
+
 
 /**
  * AbsenOutModal Component
@@ -25,7 +22,7 @@ const EARLY_REASON_OPTIONS = [
  */
 export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   const { settings:runtime,user } = useApp();
-  const settings={...runtime,...stop?.policySnapshot?.values};
+  const settings=processPolicyValues(stop?.policySnapshot,runtime);
   const policy=visitPolicy(settings);
   const requireEvidence=policy.requireOut;
   const draft=useFormDraft(`AbsenOutModal:${stop?.id}`,{notes:'',visitOutcome:{purpose:''},salesResult:{orderAmount:'',productIds:[]},earlyReason:''});
@@ -66,7 +63,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   const minMinutes = settings.MINIMUM_VISIT_DURATION_MINUTES;
   const minDurationSecs = minMinutes * 60;
   const isEarlyCheckout = requireEvidence && settings.ATTENDANCE_ENFORCE_MIN_DURATION && elapsedSecs < minDurationSecs;
-  const earlyBlocked = isEarlyCheckout && (!settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT || !earlyReason);
+  const earlyBlocked = isEarlyCheckout && (!settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT || !!earlyReasonError(earlyReason,settings));
   const remainingSecs = Math.max(0, minDurationSecs - elapsedSecs);
 
   const formatTime = (secs) => {
@@ -96,7 +93,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
 
   const handleConfirm = async () => {
     if (saving) return;
-    const outcomeError=visitOutcome.purpose&&visitOutcomeError(visitOutcome);
+    const outcomeError=visitResultPolicyError(visitOutcome.purpose?visitOutcome:null,settings,notes);
     if(settings.SALES_REQUIRE_VISIT_RESULT&&!visitOutcome.purpose){setError('Pilih tujuan dan hasil kunjungan.');return;}
     if(outcomeError){setError(outcomeError);return;}
     if (requireEvidence && settings.SALES_REQUIRE_GPS && (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng))) { setError('Ambil ulang foto dengan GPS aktif sebelum mengirim absensi.'); return; }
@@ -166,23 +163,12 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
               </div>
             </div>
 
-            {settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT && <select aria-label="Alasan absen keluar lebih awal"
-              value={earlyReason}
-              onChange={(e) => setEarlyReason(e.target.value)}
-              className="w-full p-2.5 bg-surface border border-amber-500/40 rounded-xl text-xs font-semibold text-on-surface focus:ring-2 focus:ring-amber-500 outline-none"
-            >
-              <option value="">-- Pilih Alasan Checkout Lebih Awal --</option>
-              {EARLY_REASON_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>}
+            {settings.ATTENDANCE_ALLOW_EARLY_CHECKOUT && <EarlyReasonInput value={earlyReason} onChange={setEarlyReason} settings={settings}/>}
           </div>
         )}
 
         {/* 1. Live Device Camera & GPS Verification */}
-        {requireEvidence && <DeviceCameraCapture outletId={stop.outletId}
+        {requireEvidence && <DeviceCameraCapture policyValues={settings} outletId={stop.outletId}
           photoRequired={policy.photoOut}
           capturedPhoto={capturedPhoto}
           onCapture={handleCapture}
@@ -199,7 +185,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
         />}
 
         <AttendanceSalesInput value={salesResult} onChange={setSalesResult} />
-        <VisitOutcomeInput value={visitOutcome} onChange={setVisitOutcome} allowCollection={settings.FEATURE_COLLECTION_MODE==='ACTIVE'} required={settings.SALES_REQUIRE_VISIT_RESULT}/>
+        <VisitOutcomeInput policy={settings} value={visitOutcome} onChange={setVisitOutcome} allowCollection={settings.FEATURE_COLLECTION_MODE==='ACTIVE'} required={settings.SALES_REQUIRE_VISIT_RESULT}/>
         {/* 2. Keterangan Hasil Kunjungan */}
         <AbsenNotesInput
           notes={notes}

@@ -1,4 +1,18 @@
 import {wibDateKey} from './visit-metrics.mjs';
+export function shiftSchedule(dateKey,values={}){
+ const start=Date.parse(`${dateKey}T${values.SHIFT_START_TIME||'08:00'}:00+07:00`);
+ let end=Date.parse(`${dateKey}T${values.SHIFT_END_TIME||'17:00'}:00+07:00`);
+ if(end<=start)end+=86400000;
+ const weekday=new Date(`${dateKey}T12:00:00Z`).getUTCDay();
+ return {start,end,workingDay:String(values.SHIFT_WORKING_DAYS||'1,2,3,4,5,6').split(',').includes(String(weekday))};
+}
+export function shiftActionRules(action,dateKey,values={},now=Date.now()){
+ const schedule=shiftSchedule(dateKey,values),mode=values.SHIFT_ATTENDANCE_MODE||'IN_OUT',isOut=action==='SHIFT_OUT';
+ const exception=isOut?(now<schedule.end?'EARLY_FINISH':null):(!schedule.workingDay?'NON_WORKDAY':null);
+ const handling=exception?(values[exception==='EARLY_FINISH'?'SHIFT_EARLY_FINISH_POLICY':'SHIFT_NON_WORKDAY_POLICY']||'ALLOW'):'ALLOW';
+ const evidence=mode!=='OPTIONAL'&&(!isOut||mode==='IN_OUT');
+ return {schedule,exception,handling,photoRequired:evidence&&values[isOut?'SHIFT_OUT_PHOTO':'SHIFT_IN_PHOTO']==='REQUIRED',gpsRequired:evidence&&values.SHIFT_REQUIRE_GPS===true};
+}
 export function shiftDateKey(now=Date.now(),cutoff='00:00'){
  const at=new Date(now),clock=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(at);
  return wibDateKey(+at-(clock<cutoff?86400000:0));

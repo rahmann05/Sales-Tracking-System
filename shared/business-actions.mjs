@@ -20,6 +20,9 @@ export const actionFeature=(group,action)=>{
  const rule=BUSINESS_ACTIONS[group]?.[action];return rule?[rule.feature,rule.intent==='NEW_WORK']:null;
 };
 export const BACKGROUND_CONTRACTS={
+ OUTLET_CHANGE_QUEUE:{purpose:'Perubahan master sesudah waktu efektif dan kunjungan selesai',consumer:'server/src/modules/outlets/services/outlet-change-queue.service.js',rule:'Fresh actor/scope, optimistic master revision; busy jobs wait; stale proposals fail without overwriting master; atomic change/audit/job'},
+ ASSIGNMENT_SCHEDULE:{purpose:'Penugasan bertanggal dan pemulihan delegasi',consumer:'server/src/modules/config/services/assignment-schedules.service.js',rule:'Frozen task revision; active authorized actor and eligible owner; atomic task/schedule update; finished or manually reassigned work is never overwritten'},
+ PJP_PUBLICATION:{purpose:'Penerbitan planner pada jadwal yang disimpan',consumer:'server/src/modules/pjp/services/publication-schedule.service.js',rule:'Fresh actor/permission/team/rules/calendar check; pause defers, cancellation serialized; all or nothing publication'},
  OUTLET_GOOGLE_LOCATION:{purpose:'Lokasi Google disetujui dan retensi cache',consumer:'server/src/modules/outlets/services/outlet-google-location.service.js',rule:'OUTLET_GOOGLE_LOCATION_*; no expiry extension on failure; retention continues when disabled'},
  OUTLET_FIELD_PJP:{purpose:'Agenda tugas validasi berulang',consumer:'server/src/modules/outlets/services/outlet-field-pjp.service.js',rule:'Frozen OUTLET_FIELD_PJP_MODE; existing assignment continues without changing recurring templates or fabricating attendance; manual PJP codes remain required'},
  OUTLET_VALIDATION:{purpose:'Antrean Google dan retensi cache koordinat',consumer:'server/src/modules/outlets/services/outlet-validation-job.service.js',rule:'Effective OUTLET_REVIEW / MAPS availability, actor permission, provider budgets; expired provider cache is purged even when disabled'},

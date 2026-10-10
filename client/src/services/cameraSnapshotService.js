@@ -6,7 +6,7 @@ export const cameraSnapshotService = {
   /**
    * Captures snapshot from video, draws watermark, and returns base64 DataURL
    */
-  captureWithWatermark: ({ videoElement, canvasElement, facingMode, userLocation, outletName = '' }) => {
+  captureWithWatermark: ({ videoElement, canvasElement, facingMode, userLocation, outletName = '', outputMime='image/jpeg' }) => {
     if (!videoElement || !canvasElement) return null;
 
     const width = videoElement.videoWidth || 640;
@@ -54,6 +54,6 @@ export const cameraSnapshotService = {
     const infoText = `SINAR ANUGRAH • ${outletName ? outletName + ' • ' : ''}${dateStr} ${timeStr} WIB`;
     ctx.fillText(infoText, 14, height - barHeight + 26);
 
-    return canvasElement.toDataURL('image/jpeg', 0.85);
+    return canvasElement.toDataURL(outputMime, 0.85);
   },
 };

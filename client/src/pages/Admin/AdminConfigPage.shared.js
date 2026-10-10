@@ -1,8 +1,11 @@
 import React from 'react';
 import {POLICY_OPTION_LABELS,POLICY_SECRET_KEYS} from '../../../../shared/operational-policy.mjs';
 import '../../styles/pages/AdminConfig.css';
+import {parseReferenceCatalog} from '../../../../shared/reference-catalog.mjs';
+const catalogDisplay=value=>{try{return parseReferenceCatalog(value).map(r=>`${r.label} (${r.code}${r.active?'':', nonaktif'})`).join('; ');}catch{return 'Referensi tidak valid';}};
 export const optionLabels = {
   ...POLICY_OPTION_LABELS,
+  DISABLED: 'Nonaktif',
   INCREMENT: 'Otomatis berurutan',
   PATTERN: 'Pola khusus',
   MANUAL: 'Manual (otomatis OFF)',
@@ -21,4 +24,4 @@ export const optionLabel=(param,value)=>{
  if(value==='NONE'&&param.key.startsWith('CODE_'))return 'Tidak direset';
  return optionLabels[value]||value;
 };
-export const displayValue = (param, value) => POLICY_SECRET_KEYS.includes(param.key)&&value ? '••••••••' : param.type==='checklist'?Array.isArray(value)?value.map(item=>item.label+(item.required?' (wajib)':'')).join('; ')||'Tanpa pertanyaan':'Belum tersedia': param.type === 'boolean' ? String(value) === 'true' ? 'Aktif' : 'Nonaktif' : optionLabel(param,value) || String(value) || '(kosong)';
+export const displayValue = (param, value) => POLICY_SECRET_KEYS.includes(param.key)&&value ? '••••••••' : param.type==='catalog'?catalogDisplay(value): param.type==='field-requirements' ? String(value||'').split(',').filter(Boolean).map(key=>param.optionLabels?.[key]||key).join(', ')||'Tidak ada data tambahan wajib' : param.type==='checklist'?Array.isArray(value)?value.map(item=>item.label+(item.required?' (wajib)':'')).join('; ')||'Tanpa pertanyaan':'Belum tersedia': param.type === 'boolean' ? String(value) === 'true' ? 'Aktif' : 'Nonaktif' : optionLabel(param,value) || String(value) || '(kosong)';

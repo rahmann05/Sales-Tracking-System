@@ -43,6 +43,7 @@ export function PackingItemsSection({
                   <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                     Nama Barang *
                   </label>
+                  {orderLinked&&item.sourceOrderId&&<p className="text-xs mb-1">Order: {item.sourceOrderCode||item.sourceOrderId}</p>}
                   <input type="text" readOnly={orderLinked} required aria-label={`Nama barang baris ${index+1}`} value={item.name} onChange={e => setItems(items.map((v, i) => i === index ? {
             ...v,
             name: e.target.value

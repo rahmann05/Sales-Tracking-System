@@ -10,6 +10,7 @@ export const CODE_ENTITIES = [
   {key:'DIVISION',label:'Kode divisi',model:'division',field:'code',prefix:'DIV',mode:'MANUAL',optional:true},
   {key:'ORDER',label:'Nomor order',model:'order',field:'code',prefix:'ORD',mode:'INCREMENT',reset:'MONTHLY'},
   {key:'PACKING_LIST',label:'Packing list',model:'packingList',field:'code',prefix:'PL',mode:'INCREMENT',reset:'DAILY'},
+  {key:'SHIPPING_MANIFEST',label:'Manifest pengiriman',model:'packingList',field:'code',prefix:'MF',mode:'INCREMENT',reset:'DAILY'},
   {key:'INVOICE',label:'Nomor faktur',model:'invoice',field:'invoiceNumber',prefix:'INV',mode:'MANUAL'},
   {key:'DELIVERY_ROUTE',label:'Rute pengiriman',model:'deliveryRoute',field:'code',prefix:'RT',mode:'INCREMENT',reset:'DAILY'},
 ];

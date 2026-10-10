@@ -33,7 +33,7 @@ export const recordMaintenanceSchema = z.object({
     workshopName:z.string().trim().max(200).optional(),
     requestId:z.string().uuid().optional(),
     notes:z.string().trim().max(2000).optional(),
-    serviceType: z.enum(['GANTI_OLI', 'GANTI_FILTER_OLI', 'GANTI_KANVAS_REM', 'LAINNYA']),
+    serviceType: z.string().regex(/^[A-Z][A-Z0-9_]{0,47}$/),
     odometerAtService: z.number().finite().min(0),
     cost: z.number().finite().min(0).optional(),
     serviceDate: z.string().datetime().optional(),

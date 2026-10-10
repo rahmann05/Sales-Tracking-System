@@ -119,7 +119,7 @@ export const SpvOffPjpModal = ({
             )}
           </div>
 
-          <DeviceCameraCapture
+          <DeviceCameraCapture policyValues={settings}
             photoRequired={photoRequired}
             capturedPhoto={capture?.photoUrl}
             onCapture={handleCapture}

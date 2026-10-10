@@ -1,8 +1,13 @@
 import {DEFAULT_AUDIT_ITEMS} from './supervision-checklist.mjs';
+import {DEFAULT_EARLY_REASONS} from './visit-reasons.mjs';
+import {DEFAULT_SERVICE_CATALOG} from './reference-catalog.mjs';
+import {CAMERA_INPUT_LABELS} from './camera-input-policy.mjs';
+import {REGISTRATION_FIELDS} from './registration-fields.mjs';
+import {ROUTE_DECISION_MODES} from './route-change-workflow.mjs';
 import {REPORT_PRESENTATION} from './report-presentation.mjs';
 import {OUTLET_COMPARISON_DEFAULTS as comparison} from './outlet-evidence-policy.mjs';
 export const POLICY_ROLES=['ADMIN','SUPERVISOR','SALES','KEPALA_GUDANG','SUPIR'];
-export const DRIVER_EVIDENCE_KEYS=['DELIVERY_ATTENDANCE_MODE','DELIVERY_STOP_ORDER','DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT','DELIVERY_ALLOW_RESULT_WITHOUT_OUT','DELIVERY_REQUIRE_GPS','DELIVERY_REQUIRE_PHOTO','DELIVERY_REQUIRE_GEOFENCE','GPS_REQUIRE_METADATA','GPS_MAX_ACCURACY_METERS','GPS_MAX_AGE_SECONDS'];
+export const DRIVER_EVIDENCE_KEYS=['EVIDENCE_IMAGE_MAX_KB','EVIDENCE_IMAGE_FORMATS','EVIDENCE_ALLOW_REMOTE_IMAGES','CAMERA_INPUT_MODE','DELIVERY_ATTENDANCE_MODE','DELIVERY_STOP_ORDER','DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT','DELIVERY_ALLOW_RESULT_WITHOUT_OUT','DELIVERY_REQUIRE_GPS','DELIVERY_REQUIRE_PHOTO','DELIVERY_RECIPIENT_MODE','DELIVERY_SIGNATURE_MODE','DELIVERY_REQUIRE_GEOFENCE','GPS_REQUIRE_METADATA','GPS_MAX_ACCURACY_METERS','GPS_MAX_AGE_SECONDS'];
 const bool=(key,label,defaultValue=true,description='',extra={})=>({key,label,type:'boolean',defaultValue,description,...extra});
 const num=(key,label,defaultValue,min,max,unit,description='')=>({key,label,type:'number',defaultValue,min,max,unit,description});
 const select=(key,label,defaultValue,options,description='',extra={})=>({key,label,type:'select',defaultValue,options,description,...extra});
@@ -17,8 +22,32 @@ export const BUSINESS_FEATURES=[
  ['REPORTS','Laporan operasional','Pemantauan'],['EXPORT','Ekspor dan cetak','Pemantauan'],['NOTIFICATIONS','Notifikasi','Pemantauan'],['MAPS','Peta operasional','Integrasi'],
 ].map(([id,label,domain])=>({id,label,domain,key:`FEATURE_${id}_MODE`}));
 export const OPERATIONAL_CONFIG_GROUPS=[
+ group('CLOSED_OUTLET_POLICY','Laporan toko tutup','Tahapan keputusan dibekukan ketika Sales melapor; perubahan pengaturan tidak memindahkan pengajuan berjalan.',[
+  select('CLOSED_OUTLET_DECISION_MODE','Pemeriksa laporan toko tutup','INHERIT',Object.keys(ROUTE_DECISION_MODES),'Dua tahap berlaku pada skip maupun penggantian toko. Mode kompatibilitas mempertahankan aturan lama: skip satu tahap, reroute mengikuti sakelar persetujuan Admin.',{optionLabels:ROUTE_DECISION_MODES}),
+  bool('CLOSED_OUTLET_REQUIRE_PHOTO','Wajib foto toko tutup',false),
+  bool('CLOSED_OUTLET_REQUIRE_REASON','Wajib alasan toko tutup',false),
+ ]),
+ group('ASSIGNMENT_POLICY','Penugasan bertanggal','Penjadwalan memakai kewenangan proses yang sudah dimiliki; tidak memberikan izin role tambahan.',[
+  bool('ASSIGNMENT_SCHEDULE_ENABLED','Izinkan jadwal penugasan baru',true,'Nonaktif menghentikan pembuatan jadwal baru; jadwal tersimpan dan pemulihan delegasi tetap diproses agar tugas tidak terbengkalai.'),
+ ]),
+ group('EVIDENCE_INPUT','Pengambilan foto','Cara pengguna memilih foto pada formulir kamera bersama. Kewajiban foto dan GPS tetap diatur per proses; pengaturan ini bukan pembuktian keaslian kamera.',[
+  num('EVIDENCE_IMAGE_MAX_KB','Batas ukuran setiap foto bukti',2000,50,2000,'KB','Batas server pada bukti baru. Lampiran hasil kunjungan tetap memiliki batas tambahan sekitar 500 KB dan 3 gambar. Bukti tersimpan tidak dihapus.'),
+  {key:'EVIDENCE_IMAGE_FORMATS',label:'Format foto bukti',type:'text',defaultValue:'JPEG,PNG,WEBP',description:'Daftar unik JPEG,PNG,WEBP dipisahkan koma. Header berkas diperiksa, bukan hanya ekstensi. Beberapa lampiran proses mendukung JPEG/PNG saja.'},
+  bool('EVIDENCE_ALLOW_REMOTE_IMAGES','Izinkan URL foto HTTP/HTTPS',true,'Kompatibilitas referensi gambar lama/layanan penyimpanan. Server tidak mengambil atau memverifikasi isi URL; batas format/ukuran berlaku pada gambar yang dikirim langsung. Nonaktif hanya menerima gambar langsung untuk bukti baru.'),
+  select('CAMERA_INPUT_MODE','Sumber foto formulir','CAMERA',Object.keys(CAMERA_INPUT_LABELS),'Berlaku pada presensi Sales, SPV, Driver, shift dan validasi lapangan. Kamera bawaan merupakan permintaan ke perangkat; browser dapat tetap menawarkan pemilih berkas.',{optionLabels:CAMERA_INPUT_LABELS}),
+ ]),
  group('FEATURES','Ketersediaan fitur','Aktif menerima pekerjaan baru. Jeda menghentikan pekerjaan baru sambil menyelesaikan pekerjaan terbuka. Nonaktif tetap mempertahankan histori yang dapat dibaca sesuai izin.',BUSINESS_FEATURES.map(f=>select(f.key,f.label,'ACTIVE',['ACTIVE','PAUSED','OFF'],'Pengaturan berlaku pada menu, tindakan server, dan proses otomatis.'))),
+ group('UNLOCK_WORKFLOW','Pengecualian kunjungan','Izin terbatas pada pemohon dan outlet; tidak menggantikan foto, GPS, urutan atau hasil kunjungan.',[
+  bool('UNLOCK_ALLOW_GEOFENCE','Izinkan permohonan pengecualian radius',true),
+  bool('UNLOCK_ALLOW_LOCKED_OUTLET','Izinkan permohonan masuk outlet terkunci',true),
+  select('UNLOCK_REVIEWER_ROLE','Pemeriksa pengecualian','BOTH',['ADMIN','SUPERVISOR','BOTH'],'Mengikuti scope Sales dan izin pemeriksa; tidak dapat menyetujui sendiri.'),
+  num('UNLOCK_MAX_REQUESTS_PER_WINDOW','Batas pengajuan per Sales',0,0,100,'pengajuan','Nol tanpa batas. Semua status termasuk ditolak dihitung agar permintaan berulang tetap terkendali.'),
+  num('UNLOCK_REQUEST_WINDOW_HOURS','Rentang pembatas pengajuan',24,1,720,'jam','Jendela bergulir sejak waktu server, bukan tanggal ponsel.'),
+  num('UNLOCK_MAX_VISITS_PER_APPROVAL','Batas kunjungan per izin disetujui',0,0,100,'kunjungan','Nol tanpa batas selama izin berlaku. Masuk dan keluar pada stop yang sama dihitung satu kunjungan; hanya pengecualian yang benar-benar diperlukan dihitung. Dibekukan saat pengajuan.'),
+ ]),
  group('VISIT_WORKFLOW','Alur kunjungan Sales','Kegiatan bisnis, hasil kunjungan, dan bukti presensi memiliki status terpisah.',[
+  {key:'ATTENDANCE_EARLY_REASON_OPTIONS',label:'Pilihan alasan checkout lebih awal',type:'reference',defaultValue:DEFAULT_EARLY_REASONS,description:'Satu alasan per baris, 1–30 pilihan. Daftar dibekukan saat kunjungan dimulai; perubahan tidak mengganti alasan historis.'},
+  bool('ATTENDANCE_EARLY_ALLOW_CUSTOM_REASON','Izinkan alasan checkout bebas',true,'Jika nonaktif, alasan wajib salah satu pilihan pada snapshot kunjungan. Tidak mengizinkan checkout dini bila aturan checkout dini nonaktif.'),
   select('SALES_ATTENDANCE_MODE','Mode presensi kunjungan','IN_OUT',['IN_OUT','IN_ONLY','OPTIONAL'],'Masuk–keluar; masuk saja; atau kegiatan tanpa presensi wajib.'),
   bool('SALES_ALLOW_CONTINUE_WITHOUT_OUT','Boleh lanjut ketika absen keluar terlewat',false,'Kunjungan sebelumnya masuk pemeriksaan SPV. Tidak dibuatkan bukti keluar otomatis.'),
   bool('SALES_REQUIRE_VISIT_RESULT','Wajib hasil kunjungan',false,'Hasil dapat dicatat terpisah dari presensi.'),
@@ -30,9 +59,23 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('GPS_MAX_ACCURACY_METERS','Batas akurasi GPS untuk bukti',100000,5,100000,'meter'),
   num('GPS_MAX_AGE_SECONDS','Umur maksimal bukti GPS',120,10,1800,'detik'),
   bool('VISIT_RESULT_REQUIRE_NOTE','Wajib catatan hasil',false),
+  select('VISIT_RESULT_OFFER_MODE','Rincian penawaran kunjungan','OPTIONAL',['DISABLED','OPTIONAL','REQUIRED']),
+  select('VISIT_RESULT_OBSTACLE_MODE','Kendala kunjungan','OPTIONAL',['DISABLED','OPTIONAL','REQUIRED'],'Jika wajib dan tidak ada kendala, tulis “Tidak ada kendala”.'),
+  select('VISIT_RESULT_ATTACHMENT_MODE','Lampiran hasil kunjungan','OPTIONAL',['DISABLED','OPTIONAL','REQUIRED'],'Foto pendukung terpisah dari foto presensi. Maksimal 3 gambar JPEG/PNG, masing-masing sekitar 500 KB.'),
  ]),
  group('SHIFT_WORKFLOW','Shift dan kehadiran','Aturan dapat diwariskan atau ditetapkan melalui profil role/tim.',[
   select('SHIFT_ATTENDANCE_MODE','Mode shift','IN_OUT',['IN_OUT','IN_ONLY','OPTIONAL']),
+  {key:'SHIFT_END_TIME',label:'Jam selesai shift (WIB)',type:'text',defaultValue:'17:00',description:'Jika sama atau lebih awal dari jam masuk, jadwal selesai berada pada tanggal berikutnya. Tidak mengakhiri shift atau trip otomatis.'},
+  {key:'SHIFT_WORKING_DAYS',label:'Hari kerja shift',type:'text',defaultValue:'1,2,3,4,5,6',description:'0 Minggu sampai 6 Sabtu, dipisahkan koma. Terpisah dari kalender PJP.'},
+  select('SHIFT_NON_WORKDAY_POLICY','Mulai shift di luar hari kerja','ALLOW',['ALLOW','REASON','BLOCK'],'Hari mengikuti tanggal kerja WIB, termasuk untuk shift malam.',{optionLabels:{ALLOW:'Izinkan',REASON:'Izinkan dengan alasan',BLOCK:'Blokir shift baru'}}),
+  select('SHIFT_EARLY_FINISH_POLICY','Selesai sebelum jadwal','ALLOW',['ALLOW','REASON','BLOCK'],'Berlaku pada penyelesaian shift, tanpa membuat waktu keluar otomatis.',{optionLabels:{ALLOW:'Izinkan',REASON:'Izinkan dengan alasan',BLOCK:'Tunggu jadwal selesai'}}),
+  num('SHIFT_END_OVERRUN_MINUTES','Flag shift belum ditutup setelah jadwal selesai',0,0,1440,'menit','Nol mematikan flag jadwal. Driver yang masih menjalankan trip tetap dapat melanjutkan pekerjaan.'),
+  select('SHIFT_IN_PHOTO','Foto masuk shift','OPTIONAL',['REQUIRED','OPTIONAL']),
+  select('SHIFT_OUT_PHOTO','Foto keluar shift','OPTIONAL',['REQUIRED','OPTIONAL'],'Hanya berlaku pada mode masuk–keluar.'),
+  bool('SHIFT_REQUIRE_GPS','Wajib GPS shift',false,'Khusus bukti masuk/keluar shift, tanpa radius outlet. Tidak berlaku pada kegiatan tanpa presensi wajib.'),
+  bool('SHIFT_GPS_REQUIRE_METADATA','Wajib akurasi dan waktu GPS shift',false),
+  num('SHIFT_GPS_MAX_ACCURACY_METERS','Batas akurasi GPS shift',100000,5,100000,'meter'),
+  num('SHIFT_GPS_MAX_AGE_SECONDS','Umur maksimal GPS shift',120,10,1800,'detik'),
   bool('SHIFT_ALLOW_CONTINUE_UNCLOSED','Boleh mulai shift baru saat shift lama belum ditutup',false,'Shift sebelumnya ditandai untuk pemeriksaan.'),
   num('SHIFT_LATE_TOLERANCE_MINUTES','Toleransi keterlambatan',0,0,240,'menit'),
   bool('SHIFT_ALLOW_OPEN_VISITS','Boleh menutup shift dengan kunjungan belum selesai',false,'Kegiatan belum lengkap tetap masuk antrean perhatian.'),
@@ -58,7 +101,10 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('PJP_OVERLOAD_POLICY','Ketika beban harian melampaui batas','WARN',['WARN','BLOCK']),
   bool('PJP_ALLOW_FREQUENCY_OVERRIDE','Izinkan perubahan interval dengan alasan'),
   bool('PJP_ALLOW_OWNER_OVERRIDE','Izinkan Sales pengganti dengan alasan'),
+  bool('PJP_ALLOW_TEMPORARY_SUBSTITUTION','Izinkan Sales pengganti dalam rentang tanggal',false,'Per outlet dalam draft planner. Interval tetap mengikuti acuan asli, dan Sales utama kembali setelah periode berakhir. PJP terbit tidak dipindahkan otomatis; gunakan perubahan rute terkontrol.'),
   select('PJP_PUBLISH_ROLE','Pihak yang menerbitkan PJP','BOTH',['ADMIN','SUPERVISOR','BOTH']),
+  bool('PJP_ALLOW_CANCEL_PUBLISHED','Pembatalan PJP terbit tanpa aktivitas',true,'Hanya agenda hari ini/masa depan yang belum memiliki presensi, hasil, order atau perubahan rute. Agenda beraktivitas tetap disimpan; alasan dan identitas agenda batal masuk riwayat.'),
+  bool('PJP_ALLOW_SCHEDULED_PUBLISH','Izinkan penerbitan PJP terjadwal',true,'Jadwal diperiksa ulang sebelum terbit. Perubahan tim, kalender, aturan atau izin yang memengaruhi hasil memerlukan peninjauan ulang. Pembatalan jadwal tetap tersedia ketika fitur dijeda.'),
   select('PJP_ALLOWED_INTERVALS','Interval kunjungan yang diizinkan','1,2,4',['1','2','4','1,2','1,4','2,4','1,2,4'],'Pilihan untuk rencana dan outlet baru. Kode F1/F2/F4 lama tetap berarti interval minggu.'),
   select('PJP_DEFAULT_INTERVAL','Interval awal outlet baru','1',['1','2','4'],'Harus termasuk interval yang diizinkan. Tidak mengubah jadwal yang sudah diterbitkan.'),
   select('PJP_CALENDAR_SOURCE','Kalender perencanaan','WEEKDAYS',['WEEKDAYS','REPORT_CALENDAR'],'Hari kerja mingguan atau kalender bulanan Admin beserta tanggal libur/kerja khusus. Kalender bulanan yang belum diisi memblokir penerbitan.'),
@@ -67,14 +113,23 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   bool('OFF_PJP_REQUIRE_PHOTO','Wajib foto luar PJP'),bool('OFF_PJP_REQUIRE_GPS','Wajib GPS luar PJP'),
  ]),
  group('REGISTRATION_WORKFLOW','Alur outlet baru','Pemeriksaan lokasi opsional tidak menjadi gerbang registrasi.',[
+  bool('OUTLET_DEFERRED_CHANGE_ENABLED','Izinkan perubahan master tertunda',true,'Usulan menunggu waktu efektif dan pekerjaan aktif selesai. Perubahan master sesudah usulan dibuat membuat usulan gagal agar tidak menimpa data baru. Usulan tersimpan tetap diselesaikan saat opsi dimatikan.'),
   select('REGISTRATION_APPROVAL_MODE','Pemeriksaan pengajuan','BOTH',['NONE','ADMIN','SUPERVISOR','BOTH','SEQUENTIAL']),
   select('REGISTRATION_ACTIVATOR','Pihak yang mengaktifkan outlet','BOTH',['ADMIN','SUPERVISOR','BOTH']),
   bool('REGISTRATION_ALLOW_REVISION','Izinkan perbaikan pengajuan ditolak'),
+  num('REGISTRATION_MAX_REVISIONS','Batas pengajuan ulang',0,0,100,'kali','Nol tanpa batas. Menghitung revisi berhasil, bukan percobaan atau pengiriman ulang yang identik.'),
+  num('REGISTRATION_REVISION_DAYS','Batas waktu perbaikan sejak penolakan',0,0,365,'hari','Nol tanpa batas. Satu hari berarti 24 jam sejak penolakan terakhir. Mengikuti aturan saat pengajuan dibuat.'),
+  bool('REGISTRATION_REQUIRE_LOCATION','Wajib koordinat saat pengajuan',true,'Jika opsional, kedua koordinat boleh kosong. Tidak memakai titik kantor atau nol sebagai pengganti.'),
+  {key:'REGISTRATION_SUBMIT_REQUIRED_FIELDS',label:'Data tambahan wajib saat pengajuan',type:'field-requirements',defaultValue:'',options:Object.keys(REGISTRATION_FIELDS),optionLabels:REGISTRATION_FIELDS,description:'Kosong berarti seluruh data tambahan opsional. Nama, alamat dan konsistensi identitas tetap diperiksa sebagai identitas inti.'},
+  {key:'REGISTRATION_ACTIVATION_REQUIRED_FIELDS',label:'Data tambahan wajib saat aktivasi',type:'field-requirements',defaultValue:'',options:Object.keys(REGISTRATION_FIELDS),optionLabels:REGISTRATION_FIELDS,description:'Admin/aktivator dapat melengkapi data saat mengaktifkan outlet; perubahan dicatat dengan petugas dan nilai sebelumnya. Mengikuti snapshot pengajuan.'},
+  bool('REGISTRATION_ACTIVATION_REQUIRE_LOCATION','Wajib koordinat sebelum aktivasi',true,'Dapat berbeda dari pengajuan. Tanpa titik, kemampuan rute/radius ditandai belum tersedia; validasi outlet tetap opsional.'),
   select('OUTLET_DUPLICATE_POLICY','Kemungkinan outlet ganda','REASON',['BLOCK','REASON','WARN']),
   num('OUTLET_DUPLICATE_RADIUS_METERS','Jarak pemeriksaan duplikasi',100,5,1000,'meter'),
   num('OUTLET_DUPLICATE_NAME_PERCENT','Kemiripan nama kandidat duplikasi',80,50,100,'%'),
  ]),
  group('ORDER_WORKFLOW','Alur order dan catatan eksternal','Harga, pemeriksaan order, dan pencatatan pembayaran di luar aplikasi.',[
+  bool('ORDER_ALLOW_OUTSIDE_PJP','Izinkan order tanpa kunjungan PJP',false,'Sales memilih outlet aktif dalam penugasannya. Order tidak menciptakan PJP, presensi atau kunjungan aktual.'),
+  bool('ORDER_OUTSIDE_PJP_REQUIRE_REASON','Wajib alasan order tanpa PJP',true,'Alasan disimpan pada order. Tidak mengubah syarat presensi untuk order yang dibuat melalui kunjungan.'),
   select('ORDER_APPROVAL_MODE','Persetujuan order','BOTH',['NONE','ADMIN','SUPERVISOR','BOTH','SEQUENTIAL']),
   num('ORDER_APPROVAL_AMOUNT_THRESHOLD','Batas nominal untuk persetujuan khusus',0,0,1000000000000,'Rp','Nol menonaktifkan aturan nominal. Berlaku jika total akhir order sama dengan atau melebihi batas, setelah perhitungan pajak.'),
   select('ORDER_APPROVAL_AMOUNT_MODE','Persetujuan order pada batas nominal','ADMIN',['NONE','ADMIN','SUPERVISOR','BOTH','SEQUENTIAL'],'Menggantikan persetujuan dasar pada order yang memenuhi batas nominal.'),
@@ -153,9 +208,13 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('OUTLET_REVIEW_ESTIMATED_CALL_RUPIAH','Asumsi biaya setiap panggilan pemeriksaan',0,0,1000000,'Rp','Diisi Admin menurut kontrak provider; tidak memprediksi harga layanan secara otomatis.'),
  ]),
  group('WAREHOUSE_WORKFLOW','Tahapan gudang dan penutupan trip','Tahap yang dilewati dicatat sebagai tidak diwajibkan, bukan bukti pemeriksaan petugas.',[
+  select('DELIVERY_RECIPIENT_MODE','Nama penerima barang','OPTIONAL',['DISABLED','OPTIONAL','REQUIRED'],'Berlaku untuk barang diterima penuh atau sebagian; penolakan penuh tidak memerlukan penerima.'),
+  select('DELIVERY_SIGNATURE_MODE','Tanda tangan penerima','DISABLED',['DISABLED','OPTIONAL','REQUIRED'],'Bukti penerimaan barang. Jika diisi, nama penerima wajib. Tidak menjadi bukti pembayaran.'),
   bool('WAREHOUSE_REQUIRE_PICK','Wajib tahap penyiapan'),bool('WAREHOUSE_REQUIRE_CHECK','Wajib pemeriksaan muatan'),bool('WAREHOUSE_REQUIRE_LOAD','Wajib konfirmasi loading'),
   bool('WAREHOUSE_SEPARATE_CHECKER','Pemeriksa berbeda dari penyiap',false),
   bool('TRIP_REQUIRE_ODOMETER','Wajib kilometer aktual'),
+  {key:'TRIP_DEPARTURE_CHECKLIST',label:'Checklist sebelum keberangkatan',type:'checklist',defaultValue:[],description:'Pertanyaan ya/tidak, teks, angka atau pilihan beserta alasan/foto ketika gagal. Kosongkan untuk menonaktifkan. Checklist dibekukan pada trip dan jawaban disimpan bersama pelaku serta waktu keberangkatan.'},
+  bool('TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST','Tahan keberangkatan jika jawaban checklist gagal',true,'Berlaku pada pertanyaan yang memiliki kondisi gagal; petugas perlu memperbaiki kondisi sebelum berangkat. Jika nonaktif, kegagalan tetap disimpan pada bukti keberangkatan.'),
   bool('TRIP_REQUIRE_DOCUMENT_RETURN','Wajib rekonsiliasi dokumen saat tutup'),
   bool('TRIP_REQUIRE_RETURN_INSPECTION','Wajib pemeriksaan barang kembali'),
   bool('TRIP_BLOCK_OPEN_ISSUES','Tahan penutupan jika masih ada masalah'),
@@ -168,6 +227,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
  ]),
  group('TRACKING_POLICY','Berbagi lokasi dan layanan peta','Sakelar pelacakan berlaku segera. Titik presensi dan GPS langsung tetap dibedakan.',[
   select('DRAFT_STORAGE_MODE','Penyimpanan draf formulir','SESSION',['SESSION','PERSISTENT'],'Sesi browser atau perangkat ini agar bertahan setelah browser ditutup. Terpisah per akun. Berlaku saat formulir dibuka; draf belum menjadi transaksi server.',{optionLabels:{SESSION:'Selama sesi browser',PERSISTENT:'Tetap di perangkat ini'}}),
+  bool('DRIVER_BACKGROUND_SUBMISSION_ENABLED','Kirim ulang bukti Driver otomatis',false,'Memerlukan draf persisten dan HTTPS. Payload/UUID/foto/GPS asli disimpan pada antrean perangkat; akses token sesi digunakan tanpa menyimpan refresh token. Logout menghentikan sesi antrean. Dukungan Background Sync mengikuti browser; saat sesi habis atau validasi gagal pengguna perlu masuk/periksa kembali. Bukan GPS latar belakang.'),
   num('DRAFT_RETENTION_HOURS','Masa simpan draf biasa',24,1,168,'jam','Permintaan yang sudah dicoba tetapi belum dikonfirmasi tidak kedaluwarsa otomatis; periksa hasil server dahulu. Foto/GPS lama tetap divalidasi server, bukan dianggap bukti baru.'),
   select('SALES_TRACKING_MODE','Berbagi GPS Sales','LOGIN',['OFF','LOGIN','SHIFT','VISIT']),
   select('DRIVER_TRACKING_MODE','Berbagi GPS Driver','TRIP',['OFF','TRIP']),
@@ -183,6 +243,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('PLACE_LOOKUP_TIMEOUT_SECONDS','Batas tunggu setiap layanan alamat',10,2,60,'detik','Pencarian gagal menampilkan pesan untuk mencoba lagi atau melengkapi alamat manual.'),
  ]),
  group('VEHICLE_SERVICE_POLICY','Pemantauan dan pencatatan servis','Interval umum mengikuti profil yang efektif; interval khusus dikelola pada kendaraan. Mematikan pengingat tidak mengubah kelayakan kendaraan.',[
+  {key:'VEHICLE_SERVICE_CATALOG',label:'Pilihan jenis servis',type:'catalog',defaultValue:DEFAULT_SERVICE_CATALOG,description:'Tambah kode, ubah label, nonaktifkan input baru, dan atur urutan. Kode tersimpan dipertahankan. Hanya tiga kode komponen bawaan mengatur dasar kilometer pengingat; jenis tambahan menjadi catatan servis tanpa membuat interval komponen fiktif.'},
   bool('VEHICLE_SERVICE_SCHEDULED_REMINDERS','Kirim pengingat servis berkala',false,'Diperiksa setiap jam. Status kilometer tetap ditampilkan walaupun pemberitahuan berkala dimatikan.'),
   num('VEHICLE_SERVICE_REPEAT_HOURS','Jeda pengulangan pengingat servis',24,0,720,'jam','Nol mengirim sekali per kendaraan, jenis servis dan tingkat peringatan sampai dasar servis berubah.'),
   bool('NOTIFY_VEHICLE_SERVICE_EVENTS','Notifikasi servis kendaraan'),
@@ -201,9 +262,20 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   {key:'SLA_HOLIDAYS',label:'Tanggal libur SLA',type:'text',defaultValue:'',description:'Tanggal YYYY-MM-DD dipisahkan koma. Tenggat eksplisit tidak digeser.'},
  ]),
  group('REPORTING_POLICY','Laporan dan notifikasi','Ketersediaan keluaran, pemantauan, dan ukuran halaman.',[
+  bool('REPORT_SHOW_COMMERCIAL','Tampilkan nominal dan target pada laporan',true,'Pembatasan server laporan harian, mingguan, MTD, rekap dan arsip, termasuk ekspor dari data laporan. Atur per role/tim melalui profil. Tidak mengubah akses order operasional.'),
+  bool('REPORT_SHOW_CONTACT','Tampilkan kolom kontak dan alamat laporan',true,'Membatasi kolom terstruktur kontak/alamat pada server laporan. Catatan bebas dan hak akses modul master diatur terpisah.'),
+  bool('REPORT_SHOW_LOCATION','Tampilkan titik lokasi pada laporan',true,'Membatasi koordinat, tautan peta dan metadata lokasi terstruktur. Flag anomali kunjungan tetap tampil.'),
+  bool('REPORT_SHOW_EVIDENCE','Tampilkan foto dan lampiran laporan',true,'Membatasi kolom foto/lampiran/tanda tangan terstruktur pada server laporan, tanpa menghapus bukti asli.'),
+  num('REPORT_DAILY_DEFAULT_DAYS_AGO','Tanggal awal laporan harian',0,0,31,'hari lalu','Nol berarti hari ini WIB. Hanya default saat belum ada pilihan pengguna.'),
+  select('REPORT_REGISTRATION_DEFAULT_STATUS','Status awal laporan registrasi','ALL',['ALL','SUBMITTED','SPV_APPROVED','REGISTERED_ACTIVE','REJECTED'],'Filter awal saja; tidak mengubah status atau persetujuan outlet.',{optionLabels:{ALL:'Semua status',SUBMITTED:'Menunggu persetujuan',SPV_APPROVED:'Disetujui SPV',REGISTERED_ACTIVE:'Aktif di sistem',REJECTED:'Ditolak'}}),
+  select('REPORT_REGISTRATION_DEFAULT_PERIOD','Periode awal laporan registrasi','ALL',['ALL','LAST_7','LAST_30','CURRENT_MONTH','PREVIOUS_MONTH'],'Tanggal pengajuan mengikuti WIB. Hanya default sebelum pengguna mengubah filter.',{optionLabels:{ALL:'Seluruh tanggal',LAST_7:'7 hari terakhir',LAST_30:'30 hari terakhir',CURRENT_MONTH:'Bulan berjalan',PREVIOUS_MONTH:'Bulan sebelumnya'}}),
+  select('REPORT_SPV_DEFAULT_VIEW','Tab awal pemantauan Supervisor','visits',['visits','timeline','audit','map'],'Pilihan URL pengguna dan izin laporan/peta didahulukan.',{optionLabels:{visits:'Kunjungan',timeline:'Timeline Sales',audit:'Indikasi presensi',map:'Posisi terkini'}}),
+  select('REPORT_DAILY_DEFAULT_TYPE','Filter awal kunjungan harian','ALL',['ALL','EFFECTIVE_CALL','NON_EFFECTIVE_CALL','EXTRA_CALL','SKIPPED','ALL_ANOMALIES'],'Tidak mengubah cakupan akses atau metrik.',{optionLabels:{ALL:'Semua kunjungan',EFFECTIVE_CALL:'Effective call',NON_EFFECTIVE_CALL:'Tanpa order',EXTRA_CALL:'Kunjungan tambahan',SKIPPED:'Terlewat',ALL_ANOMALIES:'Semua anomali'}}),
+  select('REPORT_WEEKLY_DEFAULT_PERIOD','Periode awal mingguan','CURRENT',['CURRENT','PREVIOUS'],'Minggu dimulai Senin; hari kerja perhitungan tetap mengikuti kalender laporan.',{optionLabels:{CURRENT:'Minggu berjalan',PREVIOUS:'Minggu sebelumnya'}}),
+  select('REPORT_MTD_DEFAULT_PERIOD','Periode awal bulanan','CURRENT',['CURRENT','PREVIOUS'],'Hanya pemilihan awal; formula target dan bulan pembanding tetap.',{optionLabels:{CURRENT:'Bulan berjalan',PREVIOUS:'Bulan sebelumnya'}}),
   select('REPORT_DEFAULT_VIEW','Tab awal laporan','DAILY',['DAILY','WEEKLY','MTD'],'Dipakai jika pengguna belum memilih tab. Tab nonaktif tidak ditawarkan.'),
   select('REPORT_TABLE_DENSITY','Kepadatan tabel laporan','COMFORTABLE',['COMFORTABLE','COMPACT'],'Pengaturan tampilan saja; tidak mengubah izin, scope, arsip atau isi ekspor.',{optionLabels:{COMFORTABLE:'Nyaman',COMPACT:'Ringkas'}}),
-  ...Object.entries(REPORT_PRESENTATION).map(([key,items])=>({key,label:({REPORT_WEEKLY_WIDGETS:'Kartu ringkasan mingguan',REPORT_MTD_WIDGETS:'Kartu ringkasan bulanan',REPORT_WEEKLY_COLUMNS:'Kelompok kolom mingguan',REPORT_MTD_COLUMNS:'Kolom bulanan'})[key],type:'text',defaultValue:items.join(','),description:'Pilih informasi yang ditampilkan. Urutan kartu dapat diubah; urutan kolom tetap konsisten. Jika semua pilihan dimatikan, identitas Sales tetap tampil. Pengaturan ini tidak membatasi izin akses atau isi ekspor.'})),
+  ...Object.entries(REPORT_PRESENTATION).map(([key,items])=>({key,label:({REPORT_SPV_WIDGETS:'Kartu ringkasan pemantauan Supervisor',REPORT_WEEKLY_WIDGETS:'Kartu ringkasan mingguan',REPORT_MTD_WIDGETS:'Kartu ringkasan bulanan',REPORT_WEEKLY_COLUMNS:'Kelompok kolom mingguan',REPORT_MTD_COLUMNS:'Kolom bulanan'})[key],type:'text',defaultValue:items.join(','),description:'Pilih informasi yang ditampilkan. Urutan kartu dapat diubah; urutan kolom tetap konsisten. Jika semua pilihan dimatikan, identitas Sales tetap tampil. Pengaturan ini tidak membatasi izin akses atau isi ekspor.'})),
   num('NOTIFY_READ_RETENTION_DAYS','Masa simpan notifikasi yang sudah dibaca',0,0,3650,'hari','Nol menyimpan tanpa batas. Hanya pesan dibaca dengan outbox selesai (terkirim/dilewati) yang dihapus; pesan belum dibaca, antrean gagal dan pekerjaan bisnis tetap ada.'),
   num('AUDIT_ACTIVE_RETENTION_DAYS','Masa riwayat audit aktif',0,0,3650,'hari','Khusus perusahaan. Nol tanpa pengarsipan otomatis. Riwayat lebih lama ditandai sebagai arsip dan tetap dapat ditelusuri; bukti keputusan serta pencegah duplikasi tidak dihapus.'),
   bool('NOTIFY_REALTIME_ENABLED','Siarkan notifikasi langsung setelah transaksi berhasil',true,'Nonaktif tetap menyimpan pesan yang diizinkan pada kotak masuk. Siaran socket bukan tanda pesan sudah dibaca.'),
@@ -226,7 +298,11 @@ export function visitPolicy(values={}){
   photoOut:values.SALES_OUT_PHOTO==='REQUIRED'||values.SALES_OUT_PHOTO!=='OPTIONAL'&&values.ATTENDANCE_REQUIRE_PHOTO!==false};
 }
 export function policyConflicts(values){
+ const imageFormats=(values.EVIDENCE_IMAGE_FORMATS||'JPEG,PNG,WEBP').split(',').map(v=>v.trim());
  const issues=[];
+ if(values.VISIT_RESULT_ATTACHMENT_MODE==='REQUIRED'&&!imageFormats.some(v=>['JPEG','PNG'].includes(v)))issues.push('Lampiran hasil kunjungan wajib memerlukan format JPEG atau PNG diizinkan.');
+ if(values.DRIVER_BACKGROUND_SUBMISSION_ENABLED===true&&values.DRAFT_STORAGE_MODE!=='PERSISTENT')issues.push('Antrean otomatis bukti Driver memerlukan penyimpanan draf persisten.');
+ if(values.DELIVERY_RECIPIENT_MODE==='DISABLED'&&values.DELIVERY_SIGNATURE_MODE!=='DISABLED'&&values.DELIVERY_SIGNATURE_MODE)issues.push('Tanda tangan penerima memerlukan kolom nama penerima aktif.');
  if(String(values.SHIFT_DAY_CUTOFF_TIME||'00:00')>String(values.SHIFT_START_TIME||'08:00'))issues.push('Pergantian tanggal kerja shift maksimal sama dengan jam mulai kerja.');
  if(Number(values.OUTLET_REVIEW_DAILY_BUDGET_RUPIAH)>0&&!(Number(values.OUTLET_REVIEW_ESTIMATED_CALL_RUPIAH)>0))issues.push('Batas perkiraan biaya pemeriksaan memerlukan asumsi biaya per panggilan lebih dari nol.');
  if(values.SLA_CLOCK_MODE==='BUSINESS'&&String(values.SLA_WORK_END||'17:00')<=String(values.SLA_WORK_START||'08:00'))issues.push('Akhir jam kerja SLA harus setelah awal pada hari yang sama.');

@@ -3,13 +3,14 @@ import {processValue} from '../../config/services/process-policy.service.js';
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {fulfillment} from '../../../../../shared/delivery-operations.mjs';
+import {packingOrderWhere} from '../../../../../shared/packing-orders.mjs';
 export const cancelOrderRemainder=(id,data,user)=>prisma.$transaction(async tx=>{
   if(user.role!=='ADMIN')throw new AppError('Pembatalan sisa order hanya oleh Admin',403);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${id}`}))`;
   const order=await tx.order.findUnique({where:{id},include:{items:{include:{product:true}}}});
   if(!order||order.deletedAt||order.status!=='APPROVED')throw new AppError('Hanya sisa order disetujui yang dapat dibatalkan',409);
   if(!await processValue(order,'ORDER_ALLOW_CANCEL_REMAINDER',true))throw new AppError('Pembatalan sisa order dinonaktifkan',403);
-  const packings=await tx.packingList.findMany({where:{sourceOrderId:id},include:{deliveryStops:true}});
+  const packings=await tx.packingList.findMany({where:packingOrderWhere([id]),include:{deliveryStops:true}});
   const state=fulfillment(order,packings);
   if(!data.note?.trim()||!data.lines?.length||new Set(data.lines.map(i=>i.id)).size!==data.lines.length)throw new AppError('Alasan dan baris pembatalan wajib',400);
   for(const line of data.lines){

@@ -36,7 +36,7 @@ export const approveOrder = async (orderId, adminId, options={}) => {
     const changed = await tx.order.updateMany({ where: { id: orderId, status: ORDER_STATUS.PENDING_APPROVAL }, data: { status: ORDER_STATUS.APPROVED, approvedBy: adminId, approvedAt: new Date(),history:[...(current.history||[]),{action:'APPROVE',actorId:adminId,at:new Date().toISOString(),...decision}] } });
     if (!changed.count) throw new AppError('Order sudah diproses', 409);
     await draftFromApprovedOrder(tx, orderId, adminId);
-    await policyNotification(tx,{data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_APPROVED,title:'Order Disetujui',message:`Order Anda di outlet "${order.pjpStop.outlet.name}" telah disetujui`,payload:{orderId:order.id}}});
+    await policyNotification(tx,{data:{userId:order.createdBy,type:NOTIFICATION_TYPES.ORDER_APPROVED,title:'Order Disetujui',message:`Order Anda di outlet "${order.customerSnapshot?.name||order.pjpStop?.outlet?.name||'pelanggan'}" telah disetujui`,payload:{orderId:order.id}}});
     return tx.order.findUnique({
     where: { id: orderId },
     include: { 

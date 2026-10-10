@@ -367,6 +367,7 @@ model Outlet {
 
   // Relasi operasional
   pjpStops                PjpStop[]
+  orders                  Order[]
   pjpTemplateStops        PjpTemplateStop[]
   offPjpAttendances       OffPjpAttendance[]
   routeChangesReplacement RouteChangeRequest[] @relation("ReplacementOutlet")
@@ -539,6 +540,8 @@ model OffPjpAttendance {
 }
 
 model OutletUnlockRequest {
+  kind String @default("BOTH")
+  policySnapshot Json?
   expiresAt DateTime?
 
   id              String       @id @default(uuid())
@@ -660,10 +663,15 @@ model PjpPlan {
   createdBy String
   updatedBy String
   publishedAt DateTime?
+  scheduledAt DateTime?
+  publicationNextAttemptAt DateTime?
+  publicationSchedule Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([supervisorId, startsOn])
+  @@index([status, scheduledAt])
+  @@index([status, publicationNextAttemptAt])
 }
 
 model PjpTemplateStop {
@@ -988,8 +996,10 @@ model Order {
   taxAmount Float @default(0)
 
   id             String      @id @default(uuid())
-  pjpStopId      String
-  pjpStop        PjpStop     @relation(fields: [pjpStopId], references: [id], onDelete: Cascade)
+  pjpStopId      String?
+  pjpStop        PjpStop?    @relation(fields: [pjpStopId], references: [id], onDelete: Restrict)
+  outletId       String?
+  outlet         Outlet?     @relation(fields: [outletId], references: [id], onDelete: Restrict)
   createdBy      String
   createdByUser  User        @relation("OrderCreatedBy", fields: [createdBy], references: [id])
   approvedBy     String?
@@ -1008,6 +1018,7 @@ model Order {
   @@index([status, createdAt])
   @@index([createdBy])
   @@index([createdBy, createdAt])
+  @@index([outletId])
 }
 
 model OrderItem {
@@ -1037,11 +1048,13 @@ model OrderItem {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model PackingList {
+  documentKind String @default("PACKING")
   policySnapshot Json?
   commercialReconciliation Json?
   status String @default("DRAFT")
   source String @default("MANUAL")
   sourceOrderId String?
+  sourceOrderIds String[] @default([])
   items Json @default("[]")
   history Json @default("[]")
   overrideReason String?
@@ -1063,6 +1076,7 @@ model PackingList {
 
   @@index([outletId])
   @@index([sourceOrderId])
+  @@index([sourceOrderIds], type: Gin)
   @@index([createdById])
   @@index([createdAt])
 }
@@ -1166,6 +1180,7 @@ model DeliveryStop {
   latitude        Float?
   longitude       Float?
   photoUrl        String?            @db.Text
+  receiptEvidence Json?
   rejectReason    String?
   rejectedCartons Int?               @default(0)
   notes           String?

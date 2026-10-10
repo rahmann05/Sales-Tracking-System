@@ -13,6 +13,9 @@ import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service
 import {synchronizeOutletCounts} from '../../clusters/services/cluster-assignment-policy.service.js';
 import {invalidateClusterCache} from '../../clusters/services/clusters.helpers.js';
 import {invalidateOutletCache} from '../../outlets/services/outlets.helpers.js';
+import {registrationLocation} from '../../../../../shared/registration-policy.mjs';
+import {REGISTRATION_FIELDS,registrationFieldError} from '../../../../../shared/registration-fields.mjs';
+import {assertOutletLegal} from '../../outlets/services/outlet-data-policy.service.js';
 
 /**
  * 6. Finalize and Register Active Outlet (Supervisor or Admin)
@@ -23,7 +26,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
     throw new AppError('Hanya Admin atau Supervisor yang dapat mendaftarkan outlet ke sistem aktif', 403);
   }
 
-  const registration = await prisma.customerRegistration.findUnique({ where: { id } });
+  let registration = await prisma.customerRegistration.findUnique({ where: { id } });
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
   const activator=await processValue(registration,'REGISTRATION_ACTIVATOR','BOTH');
@@ -43,14 +46,14 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
 
   let finalCode;
 
-  // Koordinat GPS wajib nyata dan valid, tidak boleh memakai titik koordinat palsu diam-diam
-  const lat = payload.latitude ?? registration.latitude;
-  const lng = payload.longitude ?? registration.longitude;
-  if (lat === null || lat === undefined || lng === null || lng === undefined) {
-    throw new AppError('Koordinat GPS fisik outlet wajib diisi sebelum aktivasi', 400);
-  }
-
-  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng)) || Math.abs(Number(lat))>90 || Math.abs(Number(lng))>180) throw new AppError('Koordinat GPS tidak valid',400);
+  const fields=payload.registrationFields||{};
+  if(Object.entries(fields).some(([key,value])=>!Object.hasOwn(REGISTRATION_FIELDS,key)||typeof value!=='string'||value.length>2000))throw new AppError('Data pelengkap aktivasi tidak valid.',422);
+  const beforeFields=Object.fromEntries(Object.keys(fields).map(key=>[key,registration[key]??null]));
+  assertOutletLegal(fields,registration);registration={...registration,...fields};
+  const fieldError=registrationFieldError(registration,await processValue(registration,'REGISTRATION_ACTIVATION_REQUIRED_FIELDS',''),'aktivasi');if(fieldError)throw new AppError(fieldError,422);
+  let point;try{point=registrationLocation({latitude:payload.latitude??registration.latitude,longitude:payload.longitude??registration.longitude},await processValue(registration,'REGISTRATION_ACTIVATION_REQUIRE_LOCATION',true));}catch(e){throw new AppError(e.message,400);}
+  const {latitude:lat,longitude:lng}=point;
+  const changedPoint=(payload.latitude!==undefined||payload.longitude!==undefined)&&(lat!==registration.latitude||lng!==registration.longitude);
   await assertSalesAccess(currentUser,registration.salesmanId);
   // Tentukan Cluster: prioritaskan clusterId dari payload, atau cari cluster berdasarkan Area
   const targetClusterId = payload.clusterId || registration.clusterId;
@@ -67,7 +70,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     const retry=await tx.outlet.findUnique({where:{registrationId:id}});
     if(retry)return [await tx.customerRegistration.findUnique({where:{id}}),retry];
-    await assertNoUnreviewedDuplicate(tx,{...registration,latitude:Number(lat),longitude:Number(lng)},currentUser,payload.duplicateReason);
+    await assertNoUnreviewedDuplicate(tx,{...registration,...point},currentUser,payload.duplicateReason);
     const changed=await tx.customerRegistration.updateMany({where:{id,registrationStatus:registration.registrationStatus,updatedAt:registration.updatedAt},data:{registrationStatus:'REGISTERED_ACTIVE'}});
     if(!changed.count)throw new AppError('Pengajuan sudah diproses, muat ulang',409);
     finalCode = await resolveBusinessCode('OUTLET', payload.outletCode || payload.customerCode || registration.customerCode, {db:tx,excludeId:id});
@@ -75,6 +78,9 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
       where: { id },
       data: {
         customerCode: finalCode,
+        ...fields,
+        ...point,
+        ...(changedPoint?{locationEvidence:{source:'MANUAL',actor:actorSnapshot(currentUser),at:new Date().toISOString()}}:{}),
         clusterId:targetClusterId,
         registrationStatus: 'REGISTERED_ACTIVE',
         adminId: currentUser.id,
@@ -90,14 +96,14 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
         registrationId:id,source:'REGISTRATION',taxType:registration.taxType,taxNumber:registration.taxNumber,taxName:registration.taxName,taxAddress:registration.taxAddress,
         name: registration.name,
         address: registration.address,
-        latitude: Number(lat),
-        longitude: Number(lng),
+        latitude: lat,
+        longitude: lng,
         clusterId: targetClusterId,
         channel: registration.channel || 'GENERAL_TRADE',
         type: registration.channel || 'GENERAL_TRADE',
         subChannel: registration.subChannel || 'TOKO_RETAIL',
         itineraryCode:registration.visitIntervalWeeks?`F${registration.visitIntervalWeeks}`:null,
-        locationEvidence:registration.locationEvidence || {source:'REGISTRATION',actor:actorSnapshot(currentUser),at:new Date().toISOString()},
+        locationEvidence:changedPoint?{source:'MANUAL',actor:actorSnapshot(currentUser),at:new Date().toISOString()}:registration.locationEvidence || {source:'REGISTRATION',actor:actorSnapshot(currentUser),at:new Date().toISOString()},
         ownerName: registration.ownerName || registration.taxName,
         phone: registration.phone,
         paymentType: registration.paymentType,
@@ -110,6 +116,7 @@ export const finalizeAndRegisterByAdmin = async (id, payload, currentUser) => {
 
     await tx.outletChange.create({data:{outletId:outlet.id,actor:actorSnapshot(currentUser),reason:payload.duplicateReason || 'Aktivasi pengajuan yang disetujui',source:'REGISTRATION',before:{},after:{registrationId:id,name:outlet.name,address:outlet.address,latitude:outlet.latitude,longitude:outlet.longitude,clusterId:targetClusterId}}});
     await synchronizeOutletCounts(tx,[targetClusterId]);
+    if(Object.keys(fields).length)await tx.auditEvent.create({data:{entityType:'REGISTRATION',entityId:id,action:'ACTIVATION_FIELDS',actorId:currentUser.id,actorName:currentUser.name,before:beforeFields,after:fields}});
     await tx.clusterRoute.deleteMany({where:{clusterId:targetClusterId}});
 
     return [reg, outlet];

@@ -1,3 +1,4 @@
+import {TRIP_PERMISSION_LABELS,tripPermission,tripPermissionDefaults} from '../../../../shared/trip-permissions.mjs';
 /**
  * roles.constants.js
  * Single Responsibility: Master registry of all system permissions, categories,
@@ -5,6 +6,7 @@
  */
 
 export const ALL_PERMISSIONS = [
+  ...Object.entries(TRIP_PERMISSION_LABELS).map(([action,label])=>({key:tripPermission(action),label,desc:'Mengikuti izin akses pengiriman, tahap, penugasan dan kepemilikan trip.',category:'Gudang & Logistik'})),
   ...[['run','Jalankan pemeriksaan Google'],['propose','Usulkan koreksi outlet'],['apply','Terapkan koreksi outlet'],['assign','Tugaskan pemeriksaan outlet'],['submit','Kirim bukti lapangan outlet'],['review','Periksa bukti lapangan outlet']].map(([action,label])=>({key:`can_${action}_outlet_${['submit','review'].includes(action)?'field':'review'}`,label,desc:'Mengikuti wilayah, kepemilikan dan revisi data.',category:'Tim & Master Wilayah'})),
   ...[['propose','Usulkan koreksi waktu shift'],['review','Putuskan koreksi waktu shift']].map(([action,label])=>({key:`can_${action}_shift_correction`,label,desc:'Khusus Admin; waktu asli tetap dan setiap keputusan diaudit.',category:'Tim & Master Wilayah'})),
   ...[['view','Lihat tindak lanjut'],['assign','Tugaskan / alihkan tindak lanjut'],['complete','Kirim hasil tindak lanjut'],['review','Periksa hasil tindak lanjut']].map(([action,label])=>({key:`can_${action}_follow_up`,label,desc:'Tetap mengikuti lingkup tim, kepemilikan dan tahap tugas.',category:'Tim & Master Wilayah'})),
@@ -283,3 +285,5 @@ export const BUILT_IN_ROLES = [
     },
   },
 ];
+
+for(const role of BUILT_IN_ROLES)Object.assign(role.defaultPermissions,tripPermissionDefaults(role.code));

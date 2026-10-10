@@ -14,6 +14,7 @@ export const rerouteSchema = z.object({
   }),
   body: z.object({
     replacementOutletId: z.string().uuid('replacementOutletId harus berformat UUID'),
+    reason:z.string().trim().min(5).max(2000).optional(),
   }),
 });
 

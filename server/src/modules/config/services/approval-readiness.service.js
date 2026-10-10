@@ -1,3 +1,4 @@
+import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
 import {BUILT_IN_ROLES} from '../../roles/roles.constants.js';
 import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
 import {orderReviewerGaps,registrationReviewerGaps} from '../../../../../shared/approval-readiness.mjs';
@@ -7,6 +8,9 @@ import {shiftCorrectionGaps} from '../../../../../shared/shift-policy.mjs';
 import {fieldTaskGaps} from '../../../../../shared/outlet-validation.mjs';
 import {effectivePolicy} from './policy-resolver.service.js';
 import {AppError} from '../../../utils/errors.js';
+import {assertSchedulePeopleRemain} from './assignment-schedule-protection.js';
+import {routeChangeReviewGaps} from '../../../../../shared/route-change-workflow.mjs';
+import {attachRouteWorkflows} from '../../route-changes/services/route-workflow.service.js';
 export const approvalReadinessDomains=values=>({
  order:Object.keys(values).some(k=>k.startsWith('ORDER_APPROVAL_')||['ORDER_PRICE_OVERRIDE_APPROVAL_MODE','SALES_ALLOW_PRICE_OVERRIDE','FEATURE_ORDERS_MODE'].includes(k)),
  registration:Object.keys(values).some(k=>['REGISTRATION_APPROVAL_MODE','REGISTRATION_ACTIVATOR','FEATURE_REGISTRATION_MODE'].includes(k)),
@@ -38,11 +42,12 @@ export async function publicationReadiness(db,{scope='GLOBAL',at=Date.now(),over
 async function openWorkGaps(db,people){
  const [orders,registrations,trips]=await Promise.all([db.order.findMany({where:{deletedAt:null,status:'PENDING_APPROVAL'},select:{id:true,code:true,createdBy:true,history:true,policySnapshot:true}}),db.customerRegistration.findMany({where:{registrationStatus:{in:['SUBMITTED','SPV_APPROVED']}},select:{id:true,name:true,salesmanId:true,registrationStatus:true,policySnapshot:true}}),db.deliveryRoute.findMany({where:{cancelledAt:null,OR:[{closedAt:null},{stops:{some:{rejectedCartons:{gt:0},returnReceivedAt:null}}}]},select:{id:true,code:true,driverId:true,departedAt:true,returnedAt:true,closedAt:true,status:true,preparation:true,policySnapshot:true,stops:{select:{id:true,rejectedCartons:true,returnInspection:true}}}})]);
  const issues=[];
+ if(db.routeChangeRequest){const requests=await attachRouteWorkflows(db,await db.routeChangeRequest.findMany({where:{status:'PENDING_APPROVAL'}}));for(const request of requests)for(const role of routeChangeReviewGaps(request,people))issues.push({key:`ROUTE_CHANGE:${request.id}:${role}`,message:`Laporan toko tutup memerlukan pemeriksa ${role} aktif sesuai tahap tersimpan.`});}
  for(const [kind,rows,owner,check] of [['ORDER',orders,'createdBy',orderReviewerGaps],['REGISTRATION',registrations,'salesmanId',registrationReviewerGaps]])for(const record of rows){
   const applicant=people.find(p=>p.id===record[owner]),normalized={...record,policySnapshot:{...record.policySnapshot,values:{...CONFIG_DEFAULTS,...record.policySnapshot?.values}}};
   for(const role of check(normalized,applicant,people))issues.push({key:`${kind}:${record.id}:${role}`,message:`${kind==='ORDER'?'Order':'Pengajuan outlet'} ${record.code||record.name||record.id} memerlukan ${role} aktif dengan izin yang sesuai.`});
  }
- for(const trip of trips.filter(r=>!r.returnedAt&&!r.closedAt)){const driver=people.find(p=>p.id===trip.driverId);if(!driver||driver.deletedAt||driver.role!=='SUPIR'||driver.permissions.can_access_driver_map===false)issues.push({key:`TRIP:${trip.id}:DRIVER`,message:`Trip ${trip.code} memerlukan Driver aktif dengan akses tugas. ${trip.departedAt?'Selesaikan perjalanan terlebih dahulu.':'Alihkan Driver sebelum menonaktifkan akun.'}`});}
+ for(const trip of trips.filter(r=>!r.returnedAt&&!r.closedAt)){const driver=people.find(p=>p.id===trip.driverId);if(!driver||driver.deletedAt||driver.role!=='SUPIR'||driver.permissions.can_access_driver_map===false||!canTripAction(driver,'RETURN'))issues.push({key:`TRIP:${trip.id}:DRIVER`,message:`Trip ${trip.code} memerlukan Driver aktif dengan akses tugas. ${trip.departedAt?'Selesaikan perjalanan terlebih dahulu.':'Alihkan Driver sebelum menonaktifkan akun.'}`});}
  issues.push(...warehouseAssignmentGaps(trips,people));
  const followUps=await db.staffActivity.findMany({where:{OR:[{followUp:{path:['status'],equals:'OPEN'}},{followUp:{path:['status'],equals:'SUBMITTED'}}]},select:{id:true,outletName:true,followUp:true,policySnapshot:true}});
  issues.push(...followUpAssignmentGaps(followUps,people));
@@ -54,6 +59,7 @@ async function openWorkGaps(db,people){
 // Must hold approval:actors while changing accounts, teams or role permission templates.
 export async function assertReviewersRemain(db,{patches,definitions}={}){
  const before=await reviewPeople(db),after=await reviewPeople(db,{patches,definitions});
+ await assertSchedulePeopleRemain(db,before,after);
  const old=new Set((await openWorkGaps(db,before)).map(i=>i.key)),added=(await openWorkGaps(db,after)).filter(i=>!old.has(i.key));
  if(added.length)throw new AppError(`Perubahan meninggalkan pekerjaan tanpa petugas berwenang. ${added.slice(0,3).map(i=>i.message).join(' ')} Siapkan pengganti atau selesaikan pekerjaan sebelum melanjutkan.`,409);
 }

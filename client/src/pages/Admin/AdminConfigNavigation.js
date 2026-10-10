@@ -12,8 +12,8 @@ import { CONFIG_DEFINITIONS } from '../../../../shared/config.mjs';
 import { LuKey, LuMapPin, LuUsers, LuTruck, LuShieldCheck, LuSlidersHorizontal } from 'react-icons/lu';
 export const categories = [
  {key:'features',label:'Ketersediaan fitur',icon:LuSlidersHorizontal,description:'Aktifkan, jeda, atau hentikan pekerjaan baru.',groups:['FEATURES']},
- {key:'sales',label:'Kunjungan & shift',icon:LuUsers,description:'Presensi, bukti kunjungan, supervisi, dan hasil lapangan.',groups:['VISIT_WORKFLOW','SALES_ATTENDANCE','GEOFENCE','SHIFT_WORKFLOW','SUPERVISION','OPERATIONS']},
- {key:'planning',label:'Tim, wilayah & PJP',icon:LuUsers,description:'Penugasan Sales, interval kunjungan, dan penerbitan rencana.',groups:['PLANNING_POLICY','TEAM_ASSIGNMENT']},
+ {key:'sales',label:'Kunjungan & shift',icon:LuUsers,description:'Presensi, bukti kunjungan, supervisi, dan hasil lapangan.',groups:['CLOSED_OUTLET_POLICY','EVIDENCE_INPUT','UNLOCK_WORKFLOW','VISIT_WORKFLOW','SALES_ATTENDANCE','GEOFENCE','SHIFT_WORKFLOW','SUPERVISION','OPERATIONS']},
+ {key:'planning',label:'Tim, wilayah & PJP',icon:LuUsers,description:'Penugasan Sales, interval kunjungan, dan penerbitan rencana.',groups:['ASSIGNMENT_POLICY','PLANNING_POLICY','TEAM_ASSIGNMENT']},
  {key:'outlet',label:'Outlet & registrasi',icon:LuMapPin,description:'Pengajuan outlet, persetujuan, master, dan pemeriksaan opsional.',groups:['REGISTRATION_WORKFLOW','NOO','OUTLET_REVIEW_POLICY','OUTLET_REVIEW_SEARCH','OUTLET_REVIEW_MATCHING','OUTLET_REVIEW_ADMIN','OUTLET_FIELD_POLICY','OUTLET_GOOGLE_LOCATION','OUTLET_REVIEW_SERVICE','OUTLET_REVIEW_LEGACY','VALIDATION','DIVISI']},
  {key:'orders',label:'Order & penagihan',icon:LuTruck,description:'Persetujuan order, harga, dan catatan pembayaran eksternal.',groups:['ORDER_WORKFLOW','TRANSAKSI']},
  {key:'logistics',label:'Gudang & pengiriman',icon:LuTruck,description:'Packing, persiapan, bukti tujuan, servis, dan penutupan trip.',groups:['WAREHOUSE_WORKFLOW','PACKING_WORKFLOW','VEHICLE_SERVICE_POLICY','LOGISTIK']},

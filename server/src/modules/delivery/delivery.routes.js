@@ -1,5 +1,5 @@
 import {assignReturnInspection} from './services/return-assignment.service.js';
-import {findDeliveryRequest} from './services/delivery-request.service.js';
+import {findDeliveryRequest,cancelDeliveryRequest} from './services/delivery-request.service.js';
 import { receiveReturn } from './services/receive-return.service.js';
 import { operationsDashboard, routeAction, createIssue, resolveIssue } from './services/operations.service.js';
 import { reportDriverLocation } from './services/driver-location.service.js';
@@ -25,6 +25,7 @@ const router = Router();
 // All delivery routes require authentication
 router.use(authenticate);
 router.get('/stops/:id/requests/:requestId',authorize('SUPIR'),authorizeWithPermission(['SUPIR'],'can_access_driver_map'),async(req,res,next)=>{try{res.json({data:await findDeliveryRequest(req.params.id,req.params.requestId,req.user)});}catch(e){next(e);}});
+router.post('/stops/:id/requests/:requestId/cancel',authorize('SUPIR'),authorizeWithPermission(['SUPIR'],'can_access_driver_map'),async(req,res,next)=>{try{res.json({data:await cancelDeliveryRequest(req.params.id,req.params.requestId,req.user)});}catch(e){next(e);}});
 router.patch('/packing-lists/:id/invoices',authorize('ADMIN'),async(req,res,next)=>{
   try{const data=z.object({revision:z.number().int().positive(),note:z.string().trim().min(1).max(2000),invoices:z.array(z.object({id:z.string().uuid(),totalAmount:z.number().nonnegative(),taxRatePercent:z.number().min(0).max(100).optional(),taxIncluded:z.boolean().optional(),taxRoundingMode:z.enum(['NEAREST','DOWN','UP']).optional(),items:z.array(z.object({lineId:z.string().min(1),quantity:z.number().int().positive(),unitPrice:z.number().nonnegative().optional()}))})).min(1)}).parse(req.body);res.json({data:await correctInvoiceCommercial(req.params.id,data,req.user)});}catch(e){next(e);}
 });

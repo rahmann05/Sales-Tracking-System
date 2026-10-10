@@ -43,6 +43,9 @@ try {
  const second=attempts.find(r=>r.status==='fulfilled').value;
  check((await getPackingLists({search:pl.code},'ADMIN')).items[0].remainingCartons,0);
  await prisma.deliveryRoute.updateMany({where:{id:{in:[first.id,second.id]}},data:{status:'IN_TRANSIT'}});
+ // This fixture tests allocation/results, not attendance. Freeze an explicit
+ // no-attendance policy rather than depending on historical global defaults.
+ for(const route of [first,second])await prisma.deliveryRoute.update({where:{id:route.id},data:{policySnapshot:{...route.policySnapshot,values:{...route.policySnapshot.values,DELIVERY_ATTENDANCE_MODE:'OPTIONAL'}}}});
  await updateStopStatus(first.stops[0].id,{status:'DELIVERED',photoUrl:'data:image/png;base64,dGVzdA=='},driver.id);
  check((await prisma.invoice.findFirst({where:{packingListId:pl.id}})).isDelivered,false);
  await updateStopStatus(second.stops[0].id,{status:'DELIVERED',photoUrl:'data:image/png;base64,dGVzdA=='},driver.id);

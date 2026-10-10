@@ -1,3 +1,4 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
 import {assertNewWorkReviewers} from '../../config/services/approval-readiness.service.js';
@@ -14,6 +15,8 @@ import { resolveBusinessCode } from '../../config/services/business-code.service
 import {assertRequestReplay,assertOutletLegal,assertOutletTrade} from '../../outlets/services/outlet-data-policy.service.js';
 import {actorSnapshot} from '../../outlets/services/outlet-review-policy.service.js';
 import {allowedVisitIntervals} from '../../../../../shared/pjp-planning.mjs';
+import {registrationLocation} from '../../../../../shared/registration-policy.mjs';
+import {registrationFieldError} from '../../../../../shared/registration-fields.mjs';
 
 /**
  * 1. Create Outlet Registration (Salesman)
@@ -28,6 +31,7 @@ export const createRegistration = async (data, currentUser) => {
     }
   }
   if(await getDynamicConfig('FEATURE_REGISTRATION_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Pendaftaran outlet baru dijeda oleh Admin',409);
+  const fieldError=registrationFieldError(data,await getDynamicConfig('REGISTRATION_SUBMIT_REQUIRED_FIELDS',''));if(fieldError)throw new AppError(fieldError,422);
   const allowed=allowedVisitIntervals({PJP_ALLOWED_INTERVALS:await getDynamicConfig('PJP_ALLOWED_INTERVALS','1,2,4')});
   const interval=data.visitIntervalWeeks??Number(await getDynamicConfig('PJP_DEFAULT_INTERVAL','1'));
   if(!allowed.includes(interval))throw new AppError('Interval kunjungan tidak diizinkan oleh Admin',422);
@@ -35,8 +39,10 @@ export const createRegistration = async (data, currentUser) => {
   if (await getDynamicConfig('CUSTOMER_REG_REQUIRE_PHOTO', true) && !data.photoUrl?.trim()) throw new AppError('Foto fisik outlet wajib dilampirkan', 422);
   if (await getDynamicConfig('CUSTOMER_REG_REQUIRE_TAX_DOCUMENT', true) && !data.taxDocumentUrl?.trim()) throw new AppError(`Foto dokumen ${data.taxType === 'PKP' ? 'NPWP' : 'KTP'} wajib dilampirkan`, 422);
   if(data.clusterId && !await prisma.cluster.findFirst({where:{id:data.clusterId,deletedAt:null,...(currentUser.role==='SUPERVISOR'?{supervisorId:currentUser.id}:currentUser.role==='SALES'?{OR:[{assignedSalesId:currentUser.id},{users:{some:{id:currentUser.id}}}]}:{})},select:{id:true}}))throw new AppError('Klaster berada di luar penugasan',403);
-  const { latitude, longitude, name, photoUrl: incomingPhotoUrl } = data;
-  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180)throw new AppError('Koordinat GPS nyata wajib diisi',400);
+  const { name, photoUrl: incomingPhotoUrl } = data;
+  await assertEvidenceImages({taxDocumentUrl:data.taxDocumentUrl});
+  let point;try{point=registrationLocation(data,await getDynamicConfig('REGISTRATION_REQUIRE_LOCATION',true));}catch(e){throw new AppError(e.message,422);}
+  const {latitude,longitude}=point;
 
   // 1. Process and store outlet photo directly in PostgreSQL
   let photoId = data.photoId || null;

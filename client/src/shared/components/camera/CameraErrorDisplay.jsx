@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuCamera } from 'react-icons/lu';
+import {CameraNativeFileTrigger} from './CameraNativeFileTrigger';
 import { FiAlertCircle } from 'react-icons/fi';
 
 /**
@@ -12,6 +12,8 @@ export const CameraErrorDisplay = ({
   requireGps,
   isGpsLocked,
   onNativeFileInput,
+  allowNative=true,
+  allowUpload=false,
 }) => {
   if (!cameraError) return null;
 
@@ -22,24 +24,7 @@ export const CameraErrorDisplay = ({
         <p className="text-xs font-bold text-white">Gagal Membuka Kamera</p>
         <p className="text-[11px] text-slate-400">{cameraError}</p>
       </div>
-      <label
-        className={`mt-2 px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md ${
-          requireGps && !isGpsLocked
-            ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-            : 'bg-primary text-on-primary cursor-pointer hover:bg-primary/90'
-        }`}
-      >
-        <input
-          type="file"
-          accept="image/*"
-          capture={facingMode === 'user' ? 'user' : 'environment'}
-          disabled={requireGps && !isGpsLocked}
-          onChange={onNativeFileInput}
-          className="hidden"
-        />
-        <LuCamera className="text-sm" />
-        <span>Buka Kamera Native HP</span>
-      </label>
+      {allowNative?<CameraNativeFileTrigger facingMode={facingMode} requireGps={requireGps} isGpsLocked={isGpsLocked} onNativeFileInput={onNativeFileInput} allowUpload={allowUpload}/>:<p className="text-xs text-white">Aturan formulir mewajibkan kamera langsung. Periksa izin kamera pada browser.</p>}
     </div>
   );
 };

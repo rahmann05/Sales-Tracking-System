@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { parseSpreadsheetCsv } from '../../../services/spreadsheetImportService';
 import { clustersApi, outletsApi, collectPages } from '../../../services/api';
 
 /**
@@ -121,8 +120,7 @@ export const useRjpManagement = () => {
     } finally {setDeletingId(null);}
   };
 
-  const handleImportSpreadsheet=async (csvText,impactToken)=>{
-    const rows=parseSpreadsheetCsv(csvText);
+  const handleImportSpreadsheet=async (rows,impactToken)=>{
     if(!rows.length)throw new Error('CSV tidak berisi data');
     const res=await clustersApi.importRjp(rows,impactToken);await load();setIsImportModalOpen(false);return res.data;
   };

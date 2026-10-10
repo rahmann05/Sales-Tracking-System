@@ -14,8 +14,8 @@ export const reportClosed = async (req, res, next) => {
 export const reroute = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { replacementOutletId } = req.body;
-    const data = await routeChangeService.submitReroute(req.user.id, id, replacementOutletId);
+    const { replacementOutletId,reason } = req.body;
+    const data = await routeChangeService.submitReroute(req.user.id, id, replacementOutletId,reason);
     return successResponse(res, 200, data, 'Reroute berhasil diproses dan jadwal sales diperbarui');
   } catch (error) {
     next(error);

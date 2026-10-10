@@ -39,7 +39,7 @@ try{
  await rollOutletFieldPjps(tomorrow);eq(await prisma.pjpStop.count({where:{validationTaskId:task.id,pjp:{date:wibDayRange(tomorrow)}}}),0);
  eq((await report(today)).body.data[0].validationFlag,'PJP_VALIDATION_INCOMPLETE');
  await prisma.outletFieldTask.update({where:{id:task.id},data:{schedule:{...task.schedule,assignedOn:wibDateKey(day(-1))}}});
- const evidence={requestId:randomUUID(),outcome:'FOUND',name:'Toko Usman',address:'Jl Melati No 12, Padalarang',latitude:-6.9,longitude:107.6,accuracyMeters:10,capturedAt:new Date().toISOString(),photo:'data:image/jpeg;base64,YWJj',note:'Papan nama alamat dan titik GPS diperiksa di lokasi'};
+ const evidence={requestId:randomUUID(),outcome:'FOUND',name:'Toko Usman',address:'Jl Melati No 12, Padalarang',latitude:-6.9,longitude:107.6,accuracyMeters:10,capturedAt:new Date().toISOString(),photo:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9sAAAAASUVORK5CYII=',note:'Papan nama alamat dan titik GPS diperiksa di lokasi'};
  const submit=(t,proof=evidence)=>api(`/outlets/field-tasks/${t.id}`,sales,'PATCH',{action:'SUBMIT',revision:t.revision,evidence:proof});
  eq((await submit(task)).status,409);r=await detail(r);response=await assign(r);eq(response.status,200);task=response.body.data;eq(task.schedule.assignedOn,today);
  eq(await prisma.pjpStop.count({where:{validationTaskId:task.id,pjp:{date:wibDayRange()}}}),1);

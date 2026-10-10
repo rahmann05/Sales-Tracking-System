@@ -8,6 +8,7 @@ import {freezeOpenWork} from './process-policy.service.js';
 import {publicationReadiness} from './approval-readiness.service.js';
 import { invalidateConfigCache } from './dynamic-config.service.js';
 import {broadcastCacheInvalidation} from '../../../config/socket.js';
+import {retainServiceCodes} from '../../../../../shared/reference-catalog.mjs';
 const auditValue=(key,value)=>key==='MAPS_API_KEY'?'[REDACTED]':value;
 export const saveConfigs=async(configMap,actor={})=>{
   configMap=validateConfigMap(configMap);
@@ -20,6 +21,7 @@ export const saveConfigs=async(configMap,actor={})=>{
     const saved=await tx.systemConfig.findMany({where});
     const effective={...CONFIG_DEFAULTS,...Object.fromEntries(saved.map(row=>[row.key,row.value]))};
     validateConfigRelations({...effective,...configMap});
+    try{retainServiceCodes(configMap,effective);}catch(e){throw new AppError(e.message,400);}
     const issues=policyConflicts({...effective,...configMap});if(issues.length)throw new AppError(issues.join(' '),400);
     const readiness=await publicationReadiness(tx,{values:configMap,baseOverrides:configMap});if(readiness.length)throw new AppError(readiness.join(' '),400);
     await freezeOpenWork(tx);

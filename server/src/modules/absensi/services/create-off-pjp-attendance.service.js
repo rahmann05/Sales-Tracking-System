@@ -1,3 +1,4 @@
+import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {validateVisitResult} from './visit-session.service.js';
 import {capturePolicySnapshot} from '../../config/services/process-policy.service.js';
@@ -41,6 +42,7 @@ export const createOffPjpAttendance = async (userId, data) => {
     if (!await getDynamicConfig('OFF_PJP_ENABLED', true)) throw new AppError('Kunjungan luar PJP dinonaktifkan admin', 403);
     if(await getDynamicConfig('OFF_PJP_REQUIRE_PHOTO',true)&&!photoUrl)throw new AppError('Foto luar PJP wajib diisi',422);
     if(await getDynamicConfig('OFF_PJP_REQUIRE_GPS',true)&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)))throw new AppError('GPS luar PJP wajib diisi',422);
+    await assertEvidenceImages({photoUrl});
     await validateVisitResult(data);
     const needsReview=await getDynamicConfig('OFF_PJP_REQUIRE_REVIEW',true);
     const salesResult = await resolveSalesResult(data);

@@ -48,6 +48,35 @@ try{
   eq((await api(driver,endpoint,method,{...body,requestId:randomUUID()})).status,409);
   eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:stop.id,type:'OUT'}}),mode==='IN_OUT'?1:0);
  }
+ const strict=await make('IN_OUT',{EVIDENCE_IMAGE_FORMATS:'PNG',EVIDENCE_ALLOW_REMOTE_IMAGES:false});
+ for(const photoUrl of ['data:image/jpeg;base64,YWJj','https://example.invalid/photo.png'])eq((await api(driver,strict.path+'/attendance','POST',{requestId:randomUUID(),type:'IN',photoUrl})).status,422);
+ eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:strict.stop.id}}),0);
+ const strictResult=await make('OPTIONAL',{EVIDENCE_ALLOW_REMOTE_IMAGES:false});
+ eq((await api(driver,strictResult.path+'/status','PATCH',{requestId:randomUUID(),status:'DELIVERED',photoUrl:'https://example.invalid/photo.png'})).status,422);
+ eq((await prisma.deliveryStop.findUnique({where:{id:strictResult.stop.id}})).status,'PENDING');
+ const signature='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jh1sAAAAASUVORK5CYII=';
+ for(const mode of ['IN_OUT','IN_ONLY','OPTIONAL']){
+  const fixture=await make(mode,{DELIVERY_RECIPIENT_MODE:'REQUIRED',DELIVERY_SIGNATURE_MODE:'REQUIRED'});
+  if(mode!=='OPTIONAL')eq((await api(driver,fixture.path+'/attendance','POST',{requestId:randomUUID(),type:'IN'})).status,201);
+  const endpoint=fixture.path+(mode==='IN_OUT'?'/attendance':'/status'),method=mode==='IN_OUT'?'POST':'PATCH';
+  const wrap=result=>({requestId:randomUUID(),...(mode==='IN_OUT'?{type:'OUT',result}:result)});
+  eq((await api(driver,endpoint,method,wrap({status:'DELIVERED'}))).status,422);
+  eq((await prisma.deliveryStop.findUnique({where:{id:fixture.stop.id}})).status,'PENDING');
+  eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:fixture.stop.id,type:'OUT'}}),0);
+  const payload=wrap({status:'DELIVERED',recipientName:'Penerima Uji',signatureDataUrl:signature});
+  const saved=await api(driver,endpoint,method,payload);eq(saved.status,mode==='IN_OUT'?201:200);
+  const proof=(await prisma.deliveryStop.findUnique({where:{id:fixture.stop.id}})).receiptEvidence;
+  eq(proof.recipientName,'Penerima Uji');eq(proof.signatureDataUrl,signature);eq(proof.recordedBy,driver.id);
+  eq((await api(driver,endpoint,method,payload)).status,saved.status);
+  eq((await prisma.deliveryStop.findUnique({where:{id:fixture.stop.id}})).receiptEvidence,proof);
+ }
+ const disabled=await make('OPTIONAL',{DELIVERY_RECIPIENT_MODE:'DISABLED'});
+ eq((await api(driver,disabled.path+'/status','PATCH',{requestId:randomUUID(),status:'DELIVERED',recipientName:'Nama terlarang'})).status,422);
+ const refusal=await make('OPTIONAL',{DELIVERY_RECIPIENT_MODE:'REQUIRED',DELIVERY_SIGNATURE_MODE:'REQUIRED'});
+ eq((await api(driver,refusal.path+'/status','PATCH',{requestId:randomUUID(),status:'REJECTED',rejectReason:'Menolak seluruh barang'})).status,200);
+ const partialReceipt=await make('OPTIONAL',{DELIVERY_RECIPIENT_MODE:'REQUIRED'});
+ eq((await api(driver,partialReceipt.path+'/status','PATCH',{requestId:randomUUID(),status:'PARTIAL_REJECT',rejectReason:'Kemasan rusak',rejectedCartons:1})).status,422);
+ eq((await api(driver,partialReceipt.path+'/status','PATCH',{requestId:randomUUID(),status:'PARTIAL_REJECT',rejectReason:'Kemasan rusak',rejectedCartons:1,recipientName:'Penerima Sebagian'})).status,200);
  const rejected=await make('OPTIONAL'),body={requestId:randomUUID(),status:'REJECTED',rejectReason:'Fixture customer refusal'};
  const rejections=await Promise.all([api(driver,rejected.path+'/status','PATCH',body),api(driver,rejected.path+'/status','PATCH',body)]);
  eq(rejections.map(r=>r.status),[200,200]);eq(await prisma.deliveryIssue.count({where:{stopId:rejected.stop.id}}),1);
@@ -66,6 +95,21 @@ try{
  eq((await api(deniedAdmin,'/delivery/packing-lists/'+packings[0]+'/status','PATCH',{action:'RECALL'})).status,403);
  eq((await api(deniedAdmin,'/delivery/packing-lists/'+packings[0],'PUT',{})).status,403);
  eq((await api(deniedSpv,'/pjp/planning')).status,403);
+ const cancelled=await make('IN_ONLY'),cancelId=randomUUID(),cancelPath=cancelled.path+'/requests/'+cancelId+'/cancel';
+ eq((await api(other,cancelPath,'POST')).status,404);
+ eq((await api(deniedDriver,cancelPath,'POST')).status,403);
+ eq((await api(driver,cancelPath,'POST')).body.data,{confirmed:false,cancelled:true});
+ eq((await api(driver,cancelPath,'POST')).body.data,{confirmed:false,cancelled:true});
+ eq((await api(driver,cancelled.path+'/attendance','POST',{requestId:cancelId,type:'IN'})).status,409);
+ eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:cancelled.stop.id}}),0);
+ eq((await api(driver,cancelled.path+'/requests/'+cancelId)).body.data,{confirmed:false,cancelled:true});
+ const nextId=randomUUID();eq((await api(driver,cancelled.path+'/attendance','POST',{requestId:nextId,type:'IN'})).status,201);
+ eq((await api(driver,cancelled.path+'/requests/'+nextId+'/cancel','POST')).body.data.confirmed,true);
+ const concurrent=await make('IN_ONLY'),raceId=randomUUID();
+ const raced=await Promise.all([api(driver,concurrent.path+'/attendance','POST',{requestId:raceId,type:'IN'}),api(driver,concurrent.path+'/requests/'+raceId+'/cancel','POST')]);
+ const receipt=(await api(driver,concurrent.path+'/requests/'+raceId)).body.data;
+ eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:concurrent.stop.id}}),receipt.confirmed?1:0);
+ eq(raced[0].status,receipt.confirmed?201:409);eq(raced[1].status,200);
  console.log(`C13/C15/C18 request retry passed: ${checks} assertions across all five roles, three attendance modes, concurrency, conflicts, GPS rollback, closed-trip replay and explicit permission denial.`);
 }finally{
  server.closeAllConnections();await new Promise(r=>server.close(r));

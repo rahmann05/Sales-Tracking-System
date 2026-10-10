@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import {printOperationalDocument} from '../../../services/operationalExportService';
 import React from 'react';
 import {useApp} from '../../../context/AppContext';
@@ -104,7 +105,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           <div>
             <span className="text-gray-500 font-semibold block">Nilai order disetujui:</span>
             <strong className="text-gray-900 text-[11px]">
-              Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')} ({summary.totalSkuSold} SKU)
+              {reportMoney(summary.totalOrderAmount)} ({summary.totalSkuSold} SKU)
             </strong>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {policyConflicts} from '../../shared/operational-policy.mjs';
 import {calculateNameSimilarity} from '../src/modules/outlets/services/calculate-name-similarity.service.js';
 import {runReverseGeocode,runFindPlace} from '../src/modules/outlets/services/outlet-validation.helpers.js';
 import {outletMapJson} from '../src/modules/outlets/services/outlet-map-request.service.js';
+import {registrationLocation} from '../../shared/registration-policy.mjs';
 const outlet={name:'Toko Sumber Berkah',address:'Jl Melati Bandung',latitude:-6.9,longitude:107.6};
 const none={success:false,error:'ZERO_RESULTS'};
 const reverse={success:true,formattedAddress:outlet.address};
@@ -82,7 +83,7 @@ it('operational impact ignores fulfilled order history and completed packing but
 describe('Master and registration data boundaries',()=>{
  it('prevents a retail subtype from being stored as Modern Trade',()=>{assert.throws(()=>assertOutletTrade({channel:'MODERN_TRADE',subChannel:'TOKO_RETAIL'}));assert.doesNotThrow(()=>assertOutletTrade({channel:'MODERN_TRADE',subChannel:'CHAIN_MINIMARKET'}));});
  const body={...outlet,clusterId:'cluster'};
- it('requires explicit coordinates in a new registration',()=>{assert.equal(createRegistrationSchema.safeParse({body:{name:outlet.name,address:outlet.address}}).success,false);assert.equal(createRegistrationSchema.safeParse({body:{...outlet,latitude:null}}).success,false);});
+ it('defers required coordinates to policy and rejects partial pairs in the policy evaluator',()=>{const parsed=createRegistrationSchema.parse({body:{name:outlet.name,address:outlet.address}}).body;assert.throws(()=>registrationLocation(parsed,true),/wajib/);assert.deepEqual(registrationLocation(parsed,false),{latitude:null,longitude:null});assert.throws(()=>registrationLocation({...outlet,latitude:null},false),/berpasangan/);});
  it('accepts geographically valid zero latitude without replacing it',()=>assert.equal(createRegistrationSchema.parse({body:{...outlet,latitude:0}}).body.latitude,0));
  it('limits geofence radius to a bounded positive integer',()=>{for(const radiusMeters of [-50,2.5,1000000])assert.equal(createOutletSchema.safeParse({body:{...body,radiusMeters}}).success,false);});
  it('retains NIK fields and requires version and reason on edits',()=>{assert.equal(updateOutletSchema.safeParse({params:{id:'outlet'},body:{taxNumber:'1234567890123456'}}).success,false);assert.equal(updateOutletSchema.parse({params:{id:'outlet'},body:{taxType:'NON_PKP',taxNumber:'1234567890123456',reason:'Perbaikan identitas pemilik',updatedAt:new Date().toISOString()}}).body.taxNumber,'1234567890123456');});

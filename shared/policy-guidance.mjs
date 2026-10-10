@@ -2,6 +2,7 @@ import {POLICY_OPTION_LABELS} from './operational-policy.mjs';
 const all=['ADMIN','SUPERVISOR','SALES','KEPALA_GUDANG','SUPIR'];
 export function parameterRoles(key){
  if(/^(SALES_|ATTENDANCE_|MINIMUM_VISIT_|OFF_PJP_|VISIT_RESULT_|COLLECTION_)/.test(key))return ['SALES','SUPERVISOR'];
+ if(/^UNLOCK_/.test(key))return ['ADMIN','SUPERVISOR','SALES'];
  if(/^(SPV_|FOLLOW_UP_)/.test(key))return ['SUPERVISOR','SALES'];
  if(/^(VEHICLE_SERVICE_|OIL_|BRAKE_)/.test(key))return ['ADMIN','SUPERVISOR','KEPALA_GUDANG'];
  if(/^(WAREHOUSE_|TRIP_|DELIVERY_|DRIVER_|PACKING_)/.test(key))return ['ADMIN','KEPALA_GUDANG','SUPIR'];
@@ -13,6 +14,9 @@ export function parameterGuidance(key,values){
  if(['OUTLET_REVIEW_NAME_MATCH_PERCENT','OUTLET_REVIEW_ADDRESS_MATCH_PERCENT','OUTLET_REVIEW_ADDRESS_CONFLICT_PERCENT','OUTLET_REVIEW_ALTERNATIVE_NAME_PERCENT','OUTLET_REVIEW_AMBIGUITY_GAP_PERCENT','OUTLET_REVIEW_SUGGESTION_NAME_PERCENT'].includes(key))return 'Referensi metode lama. Pemeriksaan baru memakai ambang bukti kuat dan selisih kandidat pada kelompok kecukupan bukti.';
  if(String(values.OUTLET_FIELD_ENABLED)==='false'&&/^OUTLET_FIELD_/.test(key)&&key!=='OUTLET_FIELD_ENABLED')return 'Tidak berlaku pada tugas baru selama penugasan dimatikan. Tugas berjalan mempertahankan aturan saat ditugaskan.';
  const sales=values.SALES_ATTENDANCE_MODE||'IN_OUT',driver=values.DELIVERY_ATTENDANCE_MODE||'IN_OUT';
+ if(values.SHIFT_ATTENDANCE_MODE==='OPTIONAL'&&/^SHIFT_(IN_PHOTO|OUT_PHOTO|REQUIRE_GPS|GPS_)/.test(key))return 'Tidak berlaku: shift dicatat sebagai kegiatan tanpa presensi wajib.';
+ if(values.SHIFT_ATTENDANCE_MODE==='IN_ONLY'&&key==='SHIFT_OUT_PHOTO')return 'Tidak berlaku: penyelesaian kegiatan tidak membuat bukti keluar.';
+ if(String(values.SHIFT_REQUIRE_GPS)==='false'&&/^SHIFT_GPS_/.test(key))return 'GPS opsional. Batas kualitas ini tetap memeriksa lokasi jika pengguna mengirimkannya.';
  if(sales!=='IN_OUT'&&/^(SALES_OUT_PHOTO|SALES_MISSING_OUT_MINUTES|SALES_ALLOW_CONTINUE_WITHOUT_OUT|MINIMUM_VISIT_DURATION_MINUTES|ATTENDANCE_ENFORCE_MIN_DURATION|ATTENDANCE_ALLOW_EARLY_CHECKOUT)$/.test(key))return 'Tidak berlaku: mode kunjungan ini tidak mewajibkan absen keluar.';
  if(sales==='OPTIONAL'&&/^(SALES_REQUIRE_GPS|SALES_IN_PHOTO|ATTENDANCE_REQUIRE_PHOTO|ATTENDANCE_ENFORCE_GEOFENCE|ATTENDANCE_RADIUS_METERS|ATTENDANCE_USE_OUTLET_RADIUS)$/.test(key))return 'Tidak berlaku: kegiatan Sales tidak mewajibkan presensi. Nilai tetap disimpan untuk mode lain.';
  if(values.SPV_ATTENDANCE_MODE==='OPTIONAL'&&/^SPV_(REQUIRE_PHOTO|REQUIRE_GPS|ENFORCE_GEOFENCE)$/.test(key))return 'Tidak berlaku: kegiatan SPV tidak mewajibkan presensi.';
@@ -32,6 +36,8 @@ export function parameterGuidance(key,values){
  return '';
 }
 export function policyTiming(key){
+ if(key==='PJP_ALLOW_CANCEL_PUBLISHED')return 'Dibaca saat pembatalan sisa agenda. Agenda beraktivitas dan lampau tetap dipertahankan.';
+ if(/^UNLOCK_/.test(key))return 'Dibekukan pada pengajuan pengecualian baru. Batas frekuensi memakai waktu server; perubahan tidak memperpanjang izin yang sudah disetujui.';
  if(/^OUTLET_REVIEW_ADMIN_/.test(key))return 'Dibaca ulang saat Admin menyimpan keputusan. Nilai dan peringatan saat keputusan disimpan dalam audit; hasil standar tidak diubah menjadi kuat.';
  if(/^OUTLET_GOOGLE_LOCATION_/.test(key))return 'Berlaku pada penerapan/pembaruan titik berikutnya. Cache kedaluwarsa tidak digunakan, walaupun layanan dijeda.';
  if(/^OUTLET_FIELD_/.test(key))return key==='OUTLET_FIELD_ENABLED'?'Berlaku segera untuk penugasan baru; bukti tugas terbuka tetap dapat dikirim dan diperiksa.':'Dibekukan saat penugasan terbaru; perubahan parameter tidak mengubah tugas berjalan sampai ditugaskan ulang.';

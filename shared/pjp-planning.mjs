@@ -9,6 +9,7 @@ export function planDates(start,end,maxDays=62){
 export const frequencyWeeks=code=>({F1:1,F2:2,F4:4})[code]||null;
 export const allowedVisitIntervals=values=>String(values?.PJP_ALLOWED_INTERVALS||'1,2,4').split(',').map(Number).filter(n=>[1,2,4].includes(n));
 export const ruleDue=(rule,date)=>validPlanDate(rule.anchorDate)&&Date.parse(date)>=Date.parse(rule.anchorDate)&&Math.round((Date.parse(date)-Date.parse(rule.anchorDate))/DAY)%(Number(rule.intervalWeeks)*7)===0;
+export const ruleSalesAt=(rule,date)=>rule.substitute&&date>=rule.substitute.startsOn&&date<=rule.substitute.endsOn?rule.substitute.userId:rule.userId;
 export function buildPlanCalendar({startsOn,endsOn,rules},sales,outlets,workingDays=[1,2,3,4,5,6],policy={}){
  const dates=planDates(startsOn,endsOn,policy.PJP_MAX_PLAN_DAYS||62),people=new Map(sales.map(s=>[s.id,s])),shops=new Map(outlets.map(o=>[o.id,o])),problems=[],days=[];
  const add=(code,message,extra={})=>problems.push({code,message,...extra});
@@ -21,6 +22,14 @@ export function buildPlanCalendar({startsOn,endsOn,rules},sales,outlets,workingD
   if(!allowedVisitIntervals(policy).includes(Number(r.intervalWeeks)))add('INTERVAL_DISABLED',`${outlet?.name||'Outlet'}: interval F${r.intervalWeeks} dinonaktifkan oleh Admin.`);
   if(validPlanDate(r.anchorDate)&&!policy.workingDates&&!isWorking(r.anchorDate))add('NON_WORKING_DAY',`${outlet?.name||'Outlet'}: tanggal acuan bukan hari kerja.`);
   if(person&&outlet?.cluster?.supervisorId!==person.supervisorId)add('TEAM_MISMATCH',`${outlet?.name||'Outlet'} berada di luar tim Sales.`);
+  if(r.substitute){
+   const s=r.substitute,target=people.get(s.userId);
+   if(policy.PJP_ALLOW_TEMPORARY_SUBSTITUTION!==true||policy.PJP_ALLOW_OWNER_OVERRIDE===false)add('SUBSTITUTION_DISABLED',`${outlet?.name||'Outlet'}: pengganti sementara dinonaktifkan oleh Admin.`);
+   if(!target||target.supervisorId!==person?.supervisorId||target.id===r.userId)add('SUBSTITUTE_UNAVAILABLE',`${outlet?.name||'Outlet'}: pilih Sales pengganti aktif yang berbeda dalam tim yang sama.`);
+   if(!validPlanDate(s.startsOn)||!validPlanDate(s.endsOn)||s.startsOn>s.endsOn||s.startsOn<startsOn||s.endsOn>endsOn)add('SUBSTITUTE_PERIOD',`${outlet?.name||'Outlet'}: periode pengganti harus berada dalam periode rencana.`);
+   if(!s.reason?.trim()||s.reason.trim().length<5)add('SUBSTITUTE_REASON',`${outlet?.name||'Outlet'}: alasan pengganti minimal 5 karakter wajib diisi.`);
+   if(!dates.some(date=>date>=s.startsOn&&date<=s.endsOn&&ruleDue(r,date)&&isWorking(date)))warnings.push({code:'SUBSTITUTE_NOT_DUE',message:`${outlet?.name||'Outlet'}: tidak ada kunjungan jatuh tempo dalam periode pengganti.`});
+  }
   if(policy.PJP_ALLOW_OWNER_OVERRIDE===false&&outlet?.cluster?.assignedSalesId&&outlet.cluster.assignedSalesId!==r.userId)add('OWNER_OVERRIDE_DISABLED',`${outlet.name}: penggantian Sales dinonaktifkan.`);
   if(policy.PJP_ALLOW_FREQUENCY_OVERRIDE===false&&frequencyWeeks(outlet?.itineraryCode)&&frequencyWeeks(outlet.itineraryCode)!==Number(r.intervalWeeks))add('FREQUENCY_OVERRIDE_DISABLED',`${outlet.name}: perubahan interval dinonaktifkan.`);
   if(outlet?.cluster?.assignedSalesId&&outlet.cluster.assignedSalesId!==r.userId&&!r.reason?.trim())add('OWNER_REASON',`${outlet.name}: isi alasan penugasan ke Sales pengganti.`);
@@ -34,9 +43,9 @@ export function buildPlanCalendar({startsOn,endsOn,rules},sales,outlets,workingD
   }
   const seen=new Map();
   for(const person of sales){
-   const ids=rules.filter(r=>r.userId===person.id&&ruleDue(r,date)).map(r=>r.outletId);
+   const ids=rules.filter(r=>ruleSalesAt(r,date)===person.id&&ruleDue(r,date)).map(r=>r.outletId);
    for(const id of ids){if(seen.has(id))add('DUPLICATE_VISIT',`${shops.get(id)?.name||id} dijadwalkan lebih dari sekali pada ${date}.`,{date,outletId:id});seen.set(id,person.id);}
-   days.push({date,userId:person.id,salesName:person.name,outletIds:ids,state:ids.length?'SCHEDULED':rules.some(r=>r.userId===person.id)?'NOT_DUE':'UNPLANNED'});
+   days.push({date,userId:person.id,salesName:person.name,outletIds:ids,state:ids.length?'SCHEDULED':rules.some(r=>ruleSalesAt(r,date)===person.id)?'NOT_DUE':'UNPLANNED'});
   }
  }
  const covered=new Set(rules.map(r=>r.outletId));

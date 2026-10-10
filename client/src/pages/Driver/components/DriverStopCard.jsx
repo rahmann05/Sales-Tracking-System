@@ -1,3 +1,4 @@
+import {DeliveryReceiptSummary} from '../../../shared/components/common/DeliveryReceiptSummary';
 import {deliveryNavigationUrl} from '../../../../../shared/driver-workspace.mjs';
 import {unitDescription} from '../../../../../shared/product-units.mjs';
 import React from 'react';
@@ -82,6 +83,7 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
           </div>
         )}
 
+        <DeliveryReceiptSummary stop={stop}/>
         {/* Reject info */}
         {stop.rejectReason && (
           <div className="text-xs bg-rose-50 text-rose-800 rounded-xl p-3 mt-1 border border-rose-200/60 font-medium">

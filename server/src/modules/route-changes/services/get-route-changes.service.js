@@ -2,6 +2,7 @@ import {teamSalesWhere} from '../../../utils/team-scope.js';
 import {parsePagination} from '../../../utils/pagination.js';
 /** getRouteChanges - single-responsibility service (extracted from route-change.service.js). */
 import { prisma } from '../../../config/prisma.js';
+import {attachRouteWorkflows} from './route-workflow.service.js';
 
 
 export const getRouteChanges = async (query = {}, user = null) => {
@@ -32,5 +33,5 @@ export const getRouteChanges = async (query = {}, user = null) => {
     prisma.routeChangeRequest.count({ where }),
   ]);
 
-  return { data, pagination: { total, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / take) } };
+  return { data:await attachRouteWorkflows(prisma,data), pagination: { total, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / take) } };
 };

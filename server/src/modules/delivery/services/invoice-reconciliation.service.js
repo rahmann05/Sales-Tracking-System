@@ -4,6 +4,7 @@ import {invoiceReconciliation,invoiceMappingErrors} from '../../../../../shared/
 import {packingBalance} from '../../../../../shared/packing.mjs';
 import {reconcilePackingInvoices} from './route-lifecycle.service.js';
 import {mapInvoiceCommercial} from './invoice-mapping.service.js';
+import {packingOrderIds} from '../../../../../shared/packing-orders.mjs';
 export const reconcileInvoiceReceipt=(id,data,user)=>prisma.$transaction(async tx=>{
   if(user.role!=='ADMIN')throw new AppError('Rekonsiliasi faktur hanya oleh Admin',403);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`packing:${id}`}))`;
@@ -38,11 +39,11 @@ export const correctInvoiceCommercial=(id,data,user)=>prisma.$transaction(async 
   if(!packing)throw new AppError('Packing tidak ditemukan',404);
   if(packing.revision!==data.revision)throw new AppError('Dokumen berubah. Muat ulang.',409);
   if(!data.note?.trim()||data.invoices.length!==packing.invoices.length||new Set(data.invoices.map(i=>i.id)).size!==data.invoices.length)throw new AppError('Alasan dan seluruh faktur wajib diisi',400);
-  const order=packing.sourceOrderId?await tx.order.findUnique({where:{id:packing.sourceOrderId},include:{items:true}}):null;
-  if(packing.sourceOrderId&&!order)throw new AppError('Order sumber tidak ditemukan; perlu pemeriksaan dokumen lama',409);
+  const sourceIds=packingOrderIds(packing),orders=[];
+  for(const sourceId of sourceIds){const order=await tx.order.findUnique({where:{id:sourceId},include:{items:true}});if(!order)throw new AppError('Order sumber tidak ditemukan; perlu pemeriksaan dokumen lama',409);orders.push(order);}
   const invoices=data.invoices.map(i=>{
     if(!packing.invoices.some(v=>v.id===i.id))throw new AppError('Identitas faktur berubah',409);
-    return mapInvoiceCommercial(i,packing.items,order);
+    return mapInvoiceCommercial(i,packing.items,orders);
   });
   const errors=invoiceMappingErrors({items:packing.items,invoices});if(errors.length)throw new AppError(errors[0],400);
   for(const invoice of invoices){const {id:invoiceId,...commercial}=invoice;await tx.invoice.update({where:{id:invoiceId},data:commercial});}

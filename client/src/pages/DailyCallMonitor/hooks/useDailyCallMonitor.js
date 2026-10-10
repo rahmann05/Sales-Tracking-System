@@ -1,6 +1,7 @@
 import {downloadOperationalFile} from '../../../services/operationalExportService';
 import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
-import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import {reportFilterDefaults} from '../../../../../shared/report-filter-defaults.mjs';
+import {useApp} from '../../../context/AppContext';
 import { dailyCallCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { collectPages, dailyCallsApi, usersApi } from '../../../services/api';
@@ -10,9 +11,10 @@ import { collectPages, dailyCallsApi, usersApi } from '../../../services/api';
  * Single Responsibility: Fetch Daily Call Report data from backend with filters, sales team list, and export support.
  */
 export const useDailyCallMonitor = ({enabled=true}={}) => {
-  const [date, setDate] = useWorkspaceState('callDate',wibDateKey());
+  const {settings}=useApp(),defaults=reportFilterDefaults(settings);
+  const [date, setDate] = useWorkspaceState('callDate',defaults.day);
   const [salesmanId, setSalesmanId] = useWorkspaceState('callSales','');
-  const [filterType, setFilterType] = useWorkspaceState('callType','ALL');
+  const [filterType, setFilterType] = useWorkspaceState('callType',defaults.filterType);
   const [search, setSearch] = useWorkspaceState('callSearch','');
   const [salesTeam, setSalesTeam] = useState([]);
 

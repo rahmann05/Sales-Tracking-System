@@ -1,12 +1,20 @@
-import React from 'react';
+import React,{useState} from 'react';
 import { useApp } from '../../../context/AppContext';
+import {ShiftEvidenceDialog} from './ShiftEvidenceDialog';
+import {shiftDateKey} from '../../../../../shared/shift-policy.mjs';
+import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
 
 export function ShiftAttendanceWidget() {
   const { shiftAttendance: shift, shiftBusy, shiftError, handleShiftClockIn, handleShiftClockOut, settings } = useApp();
+  const [dialog,setDialog]=useState(false);
+  const values=shift.clockedIn?{...CONFIG_DEFAULTS,...shift.policyValues}:settings;
+  const dateKey=shift.clockedIn?shift.dateKey:shiftDateKey(Date.now(),values.SHIFT_DAY_CUTOFF_TIME||'00:00');
+  const action=shift.clockedIn?'SHIFT_OUT':'SHIFT_IN',handler=shift.clockedIn?handleShiftClockOut:handleShiftClockIn;
+  const start=()=>setDialog(true);
   if(settings.FEATURE_SHIFT_MODE==='OFF'&&!shift.clockedIn)return null;
 
   return (
-    <div className="rounded-2xl border border-border-glass p-3 sm:px-4 sm:py-3 bg-surface-container/50 shadow-xs flex items-center justify-between gap-4">
+    <div className="rounded-2xl border border-border-glass p-3 sm:px-4 sm:py-3 bg-surface-container/50 shadow-xs flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-2.5 min-w-0">
         <div
           className={`w-2.5 h-2.5 rounded-full shrink-0 ${
@@ -35,7 +43,7 @@ export function ShiftAttendanceWidget() {
         <button
           type="button"
           disabled={shiftBusy||!shift.clockedIn&&['PAUSED','OFF'].includes(settings.FEATURE_SHIFT_MODE)}
-          onClick={shift.clockedIn ? handleShiftClockOut : handleShiftClockIn}
+          onClick={start}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50 ${
             shift.clockedIn
               ? 'bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border border-rose-500/20'
@@ -51,6 +59,7 @@ export function ShiftAttendanceWidget() {
           {shiftError}
         </p>
       )}
+      {dialog&&<ShiftEvidenceDialog action={action} dateKey={dateKey} values={values} busy={shiftBusy} error={shiftError} onClose={()=>setDialog(false)} onConfirm={handler}/>}
     </div>
   );
 }

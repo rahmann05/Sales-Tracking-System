@@ -2,6 +2,7 @@ import {GuardedDialog} from '../../../shared/components/common/GuardedDialog';
 import React, { useState } from 'react';
 import { vehiclesApi } from '../../../services/api';
 import {useApp} from '../../../context/AppContext';
+import {serviceCatalog} from '../../../../../shared/reference-catalog.mjs';
 
 // Use fi-icons for missing lu-icons
 
@@ -11,11 +12,12 @@ export const RecordMaintenanceModal = ({
   onSuccess
 }) => {
   const {settings}=useApp();
+  const serviceOptions=serviceCatalog(settings).filter(r=>r.active);
   const [requestId]=useState(()=>crypto.randomUUID());
   const todayWib=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
   const earliest=settings.VEHICLE_SERVICE_ALLOW_BACKDATE===false?todayWib:settings.VEHICLE_SERVICE_MAX_BACKDATE_DAYS>0?new Date(Date.now()+7*3600000-settings.VEHICLE_SERVICE_MAX_BACKDATE_DAYS*86400000).toISOString().slice(0,10):null;
   const [formData, setFormData] = useState({
-    serviceType: 'GANTI_OLI',
+    serviceType: serviceOptions[0]?.code||'',
     cost: 0,
     serviceDate: new Date(Date.now()+7*3600000).toISOString().slice(0,16),
     odometerAtService:vehicle.totalKm,workshopName:'',notes:''
@@ -28,6 +30,7 @@ export const RecordMaintenanceModal = ({
     if(loading)return;
     setError('');setLoading(true);
     try {
+      if(!serviceOptions.some(r=>r.code===formData.serviceType))throw new Error('Jenis servis tidak tersedia. Pilih ulang jenis servis.');
       const payload = {
         requestId,
         serviceType: formData.serviceType,
@@ -56,10 +59,8 @@ export const RecordMaintenanceModal = ({
             ...formData,
             serviceType: e.target.value
           })} className="w-full p-2.5 rounded-xl border border-border-glass bg-surface text-sm text-on-surface outline-none focus:border-primary/50">
-              <option value="GANTI_OLI">Ganti Oli Mesin</option>
-              <option value="GANTI_FILTER_OLI">Ganti Filter Oli</option>
-              <option value="GANTI_KANVAS_REM">Ganti Kanvas Rem</option>
-              <option value="LAINNYA">Lainnya</option>
+              {!serviceOptions.some(r=>r.code===formData.serviceType)&&<option value="">Pilih ulang jenis servis</option>}
+              {serviceOptions.map(r=><option key={r.code} value={r.code}>{r.label}</option>)}
             </select>
           </div>
 

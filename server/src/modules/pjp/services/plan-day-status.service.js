@@ -1,7 +1,7 @@
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
-import {validPlanDate,ruleDue} from '../../../../../shared/pjp-planning.mjs';
+import {validPlanDate,ruleDue,ruleSalesAt} from '../../../../../shared/pjp-planning.mjs';
 import {workingDays} from '../../../../../shared/working-calendar.mjs';
 import {teamPlanningPolicy} from './planning-policy.service.js';
 import {planningCalendar} from './planning-calendar.service.js';
@@ -17,6 +17,6 @@ export async function planDayStatus(date,userId,actor){
  const working=workingDays(values.PJP_WORKING_DAYS);
  if(!(calendar.workingDates?calendar.workingDates.includes(date):working.includes(new Date(date).getUTCDay())))return {date,state:'NON_WORKING_DAY',planNames:[]};
  const plans=await prisma.pjpPlan.findMany({where:{status:'PUBLISHED',startsOn:{lte:date},endsOn:{gte:date},...(actor.role==='SUPERVISOR'?{supervisorId:actor.id}:{})},select:{id:true,name:true,rules:true}});
- const own=plans.filter(p=>p.rules.some(r=>r.userId===userId));
- return {date,state:own.length?(own.some(p=>p.rules.some(r=>r.userId===userId&&ruleDue(r,date)))?'PUBLISHED':'NOT_DUE'):'UNPUBLISHED',planNames:own.map(p=>p.name)};
+ const own=plans.filter(p=>p.rules.some(r=>r.userId===userId||r.substitute?.userId===userId));
+ return {date,state:own.length?(own.some(p=>p.rules.some(r=>ruleSalesAt(r,date)===userId&&ruleDue(r,date)))?'PUBLISHED':'NOT_DUE'):'UNPUBLISHED',planNames:own.map(p=>p.name)};
 }

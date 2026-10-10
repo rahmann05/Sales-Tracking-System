@@ -7,13 +7,15 @@ import {AppError} from '../../../utils/errors.js';
 import {invalidateClusterCache} from '../../clusters/services/clusters.helpers.js';
 import {recordOutletChange} from './outlet-change-policy.service.js';
 import {assertOutletLegal,assertOutletTrade} from './outlet-data-policy.service.js';
+import {inTransaction} from '../../../utils/in-transaction.js';
+import {lockOutlet} from './outlet-review-policy.service.js';
 
 
-export const updateOutlet = async (id, raw,actor) => {
+export const updateOutlet = async (id, raw,actor,{db=prisma,validateOnly=false}={}) => {
   const {updatedAt,reason,locationEvidence,...input}=raw;
   let data={...input,...(input.channel?{type:input.channel}:{})};
-  const result = await prisma.$transaction(async tx=>{
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
+  const result = await inTransaction(db,async tx=>{
+    await lockOutlet(tx,id);
     const previous = await tx.outlet.findUnique({where:{id}});
     if(!previous||previous.deletedAt)throw new AppError('Outlet aktif tidak ditemukan',404);
     assertOutletLegal(input,previous);
@@ -22,9 +24,10 @@ export const updateOutlet = async (id, raw,actor) => {
     if((lat==null)!==(lng==null))throw new AppError('Isi kedua koordinat atau kosongkan keduanya.',422);
     if(data.clusterId&&data.clusterId!==previous.clusterId)throw new AppError('Pindahkan outlet melalui Wilayah & outlet pada Master RJP untuk meninjau dampak jadwal.',409);
     if (data.outletCode!==undefined) data={...data,outletCode:await validateCodeUpdate('OUTLET',data.outletCode,id)};
-    const audit=await recordOutletChange(tx,previous,data,{actor,reason,updatedAt,locationEvidence,source:locationEvidence?'LOCATION':'MASTER'});
+    const audit=await recordOutletChange(tx,previous,data,{actor,reason,updatedAt,locationEvidence,source:locationEvidence?'LOCATION':'MASTER',validateOnly});
     data={...data,...audit};
     await assertClusterTrade(tx,data.clusterId || previous.clusterId,data.type || previous.type,id);
+    if(validateOnly)return previous;
     const updated=await tx.outlet.update({where:{id},data});
     if(previous.registrationId) {
       const legal=Object.fromEntries(['taxType','taxNumber','taxName','taxAddress','ownerName'].filter(k=>input[k]!==undefined).map(k=>[k,input[k]]));
@@ -33,7 +36,6 @@ export const updateOutlet = async (id, raw,actor) => {
     if(data.outletCode!==undefined&&data.outletCode!==previous.outletCode&&previous.outletCode) await tx.customerRegistration.updateMany({where:{customerCode:previous.outletCode,registrationStatus:'REGISTERED_ACTIVE'},data:{customerCode:data.outletCode}});
     return updated;
   });
-  invalidateOutletCache();
-  invalidateClusterCache(result.clusterId);
+  if(db===prisma&&!validateOnly){invalidateOutletCache();invalidateClusterCache(result.clusterId);}
   return result;
 };

@@ -1,3 +1,4 @@
+import {VisitOutcomeAttachments} from '../../../shared/components/common/VisitOutcomeAttachments';
 import React from 'react';
 import { LuX, LuMapPin, LuCamera, LuShoppingBag, LuExternalLink, LuCircleCheck } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
@@ -10,7 +11,7 @@ import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 export const DailyCallDetailModal = ({ row, onClose }) => {
   if (!row) return null;
 
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${row.customerLat},${row.customerLng}`;
+  const googleMapsUrl = [row.customerLat,row.customerLng].every(Number.isFinite)?`https://www.google.com/maps/search/?api=1&query=${row.customerLat},${row.customerLng}`:null;
 
   return (
     <NativeDialog open title={`Detail kunjungan · ${row.customerName}`} onClose={onClose} className="spv-form-dialog">
@@ -99,7 +100,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
               <LuShoppingBag className="text-primary" /> Nilai order kunjungan:
             </span>
             <strong className="text-sm font-black text-emerald-600">
-              Rp {row.orderAmount ? row.orderAmount.toLocaleString('id-ID') : '0'}
+              {row.orderAmount===null?'Dibatasi aturan laporan':`Rp ${(row.orderAmount||0).toLocaleString('id-ID')}`}
             </strong>
           </div>
           <div className="flex items-center justify-between text-[11px] text-on-surface-variant border-t border-border-glass pt-2">
@@ -111,6 +112,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
               <strong>Keterangan Non-EC:</strong> {row.reason}
             </div>
           )}
+          <VisitOutcomeAttachments value={row.visitOutcome}/>
           {row.remark && (
             <div className="text-[11px] text-on-surface-variant">
               <strong>Catatan Sales:</strong> {row.remark}
@@ -170,14 +172,14 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
 
         {/* Footer Link to Google Maps */}
         <div className="pt-2">
-          <a
+          {googleMapsUrl?<a
             href={googleMapsUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full py-2.5 px-4 bg-primary text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm hover:opacity-95"
           >
             <LuExternalLink /> Buka Lokasi Toko di Google Maps
-          </a>
+          </a>:<p className="text-xs">Titik lokasi tidak tersedia atau dibatasi aturan laporan.</p>}
         </div>
       </div>
     </NativeDialog>

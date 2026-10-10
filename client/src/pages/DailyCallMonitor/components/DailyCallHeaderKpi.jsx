@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import React from 'react';
 import { LuPhoneCall, LuShoppingBag, LuCircleCheck } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
@@ -73,7 +74,7 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
         </div>
         <div className="flex items-baseline justify-between">
           <div className="text-lg md:text-xl font-black text-on-surface tracking-tight">
-            Rp {(totalOrderAmount || 0).toLocaleString('id-ID')}
+            {reportMoney(totalOrderAmount)}
           </div>
           <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
             {totalSkuSold} SKU

@@ -1,3 +1,4 @@
+import {reportMoney} from '../../../../../shared/report-visibility.mjs';
 import { DataTable } from '../../../shared/components/common/DataTable';
 import {useApp} from '../../../context/AppContext';
 import {selectedReportItems,reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
@@ -155,7 +156,7 @@ export function WeeklySalesTable({
                     {s.weeklyTotal?.ecRate}
                   </td>
                   <td hidden={hidden('revenue')} data-label="Nilai order disetujui" className="text-right font-mono font-black text-on-surface whitespace-nowrap">
-                    Rp {(s.weeklyTotal?.omzet || 0).toLocaleString('id-ID')}
+                    {reportMoney(s.weeklyTotal?.omzet)}
                   </td>
                 </tr>)}
 
@@ -186,7 +187,7 @@ export function WeeklySalesTable({
                     {summary.effectiveCallRate}
                   </td>
                   <td hidden={hidden('revenue')} className="text-right font-mono text-emerald-700">
-                    Rp {(summary.totalOrderAmount || 0).toLocaleString('id-ID')}
+                    {reportMoney(summary.totalOrderAmount)}
                   </td>
                 </tr>
               </tfoot>}

@@ -10,6 +10,7 @@ const scopeLabel=scope=>scope==='GLOBAL'?'Perusahaan':String(scope).startsWith('
 export function ReportBasisNote({ basis }) {
   if (!basis) return null;
   return <aside className="rounded-lg border border-border-glass p-3 text-xs space-y-1" aria-label="Dasar dan batas laporan">
+    {basis.restrictionNote&&<p role="status"><strong>Pembatasan data:</strong> {basis.restrictionNote}</p>}
     <p><strong>Dasar laporan:</strong> {basis.note}</p>
     {basis.formulaVersion&&<p>Formula {basis.formulaVersion} · {basis.processPolicies?.length||0} kelompok snapshot proses · {basis.legacyPolicyRecords||0} proses tanpa snapshot. {basis.policyNote}</p>}
     {basis.processPolicies?.length>0&&<details className="pt-2"><summary className="cursor-pointer min-h-11">Lihat versi dan aturan proses</summary><ul className="space-y-3">{basis.processPolicies.map(group=><li key={group.digest} className="rounded-lg border border-border-glass p-3 space-y-2"><strong>{processNames[group.kind]} · {group.records} proses</strong><p>{group.versions.length?group.versions.map(version=>`${scopeLabel(version.scope)}: revisi ${version.revision??'tidak tersimpan'}`).join(' · '):'Nomor revisi awal tidak tersimpan.'}</p><dl className="grid sm:grid-cols-2 gap-2">{Object.entries(group.rules).map(([key,value])=><div key={key}><dt className="text-on-surface-variant">{ruleLabel(key)}</dt><dd>{ruleValue(key,value)}</dd></div>)}</dl></li>)}</ul></details>}

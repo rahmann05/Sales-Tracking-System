@@ -12,8 +12,17 @@ import {purgeExpiredLocations} from '../modules/users/services/location-retentio
 import {runValidationJobs} from '../modules/outlets/services/outlet-validation-job.service.js';
 import {purgeOutletProviderContent} from '../modules/outlets/services/outlet-provider-content.service.js';
 import {prisma} from '../config/prisma.js';
+import {runScheduledPublications} from '../modules/pjp/services/publication-schedule.service.js';
+import {runAssignmentSchedules} from '../modules/config/services/assignment-schedules.service.js';
+import {runOutletChanges} from '../modules/outlets/services/outlet-change-queue.service.js';
 
 export const initScheduler = () => {
+  schedulerMonitor.register('OUTLET_CHANGE_QUEUE','Perubahan master outlet tertunda',Date.now()+30000,30000);
+  setInterval(()=>{schedulerMonitor.run('OUTLET_CHANGE_QUEUE',runOutletChanges,now=>now+30000).catch(()=>console.error('[Scheduler]: Outlet change queue failed.'));},30000).unref();
+  schedulerMonitor.register('ASSIGNMENT_SCHEDULE','Penugasan dan akhir delegasi',Date.now()+30000,30000);
+  setInterval(()=>{schedulerMonitor.run('ASSIGNMENT_SCHEDULE',runAssignmentSchedules,now=>now+30000).catch(()=>console.error('[Scheduler]: Assignment schedule failed.'));},30000).unref();
+  schedulerMonitor.register('PJP_PUBLICATION','Penerbitan PJP terjadwal',Date.now()+30000,30000);
+  setInterval(()=>{schedulerMonitor.run('PJP_PUBLICATION',runScheduledPublications,now=>now+30000).catch(()=>console.error('[Scheduler]: Scheduled PJP publication failed.'));},30000).unref();
   schedulerMonitor.register('OUTLET_GOOGLE_LOCATION','Lokasi operasional Google',Date.now()+60000,60000);
   setInterval(()=>{schedulerMonitor.run('OUTLET_GOOGLE_LOCATION',maintainGoogleLocations,now=>now+60000).catch(()=>console.error('[Scheduler]: Google location maintenance failed.'));},60000).unref();
   schedulerMonitor.register('OUTLET_FIELD_PJP','Agenda validasi outlet',Date.now()+60000,60000);
