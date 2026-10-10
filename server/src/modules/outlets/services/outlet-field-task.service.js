@@ -42,14 +42,10 @@ export async function assignOutletField(outletId,id,raw,user){
   await db.auditEvent.create({data:{entityType:'OUTLET_FIELD_TASK',entityId:task.id,action:entry.action,actorId:actor.id,actorName:actor.name,before:prior?{revision:prior.revision,ownerId:prior.ownerId,reviewerId:prior.reviewerId}:{},after:{...entry,schedule:data.schedule,pjpStopId:stop?.id}}});return {...task,pjpStopId:stop?.id||task.pjpStopId};
  },{timeout:15000});invalidateOutletCache();broadcastCacheInvalidation('pjp');return result;
 }
-export async function listOutletFieldTasks(user,status='ALL'){
- const actor=await reviewActor(prisma,user,user.role==='SALES'?'can_submit_outlet_field':'can_review_outlet_field');
- if(!['ALL','OPEN','SUBMITTED','DONE','CANCELLED'].includes(status))throw new AppError('Status tugas tidak valid.',400);
- return prisma.outletFieldTask.findMany({where:{...(status==='ALL'?{}:{status}),...(actor.role==='SALES'?{ownerId:actor.id}:actor.role==='SUPERVISOR'?{reviewerId:actor.id}:{}),review:{outlet:actor.role==='SUPERVISOR'?{cluster:{supervisorId:actor.id}}:{}}},include:{review:{select:{outletId:true,reason:true,outlet:{select:{name:true,outletCode:true,googleLocation:true,phone:true,clusterId:true,address:true,latitude:true,longitude:true}}}}},orderBy:[{createdAt:'desc'},{id:'asc'}],take:100});
-}
+export {listOutletFieldTasks} from './outlet-field-list.service.js';
 export async function getOutletFieldTask(id,user){
  const actor=await reviewActor(prisma,user,user.role==='SALES'?'can_submit_outlet_field':'can_review_outlet_field');
- const task=await prisma.outletFieldTask.findFirst({where:{id,...(actor.role==='SALES'?{ownerId:actor.id}:actor.role==='SUPERVISOR'?{reviewerId:actor.id,review:{outlet:{cluster:{supervisorId:actor.id}}}}:{})},include:{review:{select:{outletId:true,reason:true,status:true,outlet:{select:{name:true,outletCode:true,googleLocation:true,phone:true,clusterId:true,address:true,latitude:true,longitude:true}}}}}});
+ const task=await prisma.outletFieldTask.findFirst({where:{id,...(actor.role==='SALES'?{ownerId:actor.id}:actor.role==='SUPERVISOR'?{review:{outlet:{cluster:{supervisorId:actor.id,deletedAt:null}}}}:{})},include:{review:{select:{outletId:true,reason:true,status:true,outlet:{select:{name:true,outletCode:true,googleLocation:true,phone:true,clusterId:true,address:true,latitude:true,longitude:true}}}}}});
  if(!task)throw new AppError('Tugas tidak ditemukan dalam penugasan Anda.',404);return task;
 }
 export async function actOutletField(id,raw,user){

@@ -14,7 +14,7 @@ export const POLICY_SURFACES = [
  {id:'vehicle',label:'Armada, pengingat dan catatan servis',prefixes:['VEHICLE_','OIL_','BRAKE_']},
  {id:'location',label:'Peta, GPS dan pencarian alamat',prefixes:['OUTLET_GOOGLE_LOCATION_','TRACKING_','GPS_','LIVE_TRACKING_','ROUTING_','PLACE_LOOKUP_','MAPS_']},
  {id:'reports',label:'Laporan, arsip dan ekspor',prefixes:['REPORT_','TRAVEL_GAP_']},
- {id:'attention',label:'Antrean perhatian dan notifikasi',prefixes:['SLA_','NOTIFY_','NOTIFICATIONS_','AUDIT_']},
+ {id:'attention',label:'Antrean perhatian dan notifikasi',prefixes:['OUTLET_LOCATION_','SLA_','NOTIFY_','NOTIFICATIONS_','AUDIT_']},
  {id:'references',label:'Master referensi dan nomor dokumen',prefixes:['CODE_','DEFAULT_PRODUCT_','DEFAULT_CUSTOMER_']},
  {id:'drafts',label:'Draf formulir dan pengiriman ulang',prefixes:['DRAFT_']},
 ];

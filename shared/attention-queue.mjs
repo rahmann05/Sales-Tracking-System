@@ -8,7 +8,7 @@ export function paginateAttention(rows,{page=1,limit=25,filter='ALL',category='A
  const enriched=rows.map(r=>attentionState(r,now));
  const review=r=>r.needsReview||r.status==='SUBMITTED';
  const summary={total:enriched.length,overdue:enriched.filter(r=>r.overdue).length,awaitingReview:enriched.filter(review).length,missingOwner:enriched.filter(r=>r.missingOwner).length,missingDeadline:enriched.filter(r=>r.missingDeadline).length};
- const selected=enriched.filter(r=>(category==='ALL'||r.category===category)&&(filter==='ALL'||filter==='MINE'&&actorId&&r.ownerId===actorId||filter==='OVERDUE'&&r.overdue||filter==='REVIEW'&&review(r)||filter==='UNASSIGNED'&&r.missingOwner||filter==='UNSCHEDULED'&&r.missingDeadline));
+ const selected=enriched.filter(r=>(category==='ALL'||r.category===category||category==='OUTLET_LOCATION'&&r.locationAlert)&&(filter==='ALL'||filter==='MINE'&&actorId&&r.ownerId===actorId||filter==='OVERDUE'&&r.overdue||filter==='REVIEW'&&review(r)||filter==='UNASSIGNED'&&r.missingOwner||filter==='UNSCHEDULED'&&r.missingDeadline));
  const due=attentionDeadline;
  selected.sort((a,b)=>Number(b.overdue)-Number(a.overdue)||due(a)-due(b)||new Date(a.since)-new Date(b.since)||a.key.localeCompare(b.key));
  return {summary,total:selected.length,page,limit,rows:selected.slice((page-1)*limit,page*limit)};

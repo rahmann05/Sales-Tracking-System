@@ -12,6 +12,7 @@ import {loadAttentionPolicy} from './attention-sla.service.js';
 import {exceptionAttentionRows} from './attention-exceptions.service.js';
 import {AppError} from '../../utils/errors.js';
 import {loadOrderReviewAssignments} from '../orders/services/order-review-assignment.service.js';
+import {outletLocationAttentionRows} from './outlet-location-attention.service.js';
 
 export async function collectAttentionRows(user,policy={}) {
  if(!['ADMIN','SUPERVISOR','KEPALA_GUDANG'].includes(user?.role))throw new AppError('Tidak berwenang membuka antrean pekerjaan',403);
@@ -49,10 +50,17 @@ export async function collectAttentionRows(user,policy={}) {
  for(const i of issues)rows.push({key:`issue:${i.id}`,category:'ISSUE',title:i.title,since:i.createdAt,dueAt:i.dueAt,ownerId:i.ownerId,ownerName:name(i.ownerId),responsibleRole:'PIC TINDAK LANJUT',nextAction:i.reason,target:'DELIVERY',issue:i});
  for(const a of activities){const f=a.followUp,review=f.status==='SUBMITTED',pic=people.find(p=>p.id===f.ownerId),reviewer=review?people.find(p=>p.id===pic?.supervisorId&&p.role==='SUPERVISOR'&&p.id!==f.ownerId):null;
   rows.push({key:`visit:${a.id}`,category:'VISIT',stage:review?'FOLLOW_UP_REVIEW':'FOLLOW_UP',title:a.outletName||'Tindak lanjut kunjungan',since:review?f.submission?.at:f.createdAt||a.checkInAt,dueDate:f.dueDate,ownerId:review?reviewer?.id:f.ownerId,ownerName:review?reviewer?.name:f.ownerName||name(f.ownerId),ownerSource:reviewer?'TEAM_SUPERVISOR':null,responsibleRole:review?'SPV / ADMIN':'SALES / SPV',nextAction:review?'Periksa hasil dan bukti, lalu terima atau minta perbaikan':f.note,target:'FOLLOW_UP',activityId:a.id,status:f.status,followUp:f,policySnapshot:a.policySnapshot});}
+ const locationRows=await outletLocationAttentionRows(user,policy);
  const outletReviews=warehouse||user.permissions?.can_validate_outlet===false?[]:await prisma.outletReview.findMany({where:{status:{in:['OPEN','WAITING_FIELD']},outlet:await reviewScope(user,prisma)},include:{outlet:{include:{cluster:true}},fieldTasks:{where:{status:{in:['OPEN','SUBMITTED']}},take:1}}});
  for(const review of outletReviews){
   const task=review.fieldTasks?.[0],submitted=task?.status==='SUBMITTED',owner=task?people.find(p=>p.id===(submitted?task.reviewerId:task.ownerId)):(await outletReviewOwners(prisma,review.outlet)).find(p=>p.id===review.ownerId);
   rows.push({key:`outlet-review:${review.id}`,category:'OUTLET_REVIEW',stage:'OUTLET_REVIEW',status:submitted?'SUBMITTED':review.status,needsReview:!task||submitted,title:`${review.outlet.name} · pemeriksaan opsional`,since:task?.updatedAt||review.createdAt,dueAt:task?.dueAt||review.dueAt,...(submitted&&Number(task.policySnapshot?.values?.OUTLET_FIELD_REVIEW_SLA_HOURS??24)>0?{reviewDueAt:addSlaHours(task.updatedAt,task.policySnapshot?.values?.OUTLET_FIELD_REVIEW_SLA_HOURS??24,task.policySnapshot?.values||{}).toISOString()}:{}),ownerId:owner?.id||null,ownerName:owner?.name||null,responsibleRole:task&&!submitted?'SALES':'ADMIN / SPV',nextAction:submitted?'Periksa bukti Sales dan usulan koreksi':task?'Tunggu hasil pemeriksaan Sales':review.workflow?.technical==='ERROR'?'Periksa konfigurasi/kuota dan ulangi Google':'Bandingkan bukti dan putuskan kasus',target:'OUTLET_REVIEW',reference:{outletReviewId:review.id}});
+ }
+ for(const location of locationRows){
+  const review=outletReviews.find(r=>r.outletId===location.reference.outletId);
+  const existing=review&&rows.find(r=>r.reference?.outletReviewId===review.id);
+  if(existing)existing.locationAlert=location.locationAlert;
+  else rows.push(location);
  }
  return {rows:rows.map(row=>{
    const order=orders.find(order=>order.id===row.reference?.orderId),required=orderReviewRole(order);

@@ -4,7 +4,7 @@ export const outletValidationApi = {
   assignField:(outletId,id,body)=>request(`/outlets/${outletId}/reviews/${id}/field-task`,{method:'POST',body:JSON.stringify(body)}),
   fieldVisitReport:query=>request(`/outlets/field-visit-report?${new URLSearchParams(query)}`),
   fieldTask:id=>request(`/outlets/field-tasks/${id}`),
-  fieldTasks:(status='ALL')=>request(`/outlets/field-tasks?status=${status}`),
+  fieldTasks:(query={})=>request(`/outlets/field-tasks?${new URLSearchParams(typeof query==='string'?{status:query}:query)}`),
   fieldAction:(id,body)=>request(`/outlets/field-tasks/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
   jobs:()=>request('/outlets/validation-jobs'),
   startJob:body=>request('/outlets/validation-jobs',{method:'POST',body:JSON.stringify(body)}),

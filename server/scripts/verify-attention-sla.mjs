@@ -54,7 +54,7 @@ try{
   check((await escalateAttentionRows([job],[admin],options)).notified,0);
   const revised={...job,stage:'FOLLOW_UP_REVIEW'};check((await escalateAttentionRows([revised],[admin],options)).notified,1);
   const rollbackJob={...job,key:`${prefix}-rollback`};escalationKeys.push(rollbackJob.key);
-  await rejects(()=>escalateAttentionRows([rollbackJob],[{id:randomUUID()}],options));
+  check((await escalateAttentionRows([rollbackJob],[{id:randomUUID()}],options)).notified,0);
   check(await prisma.auditEvent.count({where:{entityType:'SLA_ESCALATION',after:{path:['attentionKey'],equals:rollbackJob.key}}}),0);
   check((await escalateAttentionRows([rollbackJob],[admin],options)).notified,1);
   check((await escalateAttentionRows([job],[admin],{delayHours:0})).notified,0);
@@ -64,7 +64,7 @@ try{
   await markNotificationAsRead(inbox.items[0].id,admin.id);
   check((await listAttentionEscalations(admin)).unreadCount,2);
   check((await listAttentionEscalations(admin,{unread:false})).total,3);
-  console.log(`Attention SLA integration passed: ${checks} checks (real SQL team scope, pending stages, decisions, review deadlines, concurrent deduplication and atomic rollback).`);
+  console.log(`Attention SLA integration passed: ${checks} checks (real SQL team scope, pending stages, decisions, review deadlines, concurrent deduplication, missing-recipient suppression and retry).`);
 }finally{
   if(escalationKeys.length)await prisma.auditEvent.deleteMany({where:{entityType:'SLA_ESCALATION',OR:escalationKeys.map(key=>({after:{path:['attentionKey'],equals:key}}))}});
   await prisma.notification.deleteMany({where:{userId:{in:users}}});

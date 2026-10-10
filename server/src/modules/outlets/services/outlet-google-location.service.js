@@ -29,7 +29,7 @@ export async function acceptGoogleLocation(db,outlet,run,actor,reason){
  await assertOutletLocationIdle(db,outlet.id);
  const now=new Date(),days=await getDynamicConfig('OUTLET_GOOGLE_LOCATION_CACHE_DAYS',7);
  const expiresAt=new Date(Math.min(+run.providerExpiresAt,+now+Math.min(30,days)*86400000));
- const googleLocation={source:'GOOGLE',status:'ACTIVE',placeId:point.placeId,latitude:point.latitude,longitude:point.longitude,basis:outletLocationBasis(outlet),cachedAt:now.toISOString(),expiresAt:expiresAt.toISOString(),nextRefreshAt:googleLocationRefreshAt(now,expiresAt,await getDynamicConfig('OUTLET_GOOGLE_LOCATION_REFRESH_HOURS',24)),revision:(outlet.googleLocation?.revision||0)+1,approvedBy:actorSnapshot(actor),policyContext:{id:actor.id,role:actor.role,supervisorId:actor.supervisorId||null},runId:run.id,lastError:null};
+ const googleLocation={source:'GOOGLE',status:'ACTIVE',placeId:point.placeId,latitude:point.latitude,longitude:point.longitude,basis:outletLocationBasis(outlet),cachedAt:now.toISOString(),expiresAt:expiresAt.toISOString(),nextRefreshAt:googleLocationRefreshAt(now,expiresAt,await getDynamicConfig('OUTLET_GOOGLE_LOCATION_REFRESH_HOURS',24)),revision:(outlet.googleLocation?.revision||0)+1,approvedBy:actorSnapshot(actor),policyContext:{id:actor.id,role:actor.role,supervisorId:actor.supervisorId||null},runId:run.id,lastError:null,problemSince:null};
  await db.clusterRoute.deleteMany({where:{clusterId:outlet.clusterId}});
  await db.auditEvent.create({data:{entityType:'OUTLET_LOCATION',entityId:outlet.id,action:'GOOGLE_ACCEPT',actorId:actor.id,actorName:actor.name,before:{source:outletOperationalPoint(outlet).source},after:{placeId:point.placeId,expiresAt:googleLocation.expiresAt,runId:run.id,reason}}});
  return googleLocation;
@@ -54,7 +54,7 @@ export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(
   await lockOutlet(db,id);const live=await db.outlet.findUnique({where:{id}});
   if(!isDeepStrictEqual(live.googleLocation,g)||Date.parse(g.refreshLeaseUntil)>+now)throw new AppError('Lokasi berubah atau sedang diperbarui. Muat ulang.',409);
   if(!sameOutletLocationBasis(outletLocationBasis(live),g.basis)){
-   const next={...g,status:'CONFLICT',latitude:null,longitude:null,lastError:'MASTER_CHANGED',revision:g.revision+1};
+   const next={...g,status:'CONFLICT',latitude:null,longitude:null,lastError:'MASTER_CHANGED',problemSince:g.problemSince||now.toISOString(),revision:g.revision+1};
    await db.outlet.update({where:{id},data:{googleLocation:next}});await db.clusterRoute.deleteMany({where:{clusterId:live.clusterId}});
    await db.auditEvent.create({data:{entityType:'OUTLET_LOCATION',entityId:id,action:'GOOGLE_CONFLICT',actorId:actor?.id||null,actorName:actor?.name||'Scheduler',before:{revision:g.revision},after:{status:'CONFLICT',revision:next.revision,placeId:g.placeId,reason:'MASTER_CHANGED'}}});return next;
   }
@@ -78,11 +78,11 @@ export async function refreshGoogleLocation(id,user,{fetcher=fetch,now=new Date(
   const current=await db.outlet.findUnique({where:{id}});
   if(!isDeepStrictEqual(current.googleLocation,g)||!sameOutletLocationBasis(outletLocationBasis(current),g.basis))throw new AppError('Lokasi/master berubah selama pembaruan. Periksa ulang.',409);
   let next={...g,refreshLeaseToken:null,refreshLeaseUntil:null,revision:g.revision+1,lastCheckedAt:now.toISOString(),nextRefreshAt:new Date(+now+3600000).toISOString()};
-  if(technicalError)next={...next,lastError:technicalError,...(Date.parse(g.expiresAt)<=+now?{status:'EXPIRED',latitude:null,longitude:null}:{})};
+  if(technicalError)next={...next,lastError:technicalError,problemSince:g.problemSince||now.toISOString(),...(Date.parse(g.expiresAt)<=+now?{status:'EXPIRED',latitude:null,longitude:null}:{})};
   else{
    const result=evaluateDigitalOutlet(current,[candidate],[{state:'SUCCESS',kind:'DETAILS'}],values);
    const drift=knownPoint(g)?calculateDistanceMeters(g.latitude,g.longitude,candidate.latitude,candidate.longitude):null;
-   if(result.code!=='STRONG'||candidate.placeId!==g.placeId||drift==null||drift>Number(values.OUTLET_GOOGLE_LOCATION_MAX_DRIFT_METERS??30))next={...next,status:'CONFLICT',latitude:null,longitude:null,lastError:'REVIEW_REQUIRED'};
+   if(result.code!=='STRONG'||candidate.placeId!==g.placeId||drift==null||drift>Number(values.OUTLET_GOOGLE_LOCATION_MAX_DRIFT_METERS??30))next={...next,status:'CONFLICT',latitude:null,longitude:null,lastError:'REVIEW_REQUIRED',problemSince:g.problemSince||now.toISOString()};
    else{
     await assertOutletLocationIdle(db,id);
     const expiry=new Date(+now+Math.min(30,Number(values.OUTLET_GOOGLE_LOCATION_CACHE_DAYS||7))*86400000);

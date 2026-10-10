@@ -63,7 +63,9 @@
     "verify:outlet-google": "node tests/outlet-google-location.integration.mjs",
     "verify:outlet-retention": "node tests/outlet-legacy-cleanup.integration.mjs",
     "verify:outlet-google-live": "node tests/verify-belfoods-google-live.mjs",
-    "outlets:migration-preflight": "node prisma/outletMigrationPreflight.mjs"
+    "outlets:migration-preflight": "node prisma/outletMigrationPreflight.mjs",
+    "verify:outlet-monitoring": "node tests/outlet-monitoring.integration.mjs",
+    "verify:outlet-monitoring-ui": "node tests/outlet-monitoring-ui.integration.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

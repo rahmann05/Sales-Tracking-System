@@ -62,7 +62,7 @@ try{
  values.OUTLET_FIELD_REQUIRE_GPS=false;values.OUTLET_FIELD_REQUIRE_PHOTO=false;invalidateConfigCache();
  await assert.rejects(()=>assertReviewersRemain(prisma,{patches:{[sales.id]:{permissions:{can_submit_outlet_field:false}}}}),{statusCode:409});checks++;
  const territoryChange={clusterId:c.id,outletIds:[...outlets],supervisorId:foreign.id},impact=await clusterImpact(territoryChange,admin);await assert.rejects(()=>requireClusterImpact(prisma,territoryChange,admin,impact.token),{statusCode:409});checks++;
- eq((await api('/outlets/field-tasks',sales)).body.data.length,1);eq((await api('/outlets/field-tasks',outsider)).body.data.length,0);
+ eq((await api('/outlets/field-tasks',sales)).body.data.items.length,1);eq((await api('/outlets/field-tasks',outsider)).body.data.items.length,0);
  const evidence={requestId:randomUUID(),outcome:'FOUND',name:'Toko Sumber Berkah Baru',address:'Jl Melati No 12, Kota Bandung',latitude:-6.9,longitude:107.6,accuracyMeters:15,capturedAt:new Date().toISOString(),photo:'data:image/jpeg;base64,YWJj',note:'Papan toko dan alamat aktual diperiksa di lokasi'};
  const submit=(actor,proof=evidence,revision=t.revision)=>api(`/outlets/field-tasks/${t.id}`,actor,'PATCH',{action:'SUBMIT',revision,evidence:proof});
  eq((await submit(outsider)).status,403);eq((await submit(sales,{...evidence,photo:''})).status,422);

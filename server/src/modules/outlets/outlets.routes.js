@@ -33,7 +33,7 @@ router.param('id',async(req,res,next,id)=>{try{if(['ADMIN','KEPALA_GUDANG','SUPI
 
 const action=fn=>async(req,res,next)=>{try{res.json({status:'success',data:await fn(req)});}catch(error){next(error);}};
 router.get('/field-visit-report',async(req,res,next)=>{try{res.json({status:'success',...await outletFieldVisitReport(req.query,req.user)});}catch(e){next(e);}});
-router.get('/field-tasks',action(req=>listOutletFieldTasks(req.user,req.query.status)));
+router.get('/field-tasks',action(req=>listOutletFieldTasks(req.user,req.query)));
 router.get('/field-tasks/:taskId',action(req=>getOutletFieldTask(req.params.taskId,req.user)));
 router.patch('/field-tasks/:taskId',action(req=>actOutletField(req.params.taskId,req.body,req.user)));
 router.get('/validation-jobs',action(req=>validationJobs(req.user)));

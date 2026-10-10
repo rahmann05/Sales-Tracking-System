@@ -65,3 +65,7 @@ test('disabled escalation avoids scanning the operational history',async t=>{
   replace(t,prisma.user,'findMany',async()=>{throw new Error('Must not scan');});
   assert.deepEqual(await runAttentionEscalation(),{notified:0,disabled:true});
 });
+test('outlet escalation skips Admin recipients whose outlet review permission is revoked',async()=>{
+ const result=await escalateAttentionRows([{...row,category:'OUTLET_LOCATION',stage:'OUTLET_LOCATION',dueAt:start}],[{id:'admin',permissions:{can_validate_outlet:false}}],{delayHours:1,now:Date.parse('2026-10-08T06:00:00Z')});
+ assert.deepEqual(result,{notified:0});
+});

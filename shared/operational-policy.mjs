@@ -123,6 +123,8 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('OUTLET_FIELD_SLA_HOURS','Tenggat tugas lapangan',48,1,720,'jam'),
  ]),
  group('OUTLET_GOOGLE_LOCATION','Validasi outlet · lokasi operasional','Titik Google disetujui terpisah dari koordinat internal dan hanya dipakai selama cache berlaku.',[
+  bool('OUTLET_LOCATION_ALERTS_ENABLED','Pantau masalah lokasi di antrean perhatian',true,'Menampilkan titik kosong, konflik, kedaluwarsa dan kegagalan pembaruan ke Admin/SPV. Tidak membuat kasus, tugas Sales atau presensi otomatis. Tetap dapat dipantau ketika pemeriksaan Google dijeda.'),
+  num('OUTLET_LOCATION_ALERT_SLA_HOURS','Tenggat penanganan peringatan lokasi',24,0,720,'jam','Berlaku pada peringatan tanpa kasus terbuka. Nol tanpa tenggat. Mengikuti kalender SLA; kasus terbuka tetap memakai PIC dan tenggat kasus/tugas yang sudah ditetapkan.'),
   bool('OUTLET_GOOGLE_LOCATION_ENABLED','Terapkan / perbarui titik Google',true,'Keputusan digital kuat dapat memakai cache titik Google untuk rute dan radius. Mematikan menghentikan penerapan/pembaruan berikutnya; titik yang sudah disetujui tetap berlaku sampai kedaluwarsa. Tidak menimpa bukti GPS.'),
   bool('OUTLET_GOOGLE_LOCATION_AUTO_REFRESH','Perbarui titik Google otomatis',true,'Perbarui referensi yang telah disetujui sebelum kedaluwarsa. Konflik memerlukan pemeriksaan ulang; kegagalan layanan tidak memperpanjang masa berlaku.'),
   num('OUTLET_GOOGLE_LOCATION_CACHE_DAYS','Masa berlaku titik Google',7,1,30,'hari','Maksimal 30 hari. Dibekukan ketika titik disetujui atau berhasil diperbarui.'),
