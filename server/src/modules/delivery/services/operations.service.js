@@ -64,7 +64,7 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
       await policyNotification(tx,{data:{userId:owner.id,type:'DELIVERY_PREPARATION',title:`Tugas persiapan ${r.code}`,message:note,payload:{routeId:id,stage:data.stage,dueAt:data.dueAt}}});
     } else if (action === 'START') {
       if (r.status !== 'READY' || !preparationReady(r) || r.onHold) fail('Loading harus selesai dan trip tidak ditahan');
-      await assertEvidenceImages({photos:Object.values(data.departureAnswers?._evidence||{})},{entity:r});
+      await assertEvidenceImages({photos:Object.values(data.departureAnswers?._evidence||{})},{entity:r,values:r.policySnapshot?.warehouseEvidence?.values});
       let checklist;
       try{const values=r.policySnapshot?.values||{TRIP_DEPARTURE_CHECKLIST:await processValue(r,'TRIP_DEPARTURE_CHECKLIST',[]),TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST:await processValue(r,'TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST',true)};checklist=departureChecklist(values,data.departureAnswers||{});}catch(error){throw new AppError(error.message,422);}
       const vehicle = await assertResources(tx, r);

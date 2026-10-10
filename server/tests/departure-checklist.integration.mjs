@@ -27,7 +27,15 @@ try{
  await prisma.deliveryRoute.update({where:{id:p.id},data:{closedAt:new Date()}});
  const legacy={...values};delete legacy.TRIP_DEPARTURE_CHECKLIST;delete legacy.TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST;
  p=await create(legacy);started=await start(p);eq(started.preparation.DEPARTURE.items,[]);eq(started.status,'IN_TRANSIT');
- console.log(`Departure checklist integration passed: ${checks} assertions, block/allow, audit evidence, rollback, and legacy snapshots.`);
+ await prisma.deliveryRoute.update({where:{id:p.id},data:{closedAt:new Date()}});
+ p=await create({...values,EVIDENCE_IMAGE_FORMATS:'WEBP',TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST:false,TRIP_DEPARTURE_CHECKLIST:[{...items[0],requireFailurePhoto:true}]});
+ await prisma.deliveryRoute.update({where:{id:p.id},data:{policySnapshot:{...p.policySnapshot,warehouseEvidence:{values:{EVIDENCE_IMAGE_FORMATS:'PNG'}}}}});
+ const proof=photoUrl=>({safe:false,_evidence:{safe:{reason:'Kondisi dicatat sebelum keberangkatan',photoUrl}}});
+ await reject(()=>start(p,proof('data:image/png;base64,YWJj')));
+ eq((await prisma.deliveryRoute.findUnique({where:{id:p.id}})).departedAt,null);
+ const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9sAAAAASUVORK5CYII=';
+ started=await start(p,proof(png));eq(started.preparation.DEPARTURE.answers._evidence.safe.photoUrl,png);
+ console.log(`Departure checklist integration passed: ${checks} assertions, block/allow, audit evidence, rollback, legacy snapshots and separate warehouse image policy.`);
 }finally{
  await prisma.deliveryRoute.deleteMany({where:{id:{in:routes}}});if(vehicle)await prisma.vehicle.delete({where:{id:vehicle.id}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
 }

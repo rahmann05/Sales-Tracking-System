@@ -128,10 +128,10 @@ test('check-in geofence on blocks; off accepts and preserves GPS WARNING', async
 test('required attendance photos are enforced on both IN and OUT', async t => {
   configs(t,{ATTENDANCE_REQUIRE_PHOTO:true}); const {addIn}=attendanceDb(t);
   await assert.rejects(checkIn('stop','sales',-6,107),/Foto absen masuk/);
-  assert.equal((await checkIn('stop','sales',-6,107,'photo')).photoUrl,'photo');
+  assert.equal((await checkIn('stop','sales',-6,107,'https://example.invalid/photo.jpg')).photoUrl,'https://example.invalid/photo.jpg');
   addIn();
   await assert.rejects(checkOut('stop','sales',-6,107),/Foto absen keluar/);
-  assert.equal((await checkOut('stop','sales',-6,107,'photo',{earlyReason:'Darurat'})).photoUrl,'photo');
+  assert.equal((await checkOut('stop','sales',-6,107,'https://example.invalid/photo.jpg',{earlyReason:'Darurat'})).photoUrl,'https://example.invalid/photo.jpg');
 });
 
 test('global radius can override outlet radius; sequence off permits later stops', async t => {

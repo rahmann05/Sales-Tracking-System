@@ -67,6 +67,7 @@ export const createDeliveryRoute = async (data, userId) => {
   const code = await resolveBusinessCode('DELIVERY_ROUTE',data.code,{db:tx,date:new Date(date)});
 
   const snapshot=await capturePolicySnapshot(),driverSettings=await effectivePolicy(driver);
+  snapshot.warehouseEvidence={values:Object.fromEntries(['CAMERA_INPUT_MODE','EVIDENCE_IMAGE_MAX_KB','EVIDENCE_IMAGE_FORMATS','EVIDENCE_ALLOW_REMOTE_IMAGES'].map(key=>[key,snapshot.values[key]]))};
   for(const key of DRIVER_EVIDENCE_KEYS)snapshot.values[key]=driverSettings.values[key];
   snapshot.driver={id:driverId,versions:driverSettings.versions,at:driverSettings.at};
   const route = await tx.deliveryRoute.create({

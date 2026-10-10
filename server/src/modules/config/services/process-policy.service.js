@@ -27,7 +27,7 @@ export async function freezeOpenWork(db,scope='GLOBAL'){
    const driver=name==='deliveryRoute'?await actorFor(row.driverId):null;
    if(!matches(actor)&&!(driver&&matches(driver)))continue;
    const snapshot=await snapshotFor(id);
-   if(driver){const driverPolicy=await effectivePolicy(driver);for(const key of DRIVER_EVIDENCE_KEYS)snapshot.values[key]=driverPolicy.values[key];snapshot.driver={id:row.driverId,versions:driverPolicy.versions,at:driverPolicy.at};}
+   if(driver){snapshot.warehouseEvidence={values:Object.fromEntries(['CAMERA_INPUT_MODE','EVIDENCE_IMAGE_MAX_KB','EVIDENCE_IMAGE_FORMATS','EVIDENCE_ALLOW_REMOTE_IMAGES'].map(key=>[key,snapshot.values[key]]))};const driverPolicy=await effectivePolicy(driver);for(const key of DRIVER_EVIDENCE_KEYS)snapshot.values[key]=driverPolicy.values[key];snapshot.driver={id:row.driverId,versions:driverPolicy.versions,at:driverPolicy.at};}
    await db[name].update({where:{id:row.id},data:{policySnapshot:{...snapshot,provenance:'LEGACY_OPEN_WORK'}}});
   }
  }
