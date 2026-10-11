@@ -1,3 +1,4 @@
+import {issueRecipients} from '../../../../../shared/operational-issues.mjs';
 import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
 import {BUILT_IN_ROLES} from '../../roles/roles.constants.js';
 import {CONFIG_DEFAULTS} from '../../../../../shared/config.mjs';
@@ -45,9 +46,9 @@ async function openWorkGaps(db,people){
  const issues=[];
  if(!people.some(hasAdminRecovery))issues.push({key:'ADMIN:RECOVERY',message:'Minimal satu Admin aktif harus mempunyai izin pengguna, role dan pengaturan sistem untuk pemulihan akses.'});
  if(db.deliveryIssue){
-  for(const issue of await db.deliveryIssue.findMany({where:{status:'OPEN'},select:{id:true,ownerId:true}})){
+  for(const issue of await db.deliveryIssue.findMany({where:{status:'OPEN'},select:{id:true,ownerId:true,responsibleRole:true,supervisorId:true,history:true}})){
    const owner=people.find(p=>p.id===issue.ownerId);
-   if(!canDomainAction(owner,'RESOLVE_DELIVERY_ISSUE')||owner.permissions?.[owner.role==='SUPIR'?'can_access_driver_map':'can_monitor_delivery']===false)issues.push({key:`ISSUE:${issue.id}:OWNER`,message:'PIC kendala pengiriman terbuka harus tetap aktif dan berizin menyelesaikan tugasnya.'});
+   if(!issueRecipients(issue,people).length)issues.push({key:`ISSUE:${issue.id}:OWNER`,message:'PIC kendala pengiriman terbuka harus tetap aktif dan berizin menyelesaikan tugasnya.'});
   }
  }
  if(db.operationalException){

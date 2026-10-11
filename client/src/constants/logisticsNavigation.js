@@ -1,10 +1,10 @@
 import {LuPackage,LuTruck,LuMap,LuWrench,LuUserCheck,LuClipboardCheck,LuSettings} from 'react-icons/lu';
 import {getNavigationTabs,TAB_IDS} from './navigation';
 const warehouse=[
- {id:'packing',label:'Antrean packing',icon:LuPackage,description:'Periksa dokumen dari Admin dan sisa muatan yang perlu dialokasikan.',tabs:[TAB_IDS.DELIVERY_PACKING_LIST]},
- {id:'planning',label:'Rencana trip',icon:LuTruck,description:'Tetapkan truk, driver, pembagian muatan, dan persiapan keberangkatan.',tabs:[TAB_IDS.DELIVERY_ROUTES]},
+ {id:'packing',label:'Muatan dari Admin',icon:LuPackage,description:'Periksa dokumen dari Admin dan sisa muatan yang perlu dialokasikan.',tabs:[TAB_IDS.DELIVERY_PACKING_LIST]},
+ {id:'planning',label:'Perjalanan pengiriman',icon:LuTruck,description:'Tetapkan truk, driver, pembagian muatan, dan persiapan keberangkatan.',tabs:[TAB_IDS.DELIVERY_ROUTES]},
  {id:'monitor',label:'Pantau pengiriman',icon:LuMap,description:'Pantau trip lintas tanggal, titik absensi, GPS, dan hasil pengiriman.',tabs:[TAB_IDS.DELIVERY_MONITOR]},
- {id:'attention',label:'Tindak lanjut gudang',icon:LuClipboardCheck,description:'Tuntaskan kendala pengiriman dan periksa sisa pemenuhan order.',tabs:[TAB_IDS.WAREHOUSE_ATTENTION]},
+ {id:'attention',label:'Perlu tindakan',icon:LuClipboardCheck,description:'Tuntaskan kendala pengiriman dan periksa sisa pemenuhan order.',tabs:[TAB_IDS.WAREHOUSE_ATTENTION]},
  {id:'vehicles',label:'Kendaraan & servis',icon:LuWrench,description:'Periksa kelayakan armada, kilometer, dan kebutuhan servis.',tabs:[TAB_IDS.WAREHOUSE_VEHICLES]},
  {id:'attendance',label:'Presensi saya',icon:LuUserCheck,description:'Catat mulai dan selesai kerja serta periksa riwayat presensi.',tabs:[TAB_IDS.WAREHOUSE_ATTENDANCE]},
 ];

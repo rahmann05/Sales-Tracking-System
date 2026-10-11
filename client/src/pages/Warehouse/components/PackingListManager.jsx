@@ -1,3 +1,4 @@
+import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import {shipmentReady} from '../../../../../shared/shipment-document.mjs';
 import { PackingWorkspaceView } from './PackingWorkspaceView';
 import React, { useState, useEffect, useCallback, useMemo,useRef } from 'react';
@@ -13,12 +14,15 @@ export const PackingListManager = () => {
     items: [],
     total: 0
   });
+  const [queueScope,setQueueScope]=useWorkspaceState('packingScope','remaining');
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [form, setForm] = useState(null);
   const [printDoc, setPrintDoc] = useState(null);
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedId, setExpandedId] = useWorkspaceState('packingDetail','');
+  const [detailError,setDetailError]=useState('');
+  useEffect(()=>{if(!expandedId)return;let active=true;setDetailError('');deliveryApi.getPackingListById(expandedId).then(r=>{if(active)setResult(previous=>({...previous,selected:r.data}));}).catch(error=>{if(active)setDetailError(error.message);});return()=>{active=false;};},[expandedId]);
 
   // Notifications & State Feedback
   const [error, setError] = useState('');
@@ -39,18 +43,16 @@ export const PackingListManager = () => {
         page,
         limit: 20,
         search,
-        status
+        status,remainingOnly:admin||queueScope==='all'?undefined:true
       });
-      if(requestId===flight.current)setResult(r.data || {
-        items: [],
-        total: 0
-      });
+      const selected=expandedId?(await deliveryApi.getPackingListById(expandedId)).data:null;
+      if(requestId===flight.current)setResult({...r.data,selected});
     } catch (e) {
       if(requestId===flight.current)setError(e.message || 'Gagal memuat daftar packing list');
     } finally {
       if(requestId===flight.current)setLoading(false);
     }
-  }, [page, search, status]);
+  }, [page, search, status,expandedId,admin,queueScope]);
   useEffect(() => {
     const timer = setTimeout(refresh, 250);
     return () => {clearTimeout(timer);flight.current++;};
@@ -152,7 +154,7 @@ export const PackingListManager = () => {
     };
   }, [result]);
   const toggleExpand = id => {
-    setExpandedId(prev => prev === id ? null : id);
+    setExpandedId(expandedId===id?'':id);
   };
-  return <PackingWorkspaceView admin={admin} busyAction={busyAction} confirmDialog={confirmDialog} error={error} expandedId={expandedId} form={form} handleDeleteDraft={handleDeleteDraft} handleTransitionAction={handleTransitionAction} loading={loading} metrics={metrics} page={page} printDoc={printDoc} refresh={refresh} result={result} search={search} setConfirmDialog={setConfirmDialog} setError={setError} setForm={setForm} setPage={setPage} setPrintDoc={setPrintDoc} setSearch={setSearch} setStatus={setStatus} setSuccess={setSuccess} settings={settings} status={status} success={success} toggleExpand={toggleExpand} />;
+  return <PackingWorkspaceView scope={queueScope} setScope={setQueueScope} admin={admin} busyAction={busyAction} confirmDialog={confirmDialog} error={error||detailError} expandedId={expandedId} form={form} handleDeleteDraft={handleDeleteDraft} handleTransitionAction={handleTransitionAction} loading={loading} metrics={metrics} page={page} printDoc={printDoc} refresh={refresh} result={result} search={search} setConfirmDialog={setConfirmDialog} setError={setError} setForm={setForm} setPage={setPage} setPrintDoc={setPrintDoc} setSearch={setSearch} setStatus={setStatus} setSuccess={setSuccess} settings={settings} status={status} success={success} toggleExpand={toggleExpand} />;
 };

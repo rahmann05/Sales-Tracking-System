@@ -1,5 +1,6 @@
 import React from 'react';
 import { LuStore, LuRefreshCw, LuSearch } from 'react-icons/lu';
+import {outletOperationalPoint} from '../../../../../shared/outlet-location.mjs';
 export function PackingOutletSection({
   doc,
   outlet,
@@ -11,6 +12,7 @@ export function PackingOutletSection({
   setSearch,
   sourceOrderId
 }) {
+  const point=outlet?.deliveryPoint||outletOperationalPoint(outlet||{});
   return <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
             <LuStore className="text-primary text-sm" />
@@ -28,6 +30,7 @@ export function PackingOutletSection({
                 <p className="text-xs text-on-surface-variant line-clamp-1">
                   {outlet.address || 'Alamat tidak tersedia'}
                 </p>
+                {Number.isFinite(point?.latitude)&&Number.isFinite(point?.longitude)?<a className="admin-table-link block min-h-11 py-2" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${point.latitude},${point.longitude}`}>Titik pengiriman: {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)} · Google Maps</a>:<p className="text-amber-700">Titik tujuan belum tersedia. Admin perlu melengkapi titik toko sebelum gudang menjadwalkan perjalanan.</p>}
               </div>
 
               {!sourceOrderId && !doc && <button type="button" onClick={() => setOutlet(null)} className="px-3 py-1.5 rounded-lg border border-border-glass hover:bg-surface text-xs font-bold text-primary transition-all shrink-0">

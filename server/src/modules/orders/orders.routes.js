@@ -10,10 +10,12 @@ import {cancelOrderRemainder} from './services/cancel-order-remainder.service.js
 import {withUserTransaction} from '../../utils/user-transaction.js';
 import {getOrderReviewAssignment,saveOrderReviewAssignment} from './services/order-review-assignment.service.js';
 import {searchAdminOrderPlaces} from './services/admin-order-place.service.js';
+import {packingCandidates} from './services/packing-candidates.service.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.get('/packing-candidates',authorizeWithPermission(['ADMIN'],'can_manage_packing_list'),async(req,res,next)=>{try{const query=z.object({status:z.enum(['APPROVED','PENDING_APPROVAL']).default('APPROVED'),search:z.string().trim().max(200).default(''),page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(100).default(20)}).parse(req.query);res.json({success:true,data:await packingCandidates(query)});}catch(error){next(error);}});
 router.get('/:id/review-assignment',authorize('ADMIN','SUPERVISOR'),async(req,res,next)=>{
   try{const id=z.string().uuid().parse(req.params.id);res.json({data:await getOrderReviewAssignment(id,req.user)});}catch(error){next(error);}
 });

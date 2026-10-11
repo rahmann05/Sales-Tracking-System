@@ -15,5 +15,5 @@ export const createVehicle = async (data) => {
     throw new AppError('Kode kendaraan sudah digunakan', 400);
   }
   await assertEvidenceImages({photoUrl:data.photoUrl});
-  return await prisma.vehicle.create({ data: { ...data, photoUpdatedAt:new Date(), code, maxCartons: data.maxCartons ?? await getDynamicConfig('DEFAULT_VEHICLE_CAPACITY_CARTONS', 200), fuelPricePerLiter: data.fuelPricePerLiter ?? await getDynamicConfig('DEFAULT_FUEL_PRICE_PER_LITER', 12500) } });
+  return await prisma.vehicle.create({ data: { ...data, capacityProfile:{status:'ESTIMATED',source:'MASTER_ENTRY',notes:'Patokan dari input master atau default sistem; belum dikonfirmasi melalui pengukuran.'}, photoUpdatedAt:new Date(), code, maxCartons: data.maxCartons ?? await getDynamicConfig('DEFAULT_VEHICLE_CAPACITY_CARTONS', 200), fuelPricePerLiter: data.fuelPricePerLiter ?? await getDynamicConfig('DEFAULT_FUEL_PRICE_PER_LITER', 12500) } });
 };

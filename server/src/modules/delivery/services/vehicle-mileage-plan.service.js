@@ -65,6 +65,7 @@ export async function actualMileageLegWithPoints(plan,previousOutletId,outletId,
  const plannedTo=outletId?plan?.points?.find(point=>point.outletId===outletId):plan?.actualReturn||plan?.returnDepot||plan?.depot;
  const from=fromPoint||plannedFrom,to=toPoint||plannedTo;
  const pointKey=point=>finite(point)?`${Number(point.latitude).toFixed(6)},${Number(point.longitude).toFixed(6)}`:null;
+ if(pointKey(from)&&pointKey(from)===pointKey(to))return {leg:{distanceKm:0,source:'SAME_LOCATION'},plan};
  const coordinateOverride=pointKey(from)!==pointKey(plannedFrom)||pointKey(to)!==pointKey(plannedTo);
  const key=`${fromId}|${toId}|${pointKey(from)}|${pointKey(to)}`;
  const exact=plan?.actualLegs?.find(leg=>leg.key===key);

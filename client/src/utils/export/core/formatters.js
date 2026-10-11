@@ -1,18 +1,3 @@
-const MONTHS_ID = [
-  'Januari',
-  'Februari',
-  'Maret',
-  'April',
-  'Mei',
-  'Juni',
-  'Juli',
-  'Agustus',
-  'September',
-  'Oktober',
-  'November',
-  'Desember',
-];
-
 export function formatCurrency(value, withPrefix = true) {
   const num = Number(value);
   if (!Number.isFinite(num)) return withPrefix ? 'Rp 0' : '0';
@@ -36,14 +21,13 @@ export function formatDateId(dateInput) {
   if (!dateInput) return '-';
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (Number.isNaN(d.getTime())) return String(dateInput);
-  return `${d.getDate()} ${MONTHS_ID[d.getMonth()]} ${d.getFullYear()}`;
+  return new Intl.DateTimeFormat('id-ID', {timeZone:'Asia/Jakarta',day:'numeric',month:'long',year:'numeric'}).format(d);
 }
 
 export function formatDateTimeId(dateInput = new Date()) {
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (Number.isNaN(d.getTime())) return String(dateInput);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getDate()} ${MONTHS_ID[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())} WIB`;
+  return new Intl.DateTimeFormat('id-ID', {timeZone:'Asia/Jakarta',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d) + ' WIB';
 }
 
 export function safeStr(val, fallback = '-') {

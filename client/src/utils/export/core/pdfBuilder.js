@@ -1,3 +1,4 @@
+import {documentImages, fitImage} from './documentImages';
 import { jsPDF } from 'jspdf';
 import autoTablePkg from 'jspdf-autotable';
 import { formatDateTimeId, safeStr } from './formatters';
@@ -11,7 +12,7 @@ const runAutoTable =
         ? autoTablePkg.autoTable
         : (doc, opts) => doc.autoTable?.(opts);
 
-export function buildDocumentPdf(blueprint) {
+export async function buildDocumentPdf(blueprint) {
   const orientation = blueprint.orientation === 'landscape' ? 'landscape' : 'portrait';
   const doc = new jsPDF({
     orientation,
@@ -23,6 +24,7 @@ export function buildDocumentPdf(blueprint) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 12;
+  const compact = blueprint.compact === true;
   let cursorY = 13;
 
   doc.setFont('helvetica', 'bold');
@@ -52,17 +54,17 @@ export function buildDocumentPdf(blueprint) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 23, 42);
-  doc.text(safeStr(blueprint.title, 'DOKUMEN OPERASIONAL').toUpperCase(), pageWidth / 2, cursorY, {
-    align: 'center',
-  });
-  cursorY += 4;
+  const titleLines = doc.splitTextToSize(safeStr(blueprint.title, 'DOKUMEN OPERASIONAL').toUpperCase(), pageWidth - margin * 2);
+  doc.text(titleLines, pageWidth / 2, cursorY, {align: 'center'});
+  cursorY += titleLines.length * 4.5;
 
   if (blueprint.subtitle) {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8.5);
     doc.setTextColor(71, 85, 105);
-    doc.text(blueprint.subtitle, pageWidth / 2, cursorY, { align: 'center' });
-    cursorY += 4;
+    const subtitleLines = doc.splitTextToSize(blueprint.subtitle, pageWidth - margin * 2);
+    doc.text(subtitleLines, pageWidth / 2, cursorY, {align: 'center'});
+    cursorY += subtitleLines.length * 4;
   }
 
   doc.setFont('helvetica', 'normal');
@@ -107,7 +109,7 @@ export function buildDocumentPdf(blueprint) {
         2: { fontStyle: 'bold', fillColor: [239, 246, 255], cellWidth: 34 },
       },
     });
-    cursorY = (doc.lastAutoTable?.finalY || cursorY) + 4;
+    cursorY = (doc.lastAutoTable?.finalY || cursorY) + (compact ? 3 : 4);
   }
 
   for (const section of blueprint.sections || []) {
@@ -125,6 +127,11 @@ export function buildDocumentPdf(blueprint) {
 
     const headers = section.headers || [];
     const columnStyles = { 0: { halign: 'center' } };
+    const weights = section.columnWidths;
+    if (weights?.length === headers.length) {
+      const total = weights.reduce((sum, n) => sum + n, 0);
+      weights.forEach((weight, i) => {columnStyles[i] = {...columnStyles[i], cellWidth: (pageWidth - margin * 2) * weight / total};});
+    }
     for (const cIdx of section.rightAlignCols || []) {
       columnStyles[cIdx] = { ...(columnStyles[cIdx] || {}), halign: 'right' };
     }
@@ -141,7 +148,7 @@ export function buildDocumentPdf(blueprint) {
       styles: {
         font: 'helvetica',
         fontSize: headers.length > 12 ? 6.5 : 7.5,
-        cellPadding: headers.length > 12 ? 1.2 : 1.8,
+        cellPadding: headers.length > 12 || compact ? 1.2 : 1.8,
         textColor: [15, 23, 42],
         lineColor: [203, 213, 225],
         lineWidth: 0.15,
@@ -158,7 +165,17 @@ export function buildDocumentPdf(blueprint) {
       },
       columnStyles,
     });
-    cursorY = (doc.lastAutoTable?.finalY || cursorY) + 4;
+    cursorY = (doc.lastAutoTable?.finalY || cursorY) + (compact ? 3 : 4);
+  }
+
+  for (const image of await documentImages(blueprint)) {
+    const size = fitImage(image, pageWidth - margin * 2, 85);
+    if (cursorY + size.height + 12 > pageHeight - 16) {doc.addPage(); cursorY = 14;}
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(0);
+    doc.text(image.caption || 'Foto outlet', margin, cursorY);
+    cursorY += 5;
+    doc.addImage(image.dataUrl, image.type === 'jpg' ? 'JPEG' : 'PNG', margin, cursorY, size.width, size.height);
+    cursorY += size.height + 5;
   }
 
   if (blueprint.notes?.length) {
@@ -176,8 +193,10 @@ export function buildDocumentPdf(blueprint) {
     doc.setTextColor(71, 85, 105);
     for (const note of blueprint.notes) {
       const wrapped = doc.splitTextToSize(`• ${note}`, pageWidth - margin * 2);
-      doc.text(wrapped, margin, cursorY);
-      cursorY += wrapped.length * 3.2;
+      for (const line of wrapped) {
+        if (cursorY + 4 > pageHeight - 16) {doc.addPage(); cursorY = 14;}
+        doc.text(line, margin, cursorY); cursorY += 3.2;
+      }
     }
     cursorY += 2;
   }
@@ -195,7 +214,7 @@ export function buildDocumentPdf(blueprint) {
       doc.setFontSize(8);
       doc.setTextColor(15, 23, 42);
       doc.text(safeStr(sig.role, ''), centerX, cursorY + 4, { align: 'center' });
-      doc.text(`( ${safeStr(sig.name, '........................')} )`, centerX, cursorY + 20, {
+      doc.text(doc.splitTextToSize(`( ${safeStr(sig.name, '........................')} )`, blockWidth - 4), centerX, cursorY + 18, {
         align: 'center',
       });
       doc.setFont('helvetica', 'normal');

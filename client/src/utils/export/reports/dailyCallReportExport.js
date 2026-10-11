@@ -28,7 +28,7 @@ function resolveDailySummary(reportData = {}, dateInput) {
       s.totalEffectiveCalls ?? s.totalEffective ?? rows.filter((r) => r.effectiveCall === 'Y').length
     ),
     ecRate: safeStr(s.effectiveCallRate, '0%'),
-    totalOrderAmount: Number(s.totalOrderAmount ?? 0),
+    totalOrderAmount: s.totalOrderAmount === null ? null : Number(s.totalOrderAmount ?? 0),
     totalSkuSold: Number(s.totalSkuSold ?? 0),
     totalAnomalies: Number(s.totalAnomalies ?? 0),
   };
@@ -66,7 +66,7 @@ function buildDailyCallBlueprint(input = {}, dateArg) {
         formatNumber(sm.effectiveCalls ?? 0),
         safeStr(sm.effectiveCallRate, '0%'),
         formatNumber(sm.skuSold ?? 0),
-        formatCurrency(sm.orderAmount ?? 0),
+        sm.orderAmount === null ? 'Dibatasi aturan' : formatCurrency(sm.orderAmount ?? 0),
       ]),
       rightAlignCols: [3, 4, 5, 6, 7, 8, 9],
     });
@@ -109,7 +109,7 @@ function buildDailyCallBlueprint(input = {}, dateArg) {
       formatNumber(r.skuSold || 0),
       r.orderAmount === null ? 'Dibatasi aturan' : formatCurrency(r.orderAmount || 0),
       r.deviationMeters != null ? `${formatNumber(r.deviationMeters)} m` : '-',
-      safeStr(r.reason || r.earlyReason || r.remark, 'Normal'),
+      safeStr(r.reason || r.earlyReason || r.remark, 'Tidak ada catatan'),
     ]),
     rightAlignCols: [7, 11, 12, 13],
     centerAlignCols: [5, 6, 8, 9, 10],
@@ -118,7 +118,7 @@ function buildDailyCallBlueprint(input = {}, dateArg) {
   const basisNotes = formatReportBasisNotes(reportData?.basis);
 
   return {
-    domain: 'REPORT',
+    domain: 'REPORTS',
     filename: `Laporan_Kunjungan_Harian_${info.dateStr}`,
     sheetName: 'DAILY_CALL',
     orientation: 'landscape',
@@ -138,7 +138,7 @@ function buildDailyCallBlueprint(input = {}, dateArg) {
         value: `${formatNumber(info.totalEffective)} Outlet (${info.ecRate})`,
       },
       { label: 'Total SKU Terjual', value: `${formatNumber(info.totalSkuSold)} SKU` },
-      { label: 'Total Nilai Order Disetujui', value: formatCurrency(info.totalOrderAmount) },
+      { label: 'Total Nilai Order Disetujui', value: info.totalOrderAmount === null ? 'Dibatasi aturan' : formatCurrency(info.totalOrderAmount) },
       { label: 'Indikasi Anomali Presensi', value: `${formatNumber(info.totalAnomalies)} Temuan` },
       { label: 'Total Baris Kunjungan', value: `${formatNumber(info.rows.length)} Kunjungan` },
     ],

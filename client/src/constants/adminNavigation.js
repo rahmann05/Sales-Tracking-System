@@ -6,7 +6,7 @@ const GROUPS=[
   {id:'delivery',label:'Packing & pengiriman',icon:LuTruck,description:'Siapkan packing, armada, dan pantau perjalanan.',tabs:[TAB_IDS.DELIVERY_PACKING_LIST,TAB_IDS.DELIVERY_ROUTES,TAB_IDS.DELIVERY_MONITOR,TAB_IDS.ADMIN_VEHICLES]},
   {id:'outlets',label:'Outlet',icon:LuStore,description:'Kelola pelanggan, persetujuan, dan ketepatan lokasi.',tabs:[TAB_IDS.OUTLET_MANAGEMENT,TAB_IDS.OUTLET_APPROVAL,TAB_IDS.OUTLET_VALIDATION,TAB_IDS.DASHBOARD]},
   {id:'sales',label:'Sales & wilayah',icon:LuUsers,description:'Pantau kunjungan, atur tim, wilayah, dan jadwal kerja.',tabs:[TAB_IDS.DAILY_CALL_MONITOR,TAB_IDS.TEAM_TRACKING,TAB_IDS.ROUTE_PLANNING,TAB_IDS.ADMIN_PJP]},
-  {id:'attention',label:'Tindak lanjut',icon:LuClipboardList,description:'Tuntaskan pekerjaan yang membutuhkan penanggung jawab dan keputusan.',tabs:[TAB_IDS.ADMIN_ATTENTION]},
+  {id:'attention',label:'Perlu tindakan',icon:LuClipboardList,description:'Lihat pekerjaan berikutnya, penerima, dan keputusan yang diperlukan.',tabs:[TAB_IDS.ADMIN_ATTENTION]},
   {id:'reports',label:'Laporan',icon:LuChartColumn,description:'Telusuri hasil operasional, registrasi outlet, dan absensi.',tabs:[TAB_IDS.REPORTS,TAB_IDS.OUTLET_REGISTRATION_REPORT,TAB_IDS.ADMIN_ATTENDANCE]},
   {id:'system',label:'Sistem',icon:LuSettings,description:'Kelola pengguna, hak akses, master, dan aturan aplikasi.',tabs:[TAB_IDS.USER_MANAGEMENT,TAB_IDS.ADMIN_MASTERS,TAB_IDS.SYSTEM_CONFIG]},
 ];
@@ -18,7 +18,7 @@ const TOOLS=[
   {id:TAB_IDS.ADMIN_VEHICLES,label:'Kendaraan & servis',description:'Kelola armada, kilometer, dan servis.',icon:LuTruck},
 ];
 const DETAILS={
-  [TAB_IDS.ADMIN_ATTENTION]:['Tindak lanjut','Periksa tenggat, penanggung jawab, dan pekerjaan lintas modul.'],
+  [TAB_IDS.ADMIN_ATTENTION]:['Perlu tindakan','Periksa tenggat, penanggung jawab, dan pekerjaan lintas modul.'],
   [TAB_IDS.ADMIN_APPROVAL]:['Order & persetujuan','Tinjau order sales dan permintaan buka kunci outlet.'],
   [TAB_IDS.DAILY_CALL_MONITOR]:['Kunjungan sales','Pantau kunjungan, nominal order, dan SKU sales.'],
   [TAB_IDS.ROUTE_PLANNING]:['Wilayah & jadwal RJP','Kelola kluster outlet, template mingguan, dan PJP harian.'],
@@ -29,7 +29,7 @@ const DETAILS={
   [TAB_IDS.OUTLET_APPROVAL]:['Persetujuan outlet','Periksa pengajuan dan aktifkan toko yang memenuhi syarat.'],
   [TAB_IDS.OUTLET_VALIDATION]:['Validasi outlet','Cocokkan identitas dan lokasi melalui Google atau bukti lapangan.'],
   [TAB_IDS.DELIVERY_PACKING_LIST]:['Packing list','Susun dokumen muatan dan kirim ke kepala gudang.'],
-  [TAB_IDS.DELIVERY_ROUTES]:['Rute & alokasi mobil','Bagi muatan ke kendaraan dan tetapkan supir.'],
+  [TAB_IDS.DELIVERY_ROUTES]:['Perjalanan pengiriman','Kepala gudang menyusun perjalanan; Admin memantau dan dapat membantu sesuai izin.'],
   [TAB_IDS.DELIVERY_MONITOR]:['Monitor pengiriman','Pantau perjalanan, hasil pengiriman, dan retur.'],
   [TAB_IDS.ADMIN_VEHICLES]:['Kendaraan & servis','Kelola armada, kilometer, kondisi, dan riwayat servis.'],
   [TAB_IDS.REPORTS]:['Laporan operasional','Buka rekap kunjungan, absensi, dan penjualan.'],

@@ -1,7 +1,7 @@
 import {AppError} from '../../../utils/errors.js';
 export function mapInvoiceCommercial(invoice,items,order){
   const orders=Array.isArray(order)?order:order?[order]:[];
-  const referenced=orders.filter(o=>(invoice.items||[]).some(line=>{const item=items.find(i=>i.lineId===line.lineId);return item&&o.items.some(i=>i.id===(item.sourceOrderItemId||item.lineId));}));
+  const referenced=orders.filter(o=>(invoice.items||[]).some(line=>{const item=items.find(i=>i.lineId===line.lineId);return item&&o.items.some(i=>i.id===(item.sourceOrderItemId||item.lineId));})||(!(invoice.items||[]).length&&(invoice.sourceOrderIds||[]).includes(o.id)));
   if(orders.length>1&&!referenced.length)throw new AppError('Faktur gabungan harus memetakan barang ke order asal.',400);
   const terms=o=>{const sum=o.items.reduce((n,i)=>n+i.subtotal,0);return [o.taxRatePercent,o.taxIncluded??(Math.abs(o.totalValue-sum)<0.005?true:Math.abs(o.totalValue-sum-o.taxAmount)<0.005?false:null),o.policySnapshot?.values?.ORDER_TAX_ROUNDING_MODE||'NEAREST'];};
   if(referenced.some(o=>JSON.stringify(terms(o))!==JSON.stringify(terms(referenced[0]))))throw new AppError('Aturan pajak order berbeda. Pisahkan pemetaan ke faktur masing-masing.',409);

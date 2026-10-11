@@ -17,7 +17,9 @@ router.use((req,res,next)=>!['GET','HEAD','OPTIONS'].includes(req.method)?author
 router.use('/policies',policyRoutes);
 router.get('/access/export',async(req,res,next)=>{
  try{
-  const report=req.query.domain==='REPORTS';
+  const domain=String(req.query.domain||'REPORTS');
+  if(!['REPORT','REPORTS','OUTLET','PACKING'].includes(domain))return res.status(400).json({message:'Domain ekspor tidak dikenal.'});
+  const report=['REPORT','REPORTS'].includes(domain);
   if(await getDynamicConfig('FEATURE_EXPORT_MODE','ACTIVE')!=='ACTIVE'||report&&!await getDynamicConfig('REPORT_EXPORT_ENABLED',true))return res.status(403).json({message:'Ekspor dan cetak dinonaktifkan dalam aturan operasional.'});
   if(report&&req.user.permissions?.can_export_reports===false)return res.status(403).json({message:'Akun tidak memiliki izin ekspor laporan.'});
   res.set('Cache-Control','no-store').json({data:{allowed:true}});

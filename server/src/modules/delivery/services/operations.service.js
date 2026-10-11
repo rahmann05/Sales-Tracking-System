@@ -1,12 +1,11 @@
+import {automaticIssue} from './automatic-issue.service.js';
 import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
-import {canDomainAction} from '../../../../../shared/domain-permissions.mjs';
-import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {locationExpired} from '../../../../../shared/location-retention.mjs';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {preparationStages,preparationReady,preparationOwnerProblem,departureChecklist} from '../../../../../shared/warehouse-policy.mjs';
-import {readReviewDefinitions,reviewIdentity,reviewPeople} from '../../config/services/approval-readiness.service.js';
+import {readReviewDefinitions,reviewIdentity} from '../../config/services/approval-readiness.service.js';
 import {processValue} from '../../config/services/process-policy.service.js';
 import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
 import {DRIVER_EVIDENCE_KEYS} from '../../../../../shared/operational-policy.mjs';
@@ -37,7 +36,7 @@ async function flagEndpointMismatch(tx,route,user,kind,planned,actual){
  if(planned?.latitude==null||planned?.longitude==null)return;
  const distance=calculateDistanceMeters(planned.latitude,planned.longitude,actual.latitude,actual.longitude);
  if(distance<=await getDynamicConfig('DELIVERY_LOCATION_REVIEW_METERS',200))return;
- await tx.deliveryIssue.create({data:{routeId:route.id,title:`Periksa titik ${kind} trip`,reason:`GPS ${kind} berjarak ${Math.round(distance)} meter dari lokasi operasional yang direncanakan. Periksa foto, akurasi GPS, serta pilihan titik; penyebab belum ditentukan.`,ownerId:route.createdById,createdById:user.id,dueAt:new Date(Date.now()+(await getDynamicConfig('DELIVERY_ISSUE_DEFAULT_HOURS',24))*3600000),history:[{action:'TRIP_ENDPOINT_DISCREPANCY',actorId:user.id,at:new Date().toISOString(),distanceMeters:distance,planned,actual}]}});
+ await automaticIssue(tx,{routeId:route.id,title:`Periksa titik ${kind} trip`,reason:`GPS ${kind} berjarak ${Math.round(distance)} meter dari lokasi operasional yang direncanakan. Periksa foto, akurasi GPS, serta pilihan titik; penyebab belum ditentukan.`,ownerId:null,responsibleRole:'ADMIN',createdById:user.id,history:[{action:'TRIP_ENDPOINT_DISCREPANCY',actorId:user.id,at:new Date().toISOString(),distanceMeters:distance,planned,actual}]});
 }
 
 export async function routeAction(id, data, user, attempt=0,{db=prisma,validateOnly=false}={}) {
@@ -51,7 +50,7 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
     if (r.closedAt || r.cancelledAt) fail('Trip sudah ditutup/dibatalkan');
     const { action, note } = data;
     const stages=preparationStages(r.policySnapshot?.values),odometerRequired=await processValue(r,'TRIP_REQUIRE_ODOMETER',false);
-    if (!note?.trim()) throw new AppError('Catatan tindakan wajib', 400);
+    if (['ASSIGN_PREPARATION','HOLD','RESUME','CANCEL','RESCHEDULE','LEGACY_ODOMETER'].includes(action)&&!note?.trim()) throw new AppError('Alasan perubahan wajib', 400);
     let change = {};
     if (['PICK', 'CHECK', 'LOAD'].includes(action)) {
       if (r.status !== 'DRAFT' || r.onHold) fail('Persiapan hanya untuk draft yang tidak ditahan');
@@ -63,6 +62,7 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
       const task=r.preparation?.tasks?.[action];
       if(task&&task.ownerId!==user.id&&user.role!=='ADMIN')throw new AppError('Tahap ini ditugaskan kepada petugas lain; ubah penugasan terlebih dahulu',403);
       if(action==='PICK'&&await processValue(r,'WAREHOUSE_SEPARATE_CHECKER',false)&&r.preparation?.tasks?.CHECK?.ownerId===user.id)fail('Anda ditugaskan sebagai pemeriksa terpisah. Ganti PIC sebelum menyiapkan barang.');
+      if(data.confirmedAsPlanned===true){data={...data,cartons:r.totalCartons,quantities:Object.fromEntries(r.stops.flatMap(stop=>stop.allocatedItems.map(item=>[`${stop.id}:${item.lineId}`,item.quantity])))};}
       if (data.cartons !== r.totalCartons) fail('Jumlah aktual berbeda dari muatan. Catat masalah dan revisi alokasi sebelum konfirmasi');
       const required = r.stops.flatMap(s => s.allocatedItems.map(i => ({ key: `${s.id}:${i.lineId}`, quantity: i.quantity })));
       if (required.some(i => data.quantities?.[i.key] !== i.quantity) || Object.keys(data.quantities || {}).length !== required.length) fail('Konfirmasi jumlah aktual setiap barang sesuai muatan');
@@ -117,7 +117,7 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
       if (await processValue(r,'TRIP_REQUIRE_RETURN_INSPECTION',true)&&r.stops.some(s => s.rejectedCartons > 0 && !s.returnInspection)) fail('Selesaikan pemeriksaan retur terlebih dahulu');
       if (await processValue(r,'TRIP_BLOCK_OPEN_ISSUES',true)){
         const openIssues=typeof tx.deliveryIssue?.findMany === 'function' ? await tx.deliveryIssue.findMany({where:{routeId:id,status:'OPEN'},select:{history:true}}) : (typeof tx.deliveryIssue?.count === 'function' && await tx.deliveryIssue.count({where:{routeId:id,status:'OPEN'}}) > 0 ? [{}] : []);
-        if(openIssues.some(issue=>!(issue.history||[]).some(event=>event.action==='LOCATION_DISCREPANCY')))fail('Masih ada masalah trip yang belum diselesaikan');
+        if(openIssues.some(issue=>!(issue.history||[]).some(event=>['LOCATION_DISCREPANCY','TRIP_ENDPOINT_DISCREPANCY'].includes(event.action))))fail('Masih ada masalah trip yang belum diselesaikan');
       }
       if (await processValue(r,'TRIP_REQUIRE_DOCUMENT_RETURN',true)&&!data.documentsReturned) fail('Konfirmasi dokumen pengiriman telah direkonsiliasi');
       change = { closedAt: new Date(), documentsReturned: data.documentsReturned===true, onHold: false, odometerPostedAt: new Date() };
@@ -138,7 +138,7 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
       const candidate = { ...r, vehicleId: data.vehicleId || r.vehicleId, driverId: data.driverId || r.driverId, plannedStartAt: data.plannedStartAt, plannedEndAt: data.plannedEndAt };
       if (!data.plannedStartAt || !data.plannedEndAt) fail('Isi jadwal berangkat dan akhir');
       const vehicle = await assertResources(tx, candidate);
-      if (r.totalCartons > vehicle.maxCartons || (vehicle.maxWeightKg && r.totalWeight > vehicle.maxWeightKg)) fail('Muatan melebihi kapasitas kendaraan pengganti');
+      if ((vehicle.maxCartons>0&&r.totalCartons>vehicle.maxCartons || vehicle.maxWeightKg>0&&r.totalWeight>vehicle.maxWeightKg)&&!data.capacityOverrideReason?.trim()) fail('Perkiraan muatan melampaui patokan kendaraan pengganti. Isi alasan persetujuan kapasitas.');
       change = { driverId: candidate.driverId, vehicleId: candidate.vehicleId, date: new Date(data.plannedStartAt), plannedStartAt: new Date(data.plannedStartAt), plannedEndAt: new Date(data.plannedEndAt), preparation: {}, status:stages.length?'DRAFT':'READY' };
       if(candidate.driverId!==r.driverId&&r.policySnapshot){
         const driver=await tx.user.findUnique({where:{id:candidate.driverId},select:{id:true,role:true,supervisorId:true}}),policy=await effectivePolicy(driver);
@@ -187,31 +187,4 @@ export async function operationsDashboard(date) {
     ].filter(Boolean) })) };
 }
 
-export const createIssue = (data, user) => prisma.$transaction(async tx => {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
-  const people=await reviewPeople(tx),creator=people.find(p=>p.id===user.id),owner=people.find(p=>p.id===data.ownerId);
-  if(!creator||creator.deletedAt||!['ADMIN','KEPALA_GUDANG'].includes(creator.role)||creator.permissions?.can_monitor_delivery===false)throw new AppError('Akun tidak berizin menugaskan kendala pengiriman',403);
-  if(!owner||owner.deletedAt||!canDomainAction(owner,'RESOLVE_DELIVERY_ISSUE')||owner.permissions?.[owner.role==='SUPIR'?'can_access_driver_map':'can_monitor_delivery']===false)throw new AppError('PIC harus aktif dan berizin menyelesaikan kendala pengiriman',409);
-  if (!await tx.user.findFirst({ where: { id: data.ownerId, deletedAt: null, role: { in: ['ADMIN', 'KEPALA_GUDANG', 'SUPIR'] } } })) throw new AppError('PIC tidak aktif', 400);
-  for (const [field, model] of [['routeId', 'deliveryRoute'], ['packingListId', 'packingList'], ['orderId', 'order']]) if (data[field] && !await tx[model].findUnique({ where: { id: data[field] } })) throw new AppError('Referensi masalah tidak ditemukan', 404);
-  if(data.routeId){const route=await tx.deliveryRoute.findUnique({where:{id:data.routeId}});if(route.closedAt||route.cancelledAt)fail('Trip sudah ditutup/dibatalkan');}
-  const issue = await tx.deliveryIssue.create({ data: { ...data, dueAt: new Date(data.dueAt||Date.now()+(await getDynamicConfig('DELIVERY_ISSUE_DEFAULT_HOURS',24))*3600000), createdById: user.id, history: [{ action: 'CREATE', actorId: user.id, at: new Date().toISOString() }] } });
-  await policyNotification(tx,{data:{userId:data.ownerId,type:'DELIVERY_FOLLOW_UP',title:data.title,message:data.reason,payload:{issueId:issue.id,routeId:data.routeId||null,dueAt:data.dueAt}}});
-  return issue;
-});
-
-export const resolveIssue = (id, resolution, user) => prisma.$transaction(async tx => {
-  user=await freshDomainActor(tx,user.id,'RESOLVE_DELIVERY_ISSUE');
-  if(user.permissions?.[user.role==='SUPIR'?'can_access_driver_map':'can_monitor_delivery']===false)throw new AppError('Akses pengiriman diperlukan untuk menyelesaikan kendala',403);
-  const issue = await tx.deliveryIssue.findUnique({ where: { id } });
-  if (!issue || issue.status !== 'OPEN') fail('Masalah tidak ditemukan atau sudah selesai');
-  if(user.role==='SUPIR' && issue.ownerId!==user.id)throw new AppError('Tindak lanjut bukan tugas Anda',403);
-  const locationReview=(issue.history||[]).some(item=>item.action==='LOCATION_DISCREPANCY');
-  if(locationReview){
-    if(user.role!=='ADMIN')throw new AppError('Selisih titik toko dan absensi harus diputuskan Admin.',403);
-    if(!/^(MASTER_POINT_WRONG|DRIVER_ATTENDANCE_INVALID|GPS_INACCURATE|LEGITIMATE_DIFFERENCE):\s*.{10,}$/s.test(resolution))throw new AppError('Pilih hasil pemeriksaan lokasi dan tulis alasan minimal 10 karakter. Jika belum dapat dipastikan, biarkan tugas tetap terbuka.',400);
-  }
-  const changed = await tx.deliveryIssue.updateMany({ where: { id, status: 'OPEN' }, data: { status: 'DONE', resolution, resolvedAt: new Date(), history: [...issue.history, { action: 'RESOLVE', actorId: user.id, at: new Date().toISOString(), resolution,locationOutcome:locationReview?resolution.split(':')[0]:null }] } });
-  if (!changed.count) fail('Masalah telah diproses');
-  return { id, status: 'DONE' };
-}, { timeout:15000 });
+export {createIssue,resolveIssue} from './operational-issues.service.js';

@@ -1,3 +1,4 @@
+import {documentImages, fitImage} from './documentImages';
 import * as ExcelJSpkg from 'exceljs';
 import { formatDateTimeId, safeStr } from './formatters';
 
@@ -45,7 +46,7 @@ export async function buildDocumentExcel(blueprint) {
       });
     }
     for (const row of firstSection.rows || []) {
-      const r = sheet.addRow(row.map((v) => safeStr(v, '')));
+      const r = sheet.addRow(row.map((v) => typeof v === 'number' && Number.isFinite(v) ? v : safeStr(v, '')));
       r.height = 19;
       r.eachCell((cell) => {
         cell.font = { name: 'Calibri', size: 10 };
@@ -185,6 +186,15 @@ export async function buildDocumentExcel(blueprint) {
     sheet.addRow([]);
   }
 
+  for (const image of await documentImages(blueprint)) {
+    sheet.addRow([image.caption || 'Foto outlet']);
+    const size = fitImage(image, 500, 300);
+    const anchor = sheet.rowCount;
+    const id = workbook.addImage({base64: image.dataUrl, extension: image.type === 'jpg' ? 'jpeg' : image.type});
+    sheet.addImage(id, {tl: {col: 0, row: anchor}, ext: size});
+    for (let n = 0; n < Math.ceil(size.height / 20) + 1; n++) sheet.addRow(['']).height = 15;
+  }
+
   if (blueprint.notes?.length) {
     const noteHeader = sheet.addRow(['Dasar & Catatan Dokumen:']);
     noteHeader.getCell(1).font = { name: 'Calibri', size: 9, bold: true };
@@ -222,5 +232,15 @@ export async function buildDocumentExcel(blueprint) {
     column.width = Math.min(Math.max(maxLen + 3, colIdx === 0 ? 6 : 12), 42);
   });
 
+  sheet.eachRow(row => {
+    let lineCount = 1;
+    row.eachCell(cell => {
+      const text = String(cell.value ?? '');
+      const width = Math.max(8, sheet.getColumn(cell.col).width || 12);
+      lineCount = Math.max(lineCount, ...text.split('\n').map(line => Math.ceil(line.length / (width - 2))));
+      cell.alignment = {...cell.alignment, wrapText: true, vertical: 'middle'};
+    });
+    row.height = Math.min(409, Math.max(row.height || 18, lineCount * 14 + 6));
+  });
   return workbook.xlsx.writeBuffer();
 }

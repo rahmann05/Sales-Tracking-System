@@ -31,7 +31,7 @@ const cluster = pjpData.user?.cluster;
             const intervalWeeks=planningRule?.intervalWeeks;
 
             return {
-              googleMapsOnly:outletOperationalPoint(s.outlet).googleMapsOnly,operationalPoint:outletOperationalPoint(s.outlet),id: s.id,validationTask:s.validationTask,validationOnly:s.validationOnly,validationResult:s.validationResult,
+              googleMapsOnly:outletOperationalPoint(s.outlet).googleMapsOnly,operationalPoint:outletOperationalPoint(s.outlet),id: s.id,workInstructions:s.workInstructions||[],validationTask:s.validationTask,validationOnly:s.validationOnly,validationResult:s.validationResult,
               policySnapshot:s.policySnapshot,visitSession:s.visitSession,
               temporaryAssignment:planningRule?.substitute&&planningRule.substitute.userId===(pjpData.userId||user?.id)?{...planningRule.substitute,primarySalesName:planningRule.primarySalesName||null}:null,
               pjpId: pjpData.id,

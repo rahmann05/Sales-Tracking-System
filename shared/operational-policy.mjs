@@ -16,7 +16,7 @@ const select=(key,label,defaultValue,options,description='',extra={})=>({key,lab
 const group=(groupKey,groupLabel,groupDescription,params)=>({groupKey,groupLabel,groupDescription,groupIcon:'LuSlidersHorizontal',groupColor:'blue',params});
 export const BUSINESS_FEATURES=[
  ['SALES_VISITS','Kunjungan Sales','Lapangan'],['OFF_PJP','Kunjungan luar PJP','Lapangan'],['SPV_VISITS','Supervisi lapangan','Lapangan'],
- ['SHIFT','Presensi shift','Lapangan'],['FOLLOW_UP','Tindak lanjut','Pemantauan'],['REROUTE','Skip dan reroute','Lapangan'],['UNLOCK','Pengecualian presensi','Lapangan'],
+ ['SHIFT','Presensi shift','Lapangan'],['FOLLOW_UP','Arahan dan laporan kendala','Pemantauan'],['REROUTE','Skip dan reroute','Lapangan'],['UNLOCK','Pengecualian presensi','Lapangan'],
  ['PJP','Perencanaan PJP','Wilayah'],['CLUSTERS','Pengelolaan wilayah','Wilayah'],['TEAMS','Penugasan tim','Wilayah'],
  ['REGISTRATION','Registrasi outlet','Outlet'],['OUTLET_MASTER','Master outlet','Outlet'],['OUTLET_REVIEW','Pemeriksaan outlet opsional','Outlet'],
  ['ORDERS','Order','Transaksi'],['PRODUCTS','Katalog produk','Transaksi'],['COLLECTION','Catatan penagihan eksternal','Transaksi'],
@@ -111,7 +111,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('FOLLOW_UP_AUTO_TRIGGER','Pemicu tugas otomatis','SELECTED_FAILURE',['ANY_FAILURE','SELECTED_FAILURE','SLA','FAILURE_OR_SLA'],'SLA berarti durasi kunjungan supervisi sejak mulai, diperiksa pada penyimpanan audit/penyelesaian, bukan pekerja latar belakang.'),
   num('FOLLOW_UP_AUTO_SLA_MINUTES','Ambang durasi supervisi untuk tugas',120,1,10080,'menit'),
   num('FOLLOW_UP_AUTO_DUE_DAYS','Tenggat tugas otomatis sejak dibuat',1,0,90,'hari'),
-  select('FOLLOW_UP_AUTO_OWNER','PIC awal tugas otomatis','PJP_SALES',['PJP_SALES','CLUSTER_SALES'],'Sales pemilik PJP atau Sales utama cluster terkini. Harus aktif, dalam tim, berizin dan memiliki pemeriksa. Pilihan PIC manual pada audit mengesampingkan otomatisasi.'),
+  select('FOLLOW_UP_AUTO_OWNER','Sales penerima arahan otomatis','PJP_SALES',['PJP_SALES','CLUSTER_SALES'],'Sales pemilik PJP atau Sales utama cluster terkini. Harus aktif, dalam tim, berizin dan memiliki pemeriksa. Penugasan khusus pada audit mengesampingkan otomatisasi. Arahan tidak menambah kunjungan sampai dijadwalkan secara eksplisit.'),
   select('FOLLOW_UP_REVIEWER_MODE','Pemeriksa hasil tugas baru','BOTH',['BOTH','SUPERVISOR','ADMIN'],'Pemeriksa tetap pengguna berbeda dari PIC, aktif dan berizin. Tugas tersimpan mengikuti aturan awal.'),
   {key:'SPV_AUDIT_ITEMS',label:'Pertanyaan audit supervisi',type:'checklist',defaultValue:DEFAULT_AUDIT_ITEMS,description:'Atur jawaban ya/tidak, teks, angka atau pilihan; kondisi gagal, alasan dan foto. Kunjungan yang telah dimulai tetap memakai daftar awal; perubahan label tidak mengganti kode historis.'},
  ]),
@@ -236,7 +236,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('DELIVERY_RECIPIENT_MODE','Nama penerima barang','OPTIONAL',['DISABLED','OPTIONAL','REQUIRED'],'Berlaku untuk barang diterima penuh atau sebagian; penolakan penuh tidak memerlukan penerima.'),
   select('DELIVERY_SIGNATURE_MODE','Tanda tangan penerima','DISABLED',['DISABLED','OPTIONAL','REQUIRED'],'Bukti penerimaan barang. Jika diisi, nama penerima wajib. Tidak menjadi bukti pembayaran.'),
   bool('WAREHOUSE_REQUIRE_PICK','Wajib tahap penyiapan'),bool('WAREHOUSE_REQUIRE_CHECK','Wajib pemeriksaan muatan'),bool('WAREHOUSE_REQUIRE_LOAD','Wajib konfirmasi loading'),
-  bool('WAREHOUSE_SEPARATE_CHECKER','Pemeriksa berbeda dari penyiap',false),
+  bool('WAREHOUSE_SEPARATE_CHECKER','Pemeriksa berbeda dari penyiap',false,'Jika aktif, petugas yang menyiapkan muatan tidak dapat mengonfirmasi pemeriksaannya sendiri. Tahap dan pelaku tetap dicatat meskipun catatan rutin tidak diwajibkan.'),
   bool('TRIP_REQUIRE_ODOMETER','Wajib kilometer aktual',false,'Jika nonaktif, jarak jalan tetap bertambah otomatis dari bukti GPS dan titik tujuan. Odometer fisik dapat diisi sebagai pembanding.'),
   {key:'TRIP_DEPARTURE_CHECKLIST',label:'Checklist sebelum keberangkatan',type:'checklist',defaultValue:[],description:'Pertanyaan ya/tidak, teks, angka atau pilihan beserta alasan/foto ketika gagal. Kosongkan untuk menonaktifkan. Checklist dibekukan pada trip dan jawaban disimpan bersama pelaku serta waktu keberangkatan.'},
   bool('TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST','Tahan keberangkatan jika jawaban checklist gagal',true,'Berlaku pada pertanyaan yang memiliki kondisi gagal; petugas perlu memperbaiki kondisi sebelum berangkat. Jika nonaktif, kegagalan tetap disimpan pada bukti keberangkatan.'),
@@ -248,7 +248,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('DELIVERY_STOP_ORDER','Urutan pelaksanaan tujuan','FREE',['FREE','SEQUENTIAL'],'Urutan wajib menunggu hasil seluruh tujuan sebelumnya. Tujuan yang sudah dimulai tetap dapat diselesaikan.',{optionLabels:{FREE:'Bebas memilih tujuan',SEQUENTIAL:'Sesuai urutan sampai hasil selesai'}}),
   bool('DELIVERY_ALLOW_CONTINUE_WITHOUT_RESULT','Boleh lanjut saat hasil tujuan sebelumnya belum dicatat',true,'Pada urutan bebas, tujuan yang sudah didatangi tetapi belum memiliki hasil ditandai untuk gudang. Tidak membuat bukti keluar atau hasil barang otomatis.'),
   bool('DELIVERY_REQUIRE_GPS','Wajib GPS pada presensi tujuan'),
-  num('DELIVERY_ISSUE_DEFAULT_HOURS','Tenggat awal kendala pengiriman',24,1,720,'jam'),
+  num('DELIVERY_ISSUE_DEFAULT_HOURS','Tenggat awal masalah (0 = tanpa tenggat otomatis)',24,0,720,'jam','Laporan diteruskan ke antrean tim sesuai konteks; pelapor tidak wajib memilih petugas. Nol berarti tanpa tenggat otomatis, bukan terlambat. Berlaku pada kasus baru; kasus lama tetap memakai tenggat tersimpannya.'),
  ]),
  group('TRACKING_POLICY','Berbagi lokasi dan layanan peta','Sakelar pelacakan berlaku segera. Titik presensi dan GPS langsung tetap dibedakan.',[
   select('DRAFT_STORAGE_MODE','Penyimpanan draf formulir','SESSION',['SESSION','PERSISTENT'],'Sesi browser atau perangkat ini agar bertahan setelah browser ditutup. Terpisah per akun. Berlaku saat formulir dibuka; draf belum menjadi transaksi server.',{optionLabels:{SESSION:'Selama sesi browser',PERSISTENT:'Tetap di perangkat ini'}}),

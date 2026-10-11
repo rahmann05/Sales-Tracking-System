@@ -42,7 +42,7 @@ function buildSuspiciousAttendanceBlueprint(input = {}, dateArg) {
   ]);
 
   return {
-    domain: 'REPORT',
+    domain: 'REPORTS',
     filename: `Audit_Absensi_Janggal_${dateStr}`,
     sheetName: 'AUDIT_ABSENSI',
     orientation: 'landscape',

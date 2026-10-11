@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useState} from 'react';
 import {unitDescription} from '../../../../../shared/product-units.mjs';
 import { LuPlus, LuTrash2, LuPackage } from 'react-icons/lu';
 export function PackingItemsSection({
@@ -8,6 +8,8 @@ export function PackingItemsSection({
   setItems,
   orderLinked=false
 }) {
+  const [partial,setPartial]=useState(false);
+  if(orderLinked)return <section className="space-y-3"><h3 className="font-semibold">Barang untuk pengiriman ini</h3><p className="text-sm">Default seluruh jumlah yang belum dibuatkan dokumen. Jumlah barang dan karton kemasan dicatat terpisah.</p><label className="flex items-center gap-2 min-h-11"><input type="checkbox" checked={partial} onChange={e=>setPartial(e.target.checked)}/>Atur jumlah / kirim sebagian</label><div className="admin-table-scroll"><table className="admin-data-table"><thead><tr><th>Barang / order</th><th>Belum dibuatkan dokumen</th><th>Pada dokumen ini</th></tr></thead><tbody>{items.map((item,index)=><tr key={item.lineId}><td><strong>{item.name}</strong><small>{item.sourceOrderCode||item.sku} · {unitDescription(item)}</small></td><td>{item.maxQuantity??'Lihat order'} {item.maxQuantity!=null?item.unit:''}</td><td>{partial?<div className="flex items-center gap-2"><input className="form-input w-28" aria-label={`Jumlah ${item.name} pada dokumen`} type="number" required min="1" max={item.maxQuantity} step="1" value={item.quantity} onChange={e=>setItems(items.map((line,i)=>i===index?{...line,quantity:Number(e.target.value)}:line))}/><span>{item.unit}</span>{items.length>1&&<button type="button" className="admin-button" onClick={()=>removeItem(index)}>Hapus</button>}</div>:<strong>{item.quantity} {item.unit}</strong>}</td></tr>)}</tbody></table></div>{partial&&<p className="admin-footnote">Bagian yang tidak disertakan tetap berada pada order untuk dibuatkan dokumen berikutnya.</p>}</section>;
   return <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

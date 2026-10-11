@@ -7,6 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {assertSalesAccess} from '../../utils/team-scope.js';
 import {notifyFollowUp} from './follow-up-notification.service.js';
 import {followUpActor} from './follow-up-access.service.js';
+import {completedVisitStatuses} from '../../../../shared/sales-visit-actions.mjs';
 export async function followUpScope(user, db = prisma) {
   if (user.role === 'ADMIN') return { followUp: { path: ['status'], string_contains: '' } };
   const team = user.role === 'SUPERVISOR' ? await db.user.findMany({ where: { supervisorId: user.id, role: 'SALES', deletedAt: null }, select: { id: true } }) : [];
@@ -29,7 +30,12 @@ export const completeFollowUp=(id,user,note,evidence)=>prisma.$transaction(async
   const record=await tx.staffActivity.findFirst({where:{id,...await followUpScope(user,tx)}});
   if(!record?.followUp)throw new AppError('Tindak lanjut tidak ditemukan',404);
   if(record.followUp.status!=='OPEN')throw new AppError('Tugas sudah dikirim atau selesai',409);
-  if(record.followUp.ownerId!==user.id)throw new AppError('Hanya PIC yang dapat mengirim hasil tugas',403);
+  if(record.followUp.ownerId!==user.id)throw new AppError('Hanya penerima arahan yang dapat mengirim hasil',403);
+  if(record.followUp.scheduledVisit){
+    const visit=await tx.pjpStop.findUnique({where:{id:record.followUp.scheduledVisit.stopId},include:{pjp:true}});
+    const closedDecision=visit?.status==='SKIPPED'&&await tx.routeChangeRequest.findFirst({where:{pjpStopId:visit.id,reportedBy:user.id,status:{in:['ACKNOWLEDGED','APPROVED']}}});
+    if(!visit||visit.pjp.userId!==user.id||!completedVisitStatuses.includes(visit.status)&&!closedDecision)throw new AppError('Selesaikan kunjungan di agenda terlebih dahulu. Jika toko tutup, laporkan dan tunggu keputusan Supervisor/Admin sebelum mengirim hasil arahan.',409);
+  }
   if(typeof note!=='string'||!note.trim()||note.trim().length>4000)throw new AppError('Catatan penyelesaian wajib, maksimal 4000 karakter',400);
   if(await processValue(record,'FOLLOW_UP_REQUIRE_EVIDENCE',true)&&(typeof evidence!=='string'||!evidence.trim()||evidence.trim().length>2000))throw new AppError('Bukti atau referensi hasil wajib diisi, maksimal 2000 karakter',400);
   const submission={id:randomUUID(),at:new Date().toISOString(),actorId:user.id,note:note.trim(),evidence:typeof evidence==='string'?evidence.trim():''};
@@ -44,7 +50,7 @@ export const reviewFollowUp=(id,user,{decision,note,submissionId})=>prisma.$tran
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
   ({actor:user}=await followUpActor(tx,user,'review'));
   if(!['ADMIN','SUPERVISOR'].includes(user.role))throw new AppError('Pemeriksaan hanya oleh Admin atau SPV',403);
-  if(!['ACCEPT','RETURN'].includes(decision)||typeof note!=='string'||!note.trim()||note.trim().length>2000)throw new AppError('Keputusan dan catatan pemeriksaan wajib diisi',400);
+  if(!['ACCEPT','RETURN'].includes(decision)||typeof note!=='string'||decision==='RETURN'&&!note.trim()||note.trim().length>2000)throw new AppError('Keputusan valid diperlukan; alasan wajib saat meminta perbaikan',400);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${id}`}))`;
   const record=await tx.staffActivity.findFirst({where:{id,...await followUpScope(user,tx)}});
   if(!record?.followUp)throw new AppError('Tindak lanjut tidak ditemukan',404);

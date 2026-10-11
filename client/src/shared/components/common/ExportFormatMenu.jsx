@@ -1,3 +1,4 @@
+import {notifyError} from '../../../services/notificationService';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   LuDownload,
@@ -49,7 +50,7 @@ export const ExportFormatMenu = ({
       setBusyFormat(key);
       await fn();
     } catch (err) {
-      console.error(`[ExportFormatMenu] Failed exporting ${key}:`, err);
+      notifyError(err.message || `Gagal mengekspor ${key}. Silakan coba kembali.`);
     } finally {
       setBusyFormat(null);
       setOpen(false);

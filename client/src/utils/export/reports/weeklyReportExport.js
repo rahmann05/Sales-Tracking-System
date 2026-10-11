@@ -112,7 +112,7 @@ function buildWeeklyReportBlueprint(input = {}, startDateArg, salesmanNameArg) {
   const basisNotes = formatReportBasisNotes(reportData?.basis);
 
   return {
-    domain: 'REPORT',
+    domain: 'REPORTS',
     filename: `Laporan_Mingguan_WTD_${dateCode}`,
     sheetName: 'LAPORAN_MINGGUAN',
     orientation: 'landscape',

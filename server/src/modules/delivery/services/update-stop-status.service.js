@@ -1,14 +1,14 @@
+import {automaticIssue} from './automatic-issue.service.js';
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {deliveryReceiptError} from '../../../../../shared/delivery-receipt.mjs';
 import {processValue} from '../../config/services/process-policy.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { getDynamicConfig } from '../../config/config.service.js';
 import { finalizeRoute, terminalStop, reconcilePackingInvoices } from './route-lifecycle.service.js';
 import {lockDestinationRoute,assertDestinationStart,flagIncompleteDestinations,flagMissingCheckout} from './destination-policy.service.js';
 import {deliveryRequest} from './delivery-request.service.js';
 import {recordMileageCheckpoint} from './vehicle-mileage-ledger.service.js';
-export async function recordStopResult(tx,stopId,data,driverId) {
+export async function recordStopResult(tx,stopId,data,driverId,{sharedVisitIds=[]}={}) {
   const stop=await tx.deliveryStop.findUnique({where:{id:stopId},include:{deliveryRoute:true,packingList:true,attendances:true}});
   if(!stop)throw new AppError('Stop pengiriman tidak ditemukan',404);
   if(stop.deliveryRoute.driverId!==driverId)throw new AppError('Rute bukan tugas Anda',403);
@@ -30,7 +30,7 @@ export async function recordStopResult(tx,stopId,data,driverId) {
   const receiptPolicy={DELIVERY_RECIPIENT_MODE:await processValue(stop.deliveryRoute,'DELIVERY_RECIPIENT_MODE','OPTIONAL'),DELIVERY_SIGNATURE_MODE:await processValue(stop.deliveryRoute,'DELIVERY_SIGNATURE_MODE','DISABLED')};
   const receiptError=deliveryReceiptError(status,data,receiptPolicy);
   if(receiptError)throw new AppError(receiptError,422);
-  const receiptEvidence=(data.recipientName?.trim()||data.signatureDataUrl)?{recipientName:data.recipientName.trim(),signatureDataUrl:data.signatureDataUrl||null,recordedBy:driverId,recordedAt:new Date().toISOString()}:undefined;
+  const receiptEvidence=(data.recipientName?.trim()||data.signatureDataUrl)?{recipientName:data.recipientName?.trim()||null,signatureDataUrl:data.signatureDataUrl||null,recordedBy:driverId,recordedAt:new Date().toISOString()}:undefined;
   const rejectedCartons=status==='REJECTED'?stop.allocatedCartons:status==='DELIVERED'?0:data.rejectedCartons;
   if(!Number.isInteger(rejectedCartons)||rejectedCartons<0||(status==='PARTIAL_REJECT'&&(!rejectedCartons||rejectedCartons>=stop.allocatedCartons)))throw new AppError('Jumlah karton ditolak tidak valid',400);
   const rejectedItems=status==='REJECTED'?stop.allocatedItems:status==='DELIVERED'?[]:data.rejectedItems||[];
@@ -42,13 +42,13 @@ export async function recordStopResult(tx,stopId,data,driverId) {
     if(new Set(rejectedInvoices.map(i=>i.invoiceId)).size!==rejectedInvoices.length || rejectedInvoices.reduce((n,i)=>n+i.cartons,0)!==rejectedCartons)throw new AppError('Rincian faktur ditolak harus sesuai jumlah karton',400);
     for(const i of rejectedInvoices)if(!Number.isInteger(i.cartons)||i.cartons<=0||i.cartons>((stop.allocatedInvoices||[]).find(a=>a.invoiceId===i.invoiceId)?.cartons||0))throw new AppError('Penolakan faktur melebihi alokasi',400);
   }
-  const incomplete=await assertDestinationStart(tx,stop);
+  const incomplete=await assertDestinationStart(tx,stop,sharedVisitIds);
   if(!stop.attendances.some(attendance=>attendance.type==='IN'))await recordMileageCheckpoint(tx,{routeId:stop.deliveryRouteId,stopId,kind:'STOP_RESULT',driverId});
   const changed=await tx.deliveryStop.updateMany({where:{id:stopId,status:'PENDING'},data:{status,rejectReason:status==='DELIVERED'?null:rejectReason.trim(),rejectedCartons,rejectedItems,rejectedInvoices,notes,photoUrl,receiptEvidence,completedAt:new Date()}});
   if(!changed.count)throw new AppError('Hasil sudah disimpan',409);
   await flagIncompleteDestinations(tx,stop,incomplete,driverId);
   if(missingOut)await flagMissingCheckout(tx,stop,data.missingCheckoutReason.trim(),driverId);
-  if(status!=='DELIVERED')await tx.deliveryIssue.create({data:{routeId:stop.deliveryRouteId,packingListId:stop.packingListId,stopId,title:'Penolakan pengiriman / tindak lanjut pelanggan',reason:rejectReason.trim(),ownerId:stop.deliveryRoute.createdById,createdById:driverId,dueAt:new Date(Date.now()+(await getDynamicConfig('DELIVERY_ISSUE_DEFAULT_HOURS',24))*3600000),history:[{action:'AUTO_REJECTION',actorId:driverId,at:new Date().toISOString()}]}});
+  if(status!=='DELIVERED')await automaticIssue(tx,{routeId:stop.deliveryRouteId,packingListId:stop.packingListId,stopId,title:'Penolakan pengiriman / tindak lanjut pelanggan',reason:rejectReason.trim(),ownerId:null,responsibleRole:'KEPALA_GUDANG',createdById:driverId,history:[{action:'AUTO_REJECTION',actorId:driverId,at:new Date().toISOString()}]});
   await reconcilePackingInvoices(tx,stop.packingListId);
   const stops=await tx.deliveryStop.findMany({where:{deliveryRouteId:stop.deliveryRouteId}});
   if(stops.every(s=>terminalStop(s.status)))await finalizeRoute(tx,stop.deliveryRouteId);

@@ -5,12 +5,13 @@ import {reviewPeople} from '../config/services/approval-readiness.service.js';
 import {effectivePolicy} from '../config/services/policy-resolver.service.js';
 import {validateShiftCorrection} from '../../../../shared/shift-policy.mjs';
 import {actionNames} from '../../../../shared/business-actions.mjs';
+import {attendanceSummary} from './attendance-report.service.js';
 
 export const shiftCorrectionInput=z.object({action:z.enum(actionNames('SHIFT_CORRECTION')),revision:z.number().int().nonnegative(),reason:z.string().trim().min(5).max(2000),checkInAt:z.string().datetime().optional(),checkOutAt:z.string().datetime().nullable().optional()}).strict();
 export async function pendingShiftCorrections(user){
  const actor=(await reviewPeople(prisma)).find(p=>p.id===user.id&&!p.deletedAt);
  if(actor?.role!=='ADMIN'||!['can_propose_shift_correction','can_review_shift_correction'].some(key=>actor.permissions[key]===true))throw new AppError('Akses koreksi shift tidak tersedia.',403);
- return prisma.staffActivity.findMany({where:{kind:'SHIFT',timeCorrection:{path:['pending','mode'],equals:'DUAL'}},include:{user:{select:{name:true,role:true}}},orderBy:[{checkInAt:'asc'},{id:'asc'}],take:100});
+ return (await prisma.staffActivity.findMany({where:{kind:'SHIFT',timeCorrection:{path:['pending','mode'],equals:'DUAL'}},include:{user:{select:{name:true,role:true}}},orderBy:[{checkInAt:'asc'},{id:'asc'}],take:100})).map(attendanceSummary);
 }
 export async function correctShiftTime(id,raw,user){
  const data=shiftCorrectionInput.parse(raw);

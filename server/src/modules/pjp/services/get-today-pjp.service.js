@@ -1,3 +1,4 @@
+import {attachAgendaInstructions} from '../../staff-attendance/follow-up-agenda.service.js';
 /** getTodayPjp - single-responsibility service (extracted from pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { buildDayRange } from "../../../utils/pagination.js";
@@ -31,5 +32,5 @@ export const getTodayPjp = async (userId) => {
     },
   });
 
-  return pjp ?? null;
+  return attachAgendaInstructions(pjp);
 };

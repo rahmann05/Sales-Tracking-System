@@ -7,7 +7,7 @@ const GROUPS=[
   {id:'field',label:'Kunjungan saya',icon:LuNavigation,description:'Mulai shift, dampingi sales, dan catat hasil supervisi.',tabs:[TAB_IDS.SPV_FIELD]},
   {id:'team',label:'Tim & jadwal',icon:LuUsers,description:'Atur anggota, wilayah outlet, dan jadwal RJP.',tabs:[TAB_IDS.TEAM_TRACKING,TAB_IDS.ROUTE_PLANNING]},
   {id:'outlets',label:'Outlet',icon:LuStore,description:'Kelola identitas pelanggan dan ketepatan lokasi toko.',tabs:[TAB_IDS.OUTLET_MANAGEMENT,TAB_IDS.OUTLET_VALIDATION,TAB_IDS.OUTLET_REGISTRATION,TAB_IDS.DASHBOARD]},
-  {id:'attention',label:'Tindak lanjut',icon:LuClipboardList,description:'Pantau temuan, tenggat, dan penyelesaian pekerjaan tim.',tabs:[TAB_IDS.SPV_ATTENTION]},
+  {id:'attention',label:'Perlu tindakan',icon:LuClipboardList,description:'Pantau temuan, tenggat, dan penyelesaian pekerjaan tim.',tabs:[TAB_IDS.SPV_ATTENTION]},
   {id:'reports',label:'Laporan',icon:LuChartColumn,description:'Evaluasi hasil operasional dan telusuri riwayat tim.',tabs:[TAB_IDS.REPORTS,TAB_IDS.OUTLET_REGISTRATION_REPORT]},
 ];
 const LABELS={

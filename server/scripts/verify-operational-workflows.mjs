@@ -53,13 +53,14 @@ const users=[],clusters=[],outlets=[],packing=[],registrations=[],routes=[];let 
 let count=0;const check=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
 const rejects=async(fn,status)=>{await assert.rejects(fn,status?e=>e.statusCode===status:undefined);count++;};
 const original={configs:prisma.systemConfig.findMany,config:prisma.systemConfig.findUnique,notify:prisma.notification.create,notifyMany:prisma.notification.createMany};
-let settings={PJP_WORKING_DAYS:'0,1,2,3,4,5,6',BYPASS_GEOFENCE_EMAILS:'',CUSTOMER_REG_REQUIRE_PHOTO:false,CUSTOMER_REG_REQUIRE_TAX_DOCUMENT:false,MINIMUM_VISIT_DURATION_MINUTES:0,ATTENDANCE_REQUIRE_ACTIVE_SHIFT:true};
+let settings={PJP_WORKING_DAYS:'0,1,2,3,4,5,6',BYPASS_GEOFENCE_EMAILS:'',CUSTOMER_REG_REQUIRE_PHOTO:false,CUSTOMER_REG_REQUIRE_TAX_DOCUMENT:false,MINIMUM_VISIT_DURATION_MINUTES:0,ATTENDANCE_REQUIRE_ACTIVE_SHIFT:true,ROUTING_PROVIDER:'OFF'};
 prisma.systemConfig.findMany=async()=>Object.entries(settings).map(([key,value])=>({key,value}));
 prisma.systemConfig.findUnique=async({where})=>where.key==='ROLE_DEFINITIONS'?{value:[{code:'CUSTOM_SALES',baseRole:'SALES',name:'Sales khusus',isSystem:false,defaultPermissions:{can_create_order:false}}]}:original.config({where});
 prisma.notification.create=async()=>({});prisma.notification.createMany=async()=>({count:0});
 const policy=patch=>{settings={...settings,...patch};invalidateConfigCache();};
 const user=async role=>{const u=await prisma.user.create({data:{name:`${prefix}-${role}`,email:`${randomUUID()}@example.invalid`,password:'fixture',role}});users.push(u.id);return u;};
 const outlet=async(clusterId,name)=>{const o=await prisma.outlet.create({data:{name:`${prefix}-${name}`,address:'Alamat pengujian',clusterId,latitude:-6.9,longitude:107.6}});outlets.push(o.id);return o;};
+const tripEvidence={latitude:-6.885229292442875,longitude:107.48966226359217,photoUrl:photo};
 const postAttendance=(stop,type,result)=>submitDriverAttendance(stop.id,{type,latitude:-6.9,longitude:107.6,photoUrl:photo,...(result?{result}:{})},driver.id);
 let admin,spv,foreignSpv,sales,foreignSales,driver,warehouse;
 try{
@@ -168,19 +169,19 @@ try{
  await rejects(()=>recordSupervisorVisit(spv,{action:'AUDIT',stopId:stopA.id,followUp:{ownerId:sales.id,dueDate:wibDateKey(),note:'Overwrite completed'}}),409);
  await recordSupervisorVisit(spv,{action:'VISIT_OUT',stopId:stopA.id});await recordShift(spv.id,'SHIFT_OUT');
  const assigned=await userAssignment({role:'CUSTOM_SALES'});check(assigned.role,'SALES');check(assigned.roleCode,'CUSTOM_SALES');const identity=await resolveIdentity({...sales,...assigned,permissions:{can_create_order:true}});check(identity.permissions.can_create_order,true);
- vehicle=await prisma.vehicle.create({data:{code:prefix,name:prefix,maxCartons:20,maxWeightKg:100,fuelKmPerLiter:5,fuelType:'DIESEL',fuelPricePerLiter:10000}});
+ vehicle=await prisma.vehicle.create({data:{code:prefix,name:prefix,photoUrl:photo,maxCartons:20,maxWeightKg:100,fuelKmPerLiter:5,fuelType:'DIESEL',fuelPricePerLiter:10000}});
  policy({PACKING_SOURCE_MODE:'BOTH',PACKING_ALLOW_SPLIT:true,DELIVERY_REQUIRE_PHOTO:true,DELIVERY_REQUIRE_GEOFENCE:true});
  const pl=await savePacking({sourceOrderId:deliveryOrder.id,outletId:b.id,totalCartons:10,totalWeight:20,items:[{sourceOrderItemId:sourceDeliveryOrder.items[0].id,lineId:sourceDeliveryOrder.items[0].id,name:product.name,sku:product.sku,quantity:100,unit:'unit'}],invoices:[{invoiceNumber:prefix,totalCartons:10,totalAmount:10000}]},admin.id);packing.push(pl.id);await transitionPacking(pl.id,'RELEASE',admin.id);
  const route=await createDeliveryRoute({date:wibDateKey(),vehicleId:vehicle.id,driverId:driver.id,totalDistanceKm:20,stops:[{packingListId:pl.id,outletId:b.id,sequence:1}]},warehouse.id);routes.push(route.id);const ds=route.stops[0];
  await rejects(()=>updateRouteStatus(route.id,'COMPLETED'),409);await rejects(()=>updateRouteStatus(route.id,'READY'),409);
  const prepare=async r=>{for(const action of ['PICK','CHECK','LOAD'])await routeAction(r.id,{action,note:'Confirm physical quantities',cartons:r.totalCartons,quantities:Object.fromEntries(r.stops.flatMap(s=>s.allocatedItems.map(i=>[`${s.id}:${i.lineId}`,i.quantity])))},warehouse);};
- await prepare(route);await routeAction(route.id,{action:'START',note:'Dispatch',odometer:0},driver);
- await rejects(()=>submitDriverAttendance(ds.id,{type:'IN',latitude:-7,longitude:107.6,photoUrl:photo},driver.id),422);
+ await prepare(route);await routeAction(route.id,{action:'START',...tripEvidence,note:'Dispatch',odometer:0},driver);
+ await rejects(()=>submitDriverAttendance(ds.id,{type:'IN',photoUrl:photo},driver.id),400);
  await rejects(()=>postAttendance(ds,'OUT',{status:'DELIVERED'}),409);await postAttendance(ds,'IN');await rejects(()=>postAttendance(ds,'IN'),409);
  await postAttendance(ds,'OUT',{status:'PARTIAL_REJECT',rejectReason:'Kemasan rusak',rejectedCartons:2,rejectedItems:[{lineId:pl.items[0].lineId,quantity:20}],rejectedInvoices:[{invoiceId:pl.invoices[0].id,cartons:2}]});
  check((await prisma.vehicle.findUnique({where:{id:vehicle.id}})).totalKm,0);check((await prisma.invoice.findFirst({where:{packingListId:pl.id}})).isDelivered,false);
  check(packingBalance(await prisma.packingList.findUnique({where:{id:pl.id},include:{deliveryStops:true}})).remainingCartons,0);
- await routeAction(route.id,{action:'RETURN',note:'Back to warehouse',odometer:20},driver);
+ await routeAction(route.id,{action:'RETURN',...tripEvidence,note:'Back to warehouse',odometer:20},driver);
  const inspection={note:'Karton dan barang sesuai',receivedCartons:2,reusableCartons:2,items:[{lineId:pl.items[0].lineId,received:20,reusable:20}],reusableInvoices:[{invoiceId:pl.invoices[0].id,cartons:2}]};
  await receiveReturn(ds.id,warehouse.id,inspection);await rejects(()=>receiveReturn(ds.id,warehouse.id,inspection),409);
  for(const issue of await prisma.deliveryIssue.findMany({where:{routeId:route.id,status:'OPEN'}}))await resolveIssue(issue.id,'Approved redelivery',warehouse);
@@ -188,8 +189,8 @@ try{
  const balance=packingBalance(await prisma.packingList.findUnique({where:{id:pl.id},include:{deliveryStops:true}}));check(balance.remainingCartons,2);check(balance.remainingItems[0].remaining,20);
  const partialOrder=(await getOrders(sales)).data.find(o=>o.id===deliveryOrder.id);
  check(partialOrder.fulfillmentLines[0].accepted,80);check(partialOrder.fulfillmentLines[0].remaining,20);
- const retry=await createDeliveryRoute({date:wibDateKey(),vehicleId:vehicle.id,driverId:driver.id,totalDistanceKm:10,stops:[{packingListId:pl.id,outletId:b.id,sequence:1}]},warehouse.id);routes.push(retry.id);await prepare(retry);await routeAction(retry.id,{action:'START',note:'Redelivery',odometer:20},driver);await postAttendance(retry.stops[0],'IN');await postAttendance(retry.stops[0],'OUT',{status:'DELIVERED'});
- await routeAction(retry.id,{action:'RETURN',note:'Returned',odometer:30},driver);await routeAction(retry.id,{action:'CLOSE',note:'Documents complete',documentsReturned:true},warehouse);
+ const retry=await createDeliveryRoute({date:wibDateKey(),vehicleId:vehicle.id,driverId:driver.id,totalDistanceKm:10,stops:[{packingListId:pl.id,outletId:b.id,sequence:1}]},warehouse.id);routes.push(retry.id);await prepare(retry);await routeAction(retry.id,{action:'START',...tripEvidence,note:'Redelivery',odometer:20},driver);await postAttendance(retry.stops[0],'IN');await postAttendance(retry.stops[0],'OUT',{status:'DELIVERED'});
+ await routeAction(retry.id,{action:'RETURN',...tripEvidence,note:'Returned',odometer:30},driver);await routeAction(retry.id,{action:'CLOSE',note:'Documents complete',documentsReturned:true},warehouse);
  check((await prisma.invoice.findFirst({where:{packingListId:pl.id}})).isDelivered,true);check((await prisma.vehicle.findUnique({where:{id:vehicle.id}})).totalKm,30);await rejects(()=>updateRouteStatus(retry.id,'COMPLETED'),409);check((await prisma.vehicle.findUnique({where:{id:vehicle.id}})).totalKm,30);
  const deliveredOrder=(await getOrders(sales)).data.find(o=>o.id===deliveryOrder.id);
  check(deliveredOrder.fulfillmentLines[0].accepted,100);check(deliveredOrder.fulfillmentLines[0].remaining,0);
@@ -199,11 +200,11 @@ try{
  const fullyRejectedPacking=await savePacking({outletId:b.id,totalCartons:2,totalWeight:4,items:[{lineId:`${prefix}-full-line`,name:product.name,sku:product.sku,quantity:20,unit:'unit'}],invoices:[{invoiceNumber:`${prefix}-FULL`,totalCartons:2,totalAmount:2000}]},admin.id);
  packing.push(fullyRejectedPacking.id);await transitionPacking(fullyRejectedPacking.id,'RELEASE',admin.id);
  const fullyRejectedTrip=await createDeliveryRoute({date:wibDateKey(),vehicleId:vehicle.id,driverId:driver.id,totalDistanceKm:10,stops:[{packingListId:fullyRejectedPacking.id,outletId:b.id,sequence:1}]},warehouse.id);routes.push(fullyRejectedTrip.id);
- await prepare(fullyRejectedTrip);await routeAction(fullyRejectedTrip.id,{action:'START',note:'Full rejection scenario',odometer:30},driver);
+ await prepare(fullyRejectedTrip);await routeAction(fullyRejectedTrip.id,{action:'START',...tripEvidence,note:'Full rejection scenario',odometer:30},driver);
  const fullyRejectedStop=fullyRejectedTrip.stops[0];await postAttendance(fullyRejectedStop,'IN');
  await postAttendance(fullyRejectedStop,'OUT',{status:'REJECTED',rejectReason:'Pelanggan menolak seluruh pengiriman',rejectedCartons:2,rejectedItems:[{lineId:fullyRejectedPacking.items[0].lineId,quantity:20}],rejectedInvoices:[{invoiceId:fullyRejectedPacking.invoices[0].id,cartons:2}]});
  check((await prisma.deliveryStop.findUnique({where:{id:fullyRejectedStop.id}})).status,'REJECTED');
- await routeAction(fullyRejectedTrip.id,{action:'RETURN',note:'All cartons returned',odometer:40},driver);
+ await routeAction(fullyRejectedTrip.id,{action:'RETURN',...tripEvidence,note:'All cartons returned',odometer:40},driver);
  await receiveReturn(fullyRejectedStop.id,warehouse.id,{note:'Seluruh barang kembali, tidak layak kirim ulang',receivedCartons:2,reusableCartons:0,items:[{lineId:fullyRejectedPacking.items[0].lineId,received:20,reusable:0}],reusableInvoices:[]});
  for(const issue of await prisma.deliveryIssue.findMany({where:{routeId:fullyRejectedTrip.id,status:'OPEN'}}))await resolveIssue(issue.id,'Pengembalian fisik sudah diperiksa dan ditindaklanjuti',warehouse);
  await routeAction(fullyRejectedTrip.id,{action:'CLOSE',note:'All return documents complete',documentsReturned:true},warehouse);
@@ -220,10 +221,10 @@ try{
  const scoped=await fetch(`${base}/orders`,{headers:headers(foreignSpv)});check(scoped.status,200);check((await scoped.json()).data.data.some(o=>o.id===order.id),false);
  await prisma.order.update({where:{id:rejected.id},data:{status:'PENDING_APPROVAL'}});
  const assignedAttention=await fetch(`${base}/delivery/issues`,{method:'POST',headers:headers(admin),body:JSON.stringify({orderId:rejected.id,ownerId:admin.id,title:'Periksa order tertahan',reason:'Konfirmasi rincian pelanggan',dueAt:new Date(Date.now()-60000).toISOString()})});check(assignedAttention.status,200);
- const assignedQueue=await fetch(`${base}/attention?category=ORDER&filter=OVERDUE&limit=100`,{headers:headers(admin)});
- const assignedRow=(await assignedQueue.json()).data.rows.find(r=>r.key===`order:${rejected.id}`);check(assignedRow.ownerId,admin.id);check(assignedRow.overdue,true);check(assignedRow.missingDeadline,false);
+ const assignedQueue=await fetch(`${base}/attention?category=ORDER&limit=100`,{headers:headers(admin)});
+ const assignedRow=(await assignedQueue.json()).data.rows.find(r=>r.key===`order:${rejected.id}`);check(assignedRow.ownerId,spv.id);check(assignedRow.overdue,false);check(assignedRow.missingOwner,false); // case owner/deadline must not reassign source order
  const supervisedQueue=await fetch(`${base}/attention?category=ORDER&limit=100`,{headers:headers(spv)});
- check((await supervisedQueue.json()).data.rows.find(r=>r.key===`order:${rejected.id}`).ownerId,admin.id);
+ check((await supervisedQueue.json()).data.rows.find(r=>r.key===`order:${rejected.id}`).ownerId,spv.id);
  const reviewTask=(await listFollowUps(sales,{status:'OPEN'})).find(r=>r.followUp.sourceId===extraVisit.id);
  const sentReview=await fetch(`${base}/staff-attendance/follow-ups/${reviewTask.id}`,{method:'PATCH',headers:headers(sales),body:JSON.stringify({note:'Dihubungi kembali',evidence:'Pemilik dihubungi pukul 11 WIB'})});check(sentReview.status,200);
  const sentRecord=(await sentReview.json()).data;check(sentRecord.followUp.status,'SUBMITTED');

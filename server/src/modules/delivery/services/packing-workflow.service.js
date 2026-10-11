@@ -10,16 +10,26 @@ import {mapInvoiceCommercial} from './invoice-mapping.service.js';
 import {unitSnapshot} from '../../../../../shared/product-units.mjs';
 import {packingSourceIds,packingOrderIds,packingOrderWhere} from '../../../../../shared/packing-orders.mjs';
 import {shipmentReady} from '../../../../../shared/shipment-document.mjs';
+import {existingOperation,operationHash} from '../../../utils/operation-request.js';
+import {packingDestination} from './packing-destination.service.js';
+import {preparePackingLoad,mapLoadInvoices,loadReadyError} from './packing-load.service.js';
+import {shipmentInvoiceRequired} from '../../../../../shared/shipment-document.mjs';
+import {isVehicleLoad,loadLogistics} from '../../../../../shared/packing-load.mjs';
 
 export const packingInclude = { outlet: true, invoices: true, deliveryStops: true, createdBy: { select: { id: true, name: true } } };
 const event = (action, userId, snapshot = {}) => ({ action, userId, at: new Date().toISOString(), ...snapshot });
 export const packingReady = shipmentReady;
 
 export async function savePacking(data, userId, id) {
+  const requestHash=data.requestId?operationHash(data):null;
   return prisma.$transaction(async tx => {
+    const previous=!id&&await existingOperation(tx,'packingList',data.requestId,requestHash,userId,{lock:true,include:packingInclude});
+    if(previous)return previous;
     const old = id ? await tx.packingList.findUnique({ where: { id }, include: packingInclude }) : null;
     if (id && !old) throw new AppError('Packing list tidak ditemukan', 404);
     const documentKind=old?.documentKind||data.documentKind||'PACKING';
+    const vehicleLoad=old?isVehicleLoad(old):data.loadPlanVersion===2;
+    if(old&&data.loadPlanVersion===2&&!vehicleLoad)throw new AppError('Dokumen lama tidak dapat diubah menjadi muatan multi toko. Buat packing list baru.',409);
     if(old&&data.documentKind&&data.documentKind!==documentKind)throw new AppError('Jenis dokumen tidak dapat diubah setelah dibuat.',409);
     if(!old&&documentKind==='MANIFEST'&&!await getDynamicConfig('PACKING_ALLOW_MANIFEST',false))throw new AppError('Pembuatan manifest dinonaktifkan oleh Admin.',409);
     const documentValues={PACKING_REQUIRE_INVOICE:await processValue(old,'PACKING_REQUIRE_INVOICE',true),MANIFEST_REQUIRE_INVOICE:await processValue(old,'MANIFEST_REQUIRE_INVOICE',false)};
@@ -29,17 +39,19 @@ export async function savePacking(data, userId, id) {
     if (!outlet) throw new AppError('Toko tidak ditemukan', 404);
     let sourceIds;try{sourceIds=packingSourceIds(data);}catch(error){throw new AppError(error.message,400);}
     if (mode === 'ORDER' && !sourceIds.length) throw new AppError('Mode admin mewajibkan referensi order', 400);
-    if(sourceIds.length>1&&!await processValue(old,'PACKING_ALLOW_MERGE_ORDERS',false))throw new AppError('Penggabungan order dinonaktifkan oleh Admin.',409);
+    if(!vehicleLoad&&sourceIds.length>1&&!await processValue(old,'PACKING_ALLOW_MERGE_ORDERS',false))throw new AppError('Penggabungan order dinonaktifkan oleh Admin.',409);
     // Stable lock order also covers removed sources during revision.
     for(const sourceId of [...new Set([...sourceIds,...packingOrderIds(old||{})])].sort())await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${sourceId}`}))`;
     const orders=[];
     for (const sourceId of sourceIds) {
       const order = await tx.order.findUnique({ where: { id: sourceId }, include: { pjpStop: true, items: { include: { product: true } } } });
-      if (!order || order.deletedAt || (order.outletId||order.pjpStop?.outletId) !== data.outletId) throw new AppError('Referensi order tidak sesuai toko', 400);
+      if (!order || order.deletedAt || (!vehicleLoad&&(order.outletId||order.pjpStop?.outletId) !== data.outletId)) throw new AppError('Referensi order tidak sesuai toko', 400);
       if (order.status === 'REJECTED') throw new AppError('Order ditolak tidak dapat menjadi referensi pengiriman', 400);
       if (order.status !== 'APPROVED' && (!pendingAllowed || !data.overrideReason?.trim())) throw new AppError('Referensi order pending memerlukan izin dan alasan override admin', 400);
       orders.push(order);
     }
+    const loadData=vehicleLoad?await preparePackingLoad(tx,data,orders):null;
+    if(!vehicleLoad&&packingDestination({outlet,sourceOrderIds:sourceIds},orders).destinationConflict)throw new AppError('Titik pengiriman pada order berbeda. Buat dokumen terpisah atau koreksi titik order sebelum menggabungkannya.',409);
     const items = data.items.map(i => ({ ...i, lineId: i.lineId || randomUUID() }));
     if (orders.length) {
       const siblings = await tx.packingList.findMany({where:{...packingOrderWhere(sourceIds),id:{not:id||''}},include:{deliveryStops:true}});
@@ -60,25 +72,43 @@ export async function savePacking(data, userId, id) {
       }
     }
     if(orders.length&&orders.some(order=>!items.some(item=>item.sourceOrderId===order.id)))throw new AppError('Setiap order yang dipilih harus menyertakan barang. Hapus sumber yang tidak digunakan.',400);
+    if(vehicleLoad)for(const item of items){
+      const destination=loadData.destinations.find(row=>item.sourceOrderId?row.sourceOrderIds.includes(item.sourceOrderId):row.id===data.items.find(line=>line.lineId===item.lineId)?.destinationId);
+      if(!destination)throw new AppError('Setiap barang harus memiliki tujuan yang sesuai order.',400);
+      item.destinationId=destination.id;
+    }
     if (new Set(items.map(i => i.lineId)).size !== items.length) throw new AppError('Identitas baris barang duplikat', 400);
-    const invoiceRows = [];
+    let invoiceRows = [];
     for (const invoice of data.invoices){
       invoiceRows.push({...mapInvoiceCommercial(invoice,items,orders),invoiceNumber:old?.invoices.some(i=>i.invoiceNumber===invoice.invoiceNumber)?invoice.invoiceNumber:await resolveBusinessCode('INVOICE',invoice.invoiceNumber,{db:tx})});
     }
+    if(vehicleLoad)invoiceRows=mapLoadInvoices(invoiceRows,items,loadData.destinations);
     if(invoiceRows.some(i=>i.items.length)){
       const errors=invoiceMappingErrors({items,invoices:invoiceRows});if(errors.length)throw new AppError(errors[0],400);
     }
     if (new Set(invoiceRows.map(i=>i.invoiceNumber)).size !== invoiceRows.length) throw new AppError('Nomor faktur duplikat dalam dokumen',409);
     const commercial=invoiceReconciliation({...data,items,invoices:invoiceRows.map((i,n)=>({...i,id:String(n)}))});
-    const ready = packingReady({ ...data,documentKind, items, invoices:invoiceRows },documentValues)&&commercial.status!=='AMOUNT_DIFFERENCE';
-    const status = autoRelease && ready ? 'RELEASED' : 'DRAFT';
+    const loadTotals=vehicleLoad?loadLogistics({...data,...loadData,items}):null;
+    if(vehicleLoad&&data.totalCartons!==loadTotals.totalCartons)throw new AppError('Total karton dokumen harus sama dengan jumlah seluruh tujuan.',400);
+    const loadError=vehicleLoad?(loadReadyError({...data,...loadData,items,invoices:invoiceRows},shipmentInvoiceRequired({documentKind},documentValues))||(invoiceRows.length?invoiceMappingErrors({items,invoices:invoiceRows})[0]:null)):null;
+    const ready = packingReady({ ...data,...(loadData||{}),documentKind, items, invoices:invoiceRows },documentValues)&&commercial.status!=='AMOUNT_DIFFERENCE'&&!loadError;
+    if(data.releaseAfterSave&&loadError)throw new AppError(loadError,422);
+    if(data.releaseAfterSave&&!ready)throw new AppError('Dokumen belum siap diserahkan. Lengkapi jumlah kemasan, rincian barang, dan faktur sesuai aturan; atau simpan draft.',422);
+    const status = (autoRelease||data.releaseAfterSave) && ready ? 'RELEASED' : 'DRAFT';
     const packingCode=old?.code || await resolveBusinessCode(documentKind==='MANIFEST'?'SHIPPING_MANIFEST':'PACKING_LIST',data.code,{db:tx});
     const history = [...(old?.history || []), event(old ? 'EDIT' : 'CREATE', userId, { before: old ? { items: old.items, totalCartons: old.totalCartons, notes: old.notes, invoices: old.invoices, sourceOrderId: old.sourceOrderId, sourceOrderIds:packingOrderIds(old), documentKind:old.documentKind } : null, after: { ...data, items, code:packingCode, invoices:invoiceRows }, status })];
-    const payload = { documentKind,policySnapshot:old?.policySnapshot||await capturePolicySnapshot(),outletId: data.outletId, sourceOrderId: sourceIds.length===1?sourceIds[0]:null,sourceOrderIds:sourceIds, source: orders.length ? (mode === 'MANUAL' ? 'MANUAL_REFERENCE' : 'ORDER') : 'MANUAL', items, totalCartons: data.totalCartons, totalWeight: data.totalWeight || 0, notes: data.notes, overrideReason: data.overrideReason || null, status, releasedAt: status === 'RELEASED' ? new Date() : null, history, revision: (old?.revision || 0) + 1 };
+    const payload = { ...(vehicleLoad?{loadPlanVersion:2,...loadData}:{}),documentKind,policySnapshot:old?.policySnapshot||await capturePolicySnapshot(),outletId: vehicleLoad?loadData.destinations[0].outletId:data.outletId, sourceOrderId: sourceIds.length===1?sourceIds[0]:null,sourceOrderIds:sourceIds, source: orders.length ? (mode === 'MANUAL' ? 'MANUAL_REFERENCE' : 'ORDER') : 'MANUAL', items, totalCartons: data.totalCartons, totalWeight: vehicleLoad?(loadTotals.weightComplete?loadTotals.knownWeightKg:null):data.totalWeight || 0, notes: data.notes, overrideReason: data.overrideReason || null, status, releasedAt: status === 'RELEASED' ? new Date() : null, history, revision: (old?.revision || 0) + 1 };
     if (old) await tx.invoice.deleteMany({ where: { packingListId: id } });
-    const invoices = { create: invoiceRows.map(i => ({ ...i, outletId: data.outletId })) };
+    if(!id&&data.requestId){payload.requestId=data.requestId;payload.requestHash=requestHash;}
+    const invoices = { create: invoiceRows.map(i => ({ ...i, outletId: vehicleLoad?i.outletId:data.outletId })) };
     return old ? tx.packingList.update({ where: { id }, data: { ...payload, invoices }, include: packingInclude }) : tx.packingList.create({ data: { ...payload, code: packingCode, createdById: userId, invoices }, include: packingInclude });
-  }, { isolationLevel: 'Serializable' });
+  }, { isolationLevel: 'Serializable' }).catch(async error=>{
+    if(error?.code==='P2034'||error?.code==='P2002'&&error.meta?.target?.includes('requestId')){
+      if(!id){const saved=await existingOperation(prisma,'packingList',data.requestId,requestHash,userId,{include:packingInclude});if(saved)return saved;}
+      throw new AppError('Dokumen atau jumlah order berubah saat diproses petugas lain. Perbarui sebelum menyimpan.',409);
+    }
+    throw error;
+  });
 }
 
 export async function transitionPacking(id, action, userId) {
@@ -95,6 +125,11 @@ export async function transitionPacking(id, action, userId) {
       if (!order || order.deletedAt || order.status === 'REJECTED' || (order.status !== 'APPROVED' && (!allowPending || !pl.overrideReason?.trim()))) throw new AppError('Referensi order tidak lagi memenuhi kebijakan pelepasan', 409);
     }
     const documentValues={PACKING_REQUIRE_INVOICE:await processValue(pl,'PACKING_REQUIRE_INVOICE',true),MANIFEST_REQUIRE_INVOICE:await processValue(pl,'MANIFEST_REQUIRE_INVOICE',false)};
+    if(action==='RELEASE'&&isVehicleLoad(pl)){
+      const loadError=loadReadyError(pl,shipmentInvoiceRequired(pl,documentValues));
+      if(loadError)throw new AppError(loadError,422);
+      const errors=invoiceMappingErrors(pl);if(pl.invoices.length&&errors.length)throw new AppError(errors[0],422);
+    }
     if (action === 'RELEASE' && (pl.status !== 'DRAFT' || !packingReady(pl,documentValues))) throw new AppError('Lengkapi barang, karton dan faktur yang diwajibkan aturan dokumen. Karton faktur terlampir harus sama dengan muatan.', 400);
     if(action==='RELEASE'&&invoiceReconciliation(pl).status==='AMOUNT_DIFFERENCE')throw new AppError('Nominal faktur berbeda dari barang dan harga order. Koreksi dokumen sebelum dilepas.',409);
     if (action === 'RECALL' && (!revisionAllowed || pl.status !== 'RELEASED')) throw new AppError('Penarikan revisi tidak diizinkan', 409);

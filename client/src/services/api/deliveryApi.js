@@ -10,6 +10,8 @@ export const deliveryApi = {
   getMyIssues: () => request('/delivery/my-issues'),
   routeAction: (id,data) => request(`/delivery/routes/${id}/actions`,{method:'POST',body:JSON.stringify(data)}),
   reportLocation: (id,data) => request(`/delivery/routes/${id}/location`,{method:'POST',body:JSON.stringify(data)}),
+  getIssues: (params={})=>request(`/delivery/issues?${queryString(params)}`),
+  changeIssue: (id,data)=>request(`/delivery/issues/${id}/actions`,{method:'PATCH',body:JSON.stringify(data)}),
   createIssue: data => request('/delivery/issues',{method:'POST',body:JSON.stringify(data)}),
   resolveIssue: (id,resolution) => request(`/delivery/issues/${id}/resolve`,{method:'PATCH',body:JSON.stringify({resolution})}),
   setOrderPromise: (id,data) => request(`/orders/${id}/promise`,{method:'PATCH',body:JSON.stringify(data)}),
@@ -91,5 +93,5 @@ export const deliveryApi = {
     return await request('/delivery/drivers');
   }
 };
-export const driverEvidenceRequest=(id,data)=>data.logicalResult?{endpoint:`/delivery/stops/${id}/status`,method:'PATCH',body:{requestId:data.requestId,...data.result,photoUrl:data.photoUrl,notes:data.notes}}:{endpoint:`/delivery/stops/${id}/attendance`,method:'POST',body:data};
+export const driverEvidenceRequest=(id,data)=>data.sharedVisit?{endpoint:`/delivery/stops/${id}/shared-visit`,method:'POST',body:data}:data.logicalResult?{endpoint:`/delivery/stops/${id}/status`,method:'PATCH',body:{requestId:data.requestId,...data.result,photoUrl:data.photoUrl,notes:data.notes}}:{endpoint:`/delivery/stops/${id}/attendance`,method:'POST',body:data};
 export const sendDriverEvidence=(id,data)=>{const req=driverEvidenceRequest(id,data);return request(req.endpoint,{method:req.method,body:JSON.stringify(req.body)});};

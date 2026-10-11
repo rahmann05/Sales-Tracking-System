@@ -1,3 +1,6 @@
+import {submitSharedVisit} from './services/shared-visit.service.js';
+import {listIssues,changeIssue} from './services/operational-issues.service.js';
+import {issueActionSchema} from './delivery.schema.js';
 import {assignReturnInspection} from './services/return-assignment.service.js';
 import {authorizeDomainAction} from '../../middlewares/domain-permission.middleware.js';
 import {findDeliveryRequest,cancelDeliveryRequest} from './services/delivery-request.service.js';
@@ -104,6 +107,7 @@ router.delete(
 // ═══════════════════════════════════════════════════════════════
 // Delivery Stop Routes — Supir (attendance & status)
 // ═══════════════════════════════════════════════════════════════
+router.post('/stops/:id/shared-visit',authorize('SUPIR'),authorizeWithPermission(['SUPIR'],'can_access_driver_map'),async(req,res,next)=>{try{res.json({data:await submitSharedVisit(req.params.id,req.body,req.user.id)});}catch(e){next(e);}});
 
 router.post(
   '/stops/:id/attendance',
@@ -144,8 +148,10 @@ router.get('/operations', monitor, execute(req=>operationsDashboard(req.query.da
 router.get('/my-issues', authorize('SUPIR'), execute(req=>prisma.deliveryIssue.findMany({where:{ownerId:req.user.id,status:'OPEN'},orderBy:{dueAt:'asc'}})));
 router.post('/routes/:id/actions', (req,res,next)=>req.user.role==='SUPIR'?authorizeWithPermission(['SUPIR'],'can_access_driver_map')(req,res,next):manage(req,res,next), validate(routeActionSchema), execute(req=>routeAction(req.params.id,routeActionSchema.parse({body:req.body}).body,req.user)));
 router.post('/routes/:id/location', authorize('SUPIR'), authorizeWithPermission(['SUPIR'],'can_access_driver_map'), validate(locationSchema), execute(req=>reportDriverLocation(req.params.id,locationSchema.parse({body:req.body}).body,req.user.id)));
-router.post('/issues', monitor, validate(issueSchema), execute(req=>createIssue(issueSchema.parse({body:req.body}).body,req.user)));
-router.patch('/issues/:id/resolve', authorizeDomainAction('RESOLVE_DELIVERY_ISSUE'), (req,res,next)=>req.user.role==='SUPIR'?authorizeWithPermission(['SUPIR'],'can_access_driver_map')(req,res,next):monitor(req,res,next), validate(resolutionSchema), execute(req=>resolveIssue(req.params.id,req.body.resolution,req.user)));
+router.get('/issues', execute(req=>listIssues(req.user,z.object({routeId:z.string().uuid().optional(),packingListId:z.string().uuid().optional(),orderId:z.string().uuid().optional(),salesVisitId:z.string().uuid().optional(),status:z.enum(['OPEN','ALL']).optional()}).parse(req.query))));
+router.patch('/issues/:id/actions', validate(issueActionSchema),execute(req=>changeIssue(req.params.id,req.body,req.user)));
+router.post('/issues', authorizeDomainAction('REPORT_OPERATIONAL_ISSUE'), validate(issueSchema), execute(req=>createIssue(issueSchema.parse({body:req.body}).body,req.user)));
+router.patch('/issues/:id/resolve', validate(resolutionSchema), execute(req=>resolveIssue(req.params.id,req.body.resolution,req.user)));
 router.patch('/stops/:id/return-assignment', monitor, execute(req=>assignReturnInspection(req.params.id,req.body,req.user)));
 router.post('/stops/:id/return', monitor, validate(returnSchema), execute(req=>receiveReturn(req.params.id,req.user.id,returnSchema.parse({body:req.body}).body)));
 router.put('/packing-lists/:id', authorize('ADMIN'), authorizeWithPermission(['ADMIN'],'can_manage_packing_list'), validate(updatePackingListSchema), ctrl.updatePackingList);

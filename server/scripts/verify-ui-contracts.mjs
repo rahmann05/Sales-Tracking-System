@@ -107,7 +107,7 @@ const adminGroups=getAdminNavigationGroups(workspaceFixture.user);
 const adminIds=adminGroups.flatMap(group=>group.items.map(item=>item.id));
 assert.equal(new Set(adminIds).size,adminIds.length,'Each admin page belongs to exactly one category');
 assert.deepEqual([...adminIds].sort(),getNavigationTabs(workspaceFixture.user).filter(tab=>![TAB_IDS.ROLE_WORKSPACE,TAB_IDS.OUTLET_REGISTRATION,TAB_IDS.DELIVERY_DRIVER_MAP].includes(tab.id)).map(tab=>tab.id).sort(),'Admin directory contains administrative and monitoring modules');
-const home=renderToStaticMarkup(<AdminLandingPage/>);assert.match(home,/Ruang kerja Anda/);assert.doesNotMatch(home,/order menunggu|Pekerjaan yang perlu dituntaskan|Akses cepat/);assert.match(home,/Tindak lanjut/);assert.match(home,/Packing list/);assert.doesNotMatch(home,/SectionSlider|Otorisasi Buka Kunci Presensi|slider/);
+const home=renderToStaticMarkup(<AdminLandingPage/>);assert.match(home,/Ruang kerja Anda/);assert.doesNotMatch(home,/order menunggu|Pekerjaan yang perlu dituntaskan|Akses cepat/);assert.match(home,/Perlu tindakan/);assert.match(home,/Packing list/);assert.doesNotMatch(home,/SectionSlider|Otorisasi Buka Kunci Presensi|slider/);
 assert.equal(adminGroups.length,7);assert.equal((home.match(/class="admin-module-card"/g)||[]).length,7);
 for(const role of ['SALES','SUPERVISOR','KEPALA_GUDANG','SUPIR'])for(const id of [TAB_IDS.ADMIN_PRODUCTS,TAB_IDS.ADMIN_PJP,TAB_IDS.ADMIN_ATTENDANCE,TAB_IDS.ADMIN_MASTERS])assert.equal(isTabPermissionAllowed(id,{role}),false,'Operational admin tools remain admin-only');
 globalThis.workspaceFixture.activeTab=TAB_IDS.DELIVERY_MONITOR;
@@ -119,7 +119,7 @@ const adminMobile=getAdminMobileNavigation(workspaceFixture.user);assert.deepEqu
 assert.equal(new Set([...adminMobile.primary,...adminMobile.secondary].map(tab=>tab.id)).size,adminIds.length+1);
 const restricted={role:'ADMIN',permissions:{can_manage_packing_list:false,can_manage_rjp:false,can_access_rjp:false}};
 assert.ok(!getAdminNavigationGroups(restricted).flatMap(group=>group.items).some(tab=>[TAB_IDS.ROUTE_PLANNING,TAB_IDS.DELIVERY_PACKING_LIST].includes(tab.id)));
-const attentionLoading=renderToStaticMarkup(<AttentionPanel/>);assert.match(attentionLoading,/Memuat antrean/);assert.match(attentionLoading,/Belum ada PIC/);assert.doesNotMatch(attentionLoading,/Tidak ada pekerjaan sesuai filter/);
+const attentionLoading=renderToStaticMarkup(<AttentionPanel/>);assert.match(attentionLoading,/Memuat pekerjaan/);assert.match(attentionLoading,/Untuk saya . tim saya/);assert.match(attentionLoading,/Menunggu pihak lain/);assert.match(attentionLoading,/Riwayat 30 hari/);assert.doesNotMatch(attentionLoading,/Belum ada PIC|<textarea|Tidak ada pekerjaan dalam pilihan ini/);
 const auditLoading=renderToStaticMarkup(<FollowUpPanel/>);assert.match(auditLoading,/Memuat tindak lanjut/);assert.doesNotMatch(auditLoading,/Tidak ada tugas sesuai status/);
 const reportFixture={basis:{...reportBasis('2026-10-08T02:00:00Z'),...assignmentReportBasis({rawRecords:[{}]}),channelNote:channelBasisNote,unverifiedChannelAmount:50},period:{monthName:'Oktober',year:2026},summary:{},salesmen:[]};
 for(const View of [WeeklyReportPdfView,MtdReportPdfView,DailyCallPdfView]){

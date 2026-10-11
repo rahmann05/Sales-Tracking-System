@@ -1,3 +1,4 @@
+import {notifyError} from '../../../services/notificationService';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { useDomainPermission } from '../../../shared/hooks/useDomainPermission';
 import { featureAvailable } from '../../../../../shared/operational-policy.mjs';
@@ -25,7 +26,7 @@ import {
 } from '../../../utils/export/reports/weeklyReportExport';
 
 const timestamp = value => new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-const download = (content, type, name) => downloadOperationalFile(content, name, type);
+const download = (content, type, name) => downloadOperationalFile(content, name, type).catch(error=>notifyError(error.message));
 
 export function ReportArchivePanel({ kind, period }) {
   const canCreate = useDomainPermission('REPORT_ARCHIVE');

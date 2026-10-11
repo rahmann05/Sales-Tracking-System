@@ -691,6 +691,7 @@ model PjpTemplateStop {
 }
 
 model Vehicle {
+    capacityProfile Json?
   photoUrl          String?   @db.Text
   photoUpdatedAt    DateTime?
   maintenancePolicy Json?
@@ -1057,6 +1058,12 @@ model OrderItem {
 // ══════════════════════════════════════════════════════════════════════════════
 
 model PackingList {
+    loadPlanVersion Int @default(1)
+    destinations Json @default("[]")
+    suggestedVehicleId String?
+    suggestedVehicleSnapshot Json?
+  requestId String? @unique
+  requestHash String?
   documentKind String @default("PACKING")
   policySnapshot Json?
   commercialReconciliation Json?
@@ -1091,6 +1098,8 @@ model PackingList {
 }
 
 model Invoice {
+    destinationId String?
+    sourceOrderIds String[] @default([])
   taxRoundingMode String @default("NEAREST")
   items Json @default("[]")
   taxRatePercent Float?
@@ -1115,6 +1124,8 @@ model Invoice {
 }
 
 model DeliveryRoute {
+  requestId String? @unique
+  requestHash String?
   policySnapshot Json?
   mileagePlan Json?
   estimatedTravelKm Float @default(0)
@@ -1164,6 +1175,7 @@ model DeliveryRoute {
 }
 
 model DeliveryStop {
+    packingDestinationId String?
   targetLatitude Float?
   targetLongitude Float?
   targetPointSource String?
@@ -1222,6 +1234,11 @@ model DeliveryPosition {
 }
 
 model DeliveryIssue {
+  salesVisitId String?
+  requestId String? @unique
+  requestHash String?
+  responsibleRole String @default("KEPALA_GUDANG")
+  supervisorId String?
   id String @id @default(uuid())
   routeId String?
   packingListId String?
@@ -1229,8 +1246,8 @@ model DeliveryIssue {
   stopId String?
   title String
   reason String
-  ownerId String
-  dueAt DateTime
+  ownerId String?
+  dueAt DateTime?
   status String @default("OPEN")
   resolution String?
   createdById String
@@ -1239,6 +1256,7 @@ model DeliveryIssue {
   history Json @default("[]")
   @@index([status, dueAt])
   @@index([routeId])
+  @@index([salesVisitId])
 }
 
 model DeliveryAttendance {

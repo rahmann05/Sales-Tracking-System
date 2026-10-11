@@ -32,7 +32,7 @@ export const updateVehicle = asyncHandler(async (req, res) => {
     body: req.body, 
     params: { id: req.params.id } 
   });
-  const vehicle = await vehicleService.updateVehicle(validated.params.id, validated.body);
+  const vehicle = await vehicleService.updateVehicle(validated.params.id, validated.body,req.user);
   res.json({
     status: 'success',
     data: vehicle,

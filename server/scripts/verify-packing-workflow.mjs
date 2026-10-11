@@ -17,7 +17,7 @@ assert.ok(['localhost','127.0.0.1','[::1]'].includes(host), 'Local DB only');
 const originalConfig = prisma.systemConfig.findMany;
 let policy = {};
 prisma.systemConfig.findMany = async () => Object.entries(policy).map(([key,value])=>({key,value}));
-const setPolicy = p => { policy=p; invalidateConfigCache(); };
+const setPolicy = p => { policy={ROUTING_PROVIDER:'OFF',...p}; invalidateConfigCache(); };
 const packingIds=[], orderIds=[]; let fixtureVehicle,fixtureDriver;
 let checks=0;
 const check = (actual,expected) => { assert.deepEqual(actual,expected); checks++; };
@@ -25,7 +25,7 @@ const rejects = async work => { await assert.rejects(work); checks++; };
 try {
  const admin = await prisma.user.findFirst({where:{role:'ADMIN',deletedAt:null}});
  const driver = await prisma.user.create({data:{name:'Packing verification',email:`${randomUUID()}@example.invalid`,password:'fixture',role:'SUPIR'}});fixtureDriver=driver.id;
- const vehicle = await prisma.vehicle.create({data:{code:randomUUID(),name:'Packing verification',maxCartons:100,maxWeightKg:1000,fuelKmPerLiter:5,fuelType:'DIESEL',fuelPricePerLiter:10000}});fixtureVehicle=vehicle.id;
+ const vehicle = await prisma.vehicle.create({data:{code:randomUUID(),name:'Packing verification',photoUrl:'https://example.invalid/fixture-vehicle.jpg',maxCartons:100,maxWeightKg:1000,fuelKmPerLiter:5,fuelType:'DIESEL',fuelPricePerLiter:10000}});fixtureVehicle=vehicle.id;
  const stop = await prisma.pjpStop.findFirst({include:{pjp:true}});
  const product = await prisma.product.findFirst({where:{deletedAt:null}});
  assert.ok(admin && driver && vehicle && stop && product,'Local master fixtures required');
@@ -46,9 +46,9 @@ try {
  // This fixture tests allocation/results, not attendance. Freeze an explicit
  // no-attendance policy rather than depending on historical global defaults.
  for(const route of [first,second])await prisma.deliveryRoute.update({where:{id:route.id},data:{policySnapshot:{...route.policySnapshot,values:{...route.policySnapshot.values,DELIVERY_ATTENDANCE_MODE:'OPTIONAL'}}}});
- await updateStopStatus(first.stops[0].id,{status:'DELIVERED',photoUrl:'data:image/png;base64,dGVzdA=='},driver.id);
+ await updateStopStatus(first.stops[0].id,{status:'DELIVERED',photoUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII='},driver.id);
  check((await prisma.invoice.findFirst({where:{packingListId:pl.id}})).isDelivered,false);
- await updateStopStatus(second.stops[0].id,{status:'DELIVERED',photoUrl:'data:image/png;base64,dGVzdA=='},driver.id);
+ await updateStopStatus(second.stops[0].id,{status:'DELIVERED',photoUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII='},driver.id);
  check((await prisma.invoice.findFirst({where:{packingListId:pl.id}})).isDelivered,true);
  await rejects(()=>updateStopStatus(second.stops[0].id,{status:'REJECTED',rejectReason:'retry'},driver.id));
  const order=await prisma.order.create({data:{pjpStopId:stop.id,createdBy:stop.pjp.userId,status:'PENDING_APPROVAL',totalValue:100,items:{create:{productId:product.id,quantity:100,unitPrice:1,subtotal:100}}},include:{items:true}});orderIds.push(order.id);

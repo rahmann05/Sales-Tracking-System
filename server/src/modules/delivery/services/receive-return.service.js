@@ -1,3 +1,4 @@
+import {automaticIssue} from './automatic-issue.service.js';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -27,6 +28,6 @@ export const receiveReturn = (stopId, userId, data) => prisma.$transaction(async
   if ((stop.allocatedInvoices || []).length && (new Set(invoices.map(i=>i.invoiceId)).size!==invoices.length || invoices.reduce((n,i)=>n+i.cartons,0)!==data.reusableCartons || invoices.some(i=>i.cartons>((stop.rejectedInvoices||[]).find(x=>x.invoiceId===i.invoiceId)?.cartons||0)))) throw new AppError('Karton layak kirim per faktur tidak sesuai',400);
   const changed = await tx.deliveryStop.updateMany({ where: { id: stopId, returnInspection: { equals: Prisma.DbNull } }, data: { returnReceivedAt: new Date(), returnReceivedBy: userId, returnNote: data.note.trim(), returnInspection: { ...data, actorId:userId, at:new Date().toISOString() }, reusableCartons:data.reusableCartons,reusableItems,reusableInvoices:invoices } });
   if (!changed.count) throw new AppError('Retur sudah diproses; muat ulang',409);
-  if(data.receivedCartons!==stop.rejectedCartons||data.reusableCartons!==data.receivedCartons||data.items.some(i=>i.reusable!==i.received || i.received!==expected.find(e=>e.lineId===i.lineId).quantity)) await tx.deliveryIssue.create({data:{routeId:stop.deliveryRouteId,stopId,packingListId:stop.packingListId,title:'Selisih / barang retur tidak layak kirim',reason:data.note,ownerId:stop.deliveryRoute.createdById,createdById:userId,dueAt:new Date(Date.now()+86400000)}});
+  if(data.receivedCartons!==stop.rejectedCartons||data.reusableCartons!==data.receivedCartons||data.items.some(i=>i.reusable!==i.received || i.received!==expected.find(e=>e.lineId===i.lineId).quantity)) await automaticIssue(tx,{routeId:stop.deliveryRouteId,stopId,packingListId:stop.packingListId,title:'Selisih / barang retur tidak layak kirim',reason:data.note,ownerId:stop.deliveryRoute.createdById,createdById:userId});
   return tx.deliveryStop.findUnique({where:{id:stopId}});
 }, {isolationLevel:'ReadCommitted'});

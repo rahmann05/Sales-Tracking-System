@@ -1,3 +1,4 @@
+import {notifyError} from '../../../services/notificationService';
 import { NikRegistryList } from './NikRegistryList';
 import { NikRegistryEditor } from './NikRegistryEditor';
 import React, { useState, useMemo } from 'react';
@@ -106,7 +107,7 @@ export const NikManagementModal = ({
   const dateCode = new Date().toISOString().split('T')[0];
   const nikExporters = exportImportNik(customerList, `IMPORT_NIK_SEMUA_${dateCode}`);
   const handleExportFiltered = () => {
-    exportImportNikExcel(filteredList, `IMPORT_NIK_TERFILTER_${dateCode}.xls`);
+    return exportImportNikExcel(filteredList, `IMPORT_NIK_TERFILTER_${dateCode}.xlsx`).catch(error=>notifyError(error.message));
   };
   return <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-surface border border-border-glass rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">

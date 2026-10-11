@@ -1,3 +1,4 @@
+import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi } from '../../../services/api';
 import {useApp} from '../../../context/AppContext';
@@ -9,7 +10,9 @@ export const DeliveryRouteBuilder = () => {
   const {user}=useApp();
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [planValue,setPlanValue]=useWorkspaceState('deliveryPlan','');
+  const showCreateForm=planValue==='1';
+  const setShowCreateForm=value=>setPlanValue(value?'1':'');
   const [page,setPage]=useState(1); const [total,setTotal]=useState(0);const [error,setError]=useState('');
   const fetchRoutes = useCallback(async () => {
     setLoading(true);

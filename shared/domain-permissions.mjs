@@ -1,6 +1,7 @@
 const all=['ADMIN','SUPERVISOR','SALES','KEPALA_GUDANG','SUPIR'];
 const define=(key,label,roles,categoryId,desc)=>({key,label,roles,categoryId,desc});
 export const DOMAIN_PERMISSIONS={
+ REPORT_OPERATIONAL_ISSUE:define('can_report_operational_issue','Laporkan masalah / keluhan',all,'warehouse','Hanya pada kunjungan, order, atau perjalanan yang dapat diakses akun.'),
  START_SHIFT:define('can_start_shift','Mulai shift sendiri',all,'team','Penutupan shift yang sudah aktif tetap tersedia.'),
  SALES_VISIT:define('can_record_sales_visit','Mulai kunjungan PJP Sales',['SALES'],'rjp','Penyelesaian kunjungan yang sudah aktif tetap tersedia.'),
  OFF_PJP:define('can_submit_off_pjp','Ajukan kunjungan luar PJP',['SALES'],'rjp','Pengajuan baru terpisah dari izin pemeriksa dan hasil manual.'),

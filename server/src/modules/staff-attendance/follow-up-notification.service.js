@@ -8,10 +8,10 @@ export async function notifyFollowUp(db, record, phase, actorId) {
     const eligible=followUpReviewers(owner,await reviewPeople(db),record.followUp.reviewerMode||'BOTH');
     recipients=eligible.some(p=>p.role==='SUPERVISOR')?eligible.filter(p=>p.role==='SUPERVISOR'):eligible;
   }
-  const titles = { REASSIGNED:'Tugas dialihkan ke PIC lain',ASSIGNED: 'Penugasan tindak lanjut', SUBMITTED: 'Hasil tindak lanjut menunggu pemeriksaan', RETURNED: 'Hasil tindak lanjut perlu dilengkapi', ACCEPTED: 'Hasil tindak lanjut diterima',COMPLETED_BY_POLICY:'Tugas selesai sesuai kebijakan' };
+  const titles = { REASSIGNED:'Arahan dialihkan ke petugas lain',ASSIGNED: 'Arahan pekerjaan', SUBMITTED: 'Hasil arahan menunggu pemeriksaan', RETURNED: 'Hasil arahan perlu dilengkapi', ACCEPTED: 'Hasil arahan diterima',COMPLETED_BY_POLICY:'Tugas selesai sesuai kebijakan' };
   if (recipients.length) await policyNotifications(db,{ data: recipients.filter(user => phase !== 'SUBMITTED' || user.id !== actorId).map(user => ({
     userId: user.id, type: `FOLLOW_UP_${phase}`, title: titles[phase],
-    message: `${record.outletName || 'Kunjungan'} · ${phase === 'REASSIGNED'?'Tugas telah dialihkan. Anda tidak lagi menjadi PIC tugas ini.':phase === 'SUBMITTED' ? 'Periksa hasil terbaru pada tindak lanjut kunjungan.' : `Tenggat: ${record.followUp.dueDate}. Periksa tugas untuk status dan instruksi terbaru.`}`,
+    message: `${record.outletName || 'Kunjungan'} · ${phase === 'REASSIGNED'?'Tugas telah dialihkan. Arahan ini kini ditangani petugas lain.':phase === 'SUBMITTED' ? 'Periksa hasil terbaru pada arahan kunjungan.' : `${record.followUp.dueDate?`Tenggat: ${record.followUp.dueDate}. `:''}Buka arahan untuk melihat tindakan dan instruksi terbaru.`}`,
     payload: { staffActivityId: record.id, phase },
   })) });
 }

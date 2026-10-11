@@ -68,12 +68,19 @@ try{
  const registration=await prisma.customerRegistration.create({data:{name:tag+'-registration',address:'Jalan Registrasi Nomor 12',salesmanId:sales.id,clusterId:cluster.id,registrationStatus:'SPV_APPROVED',policySnapshot:policy({REGISTRATION_ACTIVATION_REQUIRED_FIELDS:'city,address2,visitDays',REGISTRATION_ACTIVATION_REQUIRE_LOCATION:false,OUTLET_DUPLICATE_POLICY:'WARN'}),latitude:null,longitude:null}});registrations.push(registration.id);
  const activated=await finalizeAndRegisterByAdmin(registration.id,{clusterId:cluster.id,outletCode:tag+'-activated',registrationFields:{city:'Bandung',address2:'Blok B',visitDays:'SENIN,RABU'}},admin);outlets.push(activated.outlet);eq(activated.registration.city,'Bandung');eq(activated.outlet.visitSchedule.days,'SENIN,RABU');
  for(const kind of ['products','vehicles']){
-  const code=tag+'-'+kind,data=kind==='products'?{sku:code,name:'Produk uji',unit:'Karton',baseUnit:'Pak',unitsPerUnit:12,price:25000}:{code,name:'Kendaraan uji',maxWeightKg:1000,fuelKmPerLiter:8,fuelType:'Solar'};
+  const code=tag+'-'+kind,data=kind==='products'?{sku:code,name:'Produk uji',unit:'Karton',baseUnit:'Pak',unitsPerUnit:12,price:25000}:{code,name:'Kendaraan uji',maxWeightKg:1000,fuelKmPerLiter:8,fuelType:'Solar',photoUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII='};
   const rows=[{action:'UPSERT',data}],requestId=randomUUID(),p=policy({CODE_PRODUCT_SKU_MODE:'MANUAL',CODE_VEHICLE_MODE:'MANUAL'});
   const review=await withPolicy(p,()=>masterImport(kind,{rows},admin));eq(review.summary.created,1);
   const applied=await withPolicy(p,()=>masterImport(kind,{rows,token:review.token,requestId},admin,true));receipts.push(`_MASTER_IMPORT:${admin.id}:${requestId}`);eq(applied.created,1);
   const model=kind==='products'?'product':'vehicle',row=await prisma[model].findUnique({where:kind==='products'?{sku:code}:{code}});(kind==='products'?products:vehicles).push(row.id);
+  if(kind==='vehicles')eq(row.capacityProfile.status,'ESTIMATED');
   eq((await withPolicy(p,()=>masterImport(kind,{rows,token:review.token,requestId},admin,true))).created,1);
+  if(kind==='vehicles'){
+   await prisma.vehicle.update({where:{id:row.id},data:{capacityProfile:{status:'MEASURED',manufacturerReference:{label:'Fixture reference'}}}});
+   const changedRows=[{action:'UPDATE_ONLY',data:{...data,maxWeightKg:1100}}],capacityRequest=randomUUID(),capacityReview=await withPolicy(p,()=>masterImport(kind,{rows:changedRows},admin));
+   await withPolicy(p,()=>masterImport(kind,{rows:changedRows,token:capacityReview.token,requestId:capacityRequest},admin,true));receipts.push(`_MASTER_IMPORT:${admin.id}:${capacityRequest}`);
+   const updated=await prisma.vehicle.findUnique({where:{id:row.id}});eq(updated.capacityProfile.status,'ESTIMATED');eq(updated.capacityProfile.manufacturerReference.label,'Fixture reference');
+  }
   const nextRows=[{action:'UPDATE_ONLY',data:{...data,name:'Nama diperbarui'}}],next=await withPolicy(p,()=>masterImport(kind,{rows:nextRows},admin));await prisma[model].update({where:{id:row.id},data:{name:'Perubahan setelah pratinjau'}});
   await reject(()=>withPolicy(p,()=>masterImport(kind,{rows:nextRows,token:next.token,requestId:randomUUID()},admin,true)),409);
  }

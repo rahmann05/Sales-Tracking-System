@@ -28,6 +28,7 @@ export const getPackingLists = async (req, res, next) => {
 export const getPackingListById = async (req, res, next) => {
   try {
     const result = await deliveryService.getPackingListById(req.params.id);
+    if(req.user.role!=='ADMIN'&&result.status!=='RELEASED')throw new AppError('Dokumen masih draft Admin dan belum diserahkan ke gudang.',403);
     if (req.user.role !== 'ADMIN' && result.status !== 'RELEASED') throw new AppError('Dokumen belum dilepas admin', 403);
     res.json({ success: true, data: result });
   } catch (err) {

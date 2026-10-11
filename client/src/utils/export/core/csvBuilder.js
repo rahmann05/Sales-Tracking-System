@@ -14,6 +14,11 @@ export function buildDocumentCsv(blueprint) {
 
   const lines = [];
   const sections = blueprint.sections || [];
+  if (!blueprint.rawSheetOnly && blueprint.metaItems?.length) {
+    lines.push(['Atribut dokumen','Nilai'].map(escapeCsvField).join(','));
+    for (const item of blueprint.metaItems) lines.push([item.label,item.value].map(escapeCsvField).join(','));
+    lines.push('');
+  }
 
   sections.forEach((section, index) => {
     if (sections.length > 1 && section.title) {

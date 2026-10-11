@@ -1,3 +1,4 @@
+import {automaticIssue} from './automatic-issue.service.js';
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
 import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {processValue} from '../../config/services/process-policy.service.js';
@@ -11,9 +12,9 @@ import {deliveryRequest} from './delivery-request.service.js';
 import {recordMileageCheckpoint} from './vehicle-mileage-ledger.service.js';
 import {stopDestinationOutlet} from '../../../../../shared/driver-workspace.mjs';
 import {outletOperationalPoint} from '../../../../../shared/outlet-location.mjs';
-import {policyNotification} from '../../notifications/services/notification-policy.service.js';
-export const submitDriverAttendance = async(stopId,data,driverId)=>{
-  return prisma.$transaction(async tx=>{
+import {inTransaction} from '../../../utils/in-transaction.js';
+export const submitDriverAttendance = async(stopId,data,driverId,{db=prisma,sharedVisitIds=[]}={})=>{
+  return inTransaction(db,async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
   await lockDestinationRoute(tx,stopId);
   return deliveryRequest(tx,{stopId,data,driverId,kind:'ATTENDANCE'},async()=>{
@@ -30,15 +31,12 @@ export const submitDriverAttendance = async(stopId,data,driverId)=>{
   const distance=distanceToOutlet(data.latitude,data.longitude,stopDestinationOutlet(stop));
   const geofence=await processValue(stop.deliveryRoute,'DELIVERY_REQUIRE_GEOFENCE',false);
   if(geofence&&distance===null)throw new AppError('GPS atau koordinat tujuan belum tersedia untuk membandingkan lokasi.',422);
-  const incomplete=data.type==='IN'?await assertDestinationStart(tx,stop):[];
+  const incomplete=data.type==='IN'?await assertDestinationStart(tx,stop,sharedVisitIds):[];
   const attendance=await tx.deliveryAttendance.create({data:{gpsEvidence:await gpsEvidence(data,(key,fallback)=>processValue(stop.deliveryRoute,key,fallback)),deliveryStopId:stopId,driverId,type:data.type,latitude:data.latitude??null,longitude:data.longitude??null,photoUrl:data.photoUrl,notes:data.notes}});
   const reviewThreshold=await getDynamicConfig('DELIVERY_LOCATION_REVIEW_METERS',200);
   if(data.type==='IN'&&distance!=null&&distance>reviewThreshold){
     const point=outletOperationalPoint(stopDestinationOutlet(stop));
-    const admin=await tx.user.findFirst({where:{role:'ADMIN',deletedAt:null},orderBy:{createdAt:'asc'},select:{id:true}});
-    const ownerId=admin?.id||stop.deliveryRoute.createdById;
-    const issue=await tx.deliveryIssue.create({data:{routeId:stop.deliveryRouteId,packingListId:stop.packingListId,stopId,title:'Periksa selisih lokasi toko dan GPS supir',reason:`Selisih lurus GPS absensi dan titik toko ${Math.round(distance)} meter (hanya untuk pemeriksaan, bukan kilometer kendaraan). Periksa foto, akurasi GPS (±${data.accuracy==null?'tidak diketahui':`${Math.round(data.accuracy)} m`}), dan kecocokan titik toko; penyebab belum ditentukan.`,ownerId,createdById:driverId,dueAt:new Date(Date.now()+(await getDynamicConfig('DELIVERY_ISSUE_DEFAULT_HOURS',24))*3600000),history:[{action:'LOCATION_DISCREPANCY',actorId:driverId,at:new Date().toISOString(),attendanceId:attendance.id,distanceMeters:distance,thresholdMeters:reviewThreshold,target:{latitude:point.latitude,longitude:point.longitude,source:stop.targetPointSource||'OUTLET_MASTER'},attendance:{latitude:data.latitude,longitude:data.longitude,accuracy:data.accuracy??null},photoUrl:data.photoUrl}]}});
-    await policyNotification(tx,{data:{userId:ownerId,type:'DELIVERY_FOLLOW_UP',title:issue.title,message:issue.reason,payload:{issueId:issue.id,routeId:stop.deliveryRouteId,stopId}}});
+    await automaticIssue(tx,{routeId:stop.deliveryRouteId,packingListId:stop.packingListId,stopId,title:'Periksa selisih lokasi toko dan GPS supir',reason:`Selisih lurus GPS absensi dan titik toko ${Math.round(distance)} meter (hanya untuk pemeriksaan, bukan kilometer kendaraan). Periksa foto, akurasi GPS (±${data.accuracy==null?'tidak diketahui':`${Math.round(data.accuracy)} m`}), dan kecocokan titik toko; penyebab belum ditentukan.`,responsibleRole:'ADMIN',createdById:driverId,history:[{action:'LOCATION_DISCREPANCY',actorId:driverId,at:new Date().toISOString(),attendanceId:attendance.id,distanceMeters:distance,thresholdMeters:reviewThreshold,target:{latitude:point.latitude,longitude:point.longitude,source:stop.targetPointSource||'OUTLET_MASTER'},attendance:{latitude:data.latitude,longitude:data.longitude,accuracy:data.accuracy??null},photoUrl:data.photoUrl}]});
   }
   await recordMileageCheckpoint(tx,{routeId:stop.deliveryRouteId,stopId,attendanceId:attendance.id,kind:data.type,driverId,gps:data.latitude!=null&&data.longitude!=null?{latitude:data.latitude,longitude:data.longitude,accuracy:data.accuracy??null}:null,deviationMeters:distance});
   if(data.type==='IN'){
@@ -46,7 +44,7 @@ export const submitDriverAttendance = async(stopId,data,driverId)=>{
     await flagIncompleteDestinations(tx,stop,incomplete,driverId);
   }else{
     if(!data.result)throw new AppError('Hasil pengiriman wajib saat absen keluar',400);
-    await recordStopResult(tx,stopId,{...data.result,photoUrl:data.photoUrl,notes:data.notes},driverId);
+    await recordStopResult(tx,stopId,{...data.result,photoUrl:data.photoUrl,notes:data.notes},driverId,{sharedVisitIds});
   }
   return attendance;
   });

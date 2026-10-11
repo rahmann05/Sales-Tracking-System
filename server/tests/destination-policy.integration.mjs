@@ -48,7 +48,7 @@ try{
  await enter(permissive.stops[0]);await enter(permissive.stops[1]);
  eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:permissive.stops[0].id,type:'OUT'}}),0);
  eq((await prisma.deliveryStop.findUnique({where:{id:permissive.stops[0].id}})).status,'PENDING');
- let flags=await prisma.deliveryIssue.findMany({where:{routeId:permissive.id}});eq(flags.length,1);eq(flags[0].ownerId,warehouse.id);
+ let flags=await prisma.deliveryIssue.findMany({where:{routeId:permissive.id}});eq(flags.length,1);eq(flags[0].ownerId,null);eq(flags[0].responsibleRole,'KEPALA_GUDANG');
  await rejects(()=>returnTrip(permissive.id,'Tidak boleh melewati hasil barang'),409);
  await rejects(()=>run(()=>resolveIssue(flags[0].id,'Mengakui sendiri',driver)),403);
  await run(()=>resolveIssue(flags[0].id,'Diperiksa gudang, driver tetap wajib melengkapi hasil',warehouse));
@@ -83,7 +83,7 @@ try{
  eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:first.id,type:'OUT'}}),0);
  eq(await prisma.deliveryAttendance.count({where:{deliveryStopId:first.id,type:'IN'}}),1);
  let missingIssue=await prisma.deliveryIssue.findMany({where:{routeId:exception.id}});
- eq(missingIssue.length,1);eq(missingIssue[0].ownerId,warehouse.id);eq(missingIssue[0].reason,'GPS ponsel berhenti');eq(missingIssue[0].history[0].action,'RESULT_WITHOUT_CHECKOUT');
+ eq(missingIssue.length,1);eq(missingIssue[0].ownerId,null);eq(missingIssue[0].responsibleRole,'KEPALA_GUDANG');eq(missingIssue[0].reason,'GPS ponsel berhenti');eq(missingIssue[0].history[0].action,'RESULT_WITHOUT_CHECKOUT');
  await rejects(()=>run(()=>updateStopStatus(first.id,{status:'DELIVERED',missingCheckoutReason:'GPS ponsel berhenti'},driver.id)),409);
  eq(await prisma.deliveryIssue.count({where:{routeId:exception.id}}),1);
  for(const stop of rest){await enter(stop);await finish(stop);}

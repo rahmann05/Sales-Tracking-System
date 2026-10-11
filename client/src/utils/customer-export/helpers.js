@@ -5,5 +5,6 @@ export const escapeXml = unsafe => {
   if (unsafe === undefined || unsafe === null) return '';
   return String(unsafe).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 };
-export const downloadBlob=(content,filename,mimeType)=>downloadOperationalFile(content,filename,mimeType,'OUTLET');
+export const downloadBlob=(content,filename,mimeType)=>downloadOperationalFile(content,filename,mimeType,'OUTLET').catch(error=>{notifyError(error.message);return false;});
+import {notifyError} from '../../services/notificationService';
 import {downloadOperationalFile} from '../../services/operationalExportService';

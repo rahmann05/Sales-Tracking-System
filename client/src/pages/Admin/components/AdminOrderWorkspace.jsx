@@ -1,3 +1,8 @@
+import {ordersApi} from '../../../services/api';
+import {mapServerOrder} from '../../../utils/orderMapper';
+import {OperationalIssues} from '../../Warehouse/components/OperationalIssues';
+import {TAB_IDS} from '../../../constants/navigation';
+import {setWorkspaceValues} from '../../../shared/utils/workspaceNavigation';
 import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
 import React,{useState,useEffect,useRef} from 'react';
 import {LuSearch,LuRefreshCw,LuX} from 'react-icons/lu';
@@ -8,7 +13,7 @@ import {AdminOrderTable} from './AdminOrderTable';
 import {AdminCreateOrderDialog} from './AdminCreateOrderDialog';
 import {useApp} from '../../../context/AppContext';
 export function AdminOrderWorkspace({orders,filteredOrders,pendingOrders,approvedOrders,orderFilter,setOrderFilter,selectedSales,setSelectedSales,salesOptions,loading,loadApprovalData,handleDecision,pendingUnlockCount,manualPendingCount,unlockRequests,handleApproveUnlock,handleRejectUnlock,loadError,ordersOnly=false,hideHeading=false}){
-  const {user}=useApp();
+  const {user,setActiveTab}=useApp();
   const [createOpen,setCreateOpen]=useState(false);
   const [section,setSection]=useState('orders');
   const [search,setSearch]=useWorkspaceState('orderSearch',''),[selectedId,setSelectedId]=useWorkspaceState('orderDetail','');
@@ -16,12 +21,15 @@ export function AdminOrderWorkspace({orders,filteredOrders,pendingOrders,approve
   const query=search.trim().toLocaleLowerCase('id-ID');
   const visible=filteredOrders.filter(order=>`${order.code||''} ${order.outletName} ${order.salesName}`.toLocaleLowerCase('id-ID').includes(query));
   const currentPage=Math.min(page,Math.max(1,Math.ceil(visible.length/15)));
-  const selected=visible.find(order=>order.id===selectedId);
+  const [deepOrder,setDeepOrder]=useState(null),[detailError,setDetailError]=useState('');
+  useEffect(()=>{setDeepOrder(null);setDetailError('');if(!selectedId||orders.some(order=>order.id===selectedId))return;let active=true;ordersApi.getById(selectedId).then(response=>{if(active)setDeepOrder(mapServerOrder(response.data));}).catch(error=>{if(active)setDetailError(error.message);});return()=>{active=false;};},[selectedId,orders]);
+  const selected=orders.find(order=>order.id===selectedId)||deepOrder;
   const detailRef=useRef(null);
   useEffect(()=>{if(selected?.id){detailRef.current?.focus({preventScroll:true});if(window.matchMedia('(max-width:1199px)').matches)detailRef.current?.scrollIntoView({block:'start'});else detailRef.current?.closest('main')?.scrollTo({top:0});}},[selected?.id]);
   const changeFilter=value=>{setOrderFilter(value);setPage(1);};
   return <div className="workspace-page admin-order-workspace">
     {!hideHeading&&<header className="admin-page-heading"><div><p className="admin-eyebrow">Order / Pemeriksaan</p><h1>Order & persetujuan</h1><p>Periksa pesanan dan tetapkan keputusan sebelum diproses ke packing.</p></div><div className="app-actions">{user?.role==='ADMIN'&&<button className="admin-button primary" type="button" onClick={()=>setCreateOpen(true)}>Buat order Admin</button>}<button className="admin-button" type="button" disabled={loading} onClick={loadApprovalData}><LuRefreshCw/>{loading?'Memuat…':'Perbarui'}</button></div></header>}
+    {detailError&&<p role="alert" className="admin-feedback error">{detailError}</p>}
     {loadError&&<p className="admin-feedback error" role="alert">{loadError} Data terakhir tetap ditampilkan.</p>}
     {!ordersOnly&&<nav className="admin-local-tabs" aria-label="Jenis pemeriksaan">{[['orders','Order',pendingOrders.length],['unlock','Izin presensi outlet',pendingUnlockCount],['manual','Hasil manual',manualPendingCount]].map(([id,label,count])=><button type="button" key={id} aria-pressed={section===id} onClick={()=>setSection(id)}>{label}<span>{count}</span></button>)}</nav>}
     {section==='orders'&&<>
@@ -29,7 +37,7 @@ export function AdminOrderWorkspace({orders,filteredOrders,pendingOrders,approve
       <div className="admin-toolbar"><label className="admin-search"><LuSearch aria-hidden="true"/><input type="search" aria-label="Cari order" placeholder="Cari nomor, outlet, atau sales…" value={search} onChange={event=>{setSearch(event.target.value,{replace:true});setPage(1);}}/></label><label className="admin-select-label">Sales<select aria-label="Filter sales" value={selectedSales} onChange={event=>{setSelectedSales(event.target.value);setPage(1);}}><option value="ALL">Semua sales</option>{salesOptions.map(name=><option key={name}>{name}</option>)}</select></label><label className="admin-select-label">Status<select aria-label="Filter status order" value={orderFilter} onChange={event=>changeFilter(event.target.value)}><option value="ALL">Semua status</option><option value="PENDING">Menunggu</option><option value="APPROVED">Disetujui</option><option value="REJECTED">Ditolak</option></select></label></div>
       <div className={`admin-order-layout ${selected?'has-selection':''}`}>
         <section className="admin-panel admin-order-list" aria-label="Daftar order"><AdminOrderTable orders={visible.slice((currentPage-1)*15,currentPage*15)} selectedId={selectedId} onSelect={setSelectedId} loading={loading}/><footer className="admin-pagination"><span>{visible.length} order · Halaman {currentPage} / {Math.max(1,Math.ceil(visible.length/15))}</span><div><button type="button" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Sebelumnya</button><button type="button" disabled={currentPage*15>=visible.length} onClick={()=>setPage(currentPage+1)}>Berikutnya</button></div></footer></section>
-        {selected&&<aside className="admin-panel admin-order-detail" aria-label="Detail order"><div className="admin-panel-heading"><h2 ref={detailRef} tabIndex={-1}>Detail order</h2><button type="button" aria-label="Tutup detail order" onClick={()=>setSelectedId('')}><LuX/></button></div><PendingOrderCard key={selected.id} order={selected} onDecision={handleDecision}/></aside>}
+        {selected&&<aside className="admin-panel admin-order-detail" aria-label="Detail order"><div className="admin-panel-heading"><h2 ref={detailRef} tabIndex={-1}>Detail order</h2><button type="button" aria-label="Tutup detail order" onClick={()=>setSelectedId('')}><LuX/></button></div>{user.role==='ADMIN'&&selected.status==='APPROVED'&&user.permissions?.can_manage_packing_list!==false&&<div className="work-step-intro"><strong>Langkah berikutnya: siapkan dokumen muatan</strong><button type="button" className="admin-button primary" onClick={()=>{setWorkspaceValues({packingOrder:selected.id});setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST);}}>Siapkan pengiriman</button></div>}<PendingOrderCard key={selected.id} order={selected} onDecision={handleDecision}/><details><summary className="min-h-11 cursor-pointer">Masalah / keluhan order</summary><OperationalIssues reference={{orderId:selected.id}}/></details></aside>}
       </div>
     </>}
     {section==='unlock'&&<section className="admin-review-queue"><div><h2>Izin presensi outlet</h2><p>Pengecualian untuk sales yang belum menuntaskan presensi sebelumnya.</p></div>{unlockRequests.length?unlockRequests.map(request=><UnlockRequestCard key={request.id} request={request} onApprove={handleApproveUnlock} onReject={handleRejectUnlock}/>):<p className="admin-empty">Tidak ada permintaan izin presensi.</p>}</section>}

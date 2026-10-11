@@ -1,3 +1,5 @@
+import {FollowUpActions} from '../../../shared/components/common/FollowUpActions';
+import {OperationalIssues} from '../../Warehouse/components/OperationalIssues';
 import {VisitOutcomeAttachments} from '../../../shared/components/common/VisitOutcomeAttachments';
 import {OutletValidationVisit} from './OutletValidationVisit';
 import React from 'react';
@@ -17,6 +19,7 @@ export const SalesStopCard=React.memo(({stop,allStops=[],onAbsenIn,onAbsenOut,on
   const coordinates=Number.isFinite(stop.latitude)&&Number.isFinite(stop.longitude)&&Math.abs(stop.latitude)<=90&&Math.abs(stop.longitude)<=180;
   if(stop.validationOnly)return <article className="sales-visit-detail"><h3>{stop.outletName}</h3><p>{stop.address||'Alamat perlu dikonfirmasi'}</p><OutletValidationVisit stop={stop}/></article>;
   return <article className="sales-visit-detail"><div><span className="sales-status">{visitStatusLabel(stop.status)}</span><h3>{stop.outletName}</h3><p>{stop.address||'Alamat belum tercatat'}</p></div>
+    {stop.workInstructions?.length>0&&<section className="sales-result"><h4>Arahan supervisor pada kunjungan ini</h4>{stop.workInstructions.map(task=><FollowUpActions key={task.id} id={task.id} followUp={task.followUp} policySnapshot={task.policySnapshot} onChanged={()=>window.dispatchEvent(new Event('operational-data-changed'))}/>)}</section>}
     {stop.visitSession?.plannedFor&&<p className="sales-note">Kunjungan kembali dijadwalkan mulai {new Date(stop.visitSession.plannedFor).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB.</p>}
     <dl><div><dt>Kode outlet</dt><dd>{stop.outletCode||'Belum tercatat'}</dd></div><div><dt>Kontak pelanggan</dt><dd>{[stop.owner,stop.phone].filter(Boolean).join(' · ')||'Belum tercatat'}</dd></div><div><dt>Presensi masuk</dt><dd>{stop.checkInTime||'Belum tercatat'}</dd></div><div><dt>Presensi keluar</dt><dd>{stop.checkOutTime||'Belum tercatat'}</dd></div></dl>
     <p className="sales-note">{hasDistance?`Jarak terakhir: ${stop.currentDistance} m.`:'GPS diperiksa saat presensi.'} {settings.ATTENDANCE_ENFORCE_GEOFENCE?`Radius yang berlaku: ${radius} m.`:'Pembatasan radius sedang nonaktif.'}</p>
@@ -25,6 +28,7 @@ export const SalesStopCard=React.memo(({stop,allStops=[],onAbsenIn,onAbsenOut,on
     <SalesStopActions stop={stop} isLocked={isLocked} lockReason={lockReason} onRequestUnlock={onRequestUnlock} onAbsenIn={onAbsenIn} onAbsenOut={onAbsenOut} onInputOrder={onInputOrder} onClosedReport={onClosedReport}/>
     {stop.visitOutcome&&<section className="sales-result"><h4>Hasil kunjungan</h4><p>{visitOutcomeText(stop.visitOutcome)}</p><VisitOutcomeAttachments value={stop.visitOutcome}/></section>}
     {(stop.checkInNotes||stop.checkOutNotes)&&<section className="sales-result"><h4>Catatan presensi</h4>{stop.checkInNotes&&<p>Masuk: {stop.checkInNotes}</p>}{stop.checkOutNotes&&<p>Keluar: {stop.checkOutNotes}</p>}</section>}
+    <details><summary className="min-h-11 cursor-pointer">Masalah / keluhan (bila diperlukan)</summary><OperationalIssues reference={{salesVisitId:stop.id}}/></details>
     <details><summary>Informasi outlet & bukti</summary><div className="sales-outlet-extra"><OutletExcelMetadata stop={stop}/><OutletPhoto photoUrl={stop.googlePlaceDetails?.photoUrl||stop.photoUrl} customerName={stop.outletName}/><OutletGooglePlaceInfo googlePlaceDetails={stop.googlePlaceDetails}/>{coordinates&&<a href={`https://www.google.com/maps/search/?api=1&query=${stop.latitude},${stop.longitude}`} target="_blank" rel="noopener noreferrer">Buka titik outlet di peta</a>}{stop.checkInPhoto&&<a href={stop.checkInPhoto} target="_blank" rel="noopener noreferrer">Buka foto presensi masuk</a>}{stop.checkOutPhoto&&<a href={stop.checkOutPhoto} target="_blank" rel="noopener noreferrer">Buka foto presensi keluar</a>}</div></details>
   </article>;
 });

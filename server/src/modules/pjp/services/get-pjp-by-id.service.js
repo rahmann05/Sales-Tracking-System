@@ -1,3 +1,4 @@
+import {attachAgendaInstructions} from '../../staff-attendance/follow-up-agenda.service.js';
 import { assertSalesAccess } from '../../../utils/team-scope.js';
 /** getPjpById - single-responsibility service (extracted from pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
@@ -24,5 +25,5 @@ export const getPjpById = async (id, currentUser) => {
   }
 
   await assertSalesAccess(currentUser, pjp.userId);
-  return pjp;
+  return attachAgendaInstructions(pjp);
 };

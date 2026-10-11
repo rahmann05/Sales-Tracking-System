@@ -1,7 +1,9 @@
+import {useOperationRequest} from '../../../shared/hooks/useOperationRequest';
 import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import { PackingOutletSection } from './PackingOutletSection';
 import { PackingItemsSection } from './PackingItemsSection';
 import { PackingInvoicesSection } from './PackingInvoicesSection';
+import {PackingLoadForm} from './PackingLoadForm';
 import React, { useEffect, useRef, useState } from 'react';
 import { deliveryApi, outletsApi } from '../../../services/api';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
@@ -10,7 +12,11 @@ import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import {packingOrderIds} from '../../../../../shared/packing-orders.mjs';
 import {shipmentInvoiceRequired} from '../../../../../shared/shipment-document.mjs';
 import { LuCircleAlert, LuRefreshCw, LuPackage, LuX } from 'react-icons/lu';
-export function PackingDraftForm({
+export function PackingDraftForm(props){
+ if(props.document?.loadPlanVersion===2||!props.document&&(props.documentKind||'PACKING')==='PACKING')return <PackingLoadForm {...props}/>;
+ return <LegacyPackingDraftForm {...props}/>;
+}
+function LegacyPackingDraftForm({
   document: doc,
   order,
   orders,
@@ -18,6 +24,7 @@ export function PackingDraftForm({
   onSaved,
   onCancel
 }) {
+  const operation=useOperationRequest('packing');
   const featurePolicy=useFeaturePolicy('PACKING');
   const {settings,user}=useApp();
   const selectedOrders=orders|| (order?[order]:[]);
@@ -26,7 +33,7 @@ export function PackingDraftForm({
   const formRef=useRef(null);
   useEffect(()=>{if(user?.role==='ADMIN'){formRef.current?.closest('main')?.scrollTo({top:0});return;}formRef.current?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});},[]);
   const [code, setCode] = useState(doc?.code || '');
-  const [outlet, setOutlet] = useState(doc?.outlet || order?.pjpStop?.outlet || order?.customerSnapshot || null);
+  const [outlet, setOutlet] = useState(doc?.outlet || (order?{...order.outlet,...order.pjpStop?.outlet,...order.customerSnapshot,id:order.outletId||order.pjpStop?.outletId||order.pjpStop?.outlet?.id||order.customerSnapshot?.id}:null));
   const [search, setSearch] = useState('');
   const [outlets, setOutlets] = useState([]);
   const [searchingOutlets, setSearchingOutlets] = useState(false);
@@ -38,6 +45,7 @@ export function PackingDraftForm({
     sku: i.productSku??i.product?.sku??'',
     name: i.productName??i.product?.name??'',
     quantity: i.unpacked ?? i.quantity,
+    maxQuantity: i.unpacked ?? i.quantity,
     unitPrice:i.unitPrice,
     unit:i.unit||'unit',baseUnit:i.baseUnit??null,unitsPerUnit:i.unitsPerUnit??null
   })): [{
@@ -112,6 +120,7 @@ export function PackingDraftForm({
     try {
       const data = {
         documentKind,
+        releaseAfterSave:e.nativeEvent.submitter?.value==='RELEASE',
         code,
         outletId: outlet.id,
         sourceOrderId:sourceOrderIds.length===1?sourceOrderIds[0]:null,
@@ -129,13 +138,10 @@ export function PackingDraftForm({
           revision: doc.revision
         } : {})
       };
-      if (doc) {
-        await deliveryApi.updatePackingList(doc.id, data);
-      } else {
-        await deliveryApi.createPackingList(data);
-      }
+      const response=doc?await deliveryApi.updatePackingList(doc.id,data):await deliveryApi.createPackingList(await operation.identify(data));
+      const saved=response.data;operation.clear();
       initialSnapshot.current=snapshot;
-      onSaved(`Draft ${documentKind==='MANIFEST'?'manifest pengiriman':'packing list'} berhasil ${doc?'diperbarui':'dibuat'}!`);
+      onSaved(saved?.status==='RELEASED'?'Dokumen diserahkan ke gudang. Kepala gudang akan memeriksa muatan dan menyusun perjalanan.':'Draft tersimpan. Lengkapi dokumen, lalu serahkan ke gudang.',saved);
     } catch (e) {
       setError(e.message || 'Gagal menyimpan draft dokumen pengiriman');
     } finally {
@@ -174,7 +180,7 @@ export function PackingDraftForm({
               <LuPackage className="text-lg" />
             </span>
             <h2 className="text-lg font-black tracking-tight text-on-surface">
-              {doc ? `Edit Dokumen: ${doc.code}` : documentKind==='MANIFEST'?'Buat manifest pengiriman':'Buat draft packing list'}
+              {doc ? `Edit Dokumen: ${doc.code}` : documentKind==='MANIFEST'?'Buat manifest pengiriman':'Siapkan dokumen muatan'}
             </h2>
           </div>
           <p className="text-xs text-on-surface-variant">
@@ -193,9 +199,9 @@ export function PackingDraftForm({
         </div>}
 
       <fieldset disabled={busy} className="space-y-6">
-        <label className="block text-sm">Jenis dokumen<select className="form-input block" disabled={!!doc} value={documentKind} onChange={e=>{setDocumentKind(e.target.value);setCode('');}}><option value="PACKING">Packing list</option>{(settings.PACKING_ALLOW_MANIFEST||documentKind==='MANIFEST')&&<option value="MANIFEST">Manifest pengiriman tanpa dokumen packing</option>}</select></label>
+        <details><summary className="min-h-11 cursor-pointer">Jenis dokumen dan penomoran</summary><label className="block text-sm">Jenis dokumen<select className="form-input block" disabled={!!doc} value={documentKind} onChange={e=>{setDocumentKind(e.target.value);setCode('');}}><option value="PACKING">Packing list</option>{(settings.PACKING_ALLOW_MANIFEST||documentKind==='MANIFEST')&&<option value="MANIFEST">Manifest pengiriman tanpa dokumen packing</option>}</select></label>
         {documentKind==='MANIFEST'&&<p className="text-sm">Manifest mencatat muatan dan tujuan langsung. Dokumen ini tidak menyatakan barang sudah dipacking atau diperiksa. Bukti persiapan dan pengiriman tetap mengikuti aturan trip.</p>}
-        <BusinessCodeInput entity={documentKind==='MANIFEST'?'SHIPPING_MANIFEST':'PACKING_LIST'} value={code} onChange={setCode} existing={Boolean(doc)} />
+        <BusinessCodeInput entity={documentKind==='MANIFEST'?'SHIPPING_MANIFEST':'PACKING_LIST'} value={code} onChange={setCode} existing={Boolean(doc)} /></details>
         {/* ── Outlet Selection Section ── */}
         <PackingOutletSection doc={doc} outlet={outlet} outlets={outlets} search={search} searchingOutlets={searchingOutlets} setOutlet={setOutlet} setOutlets={setOutlets} setSearch={setSearch} sourceOrderId={sourceOrderId} />
 
@@ -230,9 +236,9 @@ export function PackingDraftForm({
 
         {/* ── Additional Notes & Reason ── */}
         <div className="space-y-3">
-          {sourceOrderId && <div>
+          {selectedOrders.some(source=>source.status==='PENDING_APPROVAL') && <div>
               <label className="block text-xs font-bold text-on-surface mb-1">
-                Alasan Override Admin (Wajib jika status order belum di-approve)
+                Alasan pengecualian: order belum disetujui
               </label>
               <textarea aria-label="Alasan pengecualian Admin" value={reason} onChange={e => setReason(e.target.value)} placeholder="Catatan justifikasi override pembuatan packing list dari order pending..." rows={2} className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface resize-none" />
             </div>}
@@ -245,15 +251,17 @@ export function PackingDraftForm({
           </div>
         </div>
 
+        <div className="work-step-intro"><strong>Langkah berikutnya: kepala gudang</strong>Setelah diserahkan, dokumen masuk antrean muatan untuk diperiksa dan dijadwalkan. Menyimpan draft belum menyerahkan muatan.</div>
         {/* ── Form Actions ── */}
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-glass">
           <button type="button" disabled={busy} onClick={cancel} className="px-4 py-2 rounded-xl border border-border-glass text-xs font-bold text-on-surface hover:bg-surface-container transition-all">
             Batal
           </button>
-          <button type="submit" disabled={busy || !outlet || !doc?.id&&!featurePolicy.canStart} title={!doc?.id?featurePolicy.reason:undefined} className="px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer">
+          <button type="submit" value="DRAFT" disabled={busy || !outlet || !doc?.id&&!featurePolicy.canStart} title={!doc?.id?featurePolicy.reason:undefined} className="px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer">
             <LuRefreshCw className={`text-xs ${busy ? 'animate-spin' : ''}`} />
-            <span>{busy ? 'Menyimpan Dokumen…' : doc ? 'Simpan Perubahan' : documentKind==='MANIFEST'?'Simpan Draft Manifest':'Simpan Draft Packing List'}</span>
+            <span>{busy ? 'Menyimpan Dokumen…' : doc ? 'Simpan Perubahan' : settings.PACKING_AUTO_RELEASE?'Simpan dokumen':'Simpan draft'}</span>
           </button>
+          {!settings.PACKING_AUTO_RELEASE&&<button type="submit" value="RELEASE" className="admin-button primary" disabled={busy||!outlet||!doc?.id&&!featurePolicy.canStart}>{busy?'Menyimpan…':'Serahkan ke gudang'}</button>}
         </div>
       </fieldset>
     </form>;

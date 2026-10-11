@@ -1,3 +1,7 @@
+import {issueScope} from '../delivery/services/operational-issues.service.js';
+import {canHandleIssue} from '../../../../shared/operational-issues.mjs';
+import {tripNextWork,presentAttention,canWorkTrip} from '../../../../shared/operational-attention.mjs';
+import {attentionHistory} from './attention-history.service.js';
 import {followUpReviewers} from '../../../../shared/follow-up-policy.mjs';
 import {reviewPeople} from '../config/services/approval-readiness.service.js';
 import {addSlaHours} from '../../../../shared/business-clock.mjs';
@@ -22,14 +26,13 @@ export async function collectAttentionRows(user,policy={}) {
  const spv=user.role==='SUPERVISOR',warehouse=user.role==='KEPALA_GUDANG';
  const stopSelect={status:true,allocatedItems:true,rejectedItems:true,reusableItems:true,returnInspection:true,allocatedCartons:true,returnReceivedAt:true,reusableCartons:true};
  const [orders,packings,routes,issues,activities,people]=await Promise.all([
-  prisma.order.findMany({where:{deletedAt:null,status:{in:spv?['PENDING_APPROVAL']:['PENDING_APPROVAL','APPROVED']},...(spv?{createdByUser:{supervisorId:user.id,deletedAt:null}}:{})},select:{id:true,code:true,status:true,policySnapshot:true,history:true,createdBy:true,createdAt:true,promisedAt:true,createdByUser:{select:{supervisorId:true,deletedAt:true,supervisor:{select:{id:true,name:true,role:true,deletedAt:true}}}},items:{select:{id:true,quantity:true,cancelledQuantity:true}},pjpStop:{select:{outlet:{select:{name:true}}}}}}),
+  prisma.order.findMany({where:{deletedAt:null,status:{in:spv?['PENDING_APPROVAL']:['PENDING_APPROVAL','APPROVED']},...(spv?{createdByUser:{supervisorId:user.id,deletedAt:null}}:{})},select:{id:true,code:true,status:true,customerSnapshot:true,policySnapshot:true,history:true,createdBy:true,createdAt:true,promisedAt:true,createdByUser:{select:{supervisorId:true,deletedAt:true,supervisor:{select:{id:true,name:true,role:true,deletedAt:true}}}},items:{select:{id:true,quantity:true,cancelledQuantity:true}},pjpStop:{select:{outlet:{select:{name:true}}}}}}),
   spv?[]:prisma.packingList.findMany({select:{id:true,code:true,status:true,createdAt:true,releasedAt:true,sourceOrderId:true,sourceOrderIds:true,totalCartons:true,items:true,outlet:{select:{name:true}},deliveryStops:{select:stopSelect}}}),
-  spv?[]:prisma.deliveryRoute.findMany({where:{closedAt:null,cancelledAt:null},select:{id:true,code:true,createdAt:true,onHold:true,departedAt:true,returnedAt:true,plannedStartAt:true,plannedEndAt:true,preparation:true,stops:{select:{id:true,rejectedCartons:true,returnInspection:true,outlet:{select:{name:true}}}},driverId:true,driver:{select:{name:true}}}}),
-  spv?[]:prisma.deliveryIssue.findMany({where:{status:'OPEN'},select:{id:true,title:true,reason:true,ownerId:true,dueAt:true,createdAt:true,orderId:true,packingListId:true,routeId:true}}),
+  spv?[]:prisma.deliveryRoute.findMany({where:{closedAt:null,cancelledAt:null},select:{id:true,code:true,status:true,policySnapshot:true,createdAt:true,onHold:true,departedAt:true,returnedAt:true,plannedStartAt:true,plannedEndAt:true,preparation:true,stops:{select:{id:true,rejectedCartons:true,returnInspection:true,outlet:{select:{name:true}}}},driverId:true,driver:{select:{name:true}}}}),
+  !spv&&user.permissions?.can_monitor_delivery===false?[]:prisma.deliveryIssue.findMany({where:{AND:[{status:'OPEN'},await issueScope(prisma,user)]}}),
   warehouse?[]:prisma.staffActivity.findMany({where:{AND:[await followUpScope(user),{OR:[{followUp:{path:['status'],equals:'OPEN'}},{followUp:{path:['status'],equals:'SUBMITTED'}}]}]},select:{id:true,userId:true,outletName:true,checkInAt:true,followUp:true,policySnapshot:true}}),
   prisma.user.findMany({where:{deletedAt:null,...(spv?{OR:[{id:user.id},{supervisorId:user.id}]}:{role:{in:warehouse?['ADMIN','KEPALA_GUDANG','SUPIR']:['ADMIN','KEPALA_GUDANG','SUPIR','SALES','SUPERVISOR']}})},select:{id:true,name:true,role:true,supervisorId:true}}),
  ]);
- const orderTasks=spv?await prisma.deliveryIssue.findMany({where:{status:'OPEN',orderId:{in:orders.map(o=>o.id)}},select:{orderId:true,ownerId:true,dueAt:true}}):issues;
  const blocked=warehouse?[]:await prisma.staffActivity.findMany({where:{checklist:{path:['autoFollowUp','status'],equals:'BLOCKED'},...(spv?{userId:user.id}:{})},select:{id:true,userId:true,outletName:true,checklist:true,followUp:true}});
  const reviewers=await reviewPeople(prisma);
  const rows=await exceptionAttentionRows(user),name=id=>people.find(p=>p.id===id)?.name||null;
@@ -38,28 +41,25 @@ export async function collectAttentionRows(user,policy={}) {
   for(const row of cases)rows.push({key:row.key,category:'EXCEPTION',stage:'AUTO_DELEGATION',title:`Auto-delegasi · ${row.value.label}`,since:row.value.updatedAt,ownerId:user.id,ownerName:user.name,responsibleRole:'ADMIN',needsReview:true,nextAction:row.value.lastError||'Menunggu pemindaian ulang. Periksa aturan, sakelar global dan status worker.',target:'SYSTEM_CONFIG'});
  }
  const reviewAssignments=await loadOrderReviewAssignments(orders.filter(order=>order.status==='PENDING_APPROVAL'));
- const taskFor=(field,id)=>(spv?orderTasks:issues).filter(i=>i[field]===id).sort((a,b)=>a.dueAt-b.dueAt)[0];
  for(const o of orders){
   if(o.status==='APPROVED'&&['FULFILLED','CLOSED_WITH_CANCELLATION'].includes(fulfillment(o,packings).fulfillmentStatus))continue;
-  const task=taskFor('orderId',o.id);
   const required=orderReviewRole(o),supervisor=o.createdByUser?.supervisor,teamOwner=required!=='ADMIN'&&o.status==='PENDING_APPROVAL'&&supervisor?.role==='SUPERVISOR'&&!supervisor.deletedAt?supervisor:null;
-  rows.push({key:`order:${o.id}`,category:'ORDER',stage:o.status==='PENDING_APPROVAL'?'ORDER_APPROVAL':'ORDER_FULFILLMENT',title:`${o.code||o.id} · ${o.pjpStop.outlet.name}`,since:o.createdAt,dueAt:o.status==='APPROVED'?o.promisedAt||task?.dueAt:task?.dueAt,ownerId:task?.ownerId||teamOwner?.id,ownerName:name(task?.ownerId)||teamOwner?.name,ownerSource:!task?.ownerId&&teamOwner?'TEAM_SUPERVISOR':null,responsibleRole:o.status==='PENDING_APPROVAL'?(required==='BOTH'?'ADMIN / SPV':required):'ADMIN / KEPALA GUDANG',nextAction:o.status==='PENDING_APPROVAL'?'Periksa dan putuskan order':'Periksa sisa pemenuhan dan rencana kirim',target:o.status==='PENDING_APPROVAL'?'APPROVAL':'DELIVERY',reference:{orderId:o.id}});
+  const balance=fulfillment(o,packings);
+  if(o.status==='APPROVED'&&!balance.fulfillmentLines.some(line=>line.unpacked>0))continue;
+  rows.push({key:`order:${o.id}`,category:'ORDER',stage:o.status==='PENDING_APPROVAL'?'ORDER_APPROVAL':'ORDER_FULFILLMENT',title:`${o.code||o.id} · ${o.pjpStop?.outlet?.name||o.customerSnapshot?.name||'Order'}`,since:o.createdAt,dueAt:o.status==='APPROVED'?o.promisedAt:null,ownerId:teamOwner?.id,ownerName:teamOwner?.name,ownerSource:teamOwner?'TEAM_SUPERVISOR':null,responsibleRole:o.status==='PENDING_APPROVAL'?(required==='BOTH'?'ADMIN / SPV':required):'ADMIN',nextAction:o.status==='PENDING_APPROVAL'?'Periksa dan putuskan order':'Buat dokumen untuk barang yang belum tercakup packing list',target:o.status==='PENDING_APPROVAL'?'APPROVAL':'PACKING_ORDER',reference:{orderId:o.id}});
  }
  for(const p of packings){
   if(p.status!=='DRAFT'&&packingBalance(p).remainingCartons<=0)continue;
-  const task=taskFor('packingListId',p.id);
-  rows.push({key:`packing:${p.id}`,category:'PACKING',stage:p.status==='DRAFT'?'PACKING_DRAFT':'PACKING_ALLOCATION',title:`${p.code} · ${p.outlet.name}`,since:p.releasedAt||p.createdAt,ownerId:task?.ownerId,ownerName:name(task?.ownerId),dueAt:task?.dueAt,responsibleRole:p.status==='DRAFT'?'ADMIN':'KEPALA GUDANG',nextAction:p.status==='DRAFT'?'Lengkapi dan lepaskan dokumen':'Alokasikan sisa muatan ke trip',target:'PACKING',reference:{packingListId:p.id}});
+  rows.push({key:`packing:${p.id}`,category:'PACKING',stage:p.status==='DRAFT'?'PACKING_DRAFT':'PACKING_ALLOCATION',title:`${p.code} · ${p.outlet.name}`,since:p.releasedAt||p.createdAt,responsibleRole:p.status==='DRAFT'?'ADMIN':'KEPALA GUDANG',nextAction:p.status==='DRAFT'?'Lengkapi dan serahkan dokumen':'Jadwalkan muatan yang belum masuk perjalanan',target:'PACKING',reference:{packingListId:p.id}});
  }
  for(const r of routes){
-  const task=taskFor('routeId',r.id),inTransit=r.departedAt&&!r.returnedAt;
-  rows.push({key:`trip:${r.id}`,category:'TRIP',stage:r.returnedAt?'TRIP_CLOSE':r.departedAt?'TRIP_DELIVERY':'TRIP_START',title:r.code,since:r.returnedAt||r.departedAt||r.createdAt,ownerId:inTransit?r.driverId:task?.ownerId,ownerName:inTransit?r.driver.name:name(task?.ownerId),dueAt:(r.returnedAt?null:r.departedAt?r.plannedEndAt:r.plannedStartAt)||task?.dueAt,responsibleRole:r.returnedAt?'KEPALA GUDANG':r.departedAt?'SUPIR':'KEPALA GUDANG',nextAction:r.onHold?'Tangani alasan trip ditahan':r.returnedAt?'Rekonsiliasi dan tutup trip':r.departedAt?'Pantau perjalanan dan hasil toko':'Selesaikan persiapan lalu berangkatkan',target:'DELIVERY',reference:{routeId:r.id}});
-  for(const stop of r.stops||[])if(stop.rejectedCartons>0&&!stop.returnInspection){const task=r.preparation?.returnTasks?.[stop.id],owner=people.find(p=>p.id===task?.ownerId&&['ADMIN','KEPALA_GUDANG'].includes(p.role));rows.push({key:`return:${stop.id}`,category:'RETURN',stage:'RETURN_INSPECTION',needsReview:true,title:`${r.code} · retur ${stop.outlet?.name||''}`,since:task?.assignedAt||r.returnedAt||r.createdAt,dueAt:task?.dueAt,ownerId:owner?.id,ownerName:owner?.name,responsibleRole:'KEPALA GUDANG',nextAction:'Periksa jumlah fisik dan kelayakan barang kembali',target:'DELIVERY',reference:{routeId:r.id,stopId:stop.id}});}
-  for(const [stage,task] of Object.entries(r.preparation?.tasks||{}))if(!r.preparation?.[stage])rows.push({key:`prep:${r.id}:${stage}`,category:'PREPARATION',title:`${r.code} · ${stage}`,since:task.assignedAt||r.createdAt,dueAt:task.dueAt,ownerId:task.ownerId,ownerName:task.ownerName,responsibleRole:'KEPALA GUDANG',nextAction:task.note||`Selesaikan ${stage}`,target:'DELIVERY',reference:{routeId:r.id}});
+  const work=tripNextWork(r);
+  rows.push({key:`trip:${r.id}`,category:work.stage==='RETURN_INSPECTION'?'RETURN':'TRIP',title:r.code,since:r.returnedAt||r.departedAt||r.createdAt,dueAt:work.dueAt||(r.returnedAt?null:r.departedAt?r.plannedEndAt:r.plannedStartAt),...work,actionTitle:work.nextAction,actionableForUser:canWorkTrip(user,work),target:work.stage==='RETURN_INSPECTION'?'DELIVERY':'ROUTE',reference:{routeId:r.id,...(work.stopId?{stopId:work.stopId}:{})}});
  }
- for(const i of issues)rows.push({key:`issue:${i.id}`,category:'ISSUE',title:i.title,since:i.createdAt,dueAt:i.dueAt,ownerId:i.ownerId,ownerName:name(i.ownerId),responsibleRole:'PIC TINDAK LANJUT',nextAction:i.reason,target:'DELIVERY',issue:i});
+ for(const i of issues)rows.push({key:`issue:${i.id}`,category:'ISSUE',title:i.title,since:i.createdAt,dueAt:i.dueAt,ownerId:i.ownerId,ownerName:name(i.ownerId),responsibleRole:i.responsibleRole||'KEPALA_GUDANG',actionTitle:'Tangani masalah / keluhan',actionableForUser:canHandleIssue(user,i)&&(!i.ownerId||i.ownerId===user.id||user.role==='ADMIN'),nextAction:i.reason,target:'ISSUE',reference:{...(i.routeId?{routeId:i.routeId}:{}),...(i.orderId?{orderId:i.orderId}:{}),...(i.packingListId?{packingListId:i.packingListId}:{})},issue:i});
  for(const a of blocked)if(!a.followUp)rows.push({key:`auto-followup:${a.id}`,category:'VISIT',stage:'AUTO_FOLLOW_UP',title:`${a.outletName||'Supervisi'} · tugas otomatis belum terbentuk`,since:a.checklist.autoFollowUp.at,ownerId:a.userId,ownerName:name(a.userId),responsibleRole:'ADMIN / SPV',nextAction:'Perbaiki penugasan dan bentuk tugas dari temuan yang tersimpan',target:'AUTO_FOLLOW_UP',activityId:a.id,blockedFollowUp:a.checklist.autoFollowUp});
- for(const a of activities){const f=a.followUp,review=f.status==='SUBMITTED',pic=people.find(p=>p.id===f.ownerId),reviewer=review?followUpReviewers(pic,reviewers,f.reviewerMode||'BOTH')[0]:null;
-  rows.push({key:`visit:${a.id}`,category:'VISIT',stage:review?'FOLLOW_UP_REVIEW':'FOLLOW_UP',title:a.outletName||'Tindak lanjut kunjungan',since:review?f.submission?.at:f.createdAt||a.checkInAt,dueDate:f.dueDate,ownerId:review?reviewer?.id:f.ownerId,ownerName:review?reviewer?.name:f.ownerName||name(f.ownerId),ownerSource:reviewer?'TEAM_SUPERVISOR':null,responsibleRole:review?'SPV / ADMIN':'SALES / SPV',nextAction:review?'Periksa hasil dan bukti, lalu terima atau minta perbaikan':f.note,target:'FOLLOW_UP',activityId:a.id,status:f.status,followUp:f,policySnapshot:a.policySnapshot});}
+ for(const a of activities){const f=a.followUp,review=f.status==='SUBMITTED',pic=people.find(p=>p.id===f.ownerId),eligible=review?followUpReviewers(pic,reviewers,f.reviewerMode||'BOTH'):[],reviewer=eligible.find(person=>person.role==='SUPERVISOR')||eligible[0];
+  rows.push({key:`visit:${a.id}`,category:'VISIT',stage:review?'FOLLOW_UP_REVIEW':'FOLLOW_UP',title:a.outletName||'Arahan kunjungan',since:review?f.submission?.at:f.createdAt||a.checkInAt,dueDate:f.dueDate,ownerId:review?reviewer?.id:f.ownerId,ownerName:review?reviewer?.name:f.ownerName||name(f.ownerId),...(review?{actionableForUser:eligible.some(person=>person.id===user.id)}:{}),ownerSource:reviewer?'TEAM_SUPERVISOR':null,responsibleRole:review?'SPV / ADMIN':'SALES / SPV',nextAction:review?'Periksa hasil dan bukti, lalu terima atau minta perbaikan':f.note,target:'FOLLOW_UP',activityId:a.id,status:f.status,followUp:f,policySnapshot:a.policySnapshot});}
  const locationRows=await outletLocationAttentionRows(user,policy);
  const outletReviews=warehouse||user.permissions?.can_validate_outlet===false?[]:await prisma.outletReview.findMany({where:{status:{in:['OPEN','WAITING_FIELD']},outlet:await reviewScope(user,prisma)},include:{outlet:{include:{cluster:true}},fieldTasks:{where:{status:{in:['OPEN','SUBMITTED']}},take:1}}});
  for(const review of outletReviews){
@@ -79,10 +79,16 @@ export async function collectAttentionRows(user,policy={}) {
    const supervisor=assignment?orders.find(order=>order.id===row.reference?.orderId)?.createdByUser?.supervisor:null;
    const fallback=required!=='ADMIN'&&supervisor?.role==='SUPERVISOR'&&!supervisor.deletedAt?supervisor:null;
    const assigned=assignment?{approvalAssignment:assignment,ownerId:assignment.ownerId?(assignment.ownerValid?assignment.ownerId:null):fallback?.id,ownerName:assignment.ownerId?(assignment.ownerValid?assignment.ownerCurrentName||assignment.ownerName:null):fallback?.name,ownerSource:assignment.ownerId?'MANUAL_REVIEWER':fallback?'TEAM_SUPERVISOR':null,dueAt:assignment.dueAt||null}:{};
-   return applyAttentionSla({...row,...assigned,needsReview:row.needsReview||row.stage==='ORDER_APPROVAL'||row.status==='SUBMITTED'},policy);
+   const merged={...row,...assigned,needsReview:row.needsReview||row.stage==='ORDER_APPROVAL'||row.status==='SUBMITTED'};
+   if(row.target==='EXCEPTION')merged.actionableForUser=row.canDecide===true;
+   if(merged.stage==='ORDER_APPROVAL'&&!assignment?.ownerId)merged.actionableForUser=required==='BOTH'?['ADMIN','SUPERVISOR'].includes(user.role):required===user.role;
+   if(assignment?.ownerValid===false)merged.actionableForUser=user.role==='ADMIN';
+   return presentAttention(applyAttentionSla(merged,policy),user);
  }),people:people.filter(p=>['ADMIN','KEPALA_GUDANG','SUPIR'].includes(p.role))};
 }
 export async function getAttention(user,query={}){
+ if(!['ADMIN','SUPERVISOR','KEPALA_GUDANG'].includes(user?.role))throw new AppError('Tidak berwenang membuka antrean pekerjaan',403);
+ if(query.filter==='HISTORY')return attentionHistory(user,{page:1,limit:25,...query});
  const policy=await loadAttentionPolicy(),{rows,people}=await collectAttentionRows(user,policy);
  return {...paginateAttention(rows,{...query,actorId:user.id}),generatedAt:new Date().toISOString(),people,policyNote:'SLA memakai jam kalender/jam kerja WIB sesuai pengaturan dan kebijakan saat ini untuk pekerjaan tanpa tenggat eksplisit. Nol berarti belum aktif. PIC dari tim SPV adalah penanggung jawab berdasarkan keanggotaan saat ini; penugasan pemeriksa order oleh Admin didahulukan.'};
 }

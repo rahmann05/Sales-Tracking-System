@@ -1,0 +1,13 @@
+import React,{useState} from 'react';
+import {staffAttendanceApi} from '../../../services/api';
+import {useApp} from '../../../context/AppContext';
+import {followUpAllowed} from '../../../../../shared/follow-up-policy.mjs';
+import {wibDateKey} from '../../../../../shared/visit-metrics.mjs';
+import {TAB_IDS} from '../../../constants/navigation';
+import {setWorkspaceValues} from '../../utils/workspaceNavigation';
+export function FollowUpVisitSchedule({id,followUp:f,onChanged}){
+ const {user,setActiveTab}=useApp(),[date,setDate]=useState(wibDateKey()),[pjpCode,setPjpCode]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ if(f.scheduledVisit)return <div className="work-step-intro"><strong>Kunjungan dijadwalkan {f.scheduledVisit.date}</strong><p>Arahan terpasang di agenda Sales. Gunakan satu kunjungan yang sama untuk absensi dan hasil; arahan baru selesai setelah hasilnya dicatat.</p>{user.role==='SALES'&&f.scheduledVisit.date===wibDateKey()&&<button type="button" className="admin-button primary" onClick={()=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true}))){setWorkspaceValues({salesStop:f.scheduledVisit.stopId,salesVisitView:'pjp'});setActiveTab(TAB_IDS.SALES_VISITS);}}}>Buka kunjungan hari ini</button>}</div>;
+ if(f.status!=='OPEN'||!followUpAllowed(user,'assign'))return null;
+ return <details className="work-target-card"><summary className="min-h-11 cursor-pointer">Perlu kunjungan fisik? Jadwalkan ke agenda Sales</summary><p className="admin-footnote">Gunakan hanya untuk tindakan di toko. Telepon dan perbaikan data cukup dicatat hasilnya; tidak membuat PJP.</p><form className="space-y-3" onSubmit={async event=>{event.preventDefault();setBusy(true);setError('');try{await staffAttendanceApi.scheduleFollowUp(id,{date,revision:f.revision||0,...(pjpCode?{pjpCode}:{})});await onChanged();window.dispatchEvent(new Event('operational-data-changed'));}catch(e){setError(e.message);}finally{setBusy(false);}}}><fieldset disabled={busy} className="space-y-3"><label className="block">Tanggal kunjungan WIB<input className="form-input block w-full" type="date" required min={wibDateKey()} value={date} onChange={e=>setDate(e.target.value)}/></label><details><summary className="min-h-11 cursor-pointer">Kode PJP bila penomoran manual</summary><input aria-label="Kode PJP manual" className="form-input block w-full" value={pjpCode} onChange={e=>setPjpCode(e.target.value)}/></details><button className="admin-button">{busy?'Menjadwalkan…':'Tambahkan ke agenda Sales'}</button></fieldset>{error&&<p role="alert" className="admin-feedback error">{error}</p>}</form></details>;
+}

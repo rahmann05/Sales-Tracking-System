@@ -1,9 +1,6 @@
-import { downloadOperationalFile } from '../../../services/operationalExportService';
-import { buildDocumentDocx } from './docxBuilder';
-import { buildDocumentExcel } from './excelBuilder';
+import { assertExportAllowed, downloadOperationalFile } from '../../../services/operationalExportService';
 import { buildDocumentCsv } from './csvBuilder';
 import { buildDocumentTxt } from './txtBuilder';
-import { buildDocumentPdf } from './pdfBuilder';
 import { sanitizeFilename } from './formatters';
 
 const MIME_TYPES = {
@@ -23,41 +20,49 @@ function resolveFilename(baseFilename, customFilename, ext) {
 export function createDocumentExporters(buildBlueprint) {
   const exportDocx = async (...args) => {
     const blueprint = buildBlueprint(...args);
+    await assertExportAllowed(blueprint.domain);
+    const {buildDocumentDocx} = await import('./docxBuilder');
     const buffer = await buildDocumentDocx(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'docx');
-    downloadOperationalFile(buffer, filename, MIME_TYPES.docx, blueprint.domain);
+    await downloadOperationalFile(buffer, filename, MIME_TYPES.docx, blueprint.domain);
     return buffer;
   };
 
   const exportExcel = async (...args) => {
     const blueprint = buildBlueprint(...args);
+    await assertExportAllowed(blueprint.domain);
+    const {buildDocumentExcel} = await import('./excelBuilder');
     const buffer = await buildDocumentExcel(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'xlsx');
-    downloadOperationalFile(buffer, filename, MIME_TYPES.xlsx, blueprint.domain);
+    await downloadOperationalFile(buffer, filename, MIME_TYPES.xlsx, blueprint.domain);
     return buffer;
   };
 
-  const exportCsv = (...args) => {
+  const exportCsv = async (...args) => {
     const blueprint = buildBlueprint(...args);
+    await assertExportAllowed(blueprint.domain);
     const content = buildDocumentCsv(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'csv');
-    downloadOperationalFile(content, filename, MIME_TYPES.csv, blueprint.domain);
+    await downloadOperationalFile(content, filename, MIME_TYPES.csv, blueprint.domain);
     return content;
   };
 
-  const exportTxt = (...args) => {
+  const exportTxt = async (...args) => {
     const blueprint = buildBlueprint(...args);
+    await assertExportAllowed(blueprint.domain);
     const content = buildDocumentTxt(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'txt');
-    downloadOperationalFile(content, filename, MIME_TYPES.txt, blueprint.domain);
+    await downloadOperationalFile(content, filename, MIME_TYPES.txt, blueprint.domain);
     return content;
   };
 
-  const exportPdf = (...args) => {
+  const exportPdf = async (...args) => {
     const blueprint = buildBlueprint(...args);
-    const buffer = buildDocumentPdf(blueprint);
+    await assertExportAllowed(blueprint.domain);
+    const {buildDocumentPdf} = await import('./pdfBuilder');
+    const buffer = await buildDocumentPdf(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'pdf');
-    downloadOperationalFile(buffer, filename, MIME_TYPES.pdf, blueprint.domain);
+    await downloadOperationalFile(buffer, filename, MIME_TYPES.pdf, blueprint.domain);
     return buffer;
   };
 

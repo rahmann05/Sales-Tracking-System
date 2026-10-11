@@ -88,22 +88,22 @@ export const getNavigationTabs = (userOrRole) => {
     const permissions = user.permissions || {};
 
     const tabs = [getRoleWorkspaceTab(role)];
-    if(role===ROLES.KEPALA_GUDANG)tabs.push({id:TAB_IDS.WAREHOUSE_ATTENTION,label:'Tindak lanjut gudang',icon:LuFileCheck},{id:TAB_IDS.WAREHOUSE_VEHICLES,label:'Kendaraan & servis',icon:LuTruck},{id:TAB_IDS.WAREHOUSE_ATTENDANCE,label:'Presensi saya',icon:LuUsers});
+    if(role===ROLES.KEPALA_GUDANG)tabs.push({id:TAB_IDS.WAREHOUSE_ATTENTION,label:'Perlu tindakan',icon:LuFileCheck},{id:TAB_IDS.WAREHOUSE_VEHICLES,label:'Kendaraan & servis',icon:LuTruck},{id:TAB_IDS.WAREHOUSE_ATTENDANCE,label:'Presensi saya',icon:LuUsers});
     if(role===ROLES.SUPIR)tabs.push({id:TAB_IDS.DRIVER_TRIPS,label:'Trip saya',icon:LuTruck});
     if(role===ROLES.SALES)tabs.push(
       {id:TAB_IDS.SALES_VISITS,label:'Kunjungan hari ini',icon:LuNavigation},
       {id:TAB_IDS.SALES_ORDERS,label:'Order saya',icon:LuClipboardList},
-      {id:TAB_IDS.SALES_FOLLOW_UP,label:'Tindak lanjut',icon:LuFileCheck}
+      {id:TAB_IDS.SALES_FOLLOW_UP,label:'Perlu tindakan',icon:LuFileCheck}
     );
     if(role===ROLES.SUPERVISOR)tabs.push(
       {id:TAB_IDS.SPV_MONITOR,label:'Pantau tim',icon:LuMap},
       {id:TAB_IDS.SPV_APPROVAL,label:'Persetujuan',icon:LuFileCheck},
       {id:TAB_IDS.SPV_FIELD,label:'Kunjungan saya',icon:LuNavigation},
-      {id:TAB_IDS.SPV_ATTENTION,label:'Tindak lanjut',icon:LuClipboardList}
+      {id:TAB_IDS.SPV_ATTENTION,label:'Perlu tindakan',icon:LuClipboardList}
     );
 
     if (role === ROLES.ADMIN) tabs.push(
-        {id:TAB_IDS.ADMIN_ATTENTION,label:'Tindak lanjut',icon:LuClipboardList},
+        {id:TAB_IDS.ADMIN_ATTENTION,label:'Perlu tindakan',icon:LuClipboardList},
         {id:TAB_IDS.ADMIN_PRODUCTS,label:'Katalog produk',icon:LuPackage},
         {id:TAB_IDS.ADMIN_PJP,label:'Siapkan PJP',icon:LuClipboardList},
         {id:TAB_IDS.ADMIN_ATTENDANCE,label:'Absensi staf',icon:LuUsers},

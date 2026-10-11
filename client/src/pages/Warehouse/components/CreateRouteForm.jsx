@@ -1,254 +1,41 @@
+import {useOperationRequest} from '../../../shared/hooks/useOperationRequest';
+import React,{useEffect,useRef,useState,lazy,Suspense} from 'react';
+import {LuArrowUp,LuArrowDown,LuX,LuSearch} from 'react-icons/lu';
+import {deliveryApi,vehiclesApi} from '../../../services/api';
+import {useApp} from '../../../context/AppContext';
 import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
-import { PackingAllocationFields } from './PackingAllocationFields';
-import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
-import { useApp } from '../../../context/AppContext';
-import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
-import {DEFAULT_DELIVERY_DEPOTS,parseDeliveryDepots} from '../../../../../shared/delivery-depots.mjs';
-import React, { useState, useEffect,useRef } from 'react';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
-import { deliveryApi, vehiclesApi } from '../../../services/api';
-
-import { LuPlus, LuPackage, LuX, LuArrowUp, LuArrowDown } from "react-icons/lu";
-import { FiAlertTriangle } from 'react-icons/fi';
-export const CreateRouteForm = ({
-  onCreated,
-  onCancel
-}) => {
-  const featurePolicy=useFeaturePolicy('DELIVERY');
-  const [error,setError]=useState(''),[dataLoading,setDataLoading]=useState(true);
-  const [code, setCode] = useState('');
-  const {
-    settings
-  } = useApp();
-  const [date, setDate] = useState(() => wibDateKey());
-  const [startTime,setStartTime]=useState('08:00');
-  const [endTime,setEndTime]=useState('17:00');
-  const [vehicles, setVehicles] = useState([]);
-  const [drivers, setDrivers] = useState([]);
-  const [packingLists, setPackingLists] = useState([]);
-  const [selectedVehicle, setSelectedVehicle] = useState('');
-  const [selectedDriver, setSelectedDriver] = useState('');
-  const depots=parseDeliveryDepots(settings.DELIVERY_DEPOT_LOCATIONS||DEFAULT_DELIVERY_DEPOTS);
-  const [departureDepotId,setDepartureDepotId]=useState('');
-  const [returnDepotId,setReturnDepotId]=useState('');
-  const [selectedPLs, setSelectedPLs] = useState([]); // Array of { packingListId, outletId, outletName, totalCartons }
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const snapshot=JSON.stringify([code,date,startTime,endTime,selectedVehicle,selectedDriver,departureDepotId,returnDepotId,selectedPLs,notes]);
-  const initialSnapshot=useRef(snapshot);
-  const dirty=snapshot!==initialSnapshot.current;
-  useUnsavedNavigation(dirty,submitting);
-  const cancel=()=>{if(!submitting&&(!dirty||window.confirm('Perubahan rute belum disimpan. Batalkan perubahan ini?')))onCancel();};
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [vRes, dRes, plRes] = await Promise.all([vehiclesApi.getAll(), deliveryApi.getDrivers(), (async () => {
-          let page = 1;
-          const items = [];
-          let result;
-          do {
-            result = await deliveryApi.getPackingLists({
-              limit: 100,
-              page,
-              status: 'RELEASED'
-            });
-            items.push(...result.data.items);
-            page++;
-          } while (items.length < result.data.total);
-          return {
-            success: true,
-            data: {
-              items
-            }
-          };
-        })()]);
-        if (Array.isArray(vRes.data)) setVehicles(vRes.data);
-        if (dRes.success) setDrivers(dRes.data || []);
-        if (plRes.success) setPackingLists(plRes.data.items || []);
-      } catch (err) {
-        setError(err.message||'Gagal memuat kendaraan, driver, atau dokumen packing. Buka ulang formulir setelah koneksi pulih.');
-      }finally{setDataLoading(false);}
-    };
-    fetchData();
-  }, []);
-  const addPackingList = pl => {
-    if (selectedPLs.find(s => s.packingListId === pl.id)) return;
-    const lat = pl.outlet?.deliveryLatitude ?? pl.outlet?.latitude ?? pl.outlet?.nativeLocation?.latitude ?? null;
-    const lng = pl.outlet?.deliveryLongitude ?? pl.outlet?.longitude ?? pl.outlet?.nativeLocation?.longitude ?? null;
-    setSelectedPLs([...selectedPLs, {
-      packingListId: pl.id,
-      outletId: pl.outletId,
-      outletName: pl.outlet?.name || '-',
-      latitude: lat,
-      longitude: lng,
-      code: pl.code,
-      totalCartons: pl.remainingCartons,
-      remainingCartons: pl.remainingCartons,
-      invoices: (pl.remainingInvoices||[]).filter(i=>i.remaining>0).map(i=>({...i,cartons:i.remaining})),
-      items: pl.remainingItems.filter(i => i.remaining > 0).map(i => ({
-        ...i,
-        quantity: i.remaining
-      }))
-    }]);
-  };
-  const removePackingList = plId => {
-    setSelectedPLs(selectedPLs.filter(s => s.packingListId !== plId));
-  };
-  const moveStop = (idx, direction) => {
-    const newList = [...selectedPLs];
-    const swapIdx = idx + direction;
-    if (swapIdx < 0 || swapIdx >= newList.length) return;
-    [newList[idx], newList[swapIdx]] = [newList[swapIdx], newList[idx]];
-    setSelectedPLs(newList);
-  };
-  const totalCartons = selectedPLs.reduce((sum, s) => sum + (s.totalCartons || 0), 0);
-  const selectedVehicleObj = vehicles.find(v => v.id === selectedVehicle);
-  const overCapacity = selectedVehicleObj && totalCartons > selectedVehicleObj.maxCartons;
-  const handleSubmit = async () => {
-    if (submitting) return;
-    if (overCapacity) {setError('Muatan melebihi kapasitas kendaraan. Kurangi alokasi atau pilih kendaraan lain.');return;}
-    if (!selectedVehicle) {setError('Pilih kendaraan.');return;}
-    if (selectedVehicleObj && !selectedVehicleObj.photoUrl) {setError('Kendaraan wajib memiliki foto sebelum dijadwalkan untuk trip.');return;}
-    if (!selectedDriver) {setError('Pilih driver.');return;}
-    if (selectedPLs.length === 0) {setError('Tambahkan minimal satu packing list.');return;}
-    if(!date||!startTime||!endTime||endTime<=startTime){setError('Isi tanggal serta target kembali setelah waktu berangkat.');return;}
-    setSubmitting(true);
-    try {
-      await deliveryApi.createDeliveryRoute({
-        code,
-        date,
-        plannedStartAt: new Date(`${date}T${startTime}:00+07:00`).toISOString(),
-        plannedEndAt: new Date(`${date}T${endTime}:00+07:00`).toISOString(),
-        vehicleId: selectedVehicle,
-        driverId: selectedDriver,
-        departureDepotId:departureDepotId||depots[0].id,
-        returnDepotId:returnDepotId||departureDepotId||depots[0].id,
-        notes: notes || undefined,
-        stops: selectedPLs.map((s, idx) => ({
-          packingListId: s.packingListId,
-          outletId: s.outletId,
-          sequence: idx + 1,
-          allocatedCartons: s.totalCartons,
-          allocatedInvoices: s.invoices.filter(i=>i.cartons>0).map(i=>({invoiceId:i.id,cartons:i.cartons})),
-          allocatedItems: s.items.filter(i => i.quantity > 0).map(i => ({
-            lineId: i.lineId,
-            quantity: i.quantity
-          }))
-        }))
-      });
-      onCreated();
-    } catch (err) {
-      setError(err.message || 'Gagal membuat rute');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Filter out packing lists that are already assigned to a route
-  const availablePLs = packingLists.filter(pl => pl.remainingCartons > 0 && !selectedPLs.find(s => s.packingListId === pl.id));
-  return <div className="logistics-route-form bg-surface border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4">
-      <h3 className="text-sm font-bold text-on-surface">Penugasan & muatan trip</h3>{error&&<p role="alert" className="admin-feedback error">{error}</p>}{dataLoading&&<p role="status">Memuat pilihan armada dan dokumen…</p>}<fieldset disabled={submitting||dataLoading} className="space-y-5">
-      <BusinessCodeInput entity="DELIVERY_ROUTE" value={code} onChange={setCode} disabled={submitting} />
-      <div className="grid grid-cols-2 gap-3"><label>Berangkat WIB<input className="form-input block w-full" type="time" required value={startTime} onChange={e=>setStartTime(e.target.value)}/></label><label>Target kembali WIB<input className="form-input block w-full" type="time" required value={endTime} onChange={e=>setEndTime(e.target.value)}/></label></div>
-      <p className="text-sm text-on-surface-variant">Pilih kendaraan dan supir, tambahkan packing list, lalu simpan sebagai draft. Konfirmasi penyiapan, pemeriksaan, dan serah terima muatan sebelum berangkat.</p>
-      <section className="rounded-xl border border-border-glass bg-surface-container p-4 space-y-3">
-        <p className="text-sm">Muatan: <strong>{totalCartons} karton</strong> · {selectedPLs.length} tujuan</p>
-        <p className="text-xs text-on-surface-variant">Jarak dan perkiraan BBM mengikuti rute jalan ke tiap toko hingga titik kembali. Bila layanan rute sedang tidak tersedia, trip tetap tersimpan dan jarak dihitung otomatis saat layanan pulih. Titik tujuan tetap wajib lengkap.</p>
-      </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Date */}
-        <div>
-          <label className="text-xs font-semibold text-on-surface-variant block mb-1">Tanggal</label>
-          <input aria-label="Tanggal trip" type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        </div>
-
-        {/* Vehicle */}
-        <div>
-          <label className="text-xs font-semibold text-on-surface-variant block mb-1">Kendaraan</label>
-          <select aria-label="Kendaraan trip" value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
-            <option value="">Pilih kendaraan...</option>
-            {vehicles.filter(v => v.isActive && v.condition==='AVAILABLE').map(v => <option key={v.id} value={v.id}>{v.name} ({v.code}) — Maks {v.maxCartons} krt{!v.photoUrl?' (Foto belum diset)':''}</option>)}
-          </select>
-        </div>
-
-        {/* Driver */}
-        <div>
-          <label className="text-xs font-semibold text-on-surface-variant block mb-1">Supir</label>
-          <select aria-label="Driver trip" value={selectedDriver} onChange={e => setSelectedDriver(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
-            <option value="">Pilih supir...</option>
-            {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label className="text-sm font-semibold">Titik berangkat<select className="form-input mt-1 block w-full" value={departureDepotId||depots[0].id} onChange={event=>{setDepartureDepotId(event.target.value);if(!returnDepotId)setReturnDepotId(event.target.value);}}>{depots.map(point=><option key={point.id} value={point.id}>{point.name} · {point.latitude}, {point.longitude}</option>)}</select></label>
-        <label className="text-sm font-semibold">Titik kembali<select className="form-input mt-1 block w-full" value={returnDepotId||departureDepotId||depots[0].id} onChange={event=>setReturnDepotId(event.target.value)}>{depots.map(point=><option key={point.id} value={point.id}>{point.name} · {point.latitude}, {point.longitude}</option>)}</select></label>
-      </div>
-
-      {/* Available Packing Lists */}
-      <div>
-        <label className="text-xs font-semibold text-on-surface-variant block mb-2">Packing List Tersedia</label>
-        {availablePLs.length === 0 ? <p className="text-xs text-on-surface-variant">Tidak ada packing list yang tersedia</p> : <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-            {availablePLs.map(pl => {
-              const lat = pl.outlet?.deliveryLatitude ?? pl.outlet?.latitude ?? pl.outlet?.nativeLocation?.latitude;
-              const lng = pl.outlet?.deliveryLongitude ?? pl.outlet?.longitude ?? pl.outlet?.nativeLocation?.longitude;
-              return <button type="button" key={pl.id} onClick={() => addPackingList(pl)} className="flex items-center gap-2 text-left p-2.5 rounded-xl border border-border-glass hover:border-primary/40 hover:bg-primary/5 transition-all">
-                <LuPackage className="text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{pl.code} • {pl.outlet?.name}</div>
-                  <div className="text-[10px] text-on-surface-variant">{pl.remainingCartons} karton tersisa • {pl.invoices?.length} faktur • Long, Lat: {lat != null && lng != null ? `${Number(lng).toFixed(6)}, ${Number(lat).toFixed(6)}` : 'Titik belum tersedia'}</div>
-                </div>
-                <LuPlus className="text-primary shrink-0" />
-              </button>;
-            })}
-          </div>}
-      </div>
-
-      {/* Selected Stops (Reorderable) */}
-      {selectedPLs.length > 0 && <div>
-          <label className="text-xs font-semibold text-on-surface-variant block mb-2">
-            Urutan Toko di Rute ({selectedPLs.length} toko)
-          </label>
-          <div className="space-y-2">
-            {selectedPLs.map((s, idx) => <div key={s.packingListId} className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
-                <span className="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-xs font-bold shrink-0">{idx + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{s.outletName}</div>
-                  <div className="text-[10px] text-on-surface-variant">{s.code} • {s.totalCartons} krt • Long, Lat: {s.latitude != null && s.longitude != null ? `${Number(s.longitude).toFixed(6)}, ${Number(s.latitude).toFixed(6)}` : 'Titik belum tersedia'}</div>
-                </div>
-                <button type="button" aria-label={`Naikkan urutan ${s.outletName}`} onClick={() => moveStop(idx, -1)} disabled={idx === 0} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
-                  <LuArrowUp className="text-sm" />
-                </button>
-                <button type="button" aria-label={`Turunkan urutan ${s.outletName}`} onClick={() => moveStop(idx, 1)} disabled={idx === selectedPLs.length - 1} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
-                  <LuArrowDown className="text-sm" />
-                </button>
-                <button type="button" aria-label={`Hapus alokasi ${s.outletName}`} onClick={() => removePackingList(s.packingListId)} className="p-1 rounded text-red-500 hover:bg-red-50">
-                  <LuX className="text-sm" />
-                </button>
-                <PackingAllocationFields entry={s} allowSplit={settings.PACKING_ALLOW_SPLIT} onChange={updated => setSelectedPLs(selectedPLs.map(v => v.packingListId === updated.packingListId ? updated : v))} />
-              </div>)}
-          </div>
-        </div>}
-
-      {/* Summary */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className={`px-4 py-2 rounded-xl text-sm font-bold ${overCapacity ? 'bg-red-100 text-red-700' : 'bg-primary/10 text-primary'}`}>
-          Total: {totalCartons} Karton
-          {selectedVehicleObj && ` / ${selectedVehicleObj.maxCartons} Maks`}
-        </div>
-        {overCapacity && <span className="flex items-center gap-1 text-xs text-red-600 font-semibold"><FiAlertTriangle /> Melebihi kapasitas kendaraan!</span>}
-      </div>
-
-      <textarea aria-label="Catatan trip" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Catatan (opsional)" rows={2} className="w-full px-3 py-2 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-
-      <div className="flex justify-end gap-2">
-        <button onClick={cancel} className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant border border-border-glass hover:bg-surface-variant transition-colors">
-          Batal
-        </button>
-        <button onClick={handleSubmit} title={featurePolicy.reason} disabled={!featurePolicy.canStart || submitting || overCapacity || selectedPLs.length === 0 || !selectedVehicle || !selectedDriver} className="px-5 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
-          {submitting ? 'Menyimpan...' : 'Simpan Rute'}
-        </button>
-      </div>
-    </fieldset></div>;
-};
+import {BusinessCodeInput} from '../../../shared/components/common/BusinessCodeInput';
+import {PackingAllocationFields} from './PackingAllocationFields';
+import {wibDateKey} from '../../../../../shared/visit-metrics.mjs';
+import {DEFAULT_DELIVERY_DEPOTS,parseDeliveryDepots} from '../../../../../shared/delivery-depots.mjs';
+import {destinationPacking,isVehicleLoad,loadLogistics,capacityGuidance} from '../../../../../shared/packing-load.mjs';
+import {packingBalance} from '../../../../../shared/packing.mjs';
+const DestinationMap=lazy(()=>import('./PlanningDestinationMap').then(module=>({default:module.PlanningDestinationMap})));
+const entryFor=pl=>({packingDestinationId:pl.destinationId||undefined,loadPlanVersion:pl.loadPlanVersion,packingListId:pl.id,outletId:pl.outletId,outletName:pl.outlet?.name||'Toko',code:pl.code,point:pl.destinationPoint,totalWeight:pl.totalWeight==null?null:pl.totalWeight*pl.remainingCartons/pl.totalCartons,totalCartons:pl.remainingCartons,remainingCartons:pl.remainingCartons,invoices:(pl.remainingInvoices||[]).filter(i=>i.remaining>0).map(i=>({...i,cartons:i.remaining})),items:(pl.remainingItems||[]).filter(i=>i.remaining>0).map(i=>({...i,quantity:i.remaining}))});
+const entriesFor=pl=>isVehicleLoad(pl)?pl.destinations.map(destination=>entryFor({...packingBalance(destinationPacking(pl,destination.id)),destinationId:destination.id,destinationPoint:destination.point})).filter(entry=>entry.remainingCartons>0):[entryFor(pl)];
+const entryKey=entry=>`${entry.packingListId}:${entry.packingDestinationId||''}`;
+const ready=pl=>isVehicleLoad(pl)?pl.destinations?.every(destination=>!!destination.point):!pl.destinationConflict&&!!pl.destinationPoint;
+export function CreateRouteForm({onCreated,onCancel,initialPackingIds=[]}){
+ const operation=useOperationRequest('delivery-route');
+ const {settings}=useApp(),feature=useFeaturePolicy('DELIVERY'),depots=parseDeliveryDepots(settings.DELIVERY_DEPOT_LOCATIONS||DEFAULT_DELIVERY_DEPOTS);
+ const [code,setCode]=useState(''),[date,setDate]=useState(wibDateKey),[startTime,setStartTime]=useState('08:00'),[endTime,setEndTime]=useState('17:00'),[departure,setDeparture]=useState(depots[0].id),[returnId,setReturnId]=useState(depots[0].id),[vehicleId,setVehicleId]=useState(''),[driverId,setDriverId]=useState(''),[notes,setNotes]=useState(''),[capacityReason,setCapacityReason]=useState(''),[vehicleReason,setVehicleReason]=useState('');
+ const [vehicles,setVehicles]=useState([]),[drivers,setDrivers]=useState([]),[packings,setPackings]=useState([]),[entries,setEntries]=useState([]),[query,setQuery]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const snapshot=JSON.stringify([code,date,startTime,endTime,departure,returnId,vehicleId,driverId,notes,entries,capacityReason,vehicleReason]),initial=useRef(snapshot);
+ useUnsavedNavigation(snapshot!==initial.current,busy);
+ const ids=initialPackingIds.join(',');
+ useEffect(()=>{let active=true;async function load(){setLoading(true);try{const [v,d]=await Promise.all([vehiclesApi.getAll(),deliveryApi.getDrivers()]);const documents=[];let page=1,total=Infinity;while(documents.length<total){const r=await deliveryApi.getPackingLists({status:'RELEASED',page,limit:100});if(!r.data.items.length)break;documents.push(...r.data.items);total=r.data.total;page++;}if(!active)return;setVehicles(v.data||[]);setDrivers(d.data||[]);setPackings(documents);const selectedDocs=documents.filter(pl=>initialPackingIds.includes(pl.id)&&pl.remainingCartons>0&&ready(pl));const selected=selectedDocs.flatMap(entriesFor);setEntries(selected);if(selectedDocs.length===1&&selectedDocs[0].suggestedVehicleId)setVehicleId(selectedDocs[0].suggestedVehicleId);if(selectedDocs.some(isVehicleLoad)&&selectedDocs.length>1)setError('Satu muatan kendaraan harus dijadwalkan sendiri. Hapus packing list lain dari pilihan.');else if(selectedDocs.length!==initialPackingIds.length)setError('Sebagian dokumen terpilih sudah dijadwalkan atau titiknya perlu diperiksa. Periksa pilihan sebelum menyimpan.');}catch(e){if(active)setError(e.message);}finally{if(active)setLoading(false);}}load();return()=>{active=false;};},[ids]);
+ const cartons=entries.reduce((sum,entry)=>sum+entry.totalCartons,0),vehicle=vehicles.find(row=>row.id===vehicleId);
+ const loadSummary=loadLogistics({loadPlanVersion:2,destinations:entries.map(entry=>({outletId:entry.outletId,totalCartons:entry.totalCartons,totalWeight:entry.totalWeight==null?null:entry.totalWeight*entry.totalCartons/entry.remainingCartons})),items:entries.flatMap(entry=>entry.items)}),guidance=capacityGuidance(loadSummary,vehicle),over=guidance.overCartons||guidance.overWeight;
+ const selectedDocs=packings.filter(pl=>entries.some(entry=>entry.packingListId===pl.id)),changedSuggestion=selectedDocs.some(pl=>pl.suggestedVehicleId&&pl.suggestedVehicleId!==vehicleId);
+ const addPacking=pl=>{if(isVehicleLoad(pl)&&entries.length&&!window.confirm('Satu packing list ini sudah mewakili satu muatan kendaraan. Ganti pilihan muatan sebelumnya?'))return;setEntries(current=>isVehicleLoad(pl)?entriesFor(pl):[...current,...entriesFor(pl)]);if(pl.suggestedVehicleId)setVehicleId(pl.suggestedVehicleId);setCapacityReason('');setVehicleReason('');};
+ const uniqueStores=new Set(entries.map(entry=>entry.outletId)).size;
+ const uniqueTargets=new Set(entries.map(entry=>`${entry.outletId}:${entry.point?.latitude?.toFixed(6)}:${entry.point?.longitude?.toFixed(6)}`)).size;
+ const available=packings.filter(pl=>pl.remainingCartons>0&&!entries.some(entry=>entry.packingListId===pl.id)&&`${pl.code} ${pl.outlet?.name} ${(pl.destinations||[]).map(row=>row.outlet.name).join(' ')}`.toLocaleLowerCase('id-ID').includes(query.toLocaleLowerCase('id-ID')));
+ const move=(index,direction)=>setEntries(current=>{const updated=[...current],target=index+direction;[updated[index],updated[target]]=[updated[target],updated[index]];return updated;});
+ const cancel=()=>{if(!busy&&(snapshot===initial.current||window.confirm('Perubahan perjalanan belum disimpan. Batalkan perubahan?')))onCancel();};
+ const save=async event=>{event.preventDefault();if(busy)return;setError('');if(!vehicle?.photoUrl){setError('Set foto kendaraan di Kendaraan & servis sebelum digunakan.');return;}if(over&&!capacityReason.trim()){setError('Isi alasan persetujuan bila perkiraan melampaui patokan kapasitas.');return;}if(changedSuggestion&&!vehicleReason.trim()){setError('Isi alasan mengganti saran kendaraan Admin.');return;}if(endTime<=startTime){setError('Target kembali harus setelah waktu berangkat.');return;}setBusy(true);try{const response=await deliveryApi.createDeliveryRoute(await operation.identify({code,date,vehicleId,driverId,departureDepotId:departure,returnDepotId:returnId,plannedStartAt:new Date(`${date}T${startTime}:00+07:00`).toISOString(),plannedEndAt:new Date(`${date}T${endTime}:00+07:00`).toISOString(),notes,capacityOverrideReason:capacityReason,vehicleDecisionReason:vehicleReason,stops:entries.map((entry,index)=>({packingListId:entry.packingListId,packingDestinationId:entry.packingDestinationId,outletId:entry.outletId,sequence:index+1,allocatedCartons:entry.totalCartons,allocatedItems:entry.items.filter(i=>i.quantity>0).map(i=>({lineId:i.lineId,quantity:i.quantity})),allocatedInvoices:entry.invoices.filter(i=>i.cartons>0).map(i=>({invoiceId:i.id,cartons:i.cartons}))}))}));operation.clear();initial.current=snapshot;onCreated(response.data);}catch(e){setError(e.message);}finally{setBusy(false);}};
+ return <form onSubmit={save} className="admin-panel p-5 space-y-5"><div className="work-step-intro"><strong>Susun perjalanan pengiriman</strong>Pilih muatan, kendaraan dan supir, lalu urutkan toko. Setelah rencana tersimpan, lanjutkan pemeriksaan dan serah terima muatan.</div>{error&&<p className="admin-feedback error" role="alert">{error}</p>}{loading&&<p role="status">Memuat muatan dan armada…</p>}<fieldset disabled={loading||busy} className="work-route-layout"><div className="space-y-5"><section className="space-y-3"><h2 className="font-semibold text-lg">1. Muatan dari Admin</h2><label className="admin-search"><LuSearch/><input type="search" aria-label="Cari muatan dari Admin" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Cari toko atau nomor dokumen…"/></label><div className="space-y-2">{available.map(pl=><div className="work-target-card" key={pl.id}><div><strong>{isVehicleLoad(pl)?`${pl.destinations.length} tujuan dalam satu muatan`:pl.outlet?.name}</strong><p className="admin-footnote">{pl.code} · {pl.remainingCartons} karton belum dijadwalkan</p></div>{pl.destinationConflict?<p role="status" className="text-amber-700">Titik pada order sumber berbeda. Minta Admin memeriksa tujuan.</p>:!ready(pl)?<p role="status" className="text-amber-700">Titik tujuan belum tersedia. Minta Admin melengkapi lokasi.</p>:<button type="button" className="admin-button" disabled={entries.some(entry=>entry.loadPlanVersion===2)&&!isVehicleLoad(pl)} onClick={()=>addPacking(pl)}>Tambahkan muatan</button>}</div>)}{!loading&&!available.length&&<p className="admin-empty">{query?'Tidak ada muatan yang cocok. Ubah pencarian.':entries.length?'Seluruh muatan yang tersedia sudah dipilih.':'Belum ada dokumen muatan yang menunggu dijadwalkan. Admin perlu menyerahkan dokumen lengkap terlebih dahulu.'}</p>}</div></section>
+ <section className="space-y-3"><h2 className="font-semibold text-lg">2. Urutan toko dan dokumen</h2>{!entries.length&&<p>Pilih muatan di atas untuk menyusun tujuan.</p>}{entries.map((entry,index)=><article key={entryKey(entry)} className="work-target-card"><div className="flex justify-between gap-3"><div><strong>{index+1}. {entry.outletName}</strong><p>{entry.code} · {entry.totalCartons} karton</p></div><div className="flex gap-2"><button className="admin-button" type="button" aria-label={`Naikkan ${entry.outletName}`} disabled={index===0} onClick={()=>move(index,-1)}><LuArrowUp/></button><button className="admin-button" type="button" aria-label={`Turunkan ${entry.outletName}`} disabled={index===entries.length-1} onClick={()=>move(index,1)}><LuArrowDown/></button><button className="admin-button" type="button" aria-label={`Hapus muatan ${entry.code}`} onClick={()=>setEntries(current=>current.filter(row=>row.packingListId!==entry.packingListId))}><LuX/></button></div></div>{entry.point&&<a className="admin-table-link" href={`https://www.google.com/maps/search/?api=1&query=${entry.point.latitude},${entry.point.longitude}`} target="_blank" rel="noopener noreferrer">{entry.point.latitude.toFixed(6)}, {entry.point.longitude.toFixed(6)} · Google Maps</a>}<details><summary className="min-h-11 cursor-pointer">{settings.PACKING_ALLOW_SPLIT===true&&entry.loadPlanVersion!==2?'Rincian / bagi muatan ke beberapa perjalanan':'Lihat rincian barang dan faktur'}</summary><PackingAllocationFields entry={entry} allowSplit={settings.PACKING_ALLOW_SPLIT===true&&entry.loadPlanVersion!==2} onChange={updated=>setEntries(current=>current.map(row=>entryKey(row)===entryKey(updated)?updated:row))}/><p className="admin-footnote">Packing list muatan kendaraan membawa seluruh tujuan yang belum dijadwalkan dalam satu perjalanan. Jumlah barang, karton, dan faktur harus sesuai.</p></details></article>)}</section>{entries.length>0&&<Suspense fallback={<p>Memuat peta tujuan…</p>}><DestinationMap entries={entries} departure={depots.find(point=>point.id===departure)} returnPoint={depots.find(point=>point.id===returnId)}/></Suspense>}</div>
+ <aside className="work-route-summary"><h2 className="font-semibold text-lg">3. Armada dan jadwal</h2><p><strong>{cartons} karton</strong> · {uniqueStores} toko · {uniqueTargets} titik tujuan · {new Set(entries.map(entry=>entry.packingListId)).size} packing list</p><label className="block">Kendaraan<select className="form-input block w-full" required value={vehicleId} onChange={e=>setVehicleId(e.target.value)}><option value="">Pilih kendaraan</option>{vehicles.filter(v=>v.isActive&&v.condition==='AVAILABLE').map(v=><option key={v.id} value={v.id}>{v.code} · Patokan {v.maxCartons>0?`${v.maxCartons} karton`:'belum diisi'}{!v.photoUrl?' · Foto belum ada':''}</option>)}</select></label>{vehicle&&<div>{vehicle.photoUrl&&<img src={vehicle.photoUrl} alt={`Kendaraan ${vehicle.code}`} className="rounded-xl w-full h-36 object-cover"/>}<p className={over?'text-red-700':'admin-footnote'}>{cartons} karton / {vehicle.maxCartons>0?`patokan ${vehicle.maxCartons} karton`:'patokan belum diketahui'}{over?' · Melampaui patokan':''}</p></div>}<p className="admin-footnote">Berat: {loadSummary.weightComplete?`${loadSummary.knownWeightKg} kg`:`${loadSummary.knownWeightKg} kg diketahui; ${loadSummary.unknownWeightDestinations} tujuan belum diketahui`}. Kapasitas menjadi patokan, bukan kepastian volume muatan.</p>{changedSuggestion&&<label>Alasan mengganti saran kendaraan Admin<textarea className="form-input block w-full" required value={vehicleReason} maxLength={2000} onChange={e=>setVehicleReason(e.target.value)}/></label>}{over&&<label>Perkiraan melampaui patokan: alasan persetujuan kepala gudang<textarea className="form-input block w-full" required value={capacityReason} maxLength={2000} onChange={e=>setCapacityReason(e.target.value)}/></label>}<label className="block">Supir<select className="form-input block w-full" required value={driverId} onChange={e=>setDriverId(e.target.value)}><option value="">Pilih supir</option>{drivers.map(driver=><option key={driver.id} value={driver.id}>{driver.name}</option>)}</select></label><label className="block">Tanggal<input type="date" required className="form-input block w-full" value={date} onChange={e=>setDate(e.target.value)}/></label><div className="grid grid-cols-2 gap-3"><label>Berangkat WIB<input type="time" required className="form-input block w-full" value={startTime} onChange={e=>setStartTime(e.target.value)}/></label><label>Target kembali WIB<input type="time" required className="form-input block w-full" value={endTime} onChange={e=>setEndTime(e.target.value)}/></label></div><label>Titik berangkat<select className="form-input block w-full" value={departure} onChange={e=>setDeparture(e.target.value)}>{depots.map(point=><option key={point.id} value={point.id}>{point.name}</option>)}</select></label><label>Titik kembali<select className="form-input block w-full" value={returnId} onChange={e=>setReturnId(e.target.value)}>{depots.map(point=><option key={point.id} value={point.id}>{point.name}</option>)}</select></label><p className="admin-footnote">Titik kembali dapat berbeda dari berangkat. GPS absen supir menjadi bukti titik aktual. Bentrok jadwal diperiksa saat disimpan.</p><details><summary className="min-h-11 cursor-pointer">Nomor dan catatan perjalanan</summary><BusinessCodeInput entity="DELIVERY_ROUTE" value={code} onChange={setCode}/><label>Catatan (opsional)<textarea className="form-input block w-full" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/></label></details><button type="submit" className="admin-button primary" title={feature.reason} disabled={!feature.canStart||!entries.length||over&&!capacityReason.trim()||changedSuggestion&&!vehicleReason.trim()}>{busy?'Menyimpan…':'Setujui muatan & simpan perjalanan'}</button><button type="button" className="admin-button" onClick={cancel}>Batal</button></aside></fieldset></form>;
+}

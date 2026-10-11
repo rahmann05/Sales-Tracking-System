@@ -1,4 +1,5 @@
 import {
+  ImageRun,
   AlignmentType,
   BorderStyle,
   Document,
@@ -13,6 +14,7 @@ import {
   VerticalAlign,
   WidthType,
 } from 'docx';
+import {documentImages, fitImage} from './documentImages';
 import { formatDateTimeId, safeStr } from './formatters';
 
 const COLORS = {
@@ -217,6 +219,12 @@ export async function buildDocumentDocx(blueprint) {
       );
     }
     children.push(buildSectionTable(section));
+  }
+
+  for (const image of await documentImages(blueprint)) {
+    const size = fitImage(image, 500, 300);
+    children.push(new Paragraph({spacing: {before: 160, after: 100}, keepNext: true, children: [run(image.caption || 'Foto outlet', {bold: true})]}));
+    children.push(new Paragraph({children: [new ImageRun({type: image.type, data: image.bytes, transformation: size})]}));
   }
 
   if (blueprint.notes?.length) {

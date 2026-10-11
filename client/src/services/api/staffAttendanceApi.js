@@ -1,7 +1,9 @@
 import { request } from "../httpClient";
 export const staffAttendanceApi = {
+  evidence:id=>request(`/staff-attendance/${encodeURIComponent(id)}/evidence`),
   correctShiftTime:(id,data)=>request(`/staff-attendance/${id}/time-correction`,{method:'PATCH',body:JSON.stringify(data)}),
   pendingShiftCorrections:()=>request('/staff-attendance/time-corrections'),
+  scheduleFollowUp:(id,data)=>request(`/staff-attendance/follow-ups/${id}/visit`,{method:'POST',body:JSON.stringify(data)}),
   followUpCandidates:()=>request('/staff-attendance/follow-ups/candidates'),
   assignFollowUp:(id,data)=>request(`/staff-attendance/follow-ups/${id}/assignment`,{method:'PATCH',body:JSON.stringify(data)}),
   getFollowUps: ({status='OPEN',page=1}={}) => request(`/staff-attendance/follow-ups?status=${encodeURIComponent(status)}&page=${page}&limit=50`),

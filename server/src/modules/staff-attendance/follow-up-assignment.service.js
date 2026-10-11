@@ -13,6 +13,7 @@ export const assignFollowUp=(id,user,raw,{db:database=prisma,validateOnly=false,
  const data=parsed.data,date=new Date(`${data.dueDate}T12:00:00Z`);
  if(Number.isNaN(+date)||date.toISOString().slice(0,10)!==data.dueDate||!restoreDeadline&&data.dueDate<wibDateKey())throw new AppError('Tenggat harus tanggal valid hari ini atau berikutnya.',400);
  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
+ await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`follow-up:${id}`}))`;
  const {actor,people}=await followUpActor(db,user,'assign');
  const record=await db.staffActivity.findFirst({where:{id,...await followUpScope(actor,db)}});
@@ -22,7 +23,9 @@ export const assignFollowUp=(id,user,raw,{db:database=prisma,validateOnly=false,
  const owner=people.find(p=>p.id===data.ownerId);
  assertFollowUpOwner(owner,actor,people,await processValue(record,'FOLLOW_UP_REQUIRE_REVIEW',true),record.followUp?.reviewerMode||'BOTH');
  if(validateOnly)return record;
- const at=new Date().toISOString(),followUp={...f,ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate,revision:data.revision+1,history:[...(f.history||[]),{action:'REASSIGNED',actorId:actor.id,at,note:data.reason,before:{ownerId:f.ownerId,ownerName:f.ownerName,dueDate:f.dueDate},after:{ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate}}]};
+ if(f.scheduledVisit&&f.ownerId!==owner.id){const visit=await db.pjpStop.findUnique({where:{id:f.scheduledVisit.stopId},include:{attendances:true,orders:true}});if(visit&&f.scheduledVisit.added&&visit.status==='PENDING'&&!visit.attendances.length&&!visit.orders.length)await db.pjpStop.update({where:{id:visit.id},data:{status:'SKIPPED'}});}
+
+ const at=new Date().toISOString(),followUp={...f,...(f.scheduledVisit&&f.ownerId!==owner.id?{scheduledVisit:null}:{}),ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate,revision:data.revision+1,history:[...(f.history||[]),{action:'REASSIGNED',actorId:actor.id,at,note:data.reason,before:{ownerId:f.ownerId,ownerName:f.ownerName,dueDate:f.dueDate},after:{ownerId:owner.id,ownerName:owner.name,dueDate:data.dueDate}}]};
  const updated=await db.staffActivity.update({where:{id},data:{followUp}});
  await db.auditEvent.create({data:{entityType:'FOLLOW_UP',entityId:id,action:'REASSIGN',actorId:actor.id,actorName:actor.name,before:f,after:followUp}});
  await notifyFollowUp(db,updated,'ASSIGNED',actor.id);

@@ -102,7 +102,7 @@ function buildMtdReportBlueprint(input = {}, monthArg, yearArg) {
   const basisNotes = formatReportBasisNotes(reportData?.basis);
 
   return {
-    domain: 'REPORT',
+    domain: 'REPORTS',
     filename: `Laporan_MTD_${monthLabel}_${yearLabel}`,
     sheetName: 'LAPORAN_MTD',
     orientation: 'landscape',

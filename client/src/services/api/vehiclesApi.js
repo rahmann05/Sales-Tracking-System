@@ -1,5 +1,6 @@
 import { request } from "../httpClient";
 export const vehiclesApi = {
+  setCapacity:(id,data)=>request(`/vehicles/${id}/capacity`,{method:'PATCH',body:JSON.stringify(data)}),
   mileage:id=>request(`/vehicles/${id}/mileage`),
   correctMileage:(id,data)=>request(`/vehicles/${id}/mileage`,{method:'PATCH',body:JSON.stringify(data)}),
   setServicePolicy:(id,data)=>request(`/vehicles/${id}/service-policy`,{method:'PATCH',body:JSON.stringify(data)}),

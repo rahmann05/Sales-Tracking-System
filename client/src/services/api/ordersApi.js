@@ -1,6 +1,8 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const ordersApi = {
+  getPackingCandidates:params=>request(`/orders/packing-candidates?${queryString(params)}`),
+  getById:id=>request(`/orders/${id}`),
   adminPlaces:(outletId,q='')=>request(`/orders/admin-places?${new URLSearchParams({outletId,q})}`),
   getReviewAssignment:id=>request(`/orders/${id}/review-assignment`),
   saveReviewAssignment:(id,data)=>request(`/orders/${id}/review-assignment`,{method:'PUT',body:JSON.stringify(data)}),

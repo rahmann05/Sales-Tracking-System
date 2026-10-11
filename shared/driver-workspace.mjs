@@ -1,6 +1,16 @@
 import {outletOperationalPoint} from './outlet-location.mjs';
 export function preferredTrip(routes,id){return routes.find(r=>r.id===id)||routes.find(r=>r.status==='IN_TRANSIT'&&!r.returnedAt&&!r.onHold)||routes.find(r=>r.status==='READY'&&!r.onHold)||routes[0];}
 export const orderedStops=route=>[...(route?.stops||[])].sort((a,b)=>(a.sequence??0)-(b.sequence??0));
+export function deliveryVisitGroups(stops){
+ const groups=[];
+ for(const stop of orderedStops({stops})){
+  const point=outletOperationalPoint(stopDestinationOutlet(stop));
+  const key=validOutletPoint(point)?`${stop.outletId}:${Number(point.latitude).toFixed(6)},${Number(point.longitude).toFixed(6)}`:`missing:${stop.id}`;
+  const previous=groups.at(-1);
+  if(previous?.key===key)previous.stops.push(stop);else groups.push({key,stops:[stop]});
+ }
+ return groups;
+}
 export function stopDestinationOutlet(stop){
  if(!stop?.outlet)return null;
  if(stop.targetLatitude!=null&&stop.targetLongitude!=null&&Number.isFinite(Number(stop.targetLatitude))&&Number.isFinite(Number(stop.targetLongitude))){

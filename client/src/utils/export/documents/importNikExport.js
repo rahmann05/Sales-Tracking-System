@@ -6,17 +6,17 @@ function buildImportNikBlueprint(items = [], customFilename) {
   const dateCode = new Date().toISOString().split('T')[0];
 
   const rows = list.map((d) => {
-    const custCode = safeStr(d.customerCode || d.outletCode, 'CMH00000');
+    const custCode = safeStr(d.customerCode || d.outletCode, '');
     const custName = safeStr(d.name || d.customerName, '').toUpperCase();
     const rawNik = String(d.taxNumber || d.nik || '').replace(/[^0-9]/g, '');
-    const nik = rawNik.length >= 10 ? rawNik : '3200000000000000';
+    const nik = rawNik.length === 16 ? rawNik : '';
     const ownerName = safeStr(d.taxName || d.ownerName || custName, '').toUpperCase();
     const address = `${safeStr(d.taxAddress || d.address, '').toUpperCase()}~`;
     const isPkp = d.taxType === 'PKP' ? 'Y' : 'N';
     const npwp =
       d.taxType === 'PKP' && d.taxNumber && String(d.taxNumber).includes('.')
         ? d.taxNumber
-        : '00.000.000.0-000.000';
+        : '';
     return [custCode, custName, nik, ownerName, address, isPkp, npwp];
   });
 

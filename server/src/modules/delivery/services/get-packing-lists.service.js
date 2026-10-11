@@ -4,6 +4,7 @@ import {invoiceReconciliation} from '../../../../../shared/invoice-reconciliatio
 import { parsePagination } from '../../../utils/pagination.js';
 import { prisma } from '../../../config/prisma.js';
 import {shipmentReady} from '../../../../../shared/shipment-document.mjs';
+import {withPackingDestinations} from './packing-destination.service.js';
 
 /**
  * List packing lists with filters
@@ -15,11 +16,14 @@ export const getPackingLists = async (query, role) => {
   const where = {};
   if (role !== 'ADMIN' || query.status === 'RELEASED') where.status = 'RELEASED';
   else if (query.status === 'DRAFT') where.status = 'DRAFT';
-  if (outletId) where.outletId = outletId;
+  if (outletId) where.AND = [{ OR: [{outletId}, {loadPlanVersion:2,destinations:{array_contains:[{outletId}]}}] }];
   if (search) {
+    const matchingOutlets = await prisma.outlet.findMany({where:{name:{contains:search,mode:'insensitive'}},select:{id:true}});
     where.OR = [
       { code: { contains: search, mode: 'insensitive' } },
       { outlet: { name: { contains: search, mode: 'insensitive' } } },
+      { invoices: { some: { invoiceNumber: {contains:search,mode:'insensitive'} } } },
+      ...matchingOutlets.map(({id})=>({loadPlanVersion:2,destinations:{array_contains:[{outletId:id}]}})),
     ];
   }
   if (dateFrom || dateTo) {
@@ -28,12 +32,12 @@ export const getPackingLists = async (query, role) => {
     if (dateTo) where.createdAt.lte = new Date(dateTo + 'T23:59:59Z');
   }
 
-  const [items, total] = await Promise.all([
+  const pendingOnly=query.remainingOnly==='true';
+  const [rawItems, rawTotal] = await Promise.all([
     prisma.packingList.findMany({
       where,
-      skip,
-      take: parseInt(limit),
-      orderBy: { createdAt: 'desc' },
+      ...(pendingOnly?{}:{skip,take:parseInt(limit)}),
+      orderBy: [{ createdAt: 'desc' },{id:'asc'}],
       include: {
         outlet: { select: { id: true, name: true, address: true, outletCode: true, latitude: true, longitude: true, googleLocation: true } },
         invoices: true,
@@ -44,7 +48,9 @@ export const getPackingLists = async (query, role) => {
     prisma.packingList.count({ where }),
   ]);
 
-  const all = await prisma.packingList.findMany({where,select:{status:true,documentKind:true,policySnapshot:true,totalCartons:true,items:true,invoices:{select:{totalCartons:true}}}});
+  const matching=pendingOnly?rawItems.filter(item=>packingBalance(item).remainingCartons>0):rawItems;
+  const total=pendingOnly?matching.length:rawTotal,items=pendingOnly?matching.slice(skip,skip+limit):matching;
+  const all = await prisma.packingList.findMany({where,select:{status:true,documentKind:true,policySnapshot:true,loadPlanVersion:true,destinations:true,totalCartons:true,items:true,invoices:{select:{totalCartons:true,destinationId:true}}}});
   const metrics = {total,draftCount:all.filter(p=>p.status==='DRAFT').length,releasedCount:all.filter(p=>p.status==='RELEASED').length,incompleteCount:all.filter(p=>p.status==='DRAFT'&&!shipmentReady(p)).length};
-  return { items: items.map(p=>({...packingBalance(p),commercial:invoiceReconciliation(p)})), total, metrics, page: parseInt(page), limit: parseInt(limit) };
+  return { items: await withPackingDestinations(items.map(p=>({...packingBalance(p),commercial:invoiceReconciliation(p)}))), total, metrics, page: parseInt(page), limit: parseInt(limit) };
 };

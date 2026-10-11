@@ -4,6 +4,7 @@ import {deliveryStopGate} from '../../shared/driver-workspace.mjs';
 import {assertDestinationStart,flagIncompleteDestinations} from '../src/modules/delivery/services/destination-policy.service.js';
 import {updateStopStatusSchema} from '../src/modules/delivery/delivery.schema.js';
 import {parameterGuidance,workflowSummary} from '../../shared/policy-guidance.mjs';
+import {withPolicy} from '../src/modules/config/services/policy-context.service.js';
 
 test('checkout exception reason survives API validation and applies only to mandatory checkout mode',()=>{
  const request={params:{id:'stop'},body:{status:'DELIVERED',missingCheckoutReason:'  GPS ponsel terputus  '}};
@@ -43,10 +44,10 @@ test('older trip snapshots retain free-order semantics when new destination sett
 });
 test('warehouse flag is created once even after resolution; disabling notifications leaves the task intact',async()=>{
  const rows=stops(),issues=[],notifications=[];
- const db={deliveryIssue:{findFirst:async q=>issues.find(i=>i.stopId===q.where.stopId&&i.title===q.where.title),create:async({data})=>{const issue={id:'issue',...data};issues.push(issue);return issue;}},user:{findFirst:async()=>({id:'warehouse'}),findUnique:async()=>null},notification:{create:async args=>notifications.push(args)}};
+ const db={deliveryIssue:{findFirst:async q=>issues.find(i=>i.stopId===q.where.stopId&&i.title===q.where.title),create:async({data})=>{const issue={id:'issue',...data};issues.push(issue);return issue;}},user:{findMany:async()=>[{id:'warehouse',role:'KEPALA_GUDANG'}],findUnique:async()=>null},systemConfig:{findMany:async()=>[]},notification:{createMany:async args=>{notifications.push(...args.data);return {count:args.data.length};}}};
  const stop={...rows[2],deliveryRoute:{id:'r',code:'TRIP',createdById:'warehouse',policySnapshot:{values:{DELIVERY_ISSUE_DEFAULT_HOURS:2}}}};
- await flagIncompleteDestinations(db,stop,[rows[0]],'driver');
- assert.equal(issues.length,1);assert.equal(issues[0].ownerId,'warehouse');assert.equal(issues[0].stopId,'s1');assert.equal(issues[0].history[0].nextStopId,'s3');
+ await withPolicy({values:{FEATURE_NOTIFICATIONS_MODE:'OFF',DELIVERY_ISSUE_DEFAULT_HOURS:2}},()=>flagIncompleteDestinations(db,stop,[rows[0]],'driver'));
+ assert.equal(issues.length,1);assert.equal(issues[0].ownerId,null);assert.equal(issues[0].responsibleRole,'KEPALA_GUDANG');assert.equal(issues[0].stopId,'s1');assert.equal(issues[0].history[0].nextStopId,'s3');
  issues[0].status='DONE';await flagIncompleteDestinations(db,stop,[rows[0]],'driver');assert.equal(issues.length,1);assert.equal(notifications.length,0);
  assert.equal(rows[0].status,'PENDING');assert.deepEqual(rows[0].attendances,[]);
 });

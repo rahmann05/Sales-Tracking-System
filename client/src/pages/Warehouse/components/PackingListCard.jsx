@@ -1,4 +1,5 @@
 import React from 'react';
+import {PackingLoadSummary} from './PackingLoadSummary';
 import {InvoiceReconciliationPanel} from './InvoiceReconciliationPanel';
 import { LuSend, LuRotateCcw, LuTrash2, LuPencil, LuPrinter, LuTriangleAlert, LuCircleCheck, LuStore, LuFileText, LuTruck, LuClock, LuChevronDown, LuChevronUp } from 'react-icons/lu';
 export function PackingListCard({
@@ -22,6 +23,7 @@ export function PackingListCard({
   toggleExpand
 }) {
   return <article key={pl.id} className={`bg-surface border rounded-2xl p-4 md:p-5 space-y-4 transition-all shadow-xs ${needsCompletion ? 'border-amber-300/80 bg-amber-50/20 dark:bg-amber-950/10' : 'border-border-glass hover:border-primary/20'}`}>
+                {isExpanded&&<PackingLoadSummary packing={pl}/>}
                 {/* 1. Header Row */}
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
@@ -32,7 +34,7 @@ export function PackingListCard({
                       <span className="text-on-surface-variant text-sm font-semibold">·</span>
                       <strong className="text-sm font-bold text-on-surface flex items-center gap-1">
                         <LuStore className="text-xs text-primary" />
-                        <span>{pl.outlet?.name || 'Toko Belum Ditugaskan'}</span>
+                        <span>{pl.loadPlanVersion===2?`${new Set(pl.destinations.map(row=>row.outletId)).size} toko dalam satu muatan`:pl.outlet?.name || 'Toko Belum Ditugaskan'}</span>
                       </strong>
 
                       {/* Status Badges */}

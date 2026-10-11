@@ -6,7 +6,7 @@ export function ReturnAssignment({stop,task,people,onChanged}){
  if(!(stop.rejectedCartons>0)||stop.returnInspection)return null;
  const eligible=people.filter(p=>warehouseStaffEligible(p,'can_monitor_delivery')),invalidOwner=Boolean(ownerId&&!eligible.some(p=>p.id===ownerId));
  const save=async e=>{e.preventDefault();setBusy(true);setError('');try{await deliveryApi.assignReturn(stop.id,{revision:task?.revision||0,ownerId:ownerId||null,dueAt:due?new Date(due).toISOString():null,reason});setReason('');await onChanged();}catch(e){setError(e.message);}finally{setBusy(false);}};
- return <details className="admin-trip-history"><summary>PIC pemeriksaan retur · {task?.ownerName||'Belum ditetapkan'}</summary><form className="app-form" onSubmit={save}>
+ return <details className="admin-trip-history"><summary>Alihkan pemeriksaan barang kembali (opsional) · {task?.ownerName||'Tim gudang'}</summary><p>Tim gudang dapat langsung memeriksa barang. Pilih petugas khusus hanya bila perlu membagi pekerjaan.</p><form className="app-form" onSubmit={save}>
  <label className="app-field">Petugas pemeriksa<select value={ownerId} disabled={busy} onChange={e=>setOwnerId(e.target.value)}><option value="">Antrean gudang</option>{invalidOwner&&<option disabled value={ownerId}>{task?.ownerName||'PIC sebelumnya'} · Tidak memenuhi izin</option>}{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
  {invalidOwner&&<p role="status">Pilih pemeriksa aktif yang berwenang atau kembalikan tugas ke antrean gudang.</p>}
  <label className="app-field">Tenggat (waktu lokal)<input type="datetime-local" value={due} disabled={busy} onChange={e=>setDue(e.target.value)}/></label>

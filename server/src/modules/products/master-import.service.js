@@ -8,6 +8,7 @@ import {validateProductUnits} from './product-units.js';
 import {freshDomainActor} from '../../middlewares/domain-permission.middleware.js';
 import {getCodePolicy,resolveBusinessCode,validateCodeUpdate} from '../config/services/business-code.service.js';
 import {getDynamicConfig} from '../config/config.service.js';
+import {assertEvidenceImages} from '../../utils/evidence-images.js';
 const definitions={products:{model:'product',key:'sku',code:'PRODUCT_SKU',feature:'PRODUCTS'},vehicles:{model:'vehicle',key:'code',code:'VEHICLE',feature:'VEHICLES'}};
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function parse(kind,raw){
@@ -16,6 +17,7 @@ function parse(kind,raw){
 }
 async function preview(db,kind,raw){
  const d=definitions[kind],rows=parse(kind,raw),codes=rows.map(r=>r.data[d.key]);
+ if(kind==='vehicles')for(const row of rows)if(row.action!=='SKIP')await assertEvidenceImages({photoUrl:row.data.photoUrl});
  if(codes.some(c=>!c)||new Set(codes).size!==codes.length)throw new AppError('Kode/SKU wajib dan tidak boleh duplikat dalam berkas.',422);
  const saved=await db[d.model].findMany({where:{[d.key]:{in:codes}},orderBy:{id:'asc'}}),lookup=new Map(saved.map(r=>[r[d.key],r]));
  const changes=rows.map(row=>{const old=lookup.get(row.data[d.key]);if(old?.deletedAt&&row.action!=='SKIP')throw new AppError(`Kode ${row.data[d.key]} sudah dinonaktifkan. Aktifkan melalui master; impor tidak menghidupkan histori.`,409);
@@ -48,7 +50,10 @@ export async function masterImport(kind,body,user,apply=false){
    if(kind==='products'&&c.before&&data.code!==undefined)data.code=await validateCodeUpdate('PRODUCT',data.code,c.before.id,db);
    if(kind==='products')Object.assign(data,validateProductUnits(data));
    if(c.action==='CREATE'&&kind==='products'){data.stock=0;data.code=await resolveBusinessCode('PRODUCT',data.code,{db,optional:true});}
-   if(kind==='vehicles'){data.maxCartons??=await getDynamicConfig('DEFAULT_VEHICLE_CAPACITY_CARTONS',200);data.fuelPricePerLiter??=await getDynamicConfig('DEFAULT_FUEL_PRICE_PER_LITER',12500);}
+   if(kind==='vehicles'){
+    data.maxCartons??=await getDynamicConfig('DEFAULT_VEHICLE_CAPACITY_CARTONS',200);data.fuelPricePerLiter??=await getDynamicConfig('DEFAULT_FUEL_PRICE_PER_LITER',12500);
+    if(!c.before||['maxCartons','maxWeightKg'].some(key=>data[key]!=null&&data[key]!==c.before[key]))data.capacityProfile={...(c.before?.capacityProfile||{}),status:'ESTIMATED',reviewedBy:user.id,reviewedAt:new Date().toISOString(),notes:'Patokan dari impor master; bukan konfirmasi pengukuran kendaraan.'};
+   }
    const after=c.action==='CREATE'?await db[d.model].create({data}):await db[d.model].update({where:{id:c.before.id},data});
    await db.auditEvent.create({data:{entityType:kind==='products'?'PRODUCT':'VEHICLE',entityId:after.id,action:'MASTER_IMPORT',actorId:user.id,actorName:user.name,before:c.before?JSON.parse(JSON.stringify(c.before)):{},after:JSON.parse(JSON.stringify(after))}});
   }

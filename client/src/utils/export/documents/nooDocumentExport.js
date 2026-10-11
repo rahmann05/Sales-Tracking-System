@@ -1,14 +1,14 @@
 import { createDocumentExporters } from '../core/createDocumentExporters';
 import { formatCurrency, formatDateId, safeStr } from '../core/formatters';
 
-function buildNooDocumentBlueprint(item = {}) {
+export function buildNooDocumentBlueprint(item = {}) {
   const regNo = safeStr(
     item.registrationCode ||
       (item.id ? `REG-${String(item.id).substring(0, 8).toUpperCase()}` : 'REG-BARU')
   );
   const custCode = safeStr(item.customerCode || item.outletCode, 'MENUNGGU FINALISASI');
-  const status = safeStr(item.registrationStatus || item.status, 'PENDING');
-  const dateStr = formatDateId(item.createdAt || new Date());
+  const status = safeStr(item.registrationStatus || item.status, 'Belum tercatat');
+  const dateStr = formatDateId(item.createdAt);
   const dateCode = new Date().toISOString().split('T')[0];
   const visitDays = Array.isArray(item.visitDays)
     ? item.visitDays.join(', ')
@@ -27,8 +27,8 @@ function buildNooDocumentBlueprint(item = {}) {
       { label: 'Kode Customer (ND6)', value: custCode },
       { label: 'Tanggal Pengajuan', value: dateStr },
       { label: 'Status Persetujuan', value: status },
-      { label: 'Divisi Distribusi', value: safeStr(item.division, 'BELFOODS') },
-      { label: 'Wilayah / Area', value: safeStr(item.area, 'CMH') },
+      { label: 'Divisi Distribusi', value: safeStr(item.divisionName || item.division, 'Belum diisi') },
+      { label: 'Wilayah / Area', value: safeStr(item.area, 'Belum diisi') },
     ],
     sections: [
       {
@@ -38,22 +38,22 @@ function buildNooDocumentBlueprint(item = {}) {
           ['1', 'Nama Toko / Outlet', safeStr(item.name || item.outletName)],
           ['2', 'Nama Pemilik (Owner)', safeStr(item.ownerName)],
           ['3', 'Nomor Telepon / WhatsApp', safeStr(item.phone || item.ownerPhone)],
-          ['4', 'Alamat Lengkap Toko', safeStr(item.address)],
+          ['4', 'Alamat Lengkap Toko', [item.address,item.address2,item.address3].filter(Boolean).join(', ') || 'Belum diisi'],
           [
             '5',
             'Kecamatan / Kota',
-            `${safeStr(item.subAreaKecamatan)} / ${safeStr(item.city, 'CIMAHI')}`,
+            `${safeStr(item.subAreaKecamatan)} / ${safeStr(item.city, 'Belum diisi')}`,
           ],
           ['6', 'Kode Pos', safeStr(item.postalCode, '-')],
           [
             '7',
             'Titik Koordinat GPS',
-            `Lat: ${safeStr(item.latitude, '0')}, Lng: ${safeStr(item.longitude, '0')}`,
+            `Lat: ${safeStr(item.latitude, 'Belum tersedia')}, Lng: ${safeStr(item.longitude, 'Belum tersedia')}`,
           ],
           [
             '8',
             'ID Bukti Foto Lapangan',
-            safeStr(item.photoId, item.photoUrl ? 'PHOTO-REG-LIVE' : '-'),
+            safeStr(item.photoId, item.photoUrl ? 'Foto terlampir' : 'Belum dilampirkan'),
           ],
         ],
         columnWidths: [8, 35, 57],
@@ -65,16 +65,16 @@ function buildNooDocumentBlueprint(item = {}) {
           [
             '1',
             'Saluran Distribusi (Channel)',
-            `${safeStr(item.channel, 'GT')} / ${safeStr(item.subChannel, 'RTL')}`,
+            `${safeStr(item.channel, 'Belum diisi')} / ${safeStr(item.subChannel, 'Belum diisi')}`,
           ],
-          ['2', 'Kelas / Tiering Outlet', `Tier ${safeStr(item.channelTier, 'A')}`],
-          ['3', 'Status Perpajakan', safeStr(item.taxType, 'NON_PKP')],
+          ['2', 'Kelas / Tiering Outlet', `Tier ${safeStr(item.channelTier, 'Belum diisi')}`],
+          ['3', 'Status Perpajakan', safeStr(item.taxType, 'Belum diisi')],
           ['4', 'Nomor NPWP / NIK 16-Digit', safeStr(item.taxNumber || item.nik, '-')],
           ['5', 'Nama Wajib Pajak (Sesuai KTP/NPWP)', safeStr(item.taxName || item.ownerName)],
           ['6', 'Alamat Pajak', safeStr(item.taxAddress || item.address)],
-          ['7', 'Metode Pembayaran', safeStr(item.paymentType, 'CASH')],
-          ['8', 'Term of Payment (TOP)', `${Number(item.termOfPaymentDays || 0)} Hari`],
-          ['9', 'Plafon / Limit Kredit', formatCurrency(item.creditLimit || 0)],
+          ['7', 'Metode Pembayaran', safeStr(item.paymentType, 'Belum diisi')],
+          ['8', 'Term of Payment (TOP)', item.termOfPaymentDays == null ? 'Belum diisi' : `${Number(item.termOfPaymentDays)} Hari`],
+          ['9', 'Plafon / Limit Kredit', item.creditLimit == null ? 'Belum diisi' : formatCurrency(item.creditLimit)],
         ],
         columnWidths: [8, 35, 57],
       },
@@ -82,17 +82,19 @@ function buildNooDocumentBlueprint(item = {}) {
         title: '3. Jadwal Kunjungan Rutin (RJP / PJP) & Verifikasi',
         headers: ['No', 'Atribut Rute & Otorisasi', 'Nilai / Keterangan Tercatat'],
         rows: [
-          ['1', 'Siklus Kunjungan RJP', safeStr(item.visitWeekSchedule, 'EVERY_WEEK')],
+          ['1', 'Siklus Kunjungan RJP', item.visitIntervalWeeks ? `Setiap ${item.visitIntervalWeeks} minggu` : safeStr(item.visitWeekSchedule, 'Belum diisi')],
           ['2', 'Hari Kunjungan Rutin', visitDays],
           ['3', 'Salesman Pengaju', safeStr(item.salesmanName || item.submittedBy?.name)],
           ['4', 'Supervisor Area', safeStr(item.spvName || item.supervisorName)],
-          ['5', 'Catatan Verifikasi / Penolakan', safeStr(item.rejectionNote, 'Sesuai prosedur')],
+          ['5', 'Catatan Verifikasi / Penolakan', safeStr(item.rejectionNote, 'Tidak ada catatan keputusan')],
         ],
         columnWidths: [8, 35, 57],
       },
     ],
+    images: item.photoUrl ? [{url: item.photoUrl, caption: `Foto outlet ${safeStr(item.name)}`}] : [],
     notes: [
-      'Formulir ini merupakan bukti sah registrasi pelanggan baru (NOO) dan dasar pengaktifan Master Customer ND6.',
+      ...(!item.photoUrl ? ['Foto fisik outlet belum dilampirkan.'] : []),
+      'Dokumen ini mencerminkan data pengajuan dan status keputusan yang tercatat. Ekspor tidak merupakan persetujuan atau aktivasi outlet.',
     ],
     signatories: [
       {

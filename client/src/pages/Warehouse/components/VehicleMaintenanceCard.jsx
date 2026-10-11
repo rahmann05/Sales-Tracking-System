@@ -84,12 +84,12 @@ export const VehicleMaintenanceCard = ({
         {/* Specifications */}
         <div className="flex gap-4 p-3 bg-surface-variant/30 rounded-xl">
           <div>
-            <div className="text-xs text-on-surface-variant">Kapasitas Maksimal</div>
-            <div className="text-sm font-bold text-on-surface">{maxCartons} Karton</div>
+            <div className="text-xs text-on-surface-variant">Patokan karton</div>
+            <div className="text-sm font-bold text-on-surface">{maxCartons>0?`${maxCartons} karton`:'Belum diketahui'}</div>
           </div>
           <div className="border-l border-border-glass pl-4">
-            <div className="text-xs text-on-surface-variant">Berat Maksimal</div>
-            <div className="text-sm font-bold text-on-surface">{maxWeightKg} kg</div>
+            <div className="text-xs text-on-surface-variant">Patokan berat operasional</div>
+            <div className="text-sm font-bold text-on-surface">{maxWeightKg>0?`${maxWeightKg} kg`:'Belum diketahui'}</div>
           </div>
         </div>
 
