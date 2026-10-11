@@ -211,7 +211,8 @@ export const AppRouter = ({
   }
   hasAccess = hasAccess && isTabPermissionAllowed(activeTab, user);
   if (!hasAccess) {
-    return <AccessDenied title={accessRule?.title||'Akses dibatasi'} description={accessRule?.description||'Fitur ini hanya tersedia untuk Admin.'} onGoBack={onGoBack} />;
+    const permissionDenied=accessRule?.roles?.includes(role)&&!isTabPermissionAllowed(activeTab,user);
+    return <AccessDenied title={accessRule?.title||'Akses dibatasi'} description={permissionDenied?'Peran Anda dapat membuka halaman ini, tetapi izin fitur pada akun Anda sedang dinonaktifkan. Hubungi Admin untuk memeriksa hak akses.':accessRule?.description||'Fitur ini memerlukan peran dan izin yang sesuai.'} onGoBack={onGoBack} />;
   }
 
   // Public tab routing with Suspense code splitting

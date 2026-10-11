@@ -1,0 +1,25 @@
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const client=fileURLToPath(new URL('../../client/',import.meta.url)),require=createRequire(path.join(client,'package.json'));
+const result=await require('esbuild').build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,stdin:{resolveDir:client,loader:'jsx',contents:`
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import assert from 'node:assert/strict';
+import {ErrorBoundary,isModuleLoadError} from './src/shared/components/common/ErrorBoundary.jsx';
+let checks=0;const eq=(actual,expected)=>{assert.equal(actual,expected);checks++;};
+for(const message of ['Failed to fetch dynamically imported module: https://example.invalid/old.js','error loading dynamically imported module','Importing a module script failed.','Loading chunk 7 failed.','Loading CSS chunk 7 failed.','Unable to preload CSS for old.css'])eq(isModuleLoadError(new TypeError(message)),true);
+for(const message of ['Cannot read properties of undefined','Failed to fetch','Permission denied'])eq(isModuleLoadError(new Error(message)),false);
+eq(isModuleLoadError(null),false);
+const boundary=new ErrorBoundary({children:<p>Page</p>});
+boundary.state={hasError:true,error:new TypeError('Failed to fetch dynamically imported module: old.js')};
+const html=renderToStaticMarkup(boundary.render());
+eq(html.includes('Muat ulang aplikasi'),true);eq(html.includes('Isian yang belum disimpan dapat hilang'),true);eq(html.includes('old.js'),false);
+let reloaded=0,reset=0;globalThis.window={location:{reload:()=>reloaded++}};
+boundary.setState=()=>reset++;
+boundary.handleReset();eq(reloaded,1);eq(reset,0);
+boundary.state.error=new Error('Render error');boundary.handleReset();eq(reloaded,1);eq(reset,1);
+delete globalThis.window;
+console.log('Module load recovery: '+checks+' assertions passed; stale imports reload explicitly, ordinary errors reset without reload. SSR/action contract, not browser outage simulation.');
+`}});
+require('node:vm').runInThisContext(`(function(require){${result.outputFiles[0].text}\n})`)(require);

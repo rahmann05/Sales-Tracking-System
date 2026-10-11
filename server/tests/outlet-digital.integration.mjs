@@ -130,7 +130,39 @@ try{
  job=await prisma.outletValidationJob.findUnique({where:{id:job.id}});eq(job.items[0].state,'DONE');eq(job.items[0].attempts,2);
  await prisma.outletValidationJob.update({where:{id:job.id},data:{status:'STOPPING',leaseUntil:new Date(Date.now()-1000),leaseToken:randomUUID(),items:[{outletId:batchOutlet.id,state:'RUNNING',attempts:2}]}});eq((await runValidationJobs()).processed,0);job=await prisma.outletValidationJob.findUnique({where:{id:job.id}});eq(job.status,'PAUSED');eq(job.items[0].state,'WAITING');
  await prisma.outletValidationJob.update({where:{id:job.id},data:{status:'RUNNING',leaseUntil:new Date(Date.now()-1000),leaseToken:randomUUID(),items:[{outletId:batchOutlet.id,state:'RUNNING',attempts:3}]}});eq((await runValidationJobs()).processed,0);job=await prisma.outletValidationJob.findUnique({where:{id:job.id}});eq(job.status,'DONE');eq(job.items[0].state,'FAILED');
+ const cancelOne=await make(),cancelTwo=await make();
+ const cancelledBatch={requestId:randomUUID(),outletIds:[cancelOne.id,cancelTwo.id],reason:'Batalkan item yang belum diperiksa'};
+ let cancelJob=(await api('/outlets/validation-jobs',spv,'POST',cancelledBatch)).body.data;jobs.push(cancelJob.id);
+ eq((await api(`/outlets/validation-jobs/${cancelJob.id}`,spv,'PATCH',{action:'CANCEL',reason:'Pengujian pembatalan batch'})).body.data.status,'CANCELLED');
+ eq((await runValidationJobs()).processed,0);
+ cancelJob=await prisma.outletValidationJob.findUnique({where:{id:cancelJob.id}});
+ eq(cancelJob.items.map(i=>i.state),['CANCELLED','CANCELLED']);eq(cancelJob.items[0].cancelReason,'Pengujian pembatalan batch');
+ eq((await api(`/outlets/validation-jobs/${cancelJob.id}`,spv,'PATCH',{action:'RESUME',reason:'Mencoba melanjutkan batch batal'})).status,409);
+ eq((await api(`/outlets/validation-jobs/${cancelJob.id}`,spv,'PATCH',{action:'RETRY',reason:'Mencoba mengulang batch batal'})).status,409);
+ const partialBatch={requestId:randomUUID(),outletIds:[cancelOne.id,cancelTwo.id],reason:'Batalkan batch setelah hasil pertama'};
+ let partialJob=(await api('/outlets/validation-jobs',spv,'POST',partialBatch)).body.data;jobs.push(partialJob.id);
+ mode='MATCH';eq((await runValidationJobs()).processed,1);
+ partialJob=await prisma.outletValidationJob.findUnique({where:{id:partialJob.id}});eq(partialJob.items.map(i=>i.state),['DONE','WAITING']);
+ eq((await api(`/outlets/validation-jobs/${partialJob.id}`,spv,'PATCH',{action:'CANCEL',reason:'Sisa item tidak perlu diperiksa'})).body.data.items.map(i=>i.state),['DONE','CANCELLED']);
+ eq((await runValidationJobs()).processed,0);
+ const activeBatch={requestId:randomUUID(),outletIds:[cancelTwo.id],reason:'Pembatalan menunggu pekerjaan aktif'};
+ let activeJob=(await api('/outlets/validation-jobs',spv,'POST',activeBatch)).body.data;jobs.push(activeJob.id);
+ await prisma.outletValidationJob.update({where:{id:activeJob.id},data:{status:'RUNNING',leaseToken:randomUUID(),leaseUntil:new Date(Date.now()+60000),items:[{outletId:cancelTwo.id,state:'RUNNING',attempts:1}]}});
+ eq((await api(`/outlets/validation-jobs/${activeJob.id}`,spv,'PATCH',{action:'CANCEL',reason:'Harus menunggu pekerjaan selesai'})).status,409);
+ eq((await api(`/outlets/validation-jobs/${activeJob.id}`,spv,'PATCH',{action:'STOP',reason:'Jeda dahulu lalu batalkan'})).body.data.status,'STOPPING');
  eq((await api('/outlets/reviews?status=ALL&issue=MISSING_POINT',spv)).body.data.every(r=>r.outlet.latitude===null),true);
+ // Equal timestamps and custom page sizes must not duplicate or hide reviews.
+ const paginationTag=`page-${randomUUID()}`;
+ for(let n=0;n<23;n++)await open((await make({outletCode:`${paginationTag}-${n}`})).id,spv);
+ const pages=[];
+ for(let page=1;page<=3;page++){
+  const response=await api(`/outlets/reviews?status=ALL&search=${paginationTag}&limit=10&page=${page}`,spv);
+  eq(response.status,200);eq(response.body.pagination.limit,10);eq(response.body.pagination.total,23);eq(response.body.pagination.totalPages,3);
+  eq(response.body.data.length,page===3?3:10);pages.push(...response.body.data.map(review=>review.id));
+ }
+ eq(new Set(pages).size,23);
+ eq((await api(`/outlets/reviews?status=ALL&search=${paginationTag}&limit=1`,spv)).body.pagination.limit,10);
+ eq((await api(`/outlets/reviews?status=ALL&search=${paginationTag}&limit=1000`,spv)).body.pagination.limit,100);
  console.log(`Outlet digital/field/batch integration passed: ${checks} assertions; ${calls} mocked provider calls; no external HTTP.`);
 }finally{
  globalThis.fetch=realFetch;prisma.systemConfig.findMany=originalConfigs;invalidateConfigCache();

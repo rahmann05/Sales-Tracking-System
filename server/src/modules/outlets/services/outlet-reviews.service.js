@@ -35,8 +35,8 @@ export async function getOutletReviews(query,actor) {
   }
   if(query.ownerId)where.ownerId=String(query.ownerId);
   if(query.search?.trim())where.outlet={...where.outlet,OR:['name','address','outletCode'].map(k=>({[k]:{contains:query.search.trim(),mode:'insensitive'}}))};
-  const page=Math.max(1,parseInt(query.page)||1),limit=30;
-  const [data,total]=await prisma.$transaction([prisma.outletReview.findMany({where,include:{outlet:{include:{cluster:true}}},orderBy:{updatedAt:'desc'},skip:(page-1)*limit,take:limit}),prisma.outletReview.count({where})]);
+  const page=Math.max(1,parseInt(query.page)||1),limit=Math.min(100,Math.max(10,parseInt(query.limit)||25));
+  const [data,total]=await prisma.$transaction([prisma.outletReview.findMany({where,include:{outlet:{include:{cluster:true}}},orderBy:[{updatedAt:'desc'},{id:'desc'}],skip:(page-1)*limit,take:limit}),prisma.outletReview.count({where})]);
   return {data,pagination:{page,limit,total,totalPages:Math.max(1,Math.ceil(total/limit))}};
 }
 export async function getOutletReview(id,actor) {

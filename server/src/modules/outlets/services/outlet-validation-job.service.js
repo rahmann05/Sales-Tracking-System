@@ -32,6 +32,16 @@ export async function validationJobs(user){await reviewActor(prisma,user,'can_ru
 export async function changeValidationJob(id,raw,user){
  const b=jobActionInput.parse(raw);await reviewActor(prisma,user,'can_run_outlet_review');
  return prisma.$transaction(async db=>{await jobLock(db,id);const job=await db.outletValidationJob.findFirst({where:{id,actorId:user.id}});if(!job)throw new AppError('Batch tidak ditemukan.',404);
+  if(b.action==='CANCEL'){
+   if(!['QUEUED','PAUSED'].includes(job.status)||job.leaseToken)throw new AppError('Jeda batch dan tunggu outlet yang sedang diperiksa selesai sebelum membatalkan.',409);
+   const cancelledAt=new Date().toISOString();
+   const items=job.items.map(i=>i.state==='WAITING'?{...i,state:'CANCELLED',cancelledAt,cancelReason:b.reason}:i);
+   return db.outletValidationJob.update({where:{id},data:{status:'CANCELLED',items}});
+  }
+  if(job.status==='CANCELLED')throw new AppError('Batch yang dibatalkan tidak dapat dilanjutkan.',409);
+  if(b.action==='STOP'&&!['QUEUED','RUNNING','STOPPING'].includes(job.status))throw new AppError('Hanya batch aktif yang dapat dijeda.',409);
+  if(b.action==='RESUME'&&job.status!=='PAUSED')throw new AppError('Hanya batch yang dijeda yang dapat dilanjutkan.',409);
+  if(b.action==='RETRY'&&(!['DONE','PAUSED'].includes(job.status)||!job.items.some(i=>i.state==='FAILED'&&i.attempts<3)))throw new AppError('Tidak ada pemeriksaan gagal yang dapat diulang.',409);
   const items=job.items.map(i=>b.action==='RETRY'&&i.state==='FAILED'&&i.attempts<3?{...i,state:'WAITING'}:i);
   if(b.action!=='STOP'&&job.leaseUntil&&+job.leaseUntil>Date.now())throw new AppError('Tunggu outlet yang sedang diproses.',409);
   return db.outletValidationJob.update({where:{id},data:{status:b.action==='STOP'?(job.leaseToken?'STOPPING':'PAUSED'):'QUEUED',items}});

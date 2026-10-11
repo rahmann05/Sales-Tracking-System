@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {request} from '../../../services/httpClient';
 import {useApp} from '../../../context/AppContext';
+import {SalesExceptionDetail} from './SalesExceptionDetail';
 
 export function SalesExceptionClarifications(){
  const {user}=useApp(),[items,setItems]=useState([]),[notes,setNotes]=useState({}),[busy,setBusy]=useState(''),[error,setError]=useState('');
@@ -20,8 +21,7 @@ export function SalesExceptionClarifications(){
   {error&&<p role="alert" className="app-error">{error}</p>}
   {items.map(row=>{const asked=row.decision?.value==='REQUIRES_CORRECTION',sent=row.details.clarification?.requestAt===row.decision?.at;return <details key={row.id} className="border border-border-glass rounded-xl p-4" open={asked&&!sent||undefined}>
    <summary className="cursor-pointer min-h-11">{row.details.outletName||'Kegiatan'} · {asked?sent?'Penjelasan menunggu pemeriksaan':'SPV meminta penjelasan':'Menunggu pemeriksaan SPV'}</summary>
-   {row.decision?.note&&<p className="py-2 text-sm">Catatan SPV: {row.decision.note}</p>}
-   {row.details.clarification&&<p className="py-2 text-sm">Penjelasan Anda: {row.details.clarification.note}</p>}
+   <SalesExceptionDetail row={row}/>
    {asked&&!sent&&<form onSubmit={event=>send(row.id,event)}><label className="app-field">Penjelasan<textarea required minLength={5} maxLength={2000} value={notes[row.id]||''} onChange={event=>setNotes(values=>({...values,[row.id]:event.target.value}))}/></label><button className="app-button app-button-primary mt-3" disabled={Boolean(busy)||(notes[row.id]||'').trim().length<5}>{busy===row.id?'Mengirim…':'Kirim penjelasan ke SPV'}</button></form>}
   </details>;})}
  </section>;

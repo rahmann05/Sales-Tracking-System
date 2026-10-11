@@ -23,7 +23,7 @@ export const CapturedPhotoPreview = ({ capturedPhoto, onRetake }) => {
       </div>
       <div className="absolute bottom-3 left-3 bg-emerald-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md">
         <LuCheck className="text-sm" />
-        <span>Foto & Koordinat GPS Berhasil Direkam</span>
+        <span>Foto berhasil dilampirkan. Status GPS ditampilkan terpisah.</span>
       </div>
     </div>
   );

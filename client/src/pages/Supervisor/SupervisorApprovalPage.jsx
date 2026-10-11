@@ -21,6 +21,7 @@ import {IncidentCard} from './components/IncidentCard';
 import {IncidentHandleModal} from './components/IncidentHandleModal';
 
 const isPending=row=>['PENDING','PENDING_SPV','WAITING_SPV'].includes(row.status)||!row.status&&row.validationStatus==='MENUNGGU';
+const statusLabel=row=>isPending(row)?'Menunggu':({APPROVED:'Disetujui',REJECTED:'Ditolak',CANCELLED:'Dibatalkan',RESOLVED:'Selesai',COMPLETED:'Selesai'})[row.status]||row.validationStatus||row.status||'Belum tersedia';
 
 export function SupervisorApprovalPage(){
 
@@ -72,7 +73,7 @@ export function SupervisorApprovalPage(){
 
       {error&&<p role="alert" className="app-error">{error}</p>}
 
-      <div className={`spv-queue-layout ${selected?'has-selection':''}`}><section className="spv-panel spv-table-wrap" aria-label="Daftar permintaan"><table className="spv-table spv-mobile-cards"><thead><tr><th>Outlet / pemohon</th><th>Alasan</th><th>Status</th><th>Pemeriksaan</th></tr></thead><tbody>{rows.map(row=>{const key=`${row.queueKind||row.type}:${row.id}`;return <tr key={key} aria-selected={selectedId===key}><td data-label="Outlet / pemohon"><strong>{row.outletName||'Outlet belum tersedia'}</strong><small>{row.salesName||row.userName||'Pemohon belum tersedia'}</small></td><td data-label="Alasan">{row.reason||'Lihat bukti permintaan'}</td><td data-label="Status"><span className="app-status">{isPending(row)?'Menunggu':row.status||row.validationStatus}</span></td><td data-label="Pemeriksaan"><button type="button" className="app-button" disabled={busy} onClick={()=>setSelectedId(key)}>Periksa</button></td></tr>;})}{!rows.length&&<tr><td colSpan="4">{queue.loading?'Memuat antrean…':queue.error?'Perbarui antrean untuk mencoba kembali.':'Tidak ada permintaan sesuai filter.'}</td></tr>}</tbody></table></section>
+      <div className={`spv-queue-layout ${selected?'has-selection':''}`}><section className="spv-panel spv-table-wrap" aria-label="Daftar permintaan"><table className="spv-table spv-mobile-cards"><thead><tr><th>Outlet / pemohon</th><th>Alasan</th><th>Status</th><th>Pemeriksaan</th></tr></thead><tbody>{rows.map(row=>{const key=`${row.queueKind||row.type}:${row.id}`;return <tr key={key} aria-selected={selectedId===key}><td data-label="Outlet / pemohon"><strong>{row.outletName||'Outlet belum tersedia'}</strong><small>{row.salesName||row.userName||'Pemohon belum tersedia'}</small></td><td data-label="Alasan">{row.reason||'Lihat bukti permintaan'}</td><td data-label="Status"><span className="app-status">{statusLabel(row)}</span></td><td data-label="Pemeriksaan"><button type="button" className="app-button" disabled={busy} onClick={()=>setSelectedId(key)}>Periksa</button></td></tr>;})}{!rows.length&&<tr><td colSpan="4">{queue.loading?'Memuat antrean…':queue.error?'Perbarui antrean untuk mencoba kembali.':'Tidak ada permintaan sesuai filter.'}</td></tr>}</tbody></table></section>
 
       {selected&&<aside className="spv-panel spv-queue-detail" aria-label="Bukti permintaan"><div className="spv-detail-heading"><h2 ref={detailRef} tabIndex={-1}>Detail permintaan</h2><button type="button" className="app-button" disabled={busy} onClick={()=>setSelectedId('')}>Tutup</button></div><fieldset disabled={busy}>
 

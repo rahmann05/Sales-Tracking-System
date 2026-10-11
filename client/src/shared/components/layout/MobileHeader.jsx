@@ -5,7 +5,7 @@ import { useApp } from '../../../context/AppContext';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { Avatar } from '../common/Avatar';
 import { MonitoringStatus } from '../common/MonitoringStatus';
-import { TAB_IDS } from '../../../constants/navigation';
+import { getNavigationTabs, TAB_IDS } from '../../../constants/navigation';
 import '../../../styles/layout/MobileHeader.css';
 
 /**
@@ -14,7 +14,7 @@ import '../../../styles/layout/MobileHeader.css';
 export const MobileHeader = ({ onLogout }) => {
   const { user, activeTab, setActiveTab } = useApp();
   const isAdmin = managedRoles.includes(user?.role);
-  const currentAdmin=roleNavigationGroups(user).flatMap(group=>group.items).find(item=>item.id===roleParentTab(user,activeTab));
+  const currentAdmin=roleNavigationGroups(user).flatMap(group=>group.items).find(item=>item.id===roleParentTab(user,activeTab)) || getNavigationTabs(user?.role).find(tab=>tab.id===activeTab);
   const isLanding = activeTab === TAB_IDS.ROLE_WORKSPACE;
 
   return (
@@ -37,7 +37,7 @@ export const MobileHeader = ({ onLogout }) => {
           </div>
         )}
         <div>
-          <p className="mobile-brand-title">{isAdmin?(isLanding?roleHomeLabel(user?.role):currentAdmin?.label || 'Buat kluster'):'Sinar Anugrah'}</p>
+          <p className="mobile-brand-title">{isAdmin?(isLanding?roleHomeLabel(user?.role):currentAdmin?.label || (activeTab===TAB_IDS.CREATE_CLUSTER?'Buat kluster':'Halaman operasional')):'Sinar Anugrah'}</p>
           <span className="mobile-brand-subtitle font-bold text-primary">
             Operasional distribusi
           </span>

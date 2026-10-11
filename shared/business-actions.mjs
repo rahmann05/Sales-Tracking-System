@@ -13,7 +13,7 @@ export const BUSINESS_ACTIONS={
  SHIFT_CORRECTION:existing('SHIFT',['PROPOSE','ACCEPT','REJECT','CANCEL']),
  OUTLET_DIGITAL:existing('OUTLET_REVIEW',['DIGITAL_KEEP','ADMIN_DIGITAL_KEEP','INTERNAL_KEEP','FIELD_KEEP','PROPOSE','APPLY','RETURN','CANCEL']),
  OUTLET_FIELD:existing('OUTLET_REVIEW',['SUBMIT','ACCEPT','RETURN','CANCEL']),
- OUTLET_BATCH:existing('OUTLET_REVIEW',['STOP','RESUME','RETRY']),
+ OUTLET_BATCH:existing('OUTLET_REVIEW',['STOP','RESUME','RETRY','CANCEL']),
 };
 export const actionNames=group=>Object.keys(BUSINESS_ACTIONS[group]||{});
 export const actionFeature=(group,action)=>{
