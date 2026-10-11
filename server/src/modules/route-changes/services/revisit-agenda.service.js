@@ -1,5 +1,5 @@
 import {AppError} from '../../../utils/errors.js';
-import {ensureSalesPjpForDate} from '../../pjp/services/pjp.helpers.js';
+import {ensureSalesPjpForDate,lockSalesPjpForDate} from '../../pjp/services/pjp.helpers.js';
 import {resolveBusinessCode,getCodePolicy} from '../../config/services/business-code.service.js';
 import {effectivePolicy} from '../../config/services/policy-resolver.service.js';
 import {withPolicy} from '../../config/services/policy-context.service.js';
@@ -18,7 +18,7 @@ export async function createRevisitAgenda(db,request,schedule){
  return withPolicy(policy,async()=>{
   const calendar=await planningCalendar(db,schedule.date,schedule.date),day=new Date(schedule.date+'T12:00:00Z').getUTCDay();
   if(calendar.missing.length||!(calendar.workingDates?calendar.workingDates.includes(schedule.date):workingDays(policy.values.PJP_WORKING_DAYS||'1,2,3,4,5,6').includes(day)))throw new AppError('Tanggal tujuan bukan hari kerja atau kalender belum lengkap.',422);
-  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${sales.id}:${schedule.date}`}))`;
+  await lockSalesPjpForDate(db,sales.id,schedule.date);
   let pjp=await ensureSalesPjpForDate(db,sales.id,date,schedule.manualCode);
   if(!pjp){
    if((await getCodePolicy('PJP')).mode==='MANUAL'&&!schedule.manualCode)throw new AppError('Isi kode PJP manual untuk tanggal kunjungan kembali.',422);

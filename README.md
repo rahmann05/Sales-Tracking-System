@@ -37,6 +37,8 @@ SINAR ANUGRAH/
 
 ## Cara Menjalankan Project
 
+Gunakan Node.js 20.19+ atau 22.12+ (lingkungan verifikasi memakai Node 24). Backend development memakai `node --watch`; frontend memakai Vite 7.
+
 ### 1. Install Dependensi
 Jalankan perintah ini dari root folder untuk menginstall dependensi root, client, dan server sekaligus:
 

@@ -23,6 +23,11 @@ export const PJP_STOP_INCLUDE = {
     users: { select: { id: true, name: true, role: true } }, supervisor: { select: { id: true, name: true } } } } } },
   attendances: true, routeChanges: true, orders: { where: { deletedAt: null }, include: { items: true } },
 };
+// Match planner publication: lock the team before its sales/date agenda.
+export const lockSalesPjpForDate = async (tx,userId,key) => {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${userId}:${key}`}))`;
+};
 export const ensureSalesPjpForDate = async (tx,userId,now=new Date(),manualCode) => {
   const key = wibDateKey(now);
   const dayOfWeek = new Date(`${key}T12:00:00Z`).getUTCDay();
@@ -31,14 +36,13 @@ export const ensureSalesPjpForDate = async (tx,userId,now=new Date(),manualCode)
     getDynamicConfig('PJP_WEEK_MODE', 'ISO_PARITY'), getDynamicConfig('PJP_FALLBACK_TO_CLUSTER', true),
   ]);
     // All generators serialize on the same sales/day key, without altering historical plans.
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${userId}:${key}`}))`;
+    await lockSalesPjpForDate(tx,userId,key);
     const existing = await tx.pjp.findFirst({ where: { userId, date: wibDayRange(now), type: 'SALES' }, include: { stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } } } });
     if (existing) return existing;
     if(await getDynamicConfig('FEATURE_PJP_MODE','ACTIVE')!=='ACTIVE')return null;
     if ((await getCodePolicy('PJP')).mode === 'MANUAL' && !manualCode?.trim()) return null;
     const calendar=await planningCalendar(tx,key,key);
     if(calendar.missing.length||!(calendar.workingDates?calendar.workingDates.includes(key):workingDays(days).includes(dayOfWeek)))return null;
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`team:${userId}`}))`;
     const sales = await tx.user.findUnique({ where: { id: userId }, select: { ...REPORT_USER_SELECT, deletedAt: true } });
     if (!sales || sales.deletedAt || sales.role !== 'SALES' || !sales.supervisorId) return null;
     const templates = await tx.pjpTemplate.findMany({ where: { userId, dayOfWeek, weekType: { in: [getCurrentWeekType(now, mode), 'ALL'] } }, include: { stops: { orderBy: { sequence: 'asc' }, include: { outlet: {include:{cluster:{select:{supervisorId:true,deletedAt:true}}}} } } } });

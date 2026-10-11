@@ -1,4 +1,4 @@
-import {ensureSalesPjpForDate} from '../../pjp/services/pjp.helpers.js';
+import {ensureSalesPjpForDate,lockSalesPjpForDate} from '../../pjp/services/pjp.helpers.js';
 import {reviewActor} from './outlet-review-access.service.js';
 import {prisma} from '../../../config/prisma.js';
 import {AppError} from '../../../utils/errors.js';
@@ -16,7 +16,7 @@ export function fieldScheduleActive(task,date=new Date()){
 export async function addFieldPjpVisit(db,task,outlet,now=new Date(),manualCode){
  if(!fieldScheduleActive(task,now))return null;
  const key=wibDateKey(now);
- await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`pjp:${task.ownerId}:${key}`}))`;
+ await lockSalesPjpForDate(db,task.ownerId,key);
  const existing=await db.pjpStop.findFirst({where:{validationTaskId:task.id,pjp:{userId:task.ownerId,date:wibDayRange(now)}}});
  if(existing)return {...existing,added:false};
  const owner=await db.user.findFirst({where:{id:task.ownerId,role:'SALES',deletedAt:null},select:REPORT_USER_SELECT});

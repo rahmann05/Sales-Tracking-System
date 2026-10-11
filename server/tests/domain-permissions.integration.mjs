@@ -20,6 +20,7 @@ assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABAS
 const tag='domain-access-'+randomUUID(),ids=[],productIds=[],exceptions=[],issueIds=[];let pjp,cluster,outlet,checks=0;
 const eq=(a,b)=>{assert.deepEqual(a,b);checks++;},reject=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
 const allGrants=Object.fromEntries(ALL_PERMISSIONS.map(p=>[p.key,true]));
+let roleBaseline,rolesChanged=false,customChecks=0;
 const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
 const token=user=>jwt.sign({id:user.id,tokenVersion:user.tokenVersion||0},config.jwtSecret);
 const request=async(user,path,method='GET',body,auth=token(user))=>{const res=await fetch(`http://127.0.0.1:${server.address().port}/api/v1${path}`,{method,headers:{Authorization:'Bearer '+auth,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:res.status,data:await res.json()};};
@@ -47,6 +48,23 @@ try{
    }else eq((await request(actor,...args)).status,403);
   }
  }
+ // Repeat the real HTTP boundaries with custom definitions for every base role.
+ // Only local fixtures; preserve the original role configuration exactly.
+ roleBaseline=await prisma.systemConfig.findUnique({where:{key:'ROLE_DEFINITIONS'}});
+ const customDefinitions=Object.entries(people).map(([role])=>({code:'TEST_'+role+'_'+tag.replaceAll('-','_').toUpperCase(),name:'Temporary boundary test '+role,baseRole:role,isSystem:false,defaultPermissions:allGrants}));
+ await prisma.systemConfig.upsert({where:{key:'ROLE_DEFINITIONS'},create:{key:'ROLE_DEFINITIONS',value:[...(Array.isArray(roleBaseline?.value)?roleBaseline.value:[]),...customDefinitions]},update:{value:[...(Array.isArray(roleBaseline?.value)?roleBaseline.value:[]),...customDefinitions]}});rolesChanged=true;
+ for(const definition of customDefinitions){
+  const actor=people[definition.baseRole];
+  await prisma.user.update({where:{id:actor.id},data:{roleCode:definition.code,permissions:allGrants}});
+  const identity=await request(actor,'/auth/me');eq(identity.data.data.role,definition.baseRole);eq(identity.data.data.roleCode,definition.code);customChecks+=2;
+  for(const [action,rule] of Object.entries({...DOMAIN_PERMISSIONS,...CORE_ADMIN_ACTIONS})){
+   if(rule.roles.includes(definition.baseRole))await prisma.user.update({where:{id:actor.id},data:{permissions:{...allGrants,[rule.key]:false}}});
+   eq((await request(actor,...cases[action])).status,403);customChecks++;
+   await prisma.user.update({where:{id:actor.id},data:{permissions:allGrants}});
+  }
+  await prisma.user.update({where:{id:actor.id},data:{roleCode:null}});
+ }
+ if(roleBaseline)await prisma.systemConfig.update({where:{key:'ROLE_DEFINITIONS'},data:{value:roleBaseline.value,updatedAt:roleBaseline.updatedAt}});else await prisma.systemConfig.delete({where:{key:'ROLE_DEFINITIONS'}});rolesChanged=false;
  // Representative existing middleware: a true permission never expands the base role.
  for(const actor of [driver,people.KEPALA_GUDANG,sales]){
   eq((await request(actor,'/clusters','POST',{})).status,403);
@@ -83,8 +101,9 @@ try{
  // Password reset endpoint must revoke the old JWT and persist a hash.
  const oldJwt=token(sales),reset=await request(admin,`/users/${sales.id}/password`,'PUT',{password:'Fixture-Password-2026!'});eq(reset.status,200);
  eq((await request(sales,'/staff-attendance','GET',undefined,oldJwt)).status,401);eq(await bcrypt.compare('Fixture-Password-2026!',(await prisma.user.findUnique({where:{id:sales.id}})).password),true);
- console.log(`Domain permissions passed: ${checks} assertions; all action/role boundaries, explicit denials, actual product write, recovery/PIC guards, completion after revocation, fresh service permissions and password session revocation.`);
+ console.log(`Domain permissions passed: ${checks} assertions (${customChecks} custom-role checks); all action/role boundaries, explicit denials, actual product write, recovery/PIC guards, completion after revocation, fresh service permissions and password session revocation.`);
 }finally{
+ if(rolesChanged){if(roleBaseline)await prisma.systemConfig.update({where:{key:'ROLE_DEFINITIONS'},data:{value:roleBaseline.value,updatedAt:roleBaseline.updatedAt}});else await prisma.systemConfig.delete({where:{key:'ROLE_DEFINITIONS'}});}
  await prisma.operationalException.deleteMany({where:{id:{in:exceptions}}});await prisma.deliveryIssue.deleteMany({where:{id:{in:issueIds}}});
  await prisma.auditEvent.deleteMany({where:{OR:[{actorId:{in:ids}},{entityId:{in:productIds}}]}});await prisma.notification.deleteMany({where:{userId:{in:ids}}});await prisma.staffActivity.deleteMany({where:{userId:{in:ids}}});
  if(pjp)await prisma.pjp.delete({where:{id:pjp.id}});if(outlet)await prisma.outlet.delete({where:{id:outlet.id}});if(cluster)await prisma.cluster.delete({where:{id:cluster.id}});
