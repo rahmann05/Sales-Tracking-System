@@ -27,7 +27,7 @@ export function requestFeature(path,method='GET',body={}){
  const module=p.split('/')[0];
  if(/^pjp\/planning\/[^/]+\/(cancel-schedule|cancel-published)$/.test(p))return ['PJP',false];
  const feature={pjp:'PJP',clusters:'CLUSTERS',teams:'TEAMS',orders:'ORDERS',products:'PRODUCTS',vehicles:'VEHICLES',reports:'REPORTS',notifications:'NOTIFICATIONS',routing:'MAPS','daily-calls':'REPORTS'}[module];
- const newWork=['CLUSTERS','TEAMS','PRODUCTS','PJP','VEHICLES'].includes(feature)?!['GET','HEAD'].includes(method)&&!/(preview|impact|nearest-outlets|condition|maintenance)$/.test(p):feature==='MAPS'?method==='POST':method==='POST'&&p===module;
+ const newWork=['CLUSTERS','TEAMS','PRODUCTS','PJP','VEHICLES'].includes(feature)?!['GET','HEAD'].includes(method)&&!/(preview|impact|nearest-outlets|condition|maintenance|photo)$/.test(p):feature==='MAPS'?method==='POST':method==='POST'&&p===module;
  return feature?[feature,newWork]:null;
 }
 export function featureDecision(values,path,method,body){

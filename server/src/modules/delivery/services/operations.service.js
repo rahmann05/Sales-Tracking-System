@@ -26,6 +26,13 @@ import {calculateDistanceMeters} from '../../../utils/geolocation.js';
 export const operationsInclude = { vehicle: true, driver: { select: { id: true, name: true } }, position: true, stops: { orderBy: { sequence: 'asc' }, include: { outlet: true, attendances: { orderBy: { timestamp: 'asc' } }, packingList: { include: { invoices: true } } } } };
 const fail = message => { throw new AppError(message, 409); };
 export const routeEvent = (route, action, actor, detail) => [...(route.history || []), { action, actorId: actor.id, actorName: actor.name, at: new Date().toISOString(), detail }];
+// Flag untuk Admin: armada sedang di jalan tetapi tidak ada GPS terkini. Posisi toko tidak pernah dipakai sebagai posisi armada.
+export function gpsFlag(route, policy, now = Date.now()) {
+  if (!route.departedAt || route.returnedAt || route.closedAt || route.cancelledAt || policy?.enabled === false) return null;
+  const location = routeLocation(route, now, policy);
+  if (location?.isLive) return null;
+  return { code: 'GPS_LOST', since: location?.observedAt || route.departedAt, lastSource: location?.source || null, lastPoint: location ? { latitude: location.latitude, longitude: location.longitude } : null, message: location ? 'GPS armada tidak terkirim; posisi terakhir ditampilkan, bukan posisi saat ini.' : 'GPS armada belum pernah terkirim sejak berangkat; posisi armada tidak diketahui.' };
+}
 async function flagEndpointMismatch(tx,route,user,kind,planned,actual){
  if(planned?.latitude==null||planned?.longitude==null)return;
  const distance=calculateDistanceMeters(planned.latitude,planned.longitude,actual.latitude,actual.longitude);
@@ -109,7 +116,7 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
       if (!r.returnedAt || !r.stops.every(s => terminalStop(s.status))) fail('Catat kembali gudang dan selesaikan semua toko');
       if (await processValue(r,'TRIP_REQUIRE_RETURN_INSPECTION',true)&&r.stops.some(s => s.rejectedCartons > 0 && !s.returnInspection)) fail('Selesaikan pemeriksaan retur terlebih dahulu');
       if (await processValue(r,'TRIP_BLOCK_OPEN_ISSUES',true)){
-        const openIssues=await tx.deliveryIssue.findMany({where:{routeId:id,status:'OPEN'},select:{history:true}});
+        const openIssues=typeof tx.deliveryIssue?.findMany === 'function' ? await tx.deliveryIssue.findMany({where:{routeId:id,status:'OPEN'},select:{history:true}}) : (typeof tx.deliveryIssue?.count === 'function' && await tx.deliveryIssue.count({where:{routeId:id,status:'OPEN'}}) > 0 ? [{}] : []);
         if(openIssues.some(issue=>!(issue.history||[]).some(event=>event.action==='LOCATION_DISCREPANCY')))fail('Masih ada masalah trip yang belum diselesaikan');
       }
       if (await processValue(r,'TRIP_REQUIRE_DOCUMENT_RETURN',true)&&!data.documentsReturned) fail('Konfirmasi dokumen pengiriman telah direkonsiliasi');
@@ -169,7 +176,7 @@ export async function operationsDashboard(date) {
   for(const driverId of new Set(routes.map(r=>r.driverId))){const actor=await prisma.user.findUnique({where:{id:driverId},select:{id:true,role:true,supervisorId:true}});const values=(await effectivePolicy(actor||{role:'SUPIR'})).values;policies.set(driverId,{retentionHours:values.TRACKING_LOCATION_RETENTION_HOURS,liveSeconds:values.DRIVER_TRACKING_LIVE_SECONDS,enabled:values.DRIVER_TRACKING_MODE!=='OFF'});}
   const definitions=await readReviewDefinitions(prisma),staff=people.map(person=>reviewIdentity(person,definitions));
   return { generatedAt: new Date().toISOString(), date: wibDateKey(date || new Date()), people:staff, issues, orders: backlog, packings: packingQueue,commercialQueue,
-    routes: routes.map(r => ({ ...r,position:locationExpired(r.position,policies.get(r.driverId)?.retentionHours,now)?null:r.position, locationPolicy:policies.get(r.driverId),location: routeLocation(r,now,policies.get(r.driverId)), progress: routeProgress(r), alerts: [
+    routes: routes.map(r => ({ ...r,position:locationExpired(r.position,policies.get(r.driverId)?.retentionHours,now)?null:r.position, locationPolicy:policies.get(r.driverId),location: routeLocation(r,now,policies.get(r.driverId)), progress: routeProgress(r), gpsFlag: gpsFlag(r,policies.get(r.driverId),now), alerts: [
       !r.cancelledAt && !r.closedAt && !r.departedAt && r.plannedStartAt && +new Date(r.plannedStartAt) < now ? 'Lewat jadwal berangkat' : null,
       !r.closedAt && !r.cancelledAt && r.plannedEndAt && +new Date(r.plannedEndAt) < now ? 'Lewat target selesai' : null,
       r.onHold ? 'Trip ditahan' : null,

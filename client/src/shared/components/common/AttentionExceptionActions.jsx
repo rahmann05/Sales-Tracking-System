@@ -9,7 +9,7 @@ import {canDomainAction} from '../../../../../shared/domain-permissions.mjs';
 
 const labels={SHIFT_TIME_RANGE:'Shift melewati batas waktu / tengah malam',OPEN_SPV_VISIT:'Kunjungan supervisi belum selesai',MISSING_OUT:'Absen keluar terlewat',UNCLOSED_SHIFT:'Shift belum ditutup',MANUAL_RESULT:'Persetujuan hasil kegiatan',OFF_PJP:'Validasi kunjungan luar PJP',MANUAL_PJP:'Persetujuan hasil manual PJP',MANUAL_OFF_PJP:'Persetujuan hasil manual luar PJP',UNLOCK:'Pengecualian absensi',ROUTE_CHANGE:'Keputusan toko tutup / reroute'};
 export function AttentionExceptionActions({row,onChanged}){
-  const {user,settings}=useApp(),e=row.exception;
+  const {user}=useApp(),e=row.exception;
   const reviewAction=e.kind==='OFF_PJP'?'OFF_PJP':['MANUAL_PJP','MANUAL_OFF_PJP','MANUAL_RESULT'].includes(e.kind)?'MANUAL_SALES':null;
   const attendanceException=['SHIFT_TIME_RANGE','MISSING_OUT','UNCLOSED_SHIFT','OPEN_SPV_VISIT'].includes(e.kind);
   const canDecide=row.canDecide&&(!reviewAction||canReviewVisit(user,reviewAction,e.applicantId))&&(!attendanceException||canDomainAction(user,'EXCEPTION_REVIEW'));

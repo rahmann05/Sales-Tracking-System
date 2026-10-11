@@ -12,6 +12,15 @@ import { LuPrinter, LuX } from 'react-icons/lu';
  * Renders an exact official printable sheet of the Daily Call Report
  * with company header, KPI summary, full ND6 visit table, and signature sections.
  */
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportDailyCallDocx,
+  exportDailyCallExcel,
+  exportDailyCallCsv,
+  exportDailyCallTxt,
+  exportDailyCallPdf,
+} from '../../../utils/export/reports/dailyCallReportExport';
+
 export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) => {
   const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
   if (!reportData) return null;
@@ -32,14 +41,22 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Top Floating Action Bar (Hidden when printing) */}
-      <div className="fixed top-4 right-6 z-60 flex items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+      <div className="fixed top-4 right-6 z-60 flex flex-wrap items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+        <ExportFormatMenu
+          disabled={!canExport}
+          onExportDocx={() => exportDailyCallDocx(reportData, date)}
+          onExportExcel={() => exportDailyCallExcel(reportData, date)}
+          onExportCsv={() => exportDailyCallCsv(reportData, date)}
+          onExportTxt={() => exportDailyCallTxt(reportData, date)}
+          onExportPdf={() => exportDailyCallPdf(reportData, date)}
+        />
         <button
           type="button"
           onClick={handlePrint}
           disabled={!canExport}
-          className="px-4 py-2.5 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:opacity-90 transition-all cursor-pointer"
+          className="px-3.5 py-2 bg-surface-container text-on-surface hover:bg-surface-container-high rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
         >
-          <LuPrinter className="text-base" /> Cetak / Unduh PDF
+          <LuPrinter className="text-sm" /> Cetak Printer
         </button>
         <button
           type="button"

@@ -10,6 +10,15 @@ import {stamp,subChannels} from '../../OutletManagement/outletPresentation';
 import {NooDocumentFact as Fact} from './NooDocumentFact';
 import '../../../styles/pages/OperationalDocument.css';
 
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportNooDocx,
+  exportNooExcel,
+  exportNooCsv,
+  exportNooTxt,
+  exportNooPdf,
+} from '../../../utils/export/documents/nooDocumentExport';
+
 const statusLabels={DRAFT:'Draf',SUBMITTED:'Menunggu persetujuan',SPV_APPROVED:'Disetujui, menunggu aktivasi',REGISTERED_ACTIVE:'Aktif',REJECTED:'Dikembalikan'};
 const show=value=>value===null||value===undefined||value===''?'Belum diisi':String(value);
 const hasCoordinates=item=>item.latitude!=null&&item.longitude!=null&&Number.isFinite(Number(item.latitude))&&Number.isFinite(Number(item.longitude))&&Math.abs(Number(item.latitude))<=90&&Math.abs(Number(item.longitude))<=180;
@@ -34,7 +43,19 @@ export function OutletApprovalReviewModal({item,userRole,isProcessing=false,onCl
   {loading&&<p className="outlet-muted" role="status">Memuat dokumen dan foto pengajuan…</p>}
   {loadError&&<div className="app-error" role="alert"><p>{loadError}</p><p>Keputusan ditahan sampai dokumen lengkap berhasil dimuat.</p><button type="button" className="app-button" onClick={onClose}>Tutup</button></div>}
   {current&&<>
-   <div className="noo-review-tools no-print"><p>Periksa identitas, titik lokasi, dan foto fisik sebelum mengambil keputusan.</p><button type="button" className="app-button" onClick={()=>printOperationalDocument('OUTLET')}>Cetak dokumen / PDF</button></div>
+   <div className="noo-review-tools no-print flex flex-wrap items-center justify-between gap-3 p-3 bg-surface-container/60 rounded-xl border border-border-glass">
+     <p className="text-xs text-on-surface-variant font-medium">Periksa identitas, titik lokasi, dan foto fisik. Ekspor dalam 5 format resmi atau cetak.</p>
+     <div className="flex flex-wrap items-center gap-2">
+       <ExportFormatMenu
+         onExportDocx={() => exportNooDocx(current)}
+         onExportExcel={() => exportNooExcel(current)}
+         onExportCsv={() => exportNooCsv(current)}
+         onExportTxt={() => exportNooTxt(current)}
+         onExportPdf={() => exportNooPdf(current)}
+       />
+       <button type="button" className="app-button text-xs font-bold" onClick={()=>printOperationalDocument('OUTLET')}>Cetak Printer</button>
+     </div>
+   </div>
    <article className="operational-document noo-document" aria-label={`Dokumen pengajuan outlet ${current.name}`}>
     <header className="operational-document-letterhead"><div><strong>CV. SINAR ANUGRAH</strong><span>Dokumen pengajuan outlet baru (NOO)</span></div><div className="operational-document-reference"><b>{current.registrationCode||'Nomor belum ditetapkan'}</b><span>{stamp(current.createdAt)}</span></div></header>
     <div className="operational-document-title"><p>FORMULIR PENGAJUAN OUTLET BARU</p><h2>{current.name}</h2><span className="noo-document-status">{statusLabels[current.registrationStatus]||current.registrationStatus}</span></div>

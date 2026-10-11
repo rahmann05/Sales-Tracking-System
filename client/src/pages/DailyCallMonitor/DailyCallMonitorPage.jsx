@@ -11,7 +11,15 @@ import { DailyCallDetailModal } from './components/DailyCallDetailModal';
 import { DailyCallPdfView } from './components/DailyCallPdfView';
 import { ReportBasisNote } from '../Reports/components/ReportBasisNote';
 import { PageHeader } from '../../shared/components/common/PageHeader';
-import { LuPhoneCall, LuCalendar, LuListOrdered, LuShieldAlert, LuUserCheck, LuRefreshCw, LuDownload, LuPrinter } from 'react-icons/lu';
+import { LuPhoneCall, LuCalendar, LuListOrdered, LuShieldAlert, LuUserCheck, LuRefreshCw, LuPrinter } from 'react-icons/lu';
+import { ExportFormatMenu } from '../../shared/components/common/ExportFormatMenu';
+import {
+  exportDailyCallDocx,
+  exportDailyCallExcel,
+  exportDailyCallCsv,
+  exportDailyCallTxt,
+  exportDailyCallPdf,
+} from '../../utils/export/reports/dailyCallReportExport';
 
 /**
  * DailyCallMonitorPage Component
@@ -34,7 +42,6 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
     selectedRow,
     setSelectedRow,
     refreshData,
-    exportToCsv,
   } = useDailyCallMonitor();
 
   const [activeTableView, setActiveTableView] = useState(initialTableView);
@@ -187,24 +194,23 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
             </button>
 
-            <button
-              type="button"
-              onClick={exportToCsv}
+            <ExportFormatMenu
               disabled={!canExport||isLoading||Boolean(error)}
-              className="h-10 px-3.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
-              title="Ekspor Laporan Format Excel ND6"
-            >
-              <LuDownload /> <span>Excel</span>
-            </button>
+              onExportDocx={() => exportDailyCallDocx(reportData, date)}
+              onExportExcel={() => exportDailyCallExcel(reportData, date)}
+              onExportCsv={() => exportDailyCallCsv(reportData, date)}
+              onExportTxt={() => exportDailyCallTxt(reportData, date)}
+              onExportPdf={() => exportDailyCallPdf(reportData, date)}
+            />
 
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
               disabled={!canExport || isLoading || Boolean(error) || !reportData?.summary}
               className="h-10 px-3.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
-              title="Buka Dokumen Cetak / PDF Resmi"
+              title="Buka Dokumen Cetak / Pratinjau Resmi"
             >
-              <LuPrinter /> <span>Cetak PDF</span>
+              <LuPrinter /> <span>Cetak Printer</span>
             </button>
           </div>
         </div>

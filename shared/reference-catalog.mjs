@@ -25,6 +25,6 @@ export function retainServiceCodes(next,previous={}){
  if(next.VEHICLE_SERVICE_CATALOG!==undefined)parseReferenceCatalog(next.VEHICLE_SERVICE_CATALOG,serviceCatalog(previous).map(r=>r.code));
 }
 export function serviceRecordLabel(record){
- const stored=record.policySnapshot?.serviceReference;
- return stored?.code===record.serviceType?stored.label:DEFAULT_SERVICE_CATALOG.find(r=>r.code===record.serviceType)?.label||record.serviceType;
+ const codes=record.serviceTypes?.length?record.serviceTypes:[record.serviceType],stored=[...(record.policySnapshot?.serviceReferences||[]),record.policySnapshot?.serviceReference].filter(Boolean);
+ return codes.map(code=>stored.find(r=>r.code===code)?.label||DEFAULT_SERVICE_CATALOG.find(r=>r.code===code)?.label||code).join(', ');
 }

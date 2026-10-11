@@ -35,7 +35,7 @@ export const getPackingLists = async (query, role) => {
       take: parseInt(limit),
       orderBy: { createdAt: 'desc' },
       include: {
-        outlet: { select: { id: true, name: true, address: true, outletCode: true } },
+        outlet: { select: { id: true, name: true, address: true, outletCode: true, latitude: true, longitude: true, googleLocation: true } },
         invoices: true,
         createdBy: { select: { id: true, name: true } },
         deliveryStops: true,

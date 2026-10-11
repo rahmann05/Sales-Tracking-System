@@ -691,6 +691,8 @@ model PjpTemplateStop {
 }
 
 model Vehicle {
+  photoUrl          String?   @db.Text
+  photoUpdatedAt    DateTime?
   maintenancePolicy Json?
   id                String    @id @default(uuid())
   code              String    @unique
@@ -723,6 +725,11 @@ enum VehicleCondition {
 }
 
 model VehicleServiceRecord {
+  serviceTypes String[] @default([])
+  receiptPhotoUrl String? @db.Text
+  workshopLatitude Float?
+  workshopLongitude Float?
+  evidence Json?
   requestId String? @unique
   policySnapshot Json?
   id                String   @id @default(uuid())

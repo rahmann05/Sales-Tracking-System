@@ -1,42 +1,36 @@
 import { useState, useEffect, useCallback } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
-import {useApp} from '../../../context/AppContext';
-import {useConfiguredFilters} from '../../../shared/hooks/useConfiguredFilters';
-import {reportDateRange} from '../../../../../shared/report-filter-defaults.mjs';
-import {
-  exportCustomerExcel,
-  exportCustomerNd6Txt,
-  exportCustomerSummaryTxt,
-  exportImportNikExcel,
-} from '../../../utils/customerExport';
+import { useApp } from '../../../context/AppContext';
+import { useConfiguredFilters } from '../../../shared/hooks/useConfiguredFilters';
+import { reportDateRange } from '../../../../../shared/report-filter-defaults.mjs';
+import { exportCustomerNd6Txt } from '../../../utils/customerExport';
+import { exportOutletMaster } from '../../../utils/export/reports/outletMasterExport';
+import { exportImportNik } from '../../../utils/export/documents/importNikExport';
 
 /**
  * useOutletRegistrationReport Hook
- * Single Responsibility: Manage data filtering, Admin activation, and Excel/CSV/TXT file exports.
+ * Single Responsibility: Manage data filtering, Admin activation, and 5-format file exports.
  */
 export const useOutletRegistrationReport = () => {
-  const {settings}=useApp();
+  const { settings } = useApp();
   const [data, setData] = useState([]);
   const [statusCounts, setStatusCounts] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filters
   const [filters, updateFilter] = useConfiguredFilters({
-    status: settings.REPORT_REGISTRATION_DEFAULT_STATUS||'ALL',
+    status: settings.REPORT_REGISTRATION_DEFAULT_STATUS || 'ALL',
     area: 'ALL',
     channel: 'ALL',
     division: 'ALL',
     search: '',
-    ...reportDateRange(settings.REPORT_REGISTRATION_DEFAULT_PERIOD||'ALL'),
+    ...reportDateRange(settings.REPORT_REGISTRATION_DEFAULT_PERIOD || 'ALL'),
   });
 
-  // Modal states
   const [finalizeTarget, setFinalizeTarget] = useState(null);
   const [pdfTarget, setPdfTarget] = useState(null);
   const [isNikModalOpen, setIsNikModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
-
 
   const loadReportData = useCallback(async () => {
     setIsLoading(true);
@@ -68,11 +62,15 @@ export const useOutletRegistrationReport = () => {
     loadReportData();
   }, [loadReportData]);
 
-  // Admin Finalize Action
-  const handleFinalize = async (id, customerCode, clusterId,duplicateReason,point={}) => {
+  const handleFinalize = async (id, customerCode, clusterId, duplicateReason, point = {}) => {
     setIsProcessing(true);
     try {
-      const result=await customerRegistrationsApi.finalize(id, { customerCode, clusterId,...point,duplicateReason:duplicateReason||undefined });
+      const result = await customerRegistrationsApi.finalize(id, {
+        customerCode,
+        clusterId,
+        ...point,
+        duplicateReason: duplicateReason || undefined,
+      });
       setFeedbackMsg({
         type: 'success',
         text: `Outlet berhasil diinput ke sistem aktif dengan Kode Outlet "${result.data?.outlet?.outletCode || customerCode}"!`,
@@ -86,24 +84,12 @@ export const useOutletRegistrationReport = () => {
     }
   };
 
-  // Export to Excel (Styled ND6 Master .xls)
-  const exportToCSV = () => {
-    exportCustomerExcel(data, `IMPORT_CUSTOMER_ND6_MASTER_${new Date().toISOString().split('T')[0]}.xls`);
-  };
+  const dateCode = new Date().toISOString().split('T')[0];
+  const outletExporters = exportOutletMaster(data, `DATA_OUTLET_${dateCode}`);
+  const nikExporters = exportImportNik(data, `IMPORT_NIK_${dateCode}`);
 
-  // Export to ND6 TXT Format
   const exportToNd6TXT = () => {
-    exportCustomerNd6Txt(data, `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`);
-  };
-
-  // Export to Human Readable TXT
-  const exportToTXT = () => {
-    exportCustomerSummaryTxt(data, `Ringkasan_Registrasi_Outlet_${new Date().toISOString().split('T')[0]}.txt`);
-  };
-
-  // Export to Official IMPORT NIK Excel (.xls)
-  const exportToNikExcel = () => {
-    exportImportNikExcel(data, `IMPORT_NIK_${new Date().toISOString().split('T')[0]}.xls`);
+    exportCustomerNd6Txt(data, `IMPORT_CUSTOMER_ND6_${dateCode}.txt`);
   };
 
   return {
@@ -122,10 +108,9 @@ export const useOutletRegistrationReport = () => {
     feedbackMsg,
     setFeedbackMsg,
     handleFinalize,
-    exportToCSV,
+    outletExporters,
+    nikExporters,
     exportToNd6TXT,
-    exportToTXT,
-    exportToNikExcel,
     refreshData: loadReportData,
   };
 };

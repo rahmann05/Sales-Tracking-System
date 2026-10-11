@@ -12,7 +12,7 @@ export const DOMAIN_PERMISSIONS={
  MANAGE_DIVISION:define('can_manage_divisions','Kelola divisi',['ADMIN'],'team','Tambah, ubah dan nonaktifkan master divisi.'),
  MANAGE_VEHICLE:define('can_manage_vehicles','Kelola master kendaraan',['ADMIN','SUPERVISOR'],'warehouse','Tambah, ubah dan nonaktifkan armada.'),
  VEHICLE_CONDITION:define('can_change_vehicle_condition','Ubah kondisi kendaraan',['ADMIN','SUPERVISOR','KEPALA_GUDANG'],'warehouse','Kondisi kendaraan dan dampak terhadap trip terbuka.'),
- VEHICLE_MAINTENANCE:define('can_record_vehicle_maintenance','Catat servis kendaraan',['ADMIN','SUPERVISOR','KEPALA_GUDANG'],'warehouse','Catatan servis, bukti dan odometer aktual.'),
+ VEHICLE_MAINTENANCE:define('can_record_vehicle_maintenance','Catat servis kendaraan',['ADMIN','SUPERVISOR','KEPALA_GUDANG','SUPIR'],'warehouse','Catatan servis dengan foto struk, titik bengkel dan odometer aktual; Supir hanya untuk kendaraan penugasannya.'),
  VEHICLE_POLICY:define('can_manage_vehicle_service_policy','Atur interval servis kendaraan',['ADMIN'],'warehouse','Aturan servis khusus kendaraan, dengan alasan dan revisi.'),
  INVOICE_CORRECTION:define('can_correct_invoice','Koreksi referensi faktur',['ADMIN'],'warehouse','Koreksi komersial beralasan, mengikuti sumber dan revisi dokumen.'),
  INVOICE_RECONCILIATION:define('can_reconcile_invoice','Rekonsiliasi faktur dan penerimaan',['ADMIN'],'warehouse','Mencocokkan jumlah dokumen dan penerimaan; bukan proses pembayaran.'),

@@ -7,11 +7,20 @@ import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportMtdDocx,
+  exportMtdExcel,
+  exportMtdCsv,
+  exportMtdTxt,
+  exportMtdPdf,
+} from '../../../utils/export/reports/mtdReportExport';
+
 /**
  * MtdReportPdfView Component
  * Renders an official printable sheet for Month-to-Date (MTD) Sales, Target, and LMA Growth analysis.
  */
-export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
+export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClose }) => {
   const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
   if (!reportData) return null;
 
@@ -24,21 +33,29 @@ export const MtdReportPdfView = ({ reportData, salesmanName, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Action Bar */}
-      <div className="fixed top-4 right-6 z-60 flex items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+      <div className="fixed top-4 right-6 z-60 flex flex-wrap items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+        <ExportFormatMenu
+          disabled={!canExport}
+          onExportDocx={() => exportMtdDocx(reportData, month, year)}
+          onExportExcel={() => exportMtdExcel(reportData, month, year)}
+          onExportCsv={() => exportMtdCsv(reportData, month, year)}
+          onExportTxt={() => exportMtdTxt(reportData, month, year)}
+          onExportPdf={() => exportMtdPdf(reportData, month, year)}
+        />
         <button
           type="button"
           onClick={handlePrint}
           disabled={!canExport}
-          className="px-4 py-2.5 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:opacity-90 transition-all cursor-pointer"
+          className="px-3.5 py-2 bg-surface-container text-on-surface hover:bg-surface-container-high rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
         >
-          <LuPrinter className="text-base" /> Cetak / Unduh PDF
+          <LuPrinter className="text-sm" /> Cetak Printer
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="px-3.5 py-2.5 bg-surface-container text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-high transition-all cursor-pointer"
+          className="px-3.5 py-2 bg-surface-container text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-high transition-all cursor-pointer"
         >
-          <LuX className="text-base" /> Tutup
+          <LuX className="text-sm" /> Tutup
         </button>
       </div>
 

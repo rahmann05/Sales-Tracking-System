@@ -1,21 +1,21 @@
-import {downloadOperationalFile} from '../../../services/operationalExportService';
-import {useWorkspaceState} from '../../../shared/hooks/useWorkspaceState';
-import {reportFilterDefaults} from '../../../../../shared/report-filter-defaults.mjs';
-import {useApp} from '../../../context/AppContext';
-import { dailyCallCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
+import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
+import { reportFilterDefaults } from '../../../../../shared/report-filter-defaults.mjs';
+import { useApp } from '../../../context/AppContext';
+import { reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { collectPages, dailyCallsApi, usersApi } from '../../../services/api';
 
 /**
  * useDailyCallMonitor Hook
- * Single Responsibility: Fetch Daily Call Report data from backend with filters, sales team list, and export support.
+ * Single Responsibility: Fetch Daily Call Report data from backend with filters and sales team list.
  */
-export const useDailyCallMonitor = ({enabled=true}={}) => {
-  const {settings}=useApp(),defaults=reportFilterDefaults(settings);
-  const [date, setDate] = useWorkspaceState('callDate',defaults.day);
-  const [salesmanId, setSalesmanId] = useWorkspaceState('callSales','');
-  const [filterType, setFilterType] = useWorkspaceState('callType',defaults.filterType);
-  const [search, setSearch] = useWorkspaceState('callSearch','');
+export const useDailyCallMonitor = ({ enabled = true } = {}) => {
+  const { settings } = useApp();
+  const defaults = reportFilterDefaults(settings);
+  const [date, setDate] = useWorkspaceState('callDate', defaults.day);
+  const [salesmanId, setSalesmanId] = useWorkspaceState('callSales', '');
+  const [filterType, setFilterType] = useWorkspaceState('callType', defaults.filterType);
+  const [search, setSearch] = useWorkspaceState('callSearch', '');
   const [salesTeam, setSalesTeam] = useState([]);
 
   const [reportData, setReportData] = useState({
@@ -42,26 +42,30 @@ export const useDailyCallMonitor = ({enabled=true}={}) => {
   const loadRevision = useRef(0);
   const [selectedRow, setSelectedRow] = useState(null);
 
-  // 1. Fetch Sales Team for dropdown
   useEffect(() => {
     const fetchSalesTeam = async () => {
       try {
-        const res = await collectPages(usersApi.getAll,{role:'SALES'});
+        const res = await collectPages(usersApi.getAll, { role: 'SALES' });
         if (res?.data) {
-          setSalesTeam(res.data.filter(person=>person.role==='SALES'));
+          setSalesTeam(res.data.filter((person) => person.role === 'SALES'));
         }
       } catch (err) {
         console.warn('[useDailyCallMonitor] Failed to fetch sales team:', err.message);
       }
     };
-    if(enabled)fetchSalesTeam();
+    if (enabled) fetchSalesTeam();
   }, [enabled]);
 
-  // 2. Load Report Data
   const loadData = useCallback(async () => {
-    if(!enabled){setIsLoading(false);return;}
-    const revision=++loadRevision.current;
-    setIsLoading(true);setError('');setSelectedRow(null);setReportData({summary:null,rows:[],salesmanSummaries:[]});
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+    const revision = ++loadRevision.current;
+    setIsLoading(true);
+    setError('');
+    setSelectedRow(null);
+    setReportData({ summary: null, rows: [], salesmanSummaries: [] });
     try {
       const res = await dailyCallsApi.getReport({
         date,
@@ -70,31 +74,22 @@ export const useDailyCallMonitor = ({enabled=true}={}) => {
         search: search || undefined,
       });
 
-      if (revision===loadRevision.current && res?.data) {
+      if (revision === loadRevision.current && res?.data) {
         setReportData(res.data);
       }
     } catch (err) {
-      if(revision===loadRevision.current)setError(err.message);
+      if (revision === loadRevision.current) setError(err.message);
     } finally {
-      if(revision===loadRevision.current)setIsLoading(false);
+      if (revision === loadRevision.current) setIsLoading(false);
     }
-  }, [date, salesmanId, filterType, search,enabled]);
+  }, [date, salesmanId, filterType, search, enabled]);
 
   useEffect(() => {
     loadData();
-    return ()=>{loadRevision.current++;};
+    return () => {
+      loadRevision.current++;
+    };
   }, [loadData]);
-
-  // 3. Export to CSV/Excel format compatible with ND6 Daily Call
-  const exportToCsv = () => {
-    if (!reportData?.rows || reportData.rows.length === 0) {
-      alert('Tidak ada data kunjungan untuk diekspor.');
-      return;
-    }
-
-    const blob = new Blob(['\uFEFF' + dailyCallCsv(reportData)], { type: 'text/csv;charset=utf-8;' });
-    downloadOperationalFile(blob,`DAILY_CALL_REPORT_${date}.csv`,'text/csv;charset=utf-8;');
-  };
 
   return {
     date,
@@ -105,13 +100,12 @@ export const useDailyCallMonitor = ({enabled=true}={}) => {
     setFilterType,
     search,
     setSearch,
-    salesTeam: reportSalesOptions(salesTeam, reportData.salesmanSummaries, salesmanId),
+    salesTeam: reportSalesOptions(salesTeam, reportData.rows, salesmanId),
     reportData,
-    isLoading, error,
+    isLoading,
+    error,
     selectedRow,
     setSelectedRow,
     refreshData: loadData,
-    exportToCsv,
   };
 };
-

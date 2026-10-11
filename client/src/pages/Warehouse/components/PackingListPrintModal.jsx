@@ -2,6 +2,14 @@ import {printOperationalDocument} from '../../../services/operationalExportServi
 import React from 'react';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { LuPrinter } from 'react-icons/lu';
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportPackingListDocx,
+  exportPackingListExcel,
+  exportPackingListCsv,
+  exportPackingListTxt,
+  exportPackingListPdf,
+} from '../../../utils/export/documents/packingListExport';
 import '../../../styles/pages/OperationalDocument.css';
 
 export function PackingListPrintModal({ document: doc, onClose }) {
@@ -30,24 +38,32 @@ export function PackingListPrintModal({ document: doc, onClose }) {
       className="packing-document-dialog"
     >
       <div className="space-y-6 text-on-surface p-1">
-        {/* Print Action Bar */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container/60 border border-border-glass no-print">
+        {/* Export & Print Action Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-surface-container/60 border border-border-glass no-print">
           <div className="text-xs text-on-surface-variant font-medium">
-            Periksa isi surat dan statusnya sebelum dicetak untuk operasional.
+            Unduh berkas resmi dalam 5 format atau cetak langsung ke printer fisik.
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportFormatMenu
+              onExportDocx={() => exportPackingListDocx(doc)}
+              onExportExcel={() => exportPackingListExcel(doc)}
+              onExportCsv={() => exportPackingListCsv(doc)}
+              onExportTxt={() => exportPackingListTxt(doc)}
+              onExportPdf={() => exportPackingListPdf(doc)}
+            />
             <button
               type="button"
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+              className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+              title="Kirim ke dialog cetak browser / printer sistem"
             >
               <LuPrinter className="text-sm" />
-              <span>Cetak / Cetak PDF</span>
+              <span>Cetak Printer</span>
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-2 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface transition-all"
+              className="px-3 py-1.5 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface transition-all"
             >
               Tutup
             </button>

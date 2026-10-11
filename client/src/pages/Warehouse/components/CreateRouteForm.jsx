@@ -73,10 +73,14 @@ export const CreateRouteForm = ({
   }, []);
   const addPackingList = pl => {
     if (selectedPLs.find(s => s.packingListId === pl.id)) return;
+    const lat = pl.outlet?.deliveryLatitude ?? pl.outlet?.latitude ?? pl.outlet?.nativeLocation?.latitude ?? null;
+    const lng = pl.outlet?.deliveryLongitude ?? pl.outlet?.longitude ?? pl.outlet?.nativeLocation?.longitude ?? null;
     setSelectedPLs([...selectedPLs, {
       packingListId: pl.id,
       outletId: pl.outletId,
       outletName: pl.outlet?.name || '-',
+      latitude: lat,
+      longitude: lng,
       code: pl.code,
       totalCartons: pl.remainingCartons,
       remainingCartons: pl.remainingCartons,
@@ -104,6 +108,7 @@ export const CreateRouteForm = ({
     if (submitting) return;
     if (overCapacity) {setError('Muatan melebihi kapasitas kendaraan. Kurangi alokasi atau pilih kendaraan lain.');return;}
     if (!selectedVehicle) {setError('Pilih kendaraan.');return;}
+    if (selectedVehicleObj && !selectedVehicleObj.photoUrl) {setError('Kendaraan wajib memiliki foto sebelum dijadwalkan untuk trip.');return;}
     if (!selectedDriver) {setError('Pilih driver.');return;}
     if (selectedPLs.length === 0) {setError('Tambahkan minimal satu packing list.');return;}
     if(!date||!startTime||!endTime||endTime<=startTime){setError('Isi tanggal serta target kembali setelah waktu berangkat.');return;}
@@ -163,7 +168,7 @@ export const CreateRouteForm = ({
           <label className="text-xs font-semibold text-on-surface-variant block mb-1">Kendaraan</label>
           <select aria-label="Kendaraan trip" value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border-glass bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
             <option value="">Pilih kendaraan...</option>
-            {vehicles.filter(v => v.isActive && v.condition==='AVAILABLE').map(v => <option key={v.id} value={v.id}>{v.name} ({v.code}) — Maks {v.maxCartons} krt</option>)}
+            {vehicles.filter(v => v.isActive && v.condition==='AVAILABLE').map(v => <option key={v.id} value={v.id}>{v.name} ({v.code}) — Maks {v.maxCartons} krt{!v.photoUrl?' (Foto belum diset)':''}</option>)}
           </select>
         </div>
 
@@ -185,14 +190,18 @@ export const CreateRouteForm = ({
       <div>
         <label className="text-xs font-semibold text-on-surface-variant block mb-2">Packing List Tersedia</label>
         {availablePLs.length === 0 ? <p className="text-xs text-on-surface-variant">Tidak ada packing list yang tersedia</p> : <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-            {availablePLs.map(pl => <button key={pl.id} onClick={() => addPackingList(pl)} className="flex items-center gap-2 text-left p-2.5 rounded-xl border border-border-glass hover:border-primary/40 hover:bg-primary/5 transition-all">
+            {availablePLs.map(pl => {
+              const lat = pl.outlet?.deliveryLatitude ?? pl.outlet?.latitude ?? pl.outlet?.nativeLocation?.latitude;
+              const lng = pl.outlet?.deliveryLongitude ?? pl.outlet?.longitude ?? pl.outlet?.nativeLocation?.longitude;
+              return <button type="button" key={pl.id} onClick={() => addPackingList(pl)} className="flex items-center gap-2 text-left p-2.5 rounded-xl border border-border-glass hover:border-primary/40 hover:bg-primary/5 transition-all">
                 <LuPackage className="text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{pl.code} • {pl.outlet?.name}</div>
-                  <div className="text-[10px] text-on-surface-variant">{pl.remainingCartons} karton tersisa • {pl.invoices?.length} faktur</div>
+                  <div className="text-[10px] text-on-surface-variant">{pl.remainingCartons} karton tersisa • {pl.invoices?.length} faktur • Long, Lat: {lat != null && lng != null ? `${Number(lng).toFixed(6)}, ${Number(lat).toFixed(6)}` : 'Titik belum tersedia'}</div>
                 </div>
                 <LuPlus className="text-primary shrink-0" />
-              </button>)}
+              </button>;
+            })}
           </div>}
       </div>
 
@@ -206,15 +215,15 @@ export const CreateRouteForm = ({
                 <span className="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-xs font-bold shrink-0">{idx + 1}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-on-surface min-w-0 whitespace-normal break-words">{s.outletName}</div>
-                  <div className="text-[10px] text-on-surface-variant">{s.code} • {s.totalCartons} krt</div>
+                  <div className="text-[10px] text-on-surface-variant">{s.code} • {s.totalCartons} krt • Long, Lat: {s.latitude != null && s.longitude != null ? `${Number(s.longitude).toFixed(6)}, ${Number(s.latitude).toFixed(6)}` : 'Titik belum tersedia'}</div>
                 </div>
-                <button aria-label={`Naikkan urutan ${s.outletName}`} onClick={() => moveStop(idx, -1)} disabled={idx === 0} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
+                <button type="button" aria-label={`Naikkan urutan ${s.outletName}`} onClick={() => moveStop(idx, -1)} disabled={idx === 0} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
                   <LuArrowUp className="text-sm" />
                 </button>
-                <button aria-label={`Turunkan urutan ${s.outletName}`} onClick={() => moveStop(idx, 1)} disabled={idx === selectedPLs.length - 1} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
+                <button type="button" aria-label={`Turunkan urutan ${s.outletName}`} onClick={() => moveStop(idx, 1)} disabled={idx === selectedPLs.length - 1} className="p-1 rounded text-on-surface-variant hover:text-primary disabled:opacity-30">
                   <LuArrowDown className="text-sm" />
                 </button>
-                <button aria-label={`Hapus alokasi ${s.outletName}`} onClick={() => removePackingList(s.packingListId)} className="p-1 rounded text-red-500 hover:bg-red-50">
+                <button type="button" aria-label={`Hapus alokasi ${s.outletName}`} onClick={() => removePackingList(s.packingListId)} className="p-1 rounded text-red-500 hover:bg-red-50">
                   <LuX className="text-sm" />
                 </button>
                 <PackingAllocationFields entry={s} allowSplit={settings.PACKING_ALLOW_SPLIT} onChange={updated => setSelectedPLs(selectedPLs.map(v => v.packingListId === updated.packingListId ? updated : v))} />

@@ -12,6 +12,7 @@ import {routeAction} from '../src/modules/delivery/services/operations.service.j
 import {DEFAULT_SERVICE_CATALOG,serviceRecordLabel} from '../../shared/reference-catalog.mjs';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local DB only');
 const prefix=`service-policy-${randomUUID()}`,vehicleIds=[],users=[],routeIds=[];
+const fixturePng='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 let checks=0;
 const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
 const rejects=async(fn,status)=>{await assert.rejects(fn,e=>e.statusCode===status);checks++;};
@@ -19,37 +20,42 @@ const run=(fn,values={})=>withPolicy({values:{...CONFIG_DEFAULTS,FEATURE_NOTIFIC
 try{
  const actor=await prisma.user.create({data:{name:prefix,email:`${prefix}@example.invalid`,password:'fixture',role:'ADMIN'}});users.push(actor.id);
  const driver=await prisma.user.create({data:{name:prefix,email:`${prefix}-driver@example.invalid`,password:'fixture',role:'SUPIR'}});users.push(driver.id);
- const makeVehicle=async()=>{const row=await prisma.vehicle.create({data:{code:`${prefix}-${vehicleIds.length}`,name:prefix,maxCartons:10,maxWeightKg:100,fuelKmPerLiter:10,fuelType:'SOLAR',fuelPricePerLiter:10000}});vehicleIds.push(row.id);return row;};
+ const makeVehicle=async()=>{const row=await prisma.vehicle.create({data:{code:`${prefix}-${vehicleIds.length}`,name:prefix,maxCartons:10,maxWeightKg:100,fuelKmPerLiter:10,fuelType:'SOLAR',fuelPricePerLiter:10000,photoUrl:fixturePng,photoUpdatedAt:new Date()}});vehicleIds.push(row.id);return row;};
  const vehicle=await makeVehicle(),other=await makeVehicle();
  const policy={updatedAt:vehicle.updatedAt.toISOString(),reason:'Interval khusus kendaraan uji',reminderMode:'ON',intervals:{GANTI_OLI:3000,GANTI_FILTER_OLI:null,GANTI_KANVAS_REM:null}};
  const updated=await setMaintenancePolicy(vehicle.id,policy,actor);
  eq(updated.maintenancePolicy.intervals.GANTI_OLI,3000);eq(updated.totalKm,0);
  eq(await prisma.auditEvent.count({where:{entityId:vehicle.id,action:'VEHICLE_SERVICE_POLICY'}}),1);
  await rejects(()=>setMaintenancePolicy(vehicle.id,policy,actor),409);
- const input={requestId:randomUUID(),serviceType:'GANTI_OLI',odometerAtService:1000.5,cost:0,serviceDate:new Date().toISOString()};
+ const input={requestId:randomUUID(),serviceType:'GANTI_OLI',serviceTypes:['GANTI_OLI'],odometerAtService:1000.5,cost:0,serviceDate:new Date().toISOString(),receiptPhotoUrl:fixturePng,location:{mapsUrl:'https://www.google.com/maps?q=-6.885229,107.489662'}};
  await rejects(()=>run(()=>recordMaintenance(vehicle.id,input,actor),{VEHICLE_SERVICE_REQUIRE_WORKSHOP:true}),422);
  eq(await prisma.vehicleServiceRecord.count({where:{vehicleId:vehicle.id}}),0);
  const first=await run(()=>recordMaintenance(vehicle.id,input,actor));
  eq(first.record.odometerAtService,1000.5);eq(first.updatedVehicle.totalKm,1000.5);eq(first.updatedVehicle.lastOilChangeKm,1000.5);
  eq(first.record.workshopName,'');eq(first.record.policySnapshot.maintenancePolicy.intervals.GANTI_OLI,3000);
  eq(first.record.policySnapshot.values.VEHICLE_SERVICE_REQUIRE_WORKSHOP,false);
+ eq(first.record.evidence.source,'GOOGLE_MAPS');eq(first.record.evidence.proxyEntry,true);
  // A lost-response retry keeps the original record, even if requirements became stricter.
  const replay=await run(()=>recordMaintenance(vehicle.id,input,actor),{VEHICLE_SERVICE_REQUIRE_WORKSHOP:true});
  eq(replay.record.id,first.record.id);eq(await prisma.auditEvent.count({where:{entityId:first.record.id}}),1);
  await rejects(()=>run(()=>recordMaintenance(vehicle.id,{...input,odometerAtService:2000},actor)),409);
  await rejects(()=>run(()=>recordMaintenance(other.id,input,actor)),409);
- const concurrent=await Promise.all([2000.5,1500.5,2300.5].map((km,i)=>run(()=>recordMaintenance(vehicle.id,{...input,requestId:randomUUID(),serviceType:i===1?'GANTI_FILTER_OLI':'GANTI_OLI',odometerAtService:km},actor))));
+ const concurrent=await Promise.all([2000.5,1500.5,2300.5].map((km,i)=>run(()=>recordMaintenance(vehicle.id,{...input,requestId:randomUUID(),serviceType:i===1?'GANTI_FILTER_OLI':'GANTI_OLI',serviceTypes:[i===1?'GANTI_FILTER_OLI':'GANTI_OLI'],odometerAtService:km},actor))));
  eq(concurrent.length,3);
  let actual=await prisma.vehicle.findUnique({where:{id:vehicle.id}});eq(actual.totalKm,2300.5);eq(actual.lastOilChangeKm,2300.5);eq(actual.lastOilFilterChangeKm,1500.5);
  const repeatId=randomUUID();
- const repeats=await Promise.all([1,2].map(()=>run(()=>recordMaintenance(vehicle.id,{...input,requestId:repeatId,odometerAtService:2400.5},actor))));
+ const repeats=await Promise.all([1,2].map(()=>run(()=>recordMaintenance(vehicle.id,{...input,requestId:repeatId,serviceTypes:['GANTI_OLI','GANTI_KANVAS_REM'],odometerAtService:2400.5},actor))));
  eq(repeats[0].record.id,repeats[1].record.id);eq(await prisma.vehicleServiceRecord.count({where:{requestId:repeatId}}),1);
+ actual=await prisma.vehicle.findUnique({where:{id:vehicle.id}});eq(actual.lastBrakePadChangeKm,2400.5);
+ // Unassigned driver cannot record maintenance on a vehicle
+ await rejects(()=>run(()=>recordMaintenance(other.id,{...input,requestId:randomUUID(),location:{latitude:-6.885,longitude:107.489,accuracy:12,observedAt:new Date().toISOString()}},driver)),403);
  const route=await prisma.deliveryRoute.create({data:{code:prefix,date:new Date(),vehicleId:vehicle.id,driverId:driver.id,createdById:actor.id,status:'COMPLETED',returnedAt:new Date(),odometerStart:2400.5,odometerEnd:2800.5,policySnapshot:{values:{TRIP_REQUIRE_DOCUMENT_RETURN:false,TRIP_BLOCK_OPEN_ISSUES:false,TRIP_REQUIRE_RETURN_INSPECTION:false}}}});routeIds.push(route.id);
- await Promise.all([run(()=>routeAction(route.id,{action:'CLOSE',note:'Periksa odometer aktual'},actor)),run(()=>recordMaintenance(vehicle.id,{...input,requestId:randomUUID(),odometerAtService:2900.5},actor))]);
+ const closeGeo={latitude:-6.885229,longitude:107.489662,accuracy:10,observedAt:new Date().toISOString(),photoUrl:fixturePng};
+ await Promise.all([run(()=>routeAction(route.id,{action:'CLOSE',note:'Periksa odometer aktual',...closeGeo},actor)),run(()=>recordMaintenance(vehicle.id,{...input,requestId:randomUUID(),odometerAtService:2900.5,location:{latitude:-6.885,longitude:107.489,accuracy:12,observedAt:new Date().toISOString()}},driver))]);
  actual=await prisma.vehicle.findUnique({where:{id:vehicle.id}});eq(actual.totalKm,2900.5);
  eq(Boolean((await prisma.deliveryRoute.findUnique({where:{id:route.id}})).closedAt),true);
  const catalog=[...DEFAULT_SERVICE_CATALOG,{code:'BAN',label:'Penggantian ban',active:true}];
- const customInput={...input,requestId:randomUUID(),serviceType:'BAN',odometerAtService:3000};
+ const customInput={...input,requestId:randomUUID(),serviceType:'BAN',serviceTypes:['BAN'],odometerAtService:3000};
  const custom=await run(()=>recordMaintenance(vehicle.id,customInput,actor),{VEHICLE_SERVICE_CATALOG:catalog});
  eq(custom.updatedVehicle.lastOilChangeKm,2900.5);eq(custom.updatedVehicle.lastOilFilterChangeKm,1500.5);eq(custom.updatedVehicle.totalKm,3000);
  eq(serviceRecordLabel(custom.record),'Penggantian ban');
@@ -67,3 +73,4 @@ try{
  await prisma.user.deleteMany({where:{id:{in:users}}});
  await prisma.$disconnect();
 }
+

@@ -29,8 +29,10 @@ export async function seedMaster(db,date){
  const division=await db.division.upsert({where:{code:'BELFOODS'},update:{},create:{id:id('division'),code:'BELFOODS',name:'BELFOODS'}});
  const products=[];
  for(const [index,name,price] of [[1,'Nugget ayam 500 g',35000],[2,'Sosis ayam 375 g',24000],[3,'Bakso ayam 500 g',28000]])products.push(await db.product.upsert({where:{sku:`UJI-BF-SKU-${index}`},update:{},create:{id:id(`product-${index}`),sku:`UJI-BF-SKU-${index}`,code:`UJI-BF-P${index}`,name:`${name} (Uji Belfoods)`,price,unit:'pak',baseUnit:'pak',unitsPerUnit:1,stock:0}}));
+ const seedPng='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
  const vehicles=[];
- for(let i=0;i<3;i++)vehicles.push(await db.vehicle.upsert({where:{code:`UJI-BF-ARMADA-${i+1}`},update:{},create:{id:id(`vehicle-${i}`),code:`UJI-BF-ARMADA-${i+1}`,name:`Mobil distribusi ${i+1} (Uji Belfoods)`,maxCartons:40,maxWeightKg:500,fuelKmPerLiter:10,fuelType:'SOLAR',fuelPricePerLiter:10000,totalKm:1200,lastOilChangeKm:i===2?1000:0,condition:i===2?'IN_SERVICE':'AVAILABLE'}}));
- await ensure(db,'vehicleServiceRecord','service',{vehicleId:vehicles[2].id,serviceDate:at(offsetDate(date,-7)),workshopName:'Bengkel uji',serviceType:'GANTI_OLI',cost:450000,odometerAtService:1000,notes:note,policySnapshot:fixturePolicy(date)});
+ for(let i=0;i<3;i++)vehicles.push(await db.vehicle.upsert({where:{code:`UJI-BF-ARMADA-${i+1}`},update:{photoUrl:seedPng,photoUpdatedAt:at(date,'07:00')},create:{id:id(`vehicle-${i}`),code:`UJI-BF-ARMADA-${i+1}`,name:`Mobil distribusi ${i+1} (Uji Belfoods)`,maxCartons:40,maxWeightKg:500,fuelKmPerLiter:10,fuelType:'SOLAR',fuelPricePerLiter:10000,totalKm:1200,lastOilChangeKm:i===2?1000:0,condition:i===2?'IN_SERVICE':'AVAILABLE',photoUrl:seedPng,photoUpdatedAt:at(date,'07:00')}}));
+ await ensure(db,'vehicleServiceRecord','service',{vehicleId:vehicles[2].id,serviceDate:at(offsetDate(date,-7)),workshopName:'Bengkel uji',serviceType:'GANTI_OLI',serviceTypes:['GANTI_OLI'],receiptPhotoUrl:seedPng,workshopLatitude:-6.885229,workshopLongitude:107.489662,evidence:{source:'DEVICE_GPS',actorId:users.gudang.id,actorName:users.gudang.name,actorRole:'KEPALA_GUDANG',proxyEntry:false,latitude:-6.885229,longitude:107.489662,mapsUrl:'https://www.google.com/maps/search/?api=1&query=-6.885229,107.489662'},cost:450000,odometerAtService:1000,notes:note,policySnapshot:fixturePolicy(date)});
  return {users,sales,supervisors,groups,clusters,products,vehicles,division,source};
 }
+

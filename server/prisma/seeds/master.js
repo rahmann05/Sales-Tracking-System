@@ -41,9 +41,10 @@ export async function seedMaster(db) {
     outlets.push(group);
     await ensure(db,'clusterRoute',`cluster-route-${i}`,{clusterId:cluster.id,routeIndex:1,isActive:true,totalDistanceKm:12,outletOrder:group.map(outlet=>outlet.id),startOutletId:group[0].id});
   }
+  const seedPng='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
   const vehicles = [];
-  for (let i=0;i<3;i++) vehicles.push(await db.vehicle.upsert({where:{code:`DEMO-ARMADA-${i+1}`},update:{},create:{id:seedId(`vehicle-${i}`),code:`DEMO-ARMADA-${i+1}`,name:`Mobil distribusi ${i+1} (Demo)`,maxCartons:80,maxWeightKg:1000,fuelKmPerLiter:10,fuelType:'DIESEL',fuelPricePerLiter:10000,condition:i===2?'IN_SERVICE':'AVAILABLE',totalKm:1200}}));
-  await ensure(db,'vehicleServiceRecord','vehicle-service',{vehicleId:vehicles[2].id,serviceDate:new Date(),workshopName:'Bengkel contoh',serviceType:'OIL_CHANGE',cost:450000,odometerAtService:1200,notes:'Data demo perawatan kendaraan'});
+  for (let i=0;i<3;i++) vehicles.push(await db.vehicle.upsert({where:{code:`DEMO-ARMADA-${i+1}`},update:{photoUrl:seedPng,photoUpdatedAt:new Date()},create:{id:seedId(`vehicle-${i}`),code:`DEMO-ARMADA-${i+1}`,name:`Mobil distribusi ${i+1} (Demo)`,maxCartons:80,maxWeightKg:1000,fuelKmPerLiter:10,fuelType:'DIESEL',fuelPricePerLiter:10000,condition:i===2?'IN_SERVICE':'AVAILABLE',totalKm:1200,photoUrl:seedPng,photoUpdatedAt:new Date()}}));
+  await ensure(db,'vehicleServiceRecord','vehicle-service',{vehicleId:vehicles[2].id,serviceDate:new Date(),workshopName:'Bengkel contoh',serviceType:'GANTI_OLI',serviceTypes:['GANTI_OLI'],receiptPhotoUrl:seedPng,workshopLatitude:-6.87,workshopLongitude:107.53,cost:450000,odometerAtService:1200,notes:'Data demo perawatan kendaraan'});
   // Repair only legacy seed accounts with no team; never transfer an assigned user.
   const legacySpv = await db.user.findUnique({where:{email:'spv@sinaranugrah.com'}});
   if (legacySpv?.role === 'SUPERVISOR' && !legacySpv.deletedAt) {

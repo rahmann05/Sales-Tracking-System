@@ -5,6 +5,7 @@ const require = createRequire(new URL('../../client/package.json', import.meta.u
 const esbuild = require('esbuild');
 const result = await esbuild.build({
   absWorkingDir: client, bundle: true, platform: 'node', format: 'cjs', write: false,
+  define: { 'import.meta.env': '{}' },
   stdin: { resolveDir: client, loader: 'js', contents: `
     import assert from 'node:assert/strict';
     import { exportCustomerExcel, exportCustomerNd6Txt, exportCustomerSummaryTxt, exportCustomerCSV, exportImportNikExcel } from './src/utils/customerExport.js';

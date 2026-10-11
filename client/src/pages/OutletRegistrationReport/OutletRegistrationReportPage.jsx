@@ -28,10 +28,9 @@ export const OutletRegistrationReportPage = () => {
     isProcessing,
     feedbackMsg,
     handleFinalize,
-    exportToCSV,
+    outletExporters,
+    nikExporters,
     exportToNd6TXT,
-    exportToTXT,
-    exportToNikExcel,
     refreshData,
   } = useOutletRegistrationReport();
 
@@ -40,10 +39,9 @@ export const OutletRegistrationReportPage = () => {
       {/* 1. Header & Export Actions */}
       <OutletReportHeader
         totalCount={data.length}
-        onExportCSV={exportToCSV}
+        outletExporters={outletExporters}
+        nikExporters={nikExporters}
         onExportNd6TXT={exportToNd6TXT}
-        onExportTXT={exportToTXT}
-        onExportNikExcel={exportToNikExcel}
         onOpenNikModal={() => setIsNikModalOpen(true)}
       />
 
@@ -85,7 +83,7 @@ export const OutletRegistrationReportPage = () => {
       {finalizeTarget && (
         <AdminFinalizeModal
           item={finalizeTarget}
-          error={feedbackMsg?.type==='error'?feedbackMsg.text:''}
+          error={feedbackMsg?.type === 'error' ? feedbackMsg.text : ''}
           isProcessing={isProcessing}
           onClose={() => setFinalizeTarget(null)}
           onConfirmFinalize={handleFinalize}

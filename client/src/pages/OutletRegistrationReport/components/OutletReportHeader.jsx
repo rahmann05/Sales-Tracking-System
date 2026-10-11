@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { LuClipboardList, LuFileSpreadsheet, LuFileText, LuSettings, LuCheck, LuIdCard } from 'react-icons/lu';
+import { LuClipboardList, LuFileText, LuSettings, LuCheck, LuIdCard } from 'react-icons/lu';
 import { configApi } from '../../../services/api';
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 
 /**
  * OutletReportHeader Component
- * Single Responsibility: Render Report title, active division parameter manager for Admin, and export buttons.
+ * Single Responsibility: Render Report title, active division parameter manager for Admin, and 5-format export menus.
  */
 export const OutletReportHeader = ({
   totalCount,
-  onExportCSV,
+  outletExporters,
+  nikExporters,
   onExportNd6TXT,
-  onExportTXT,
-  onExportNikExcel,
   onOpenNikModal,
 }) => {
   const [activeDivision, setActiveDivision] = useState('BELFOODS');
@@ -82,7 +82,6 @@ export const OutletReportHeader = ({
             Telusuri status pengajuan toko, cetak formulir, dan ekspor data pelanggan.
           </p>
         </div>
-
         {/* Export & NIK Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap lg:justify-end shrink-0">
           {onOpenNikModal && (
@@ -95,40 +94,31 @@ export const OutletReportHeader = ({
               <LuIdCard className="text-sm" /> <span>Kelola NIK</span>
             </button>
           )}
-          {onExportNikExcel && (
+
+          {/* 5-Format Master Outlet Export Menu */}
+          <ExportFormatMenu
+            label="Ekspor Master Outlet"
+            exporters={outletExporters}
+            disabled={!totalCount}
+          />
+
+          {/* 5-Format Official IMPORT NIK Export Menu */}
+          <ExportFormatMenu
+            label="Ekspor IMPORT NIK"
+            exporters={nikExporters}
+            disabled={!totalCount}
+          />
+
+          {onExportNd6TXT && (
             <button
               type="button"
-              onClick={onExportNikExcel}
-              className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
-              title="Ekspor Format Resmi IMPORT NIK.xlsx (7 Kolom: Code, Name, NIK, Owner, Alamat, PKP, NPWP)"
+              onClick={onExportNd6TXT}
+              className="h-9 px-3 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
+              title="Ekspor Format Data Stream ND6 (TXT/Pipe)"
             >
-              <LuFileSpreadsheet /> <span>Ekspor NIK</span>
+              <LuFileText /> <span>ND6 TXT</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={onExportCSV}
-            className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
-            title="Ekspor Laporan Master Tabel ke Excel (.xls)"
-          >
-            <LuFileSpreadsheet /> <span>Ekspor Excel</span>
-          </button>
-          <button
-            type="button"
-            onClick={onExportNd6TXT}
-            className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
-            title="Ekspor Format Data Stream (TXT/Pipe)"
-          >
-            <LuFileText /> <span>Ekspor TXT</span>
-          </button>
-          <button
-            type="button"
-            onClick={onExportTXT}
-            className="h-9 px-3.5 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
-            title="Ekspor Ringkasan Teks Terbaca"
-          >
-            <LuFileText /> <span>Ringkasan TXT</span>
-          </button>
         </div>
       </div>
     </div>

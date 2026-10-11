@@ -1,13 +1,15 @@
 import { NikRegistryList } from './NikRegistryList';
 import { NikRegistryEditor } from './NikRegistryEditor';
 import React, { useState, useMemo } from 'react';
-import { LuX, LuIdCard, LuDownload } from "react-icons/lu";
+import { LuX, LuIdCard } from "react-icons/lu";
 import { exportImportNikExcel } from '../../../utils/customerExport';
+import { exportImportNik } from '../../../utils/export/documents/importNikExport';
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 import { customerRegistrationsApi, outletsApi } from '../../../services/api';
 
 /**
  * NikManagementModal Component
- * Single Responsibility: Manage NIK input, 16-digit verification, and export to official IMPORT NIK.xls
+ * Single Responsibility: Manage NIK input, 16-digit verification, and 5-format export to official IMPORT NIK
  */
 export const NikManagementModal = ({
   isOpen,
@@ -101,11 +103,10 @@ export const NikManagementModal = ({
     const raw = String(c.taxNumber || c.nik || '').replace(/[^0-9]/g, '');
     return raw.length === 16;
   }).length;
-  const handleExportAll = () => {
-    exportImportNikExcel(customerList, `IMPORT_NIK_SEMUA_${new Date().toISOString().split('T')[0]}.xls`);
-  };
+  const dateCode = new Date().toISOString().split('T')[0];
+  const nikExporters = exportImportNik(customerList, `IMPORT_NIK_SEMUA_${dateCode}`);
   const handleExportFiltered = () => {
-    exportImportNikExcel(filteredList, `IMPORT_NIK_TERFILTER_${new Date().toISOString().split('T')[0]}.xls`);
+    exportImportNikExcel(filteredList, `IMPORT_NIK_TERFILTER_${dateCode}.xls`);
   };
   return <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-surface border border-border-glass rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -123,15 +124,18 @@ export const NikManagementModal = ({
                 </span>
               </h3>
               <p className="text-xs text-on-surface-variant m-0 mt-0.5">
-                Input nomor NIK 16-digit pemilik toko dan ekspor ke format Excel resmi IMPORT NIK.xlsx
+                Input nomor NIK 16-digit pemilik toko dan ekspor ke 5 format dokumen resmi IMPORT NIK
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button type="button" onClick={handleExportAll} className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Ekspor Seluruh NIK ke File Excel IMPORT NIK.xls">
-              <LuDownload /> Ekspor IMPORT NIK (.xls)
-            </button>
+            <ExportFormatMenu
+              label="Ekspor IMPORT NIK"
+              exporters={nikExporters}
+              disabled={!customerList.length}
+              compact
+            />
             <button type="button" onClick={onClose} className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-variant transition-all cursor-pointer">
               <LuX className="text-lg" />
             </button>

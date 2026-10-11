@@ -5,10 +5,15 @@ import {selectedReportItems,reportExportAllowed} from '../../../../../shared/rep
 import React from 'react';
 import { SalesTargetEditor } from './SalesTargetEditor';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
-import { LuDownload, LuPrinter, LuRefreshCw, LuUser, LuSearch } from "react-icons/lu";
+import { LuPrinter, LuRefreshCw, LuUser, LuSearch } from "react-icons/lu";
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 export function MtdSalesTable({
   MONTH_OPTIONS,
+  exportToDocx,
+  exportToExcel,
   exportToCsv,
+  exportToTxt,
+  exportToPdf,
   filteredSalesmen,
   isLoading,
   loadData,
@@ -48,12 +53,23 @@ export function MtdSalesTable({
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
             </button>
 
-            <button type="button" disabled={!canExport||isLoading} onClick={exportToCsv} className="py-2 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
-              <LuDownload /> Excel
-            </button>
+            <ExportFormatMenu
+              disabled={!canExport||isLoading}
+              onExportDocx={exportToDocx}
+              onExportExcel={exportToExcel}
+              onExportCsv={exportToCsv}
+              onExportTxt={exportToTxt}
+              onExportPdf={exportToPdf}
+            />
 
-            <button type="button" disabled={!canExport||isLoading} onClick={() => setIsPdfModalOpen(true)} className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer">
-              <LuPrinter /> Cetak PDF
+            <button
+              type="button"
+              disabled={!canExport||isLoading}
+              onClick={() => setIsPdfModalOpen(true)}
+              className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
+              title="Buka pratinjau cetak formulir resmi"
+            >
+              <LuPrinter /> Cetak Printer
             </button>
           </div>
         </div>

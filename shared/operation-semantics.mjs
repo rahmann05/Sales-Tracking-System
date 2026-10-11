@@ -45,7 +45,7 @@ export function endpointSemantics(url,method,body={}){
  if(p.startsWith('reports/'))return result(p==='reports/archives'?'START_WORK':'GOVERNANCE','REPORTS');
  if(p.startsWith('notifications/'))return result('CONTINUE_WORK','CORE');
  if(/(?:approve|reject|validate|finalize|reroute|revisit|\/skip|batch-approve|\/review)$/.test(p)||/unlock-requests/.test(p))return result('DECISION',domain);
- if(/assignment|change-queue.*cancel|cancel-schedule|cancel-published|cancel-remainder|\/out$|\/return$|maintenance|condition|\/promise$/.test(p))return result('CONTINUE_WORK',domain);
+ if(/assignment|change-queue.*cancel|cancel-schedule|cancel-published|cancel-remainder|\/out$|\/return$|maintenance|condition|vehicles\/[^/]+\/photo$|\/promise$/.test(p))return result('CONTINUE_WORK',domain);
  if(domain==='CATALOG'||domain==='OUTLET_MASTER'||domain==='PLANNING'&&!p.startsWith('pjp/'))return result('MASTER_CHANGE',domain);
  return result(feature?.[1]?'START_WORK':'CONTINUE_WORK',domain);
 }

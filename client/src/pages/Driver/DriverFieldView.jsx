@@ -1,25 +1,28 @@
 import {DepartureChecklistSummary} from '../../shared/components/common/DepartureChecklistSummary';
 import React,{useState} from 'react';
-import {LuRefreshCw,LuArrowRight,LuMapPin} from 'react-icons/lu';
+import {LuRefreshCw,LuArrowRight,LuMapPin,LuWrench} from 'react-icons/lu';
 import {useApp} from '../../context/AppContext';
 import {sendDriverEvidence} from '../../services/api/deliveryApi';
 import {DriverPendingSubmissions} from './components/DriverPendingSubmissions';
 import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
 import {useSelectedDetail} from '../../shared/hooks/useSelectedDetail';
+import {useDomainPermission} from '../../shared/hooks/useDomainPermission';
 import {TAB_IDS} from '../../constants/navigation';
 import {useDriverTrips} from './useDriverTrips';
 import {DriverStopCard} from './components/DriverStopCard';
 import {DriverAttendanceModal} from './components/DriverAttendanceModal';
 import {RouteOperationsActions} from '../Warehouse/components/RouteOperationsActions';
 import {OperationalIssues} from '../Warehouse/components/OperationalIssues';
+import {RecordMaintenanceModal} from '../Warehouse/components/RecordMaintenanceModal';
 import {deliveryRouteLabel,deliveryStopLabel} from '../Warehouse/deliveryLabels';
 import {routeProgress} from '../../../../shared/delivery-operations.mjs';
 import {orderedStops,nextDeliveryStop,deliveryStopGate} from '../../../../shared/driver-workspace.mjs';
 const stamp=v=>v?new Date(v).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}):'Belum tercatat';
 export function DriverFieldView(){
  const {driverTracking,user,setActiveTab}=useApp();
+ const canMaintenance=useDomainPermission('VEHICLE_MAINTENANCE');
  const {routes,issues,loading,error,updatedAt,refresh,activeRoute:trip,selectTrip}=useDriverTrips();
- const [selectedStopId,selectStop]=useWorkspaceState('driverStop',''),[modal,setModal]=useState(null);
+ const [selectedStopId,selectStop]=useWorkspaceState('driverStop',''),[modal,setModal]=useState(null),[serviceModal,setServiceModal]=useState(false);
  const stops=orderedStops(trip),next=nextDeliveryStop(stops),selected=stops.find(s=>s.id===selectedStopId)||next||stops[0],progress=routeProgress(trip||{});
  const detailRef=useSelectedDetail(selectedStopId?selected?.id:null,true);
  const disabled=!!error||trip?.status!=='IN_TRANSIT'||trip?.onHold||!!trip?.returnedAt;
@@ -32,7 +35,7 @@ export function DriverFieldView(){
   <DriverPendingSubmissions onChanged={refresh}/>
   {error&&<p role="alert" className="admin-feedback error">{error} Data terakhir tetap ditampilkan. Perbarui data sebelum melakukan tindakan.</p>}
   {loading&&!routes.length?<p className="admin-empty">Memuat trip yang ditugaskan…</p>:!trip?<section className="admin-panel admin-empty"><h2>Belum ada trip terbuka</h2><p>Hubungi Kepala Gudang untuk memeriksa penugasan Anda.</p></section>:<>
-   <section className="admin-panel logistics-trip-heading"><div><span className="admin-status">{deliveryRouteLabel(trip)}</span><h2>{trip.code}</h2><p>{trip.vehicle?.code||'Truk belum ditetapkan'} · {trip.vehicle?.name} · Tanggal trip {trip.date?new Date(trip.date).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta'}):'Belum tersedia'}</p></div><div className="logistics-heading-tools">{routes.length>1&&<label>Trip yang ditugaskan<select value={trip.id} onChange={e=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true}))){selectTrip(e.target.value);selectStop('');}}}>{routes.map(r=><option key={r.id} value={r.id}>{r.code} · {deliveryRouteLabel(r)}</option>)}</select></label>}<button type="button" className="admin-button" onClick={()=>{selectTrip(trip.id);setActiveTab(TAB_IDS.DELIVERY_DRIVER_MAP);}}><LuMapPin/>Peta tujuan</button></div></section>
+   <section className="admin-panel logistics-trip-heading"><div><span className="admin-status">{deliveryRouteLabel(trip)}</span><h2>{trip.code}</h2><p>{trip.vehicle?.code||'Truk belum ditetapkan'} · {trip.vehicle?.name} · Tanggal trip {trip.date?new Date(trip.date).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta'}):'Belum tersedia'}</p></div><div className="logistics-heading-tools">{routes.length>1&&<label>Trip yang ditugaskan<select value={trip.id} onChange={e=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true}))){selectTrip(e.target.value);selectStop('');}}}>{routes.map(r=><option key={r.id} value={r.id}>{r.code} · {deliveryRouteLabel(r)}</option>)}</select></label>}{canMaintenance&&trip.vehicle&&<button type="button" className="admin-button" onClick={()=>setServiceModal(true)}><LuWrench/>Catat servis</button>}<button type="button" className="admin-button" onClick={()=>{selectTrip(trip.id);setActiveTab(TAB_IDS.DELIVERY_DRIVER_MAP);}}><LuMapPin/>Peta tujuan</button></div></section>
    <div className="logistics-metrics">{[['Tujuan diproses',`${progress.resolved}/${progress.total}`],['Diterima penuh',progress.delivered],['Diterima sebagian',stops.filter(s=>s.status==='PARTIAL_REJECT').length],['Ditolak',stops.filter(s=>s.status==='REJECTED').length]].map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
    <section className="admin-panel logistics-next"><div><p className="admin-eyebrow">{trip.returnedAt?'Perjalanan telah kembali':next?'Tujuan berikutnya':'Seluruh tujuan telah diproses'}</p><h2>{trip.returnedAt?'Menunggu pemeriksaan dan penutupan gudang':next?next.outlet?.name:'Konfirmasikan perjalanan kembali'}</h2><p>{trip.onHold?'Trip ditahan. Hubungi Kepala Gudang sebelum melanjutkan.':trip.status==='DRAFT'?'Gudang sedang menyiapkan muatan. Tunggu serah terima.':trip.status==='READY'?'Periksa serah terima muatan dan isi odometer sebelum berangkat.':next?.outlet?.address||'Trip selesai setelah bukti dan retur diperiksa oleh gudang.'}</p></div>{next&&<button type="button" className="admin-button primary" onClick={()=>{selectStop(next.id);detailRef.current?.scrollIntoView({behavior:'smooth',block:'start'});}}>Buka tujuan<LuArrowRight/></button>}</section>
    {(trip.returnedAt||!['READY','COMPLETED','PARTIAL'].includes(trip.status))&&<DepartureChecklistSummary route={trip}/>}
@@ -44,5 +47,7 @@ export function DriverFieldView(){
    {tripIssues.length>0&&<section className="admin-panel logistics-action-panel"><fieldset disabled={!!error}><OperationalIssues issues={tripIssues} people={[user]} onChanged={refresh}/></fieldset></section>}
   </>}
   {modal&&<DriverAttendanceModal policy={trip?.policySnapshot?.values} stop={modal.stop} type={modal.type} onClose={()=>setModal(null)} onSubmitAttendance={save}/>}
+  {serviceModal&&trip?.vehicle&&<RecordMaintenanceModal vehicle={trip.vehicle} onClose={()=>setServiceModal(false)} onSuccess={()=>{setServiceModal(false);refresh();}}/>}
  </div>;
 }
+

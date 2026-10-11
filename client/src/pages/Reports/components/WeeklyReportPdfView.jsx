@@ -8,11 +8,20 @@ import { calendarDayLabel } from '../../../../../shared/report-calendar.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportWeeklyDocx,
+  exportWeeklyExcel,
+  exportWeeklyCsv,
+  exportWeeklyTxt,
+  exportWeeklyPdf,
+} from '../../../utils/export/reports/weeklyReportExport';
+
 /**
  * WeeklyReportPdfView Component
  * Renders an official printable sheet for the Weekly Performance & Attendance Report (ND6).
  */
-export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
+export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClose }) => {
   const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
   if (!reportData) return null;
 
@@ -32,21 +41,29 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Action Bar */}
-      <div className="fixed top-4 right-6 z-60 flex items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+      <div className="fixed top-4 right-6 z-60 flex flex-wrap items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+        <ExportFormatMenu
+          disabled={!canExport}
+          onExportDocx={() => exportWeeklyDocx(reportData, startDate, salesmanName)}
+          onExportExcel={() => exportWeeklyExcel(reportData, startDate, salesmanName)}
+          onExportCsv={() => exportWeeklyCsv(reportData, startDate, salesmanName)}
+          onExportTxt={() => exportWeeklyTxt(reportData, startDate, salesmanName)}
+          onExportPdf={() => exportWeeklyPdf(reportData, startDate, salesmanName)}
+        />
         <button
           type="button"
           onClick={handlePrint}
           disabled={!canExport}
-          className="px-4 py-2.5 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:opacity-90 transition-all cursor-pointer"
+          className="px-3.5 py-2 bg-surface-container text-on-surface hover:bg-surface-container-high rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
         >
-          <LuPrinter className="text-base" /> Cetak / Unduh PDF
+          <LuPrinter className="text-sm" /> Cetak Printer
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="px-3.5 py-2.5 bg-surface-container text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-high transition-all cursor-pointer"
+          className="px-3.5 py-2 bg-surface-container text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-high transition-all cursor-pointer"
         >
-          <LuX className="text-base" /> Tutup
+          <LuX className="text-sm" /> Tutup
         </button>
       </div>
 

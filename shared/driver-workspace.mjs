@@ -3,8 +3,15 @@ export function preferredTrip(routes,id){return routes.find(r=>r.id===id)||route
 export const orderedStops=route=>[...(route?.stops||[])].sort((a,b)=>(a.sequence??0)-(b.sequence??0));
 export function stopDestinationOutlet(stop){
  if(!stop?.outlet)return null;
- if(stop.targetLatitude==null||stop.targetLongitude==null||!Number.isFinite(Number(stop.targetLatitude))||!Number.isFinite(Number(stop.targetLongitude)))return stop.outlet;
- return {...stop.outlet,googleLocation:null,nativeLocation:{latitude:Number(stop.targetLatitude),longitude:Number(stop.targetLongitude)},latitude:Number(stop.targetLatitude),longitude:Number(stop.targetLongitude),googleMapsOnly:stop.targetPointSource==='GOOGLE'};
+ if(stop.targetLatitude!=null&&stop.targetLongitude!=null&&Number.isFinite(Number(stop.targetLatitude))&&Number.isFinite(Number(stop.targetLongitude))){
+  return {...stop.outlet,googleLocation:null,nativeLocation:{latitude:Number(stop.targetLatitude),longitude:Number(stop.targetLongitude)},latitude:Number(stop.targetLatitude),longitude:Number(stop.targetLongitude),googleMapsOnly:stop.targetPointSource==='GOOGLE'};
+ }
+ const op=outletOperationalPoint(stop.outlet);
+ if(op.latitude!=null&&op.longitude!=null)return stop.outlet;
+ const lat=stop.outlet.deliveryLatitude??stop.outlet.latitude??stop.outlet.nativeLocation?.latitude;
+ const lng=stop.outlet.deliveryLongitude??stop.outlet.longitude??stop.outlet.nativeLocation?.longitude;
+ if(lat==null||lng==null||!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))return stop.outlet;
+ return {...stop.outlet,googleLocation:null,nativeLocation:{latitude:Number(lat),longitude:Number(lng)},latitude:Number(lat),longitude:Number(lng),googleMapsOnly:false};
 }
 export const nextDeliveryStop=stops=>stops.find(s=>s.status==='PENDING'&&s.arrivedAt)||stops.find(s=>s.status==='PENDING');
 export function validOutletPoint(outlet){outlet=outletOperationalPoint(outlet);return outlet?.latitude!=null&&outlet?.longitude!=null&&Number.isFinite(Number(outlet.latitude))&&Number.isFinite(Number(outlet.longitude))&&Math.abs(Number(outlet.latitude))<=90&&Math.abs(Number(outlet.longitude))<=180;}

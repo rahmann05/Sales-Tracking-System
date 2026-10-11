@@ -1,7 +1,6 @@
 import {reportMoney} from '../../../../../shared/report-visibility.mjs';
-import {downloadOperationalFile} from '../../../services/operationalExportService';
 import { MtdMetrics } from './MtdMetrics';
-import { mtdCsv, reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
+import { reportSalesOptions } from '../../../../../shared/report-semantics.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
 import { ReportCalendarEditor } from './ReportCalendarEditor';
 import { ReportArchivePanel } from './ReportArchivePanel';
@@ -12,6 +11,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { collectPages, reportsApi, usersApi } from '../../../services/api';
 import { MtdReportPdfView } from './MtdReportPdfView';
 import { LuLayers } from "react-icons/lu";
+import {
+  exportMtdDocx,
+  exportMtdExcel,
+  exportMtdCsv,
+  exportMtdTxt,
+  exportMtdPdf,
+} from '../../../utils/export/reports/mtdReportExport';
 const MONTH_OPTIONS = [{
   value: 1,
   label: 'Januari'
@@ -141,17 +147,12 @@ export const MtdReportView = () => {
   const selectedSalesman = salesOptions.find(s => s.id === salesmanId);
   const salesmanName = selectedSalesman?.name || '';
 
-  // Export to CSV/Excel
-  const exportToCsv = () => {
-    if (!reportData?.salesmen || reportData.salesmen.length === 0) {
-      alert('Tidak ada data MTD untuk diekspor.');
-      return;
-    }
-    const blob = new Blob(['\uFEFF' + mtdCsv(reportData)], {
-      type: 'text/csv;charset=utf-8;'
-    });
-    downloadOperationalFile(blob,`MTD_PERFORMANCE_REPORT_${reportData.period.monthName}_${year}.csv`,'text/csv;charset=utf-8;');
-  };
+  // 5-Format Exporters
+  const exportToDocx = () => exportMtdDocx(reportData, month, year);
+  const exportToExcel = () => exportMtdExcel(reportData, month, year);
+  const exportToCsv = () => exportMtdCsv(reportData, month, year);
+  const exportToTxt = () => exportMtdTxt(reportData, month, year);
+  const exportToPdf = () => exportMtdPdf(reportData, month, year);
   const {
     period = {},
     summary = {},
@@ -193,9 +194,39 @@ export const MtdReportView = () => {
         </div>}
 
       {/* 3. Unified Workspace Card: Header + Filters + MTD Breakdown Table */}
-      <MtdSalesTable MONTH_OPTIONS={MONTH_OPTIONS} exportToCsv={exportToCsv} filteredSalesmen={filteredSalesmen} isLoading={isLoading} loadData={loadData} month={month} reportData={reportData} salesTeam={salesOptions} salesmanId={salesmanId} search={search} setIsPdfModalOpen={setIsPdfModalOpen} setMonth={setMonth} setSalesmanId={setSalesmanId} setSearch={setSearch} setYear={setYear} summary={summary} year={year} />
+      <MtdSalesTable
+        MONTH_OPTIONS={MONTH_OPTIONS}
+        exportToDocx={exportToDocx}
+        exportToExcel={exportToExcel}
+        exportToCsv={exportToCsv}
+        exportToTxt={exportToTxt}
+        exportToPdf={exportToPdf}
+        filteredSalesmen={filteredSalesmen}
+        isLoading={isLoading}
+        loadData={loadData}
+        month={month}
+        reportData={reportData}
+        salesTeam={salesOptions}
+        salesmanId={salesmanId}
+        search={search}
+        setIsPdfModalOpen={setIsPdfModalOpen}
+        setMonth={setMonth}
+        setSalesmanId={setSalesmanId}
+        setSearch={setSearch}
+        setYear={setYear}
+        summary={summary}
+        year={year}
+      />
 
       {/* PDF Modal */}
-      {isPdfModalOpen && !isLoading && !error && <MtdReportPdfView reportData={reportData} salesmanName={salesmanName} onClose={() => setIsPdfModalOpen(false)} />}
+      {isPdfModalOpen && !isLoading && !error && (
+        <MtdReportPdfView
+          reportData={reportData}
+          salesmanName={salesmanName}
+          year={year}
+          month={month}
+          onClose={() => setIsPdfModalOpen(false)}
+        />
+      )}
     </div>;
 };

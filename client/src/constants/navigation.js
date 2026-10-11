@@ -289,9 +289,7 @@ export function isTabPermissionAllowed(tabId,user) {
   if (tabId===TAB_IDS.SALES_FOLLOW_UP) return user?.role===ROLES.SALES&&user.permissions?.can_view_follow_up!==false;
   if ([TAB_IDS.SALES_VISITS,TAB_IDS.SALES_ORDERS].includes(tabId)) return user?.role===ROLES.SALES;
   if ([TAB_IDS.SPV_MONITOR,TAB_IDS.SPV_APPROVAL,TAB_IDS.SPV_FIELD,TAB_IDS.SPV_ATTENTION].includes(tabId)) {
-    if(user?.role!==ROLES.SUPERVISOR)return false;
-    if(tabId===TAB_IDS.SPV_MONITOR)return ['can_view_daily_call','can_view_live_tracking'].some(key=>user.permissions?.[key]!==false);
-    return true;
+    return user?.role===ROLES.SUPERVISOR && (tabId!==TAB_IDS.SPV_MONITOR || ['can_view_daily_call','can_view_live_tracking'].some(key=>user.permissions?.[key]!==false));
   }
   if(tabId===TAB_IDS.SYSTEM_CONFIG)return user?.role===ROLES.ADMIN&&user.permissions?.can_manage_system_config!==false;
   if(tabId===TAB_IDS.USER_MANAGEMENT)return user?.role===ROLES.ADMIN&&['can_manage_users','can_manage_roles'].some(key=>user.permissions?.[key]!==false);

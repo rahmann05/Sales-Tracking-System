@@ -1,10 +1,17 @@
 import React from 'react';
-import { LuFileCheck, LuSearch, LuFileSpreadsheet, LuFileText, LuRotateCw } from 'react-icons/lu';
+import { LuFileCheck, LuSearch, LuFileText, LuRotateCw } from 'react-icons/lu';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import {
-  exportCustomerExcel,
   exportCustomerNd6Txt,
 } from '../../../utils/customerExport';
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportOutletMasterDocx,
+  exportOutletMasterXlsx,
+  exportOutletMasterCsv,
+  exportOutletMasterTxt,
+  exportOutletMasterPdf,
+} from '../../../utils/export/reports/outletMasterExport';
 
 const STATUS_FILTERS = [
   { id: 'SUBMITTED', label: 'Menunggu Approval' },
@@ -57,14 +64,13 @@ export const OutletApprovalHeader = ({
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => exportCustomerExcel(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.csv`)}
-                className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-surface border border-border-glass hover:bg-surface-container text-on-surface text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                title="Ekspor ke Excel / CSV"
-              >
-                <LuFileSpreadsheet className="text-sm" /> <span>Excel</span>
-              </button>
+              <ExportFormatMenu
+                onExportDocx={() => exportOutletMasterDocx(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.docx`)}
+                onExportExcel={() => exportOutletMasterXlsx(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.xlsx`)}
+                onExportCsv={() => exportOutletMasterCsv(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.csv`)}
+                onExportTxt={() => exportOutletMasterTxt(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.txt`)}
+                onExportPdf={() => exportOutletMasterPdf(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.pdf`)}
+              />
               <button
                 type="button"
                 onClick={() => exportCustomerNd6Txt(items, `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`)}

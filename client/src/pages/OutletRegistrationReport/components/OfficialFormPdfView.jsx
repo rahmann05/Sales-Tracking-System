@@ -5,6 +5,14 @@ import { OfficialChannelSection } from './OfficialChannelSection';
 import { OfficialVisitSection } from './OfficialVisitSection';
 import React from 'react';
 import { LuPrinter, LuX } from "react-icons/lu";
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportNooDocx,
+  exportNooExcel,
+  exportNooCsv,
+  exportNooTxt,
+  exportNooPdf,
+} from '../../../utils/export/documents/nooDocumentExport';
 
 /**
  * OfficialFormPdfView Component
@@ -17,17 +25,24 @@ export const OfficialFormPdfView = ({
 }) => {
   if (!data) return null;
   const isChecked = condition => condition ? '✓' : '';
-  const visitDaysList = (data.visitDays || '').toUpperCase().split(',');
+  const visitDaysList = (data.visitDays || '').split(',').map(d => d.trim().toUpperCase());
   const handlePrint = () => {
     printOperationalDocument('OUTLET');
   };
   return <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Top Action Bar (hidden on print) */}
-      <div className="fixed top-3 right-4 z-60 flex items-center gap-2 no-print bg-surface p-2 rounded-xl shadow-xl border border-border-glass">
-        <button type="button" onClick={handlePrint} className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md hover:opacity-90 transition-all">
-          <LuPrinter className="text-sm" /> Cetak / Unduh PDF
+      <div className="fixed top-3 right-4 z-60 flex flex-wrap items-center gap-2 no-print bg-surface p-2 rounded-xl shadow-xl border border-border-glass">
+        <ExportFormatMenu
+          onExportDocx={() => exportNooDocx(data)}
+          onExportExcel={() => exportNooExcel(data)}
+          onExportCsv={() => exportNooCsv(data)}
+          onExportTxt={() => exportNooTxt(data)}
+          onExportPdf={() => exportNooPdf(data)}
+        />
+        <button type="button" onClick={handlePrint} className="px-3 py-1.5 bg-surface-container text-on-surface hover:bg-surface-container-high rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all">
+          <LuPrinter className="text-sm" /> Cetak Printer
         </button>
-        <button type="button" onClick={onClose} className="px-3 py-2 bg-surface-container text-on-surface rounded-lg text-xs font-bold hover:bg-surface-container-high transition-all">
+        <button type="button" onClick={onClose} className="px-3 py-1.5 bg-surface-container text-on-surface rounded-lg text-xs font-bold hover:bg-surface-container-high transition-all">
           <LuX className="text-sm" /> Tutup
         </button>
       </div>
@@ -242,45 +257,19 @@ export const OfficialFormPdfView = ({
             </thead>
             <tbody>
               <tr>
-                {/* 1. Mengetahui Outlet */}
-                <td className="border border-black p-2 h-20 align-bottom text-left">
-                  <div className="border-t border-dotted border-gray-400 pt-1">
-                    <div>
-                      Nama: <strong>{data.outletKnownBy || data.ownerName || '________________'}</strong>
+                {[
+                  { name: data.outletKnownBy || data.ownerName, title: 'Pemilik / Staf Toko' },
+                  { name: data.salesmanName, title: 'Salesman' },
+                  { name: data.spvName, title: 'SPV' },
+                  { name: data.adminName, title: 'Admin' }
+                ].map((s, idx) => (
+                  <td key={idx} className="border border-black p-2 h-20 align-bottom text-left">
+                    <div className="border-t border-dotted border-gray-400 pt-1">
+                      <div>Nama: <strong>{s.name || '________________'}</strong></div>
+                      <div>Jabatan: {s.title}</div>
                     </div>
-                    <div>Jabatan: Pemilik / Staf Toko</div>
-                  </div>
-                </td>
-
-                {/* 2. Mengajukan (Salesman) */}
-                <td className="border border-black p-2 h-20 align-bottom text-left">
-                  <div className="border-t border-dotted border-gray-400 pt-1">
-                    <div>
-                      Nama: <strong>{data.salesmanName || '________________'}</strong>
-                    </div>
-                    <div>Jabatan: Salesman</div>
-                  </div>
-                </td>
-
-                {/* 3. Menyetujui (SPV) */}
-                <td className="border border-black p-2 h-20 align-bottom text-left">
-                  <div className="border-t border-dotted border-gray-400 pt-1 space-y-0.5">
-                    <div>
-                      Nama: <strong>{data.spvName || '________________'}</strong>
-                    </div>
-                    <div className="text-[8.5px]">Jabatan : SPV</div>
-                  </div>
-                </td>
-
-                {/* 4. Input Ke System (Admin) */}
-                <td className="border border-black p-2 h-20 align-bottom text-left">
-                  <div className="border-t border-dotted border-gray-400 pt-1">
-                    <div>
-                      Nama: <strong>{data.adminName || '________________'}</strong>
-                    </div>
-                    <div>Jabatan : Admin</div>
-                  </div>
-                </td>
+                  </td>
+                ))}
               </tr>
             </tbody>
           </table>

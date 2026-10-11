@@ -45,6 +45,7 @@ export const createDeliveryRoute = async (data, userId) => {
   // Verify vehicle exists and is active
   const vehicle = await tx.vehicle.findUnique({ where: { id: vehicleId } });
   if (!vehicle || vehicle.deletedAt || !vehicle.isActive || vehicle.condition !== 'AVAILABLE') throw new AppError('Kendaraan tidak ditemukan atau tidak aktif', 404);
+  if (!vehicle.photoUrl) throw new AppError('Foto kendaraan belum dilampirkan. Set foto di menu Armada sebelum kendaraan dipakai pada trip.', 422);
 
   // Verify driver exists and has SUPIR role
   const driver = await tx.user.findUnique({ where: { id: driverId } });

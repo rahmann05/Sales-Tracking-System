@@ -36,6 +36,7 @@
     "verify:team-outlet": "node scripts/verify-team-outlet.mjs",
     "verify:ui": "node scripts/verify-ui-contracts.mjs",
     "verify:frontend-exports": "node scripts/verify-frontend-exports.mjs",
+    "verify:all-exports": "node scripts/verify-all-document-exports.mjs",
     "verify:seed": "node scripts/verify-seed.mjs",
     "verify:client-fetch": "node scripts/verify-client-fetch.mjs",
     "verify:session-reports": "node scripts/verify-session-reports.mjs",

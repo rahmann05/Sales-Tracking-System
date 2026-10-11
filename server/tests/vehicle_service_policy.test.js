@@ -44,3 +44,23 @@ test('vehicle overrides require a complete bounded policy, revision timestamp an
  assert.equal(maintenancePolicySchema.safeParse(valid).success,true);
  for(const bad of [{...valid,reason:'  '},{...valid,intervals:{...valid.intervals,GANTI_OLI:99}},{...valid,intervals:{...valid.intervals,GANTI_OLI:500.5}},{...valid,intervals:{...valid.intervals,STOCK:1}}])assert.equal(maintenancePolicySchema.safeParse(bad).success,false);
 });
+test('checklist serviceTypes and Google Maps workshop point parsing work for multi-item service',async()=>{
+ const {parseGoogleMapsPoint}=await import('../../shared/google-maps-point.mjs');
+ const {serviceRecordLabel}=await import('../../shared/reference-catalog.mjs');
+ const pt1=parseGoogleMapsPoint('https://www.google.com/maps/place/Bengkel/@-6.885229,107.489662,17z');
+ assert.deepEqual({lat:pt1.latitude,lng:pt1.longitude},{lat:-6.885229,lng:107.489662});
+ const pt2=parseGoogleMapsPoint('-6.912345, 107.612345');
+ assert.deepEqual({lat:pt2.latitude,lng:pt2.longitude},{lat:-6.912345,lng:107.612345});
+ assert.equal(serviceRecordLabel({serviceTypes:['GANTI_OLI','GANTI_FILTER_OLI']}),'Ganti oli mesin, Ganti filter oli');
+ const parsed=recordMaintenanceSchema.safeParse({
+  params:{id:'00000000-0000-4000-8000-000000000001'},
+  body:{
+   serviceTypes:['GANTI_OLI','GANTI_KANVAS_REM'],
+   odometerAtService:1500,
+   receiptPhotoUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+   location:{mapsUrl:'https://www.google.com/maps?q=-6.885229,107.489662'}
+  }
+ });
+ assert.equal(parsed.success,true);
+});
+

@@ -8,13 +8,15 @@ import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
 import {setMaintenancePolicy} from './services/maintenance-policy.service.js';
 import {vehicleMileage,correctVehicleMileage} from './services/vehicle-mileage.service.js';
+import {setVehiclePhoto} from './services/set-vehicle-photo.service.js';
+import {vehiclePhotoSchema} from './vehicles.schema.js';
 
 const router = Router();
 
 router.use(authenticate);
 router.use((req,res,next)=>{
  if(['GET','HEAD','OPTIONS'].includes(req.method))return next();
- const action=req.path.endsWith('/service-policy')?'VEHICLE_POLICY':req.path.endsWith('/condition')?'VEHICLE_CONDITION':req.path.endsWith('/maintenance')?'VEHICLE_MAINTENANCE':'MANAGE_VEHICLE';
+ const action=req.path.endsWith('/service-policy')?'VEHICLE_POLICY':req.path.endsWith('/condition')||req.path.endsWith('/photo')?'VEHICLE_CONDITION':req.path.endsWith('/maintenance')?'VEHICLE_MAINTENANCE':'MANAGE_VEHICLE';
  return authorizeDomainAction(action)(req,res,next);
 });
 router.patch('/:id/service-policy',authorize('ADMIN'),async(req,res,next)=>{
@@ -26,6 +28,16 @@ router.patch('/:id/mileage',authorize('ADMIN'),async(req,res,next)=>{
   const data=z.object({odometerKm:z.number().finite().nonnegative(),reason:z.string().trim().min(5).max(2000),updatedAt:z.string().datetime()}).strict().parse(req.body);
   res.json({data:await correctVehicleMileage(req.params.id,data,req.user)});
  }catch(error){next(error);}
+});
+router.get('/:id/service-records/:recordId/receipt', authorize('ADMIN','SUPERVISOR','KEPALA_GUDANG'), async(req,res,next)=>{
+  try{
+    const record=await prisma.vehicleServiceRecord.findFirst({where:{id:req.params.recordId,vehicleId:req.params.id},select:{receiptPhotoUrl:true}});
+    if(!record?.receiptPhotoUrl)throw new AppError('Foto struk tidak tersedia untuk catatan ini',404);
+    res.json({status:'success',data:{photoUrl:record.receiptPhotoUrl}});
+  }catch(error){next(error);}
+});
+router.patch('/:id/photo', authorize('ADMIN','SUPERVISOR','KEPALA_GUDANG'), async(req,res,next)=>{
+  try{const data=vehiclePhotoSchema.parse({body:req.body,params:{id:req.params.id}});res.json({status:'success',data:await setVehiclePhoto(data.params.id,data.body.photoUrl,req.user)});}catch(error){next(error);}
 });
 router.patch('/:id/condition', authorize('ADMIN','SUPERVISOR','KEPALA_GUDANG'), async(req,res,next)=>{
   try {
@@ -54,6 +66,6 @@ router.get('/:id', vehicleController.getVehicleById);
 router.post('/', authorize('ADMIN', 'SUPERVISOR'), vehicleController.createVehicle);
 router.put('/:id', authorize('ADMIN', 'SUPERVISOR'), vehicleController.updateVehicle);
 router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), vehicleController.deleteVehicle);
-router.post('/:id/maintenance', authorize('ADMIN', 'SUPERVISOR', 'KEPALA_GUDANG'), vehicleController.recordMaintenance);
+router.post('/:id/maintenance', authorize('ADMIN', 'SUPERVISOR', 'KEPALA_GUDANG', 'SUPIR'), vehicleController.recordMaintenance);
 
 export default router;

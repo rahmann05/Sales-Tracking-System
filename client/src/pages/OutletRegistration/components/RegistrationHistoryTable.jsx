@@ -1,7 +1,15 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
-import { LuClock, LuMapPin, LuFileSpreadsheet, LuFileText } from "react-icons/lu";
-import { exportCustomerExcel, exportCustomerNd6Txt } from "../../../utils/customerExport";
+import { LuClock, LuMapPin, LuFileText } from "react-icons/lu";
+import { exportCustomerNd6Txt } from "../../../utils/customerExport";
+import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import {
+  exportOutletMasterDocx,
+  exportOutletMasterXlsx,
+  exportOutletMasterCsv,
+  exportOutletMasterTxt,
+  exportOutletMasterPdf,
+} from '../../../utils/export/reports/outletMasterExport';
 
 const STATUS_BADGE_MAP = {
   SUBMITTED: {
@@ -46,15 +54,14 @@ export const RegistrationHistoryTable = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
-          <button
-            type="button"
+          <ExportFormatMenu
             disabled={isLoading||Boolean(error)||!submissions.length}
-            onClick={() => exportCustomerExcel(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.csv`)}
-            className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
-            title="Ekspor ke Excel / CSV"
-          >
-            <LuFileSpreadsheet /> Excel
-          </button>
+            onExportDocx={() => exportOutletMasterDocx(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.docx`)}
+            onExportExcel={() => exportOutletMasterXlsx(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.xlsx`)}
+            onExportCsv={() => exportOutletMasterCsv(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.csv`)}
+            onExportTxt={() => exportOutletMasterTxt(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.txt`)}
+            onExportPdf={() => exportOutletMasterPdf(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.pdf`)}
+          />
           <button
             type="button"
             disabled={isLoading||Boolean(error)||!submissions.length}

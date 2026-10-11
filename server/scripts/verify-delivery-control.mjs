@@ -23,9 +23,10 @@ const rejects=async fn=>{await assert.rejects(fn);checks++;};
 const originalConfig=prisma.systemConfig.findMany;
 prisma.systemConfig.findMany=async()=>[{key:'DELIVERY_REQUIRE_GEOFENCE',value:false},{key:'DELIVERY_REQUIRE_PHOTO',value:true},{key:'PACKING_SOURCE_MODE',value:'BOTH'},{key:'PACKING_AUTO_RELEASE',value:false},{key:'PACKING_ALLOW_SPLIT',value:true}];invalidateConfigCache();
 try{
+  const fixturePng='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9sAAAAASUVORK5CYII=';
   const people={};for(const role of ['ADMIN','KEPALA_GUDANG','SUPIR','SALES']){people[role]=await prisma.user.create({data:{name:`${tag}-${role}`,email:`${tag}-${role}@example.invalid`,password:'integration-no-login',role}});userIds.push(people[role].id);}
   const admin=people.ADMIN,warehouse=people.KEPALA_GUDANG,driver=people.SUPIR,sales=people.SALES;
-  const vehicle=await prisma.vehicle.create({data:{code:tag,name:tag,maxCartons:100,maxWeightKg:1000,fuelKmPerLiter:10,fuelType:'DIESEL',fuelPricePerLiter:10000}});vehicleId=vehicle.id;
+  const vehicle=await prisma.vehicle.create({data:{code:tag,name:tag,maxCartons:100,maxWeightKg:1000,fuelKmPerLiter:10,fuelType:'DIESEL',fuelPricePerLiter:10000,photoUrl:fixturePng,photoUpdatedAt:new Date()}});vehicleId=vehicle.id;
   const stop=await prisma.pjpStop.findFirst();const product=await prisma.product.findFirst({where:{deletedAt:null}});assert.ok(stop&&product,'Local PJP and product fixtures required');
   const order=await prisma.order.create({data:{pjpStopId:stop.id,createdBy:sales.id,status:'APPROVED',totalValue:100,items:{create:{productId:product.id,quantity:100,unitPrice:1,subtotal:100}}},include:{items:true}});orderIds.push(order.id);
   let p=await savePacking({code:`${tag}-PL`,sourceOrderId:order.id,outletId:stop.outletId,items:[{lineId:order.items[0].id,sourceOrderItemId:order.items[0].id,name:product.name,sku:product.sku,quantity:100,unit:'unit'}],totalCartons:10,totalWeight:100,invoices:[{invoiceNumber:`${tag}-I1`,totalCartons:4},{invoiceNumber:`${tag}-I2`,totalCartons:6}]},admin.id);packingIds.push(p.id);
@@ -36,11 +37,12 @@ try{
   await rejects(()=>createDeliveryRoute(routeData(6,`${today}T02:00:00Z`,`${today}T04:00:00Z`,p.invoices[1]),warehouse.id));
   const r2=await createDeliveryRoute(routeData(6,`${today}T03:00:00Z`,`${today}T05:00:00Z`,p.invoices[1]),warehouse.id);routeIds.push(r2.id);
   const prepare=async r=>{for(const action of ['PICK','CHECK','LOAD'])await routeAction(r.id,{action,note:'Integration physical confirmation',cartons:r.totalCartons,quantities:Object.fromEntries(r.stops.flatMap(s=>s.allocatedItems.map(i=>[`${s.id}:${i.lineId}`,i.quantity])))},warehouse);};
-  await rejects(()=>routeAction(r1.id,{action:'START',note:'Skip loading',odometer:0},driver));
+  const endpointProof={latitude:-6.885229,longitude:107.489662,accuracy:12,observedAt:new Date().toISOString(),photoUrl:fixturePng};
+  await rejects(()=>routeAction(r1.id,{action:'START',note:'Skip loading',odometer:0,...endpointProof},driver));
   await routeAction(r1.id,{action:'ASSIGN_PREPARATION',stage:'PICK',ownerId:admin.id,dueAt:new Date(Date.now()+3600000).toISOString(),note:'Assign preparation'},warehouse);
   await rejects(()=>routeAction(r1.id,{action:'PICK',note:'Wrong assignee',cartons:4,quantities:{[`${r1.stops[0].id}:${p.items[0].lineId}`]:40}},warehouse));
   await routeAction(r1.id,{action:'ASSIGN_PREPARATION',stage:'PICK',ownerId:warehouse.id,assignmentRevision:1,dueAt:new Date(Date.now()+3600000).toISOString(),note:'Transfer preparation to warehouse'},warehouse);
-  await prepare(r1);await routeAction(r1.id,{action:'START',note:'Dispatch',odometer:0},driver);
+  await prepare(r1);await routeAction(r1.id,{action:'START',note:'Dispatch',odometer:0,...endpointProof},driver);
   const gps={latitude:-6.8,longitude:107.5,accuracy:12,observedAt:new Date().toISOString()};
   check((await reportDriverLocation(r1.id,gps,driver.id)).accepted,true);
   await rejects(()=>reportDriverLocation(r1.id,gps,sales.id));
@@ -52,22 +54,22 @@ try{
   check(trackedRoute.location.source,'GPS');check(trackedRoute.location.isLive,true);
   check(routeLocation(trackedRoute,+new Date(gps.observedAt)+122000).isLive,false);
   await prisma.deliveryPosition.update({where:{routeId:r1.id},data:{observedAt:new Date(Date.now()-121000),receivedAt:new Date(Date.now()-31000)}});
-  trackedRoute=(await operationsDashboard(today)).routes.find(r=>r.id===r1.id);check(trackedRoute.location.isLive,false);
+  trackedRoute=(await operationsDashboard(today)).routes.find(r=>r.id===r1.id);check(trackedRoute.location.isLive,false);check(trackedRoute.gpsFlag.code,'GPS_LOST');
   check((await reportDriverLocation(r1.id,{...gps,observedAt:new Date(Date.now()-1000).toISOString()},driver.id)).accepted,true);
   check((await prisma.deliveryPosition.findUnique({where:{routeId:r1.id}})).breadcrumbs.length,2);
-  const attend=async(r,result)=>{const s=r.stops[0];const data={latitude:-6.8,longitude:107.5,photoUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9sAAAAASUVORK5CYII='};await submitDriverAttendance(s.id,{...data,type:'IN'},driver.id);await submitDriverAttendance(s.id,{...data,type:'OUT',result},driver.id);};
+  const attend=async(r,result)=>{const s=r.stops[0];const data={latitude:s.targetLatitude??-6.8,longitude:s.targetLongitude??107.5,photoUrl:fixturePng};await submitDriverAttendance(s.id,{...data,type:'IN'},driver.id);await submitDriverAttendance(s.id,{...data,type:'OUT',result},driver.id);};
   await attend(r1,{status:'DELIVERED'});
   trackedRoute=(await operationsDashboard(today)).routes.find(r=>r.id===r1.id);check(trackedRoute.location.source,'ATTENDANCE');check(trackedRoute.location.isLive,false);
   check((await prisma.invoice.findUnique({where:{id:p.invoices[0].id}})).isDelivered,true);
   check((await prisma.invoice.findUnique({where:{id:p.invoices[1].id}})).isDelivered,false);
   check((await prisma.vehicle.findUnique({where:{id:vehicle.id}})).totalKm,0);
-  await routeAction(r1.id,{action:'RETURN',note:'Returned',odometer:20},driver);
+  await routeAction(r1.id,{action:'RETURN',note:'Returned',odometer:20,...endpointProof},driver);
   await rejects(()=>reportDriverLocation(r1.id,{...gps,observedAt:new Date().toISOString()},driver.id));
   await routeAction(r1.id,{action:'CLOSE',note:'Documents reconciled',documentsReturned:true},warehouse);
   check((await prisma.vehicle.findUnique({where:{id:vehicle.id}})).totalKm,20);
-  await prepare(r2);await routeAction(r2.id,{action:'START',note:'Dispatch',odometer:20},driver);
+  await prepare(r2);await routeAction(r2.id,{action:'START',note:'Dispatch',odometer:20,...endpointProof},driver);
   await attend(r2,{status:'PARTIAL_REJECT',rejectReason:'Temporary rejection',rejectedCartons:2,rejectedItems:[{lineId:p.items[0].lineId,quantity:20}],rejectedInvoices:[{invoiceId:p.invoices[1].id,cartons:2}]});
-  await routeAction(r2.id,{action:'RETURN',note:'Returned',odometer:45},driver);
+  await routeAction(r2.id,{action:'RETURN',note:'Returned',odometer:45,...endpointProof},driver);
   await rejects(()=>routeAction(r2.id,{action:'CLOSE',note:'Not ready',documentsReturned:true},warehouse));
   await receiveReturn(r2.stops[0].id,warehouse.id,{note:'One carton damaged, one reusable',receivedCartons:2,reusableCartons:1,items:[{lineId:p.items[0].lineId,received:20,reusable:10}],reusableInvoices:[{invoiceId:p.invoices[1].id,cartons:1}]});
   const queue=await operationsDashboard(today);const tracked=queue.orders.find(o=>o.id===order.id);
@@ -86,7 +88,7 @@ try{
   check((await request('/delivery/packing-lists',warehouse,{outletId:stop.outletId,totalCartons:0})).status,403);
   check((await request(`/orders/${order.id}/promise`,warehouse,{promisedAt:new Date().toISOString(),note:'test'},'PATCH')).status,403);
   check((await request(`/orders/${order.id}/promise`,admin,{promisedAt:new Date().toISOString(),note:'Customer confirmed'},'PATCH')).status,200);
-  check((await request(`/vehicles/${vehicle.id}/maintenance`,warehouse,{serviceType:'GANTI_OLI',odometerAtService:45,cost:10,workshopName:'Test'})).status,201);
+  check((await request(`/vehicles/${vehicle.id}/maintenance`,warehouse,{serviceType:'GANTI_OLI',serviceTypes:['GANTI_OLI','GANTI_FILTER_OLI'],odometerAtService:45,cost:10,workshopName:'Test',receiptPhotoUrl:fixturePng,location:{latitude:-6.8,longitude:107.5,accuracy:12,observedAt:new Date().toISOString()}})).status,201);
   console.log(`Delivery control integration: ${checks} checks passed (local DB, isolated fixtures).`);
 }finally{
   prisma.systemConfig.findMany=originalConfig;invalidateConfigCache();
