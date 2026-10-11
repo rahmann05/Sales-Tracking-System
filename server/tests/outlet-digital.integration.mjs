@@ -10,7 +10,7 @@ import {invalidateConfigCache} from '../src/modules/config/services/dynamic-conf
 import {runValidationJobs} from '../src/modules/outlets/services/outlet-validation-job.service.js';
 import {assertReviewersRemain} from '../src/modules/config/services/approval-readiness.service.js';
 import {clusterImpact,requireClusterImpact} from '../src/modules/clusters/services/cluster-impact.service.js';
-import {purgeOutletProviderContent} from '../src/modules/outlets/services/outlet-provider-content.service.js';
+import {purgeOutletProviderContent,rememberOutletCandidates} from '../src/modules/outlets/services/outlet-provider-content.service.js';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local database required');
 const tag=`ov3-${randomUUID()}`,users=[],clusters=[],outlets=[],jobs=[];
 const realFetch=globalThis.fetch,originalConfigs=prisma.systemConfig.findMany;
@@ -18,9 +18,9 @@ let mode='MATCH',calls=0,checks=0;
 const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
 const values={MAPS_API_KEY:'mock-only',OUTLET_REVIEW_EXPAND_SEARCH:false,OUTLET_REVIEW_MAX_CALLS:4,OUTLET_FIELD_REQUIRE_PHOTO:true,OUTLET_FIELD_REQUIRE_GPS:true};
 prisma.systemConfig.findMany=async()=>Object.entries(values).map(([key,value])=>({key,value}));invalidateConfigCache();
-const place={id:'mock-place',displayName:{text:'Toko Sumber Berkah'},formattedAddress:'Jl Melati No 12, Kota Bandung',addressComponents:[{longText:'Kota Bandung',types:['administrative_area_level_2']}],location:{latitude:-6.9,longitude:107.6},businessStatus:'OPERATIONAL'};
+const place={id:'mock-place',displayName:{text:'Toko Sumber Berkah'},formattedAddress:'Jl Melati No 12, Kota Bandung',addressComponents:[{longText:'Kota Bandung',types:['administrative_area_level_2']}],location:{latitude:-6.9,longitude:107.6},businessStatus:'OPERATIONAL',types:['store','establishment']};
 globalThis.fetch=async(url,options)=>{
- if(String(url).startsWith('https://places.googleapis.com/')){calls++;if(mode==='ERROR')return {ok:false,status:403,json:async()=>({})};if(mode==='EMPTY')return {ok:true,json:async()=>({places:[]})};return {ok:true,json:async()=>String(url).includes(':searchText')?{places:mode==='AMBIGUOUS'?[place,{...place,id:'other-place'}]:[place]}:{...place,id:new URL(url).pathname.split('/').at(-1)}};}
+ if(String(url).startsWith('https://places.googleapis.com/')){calls++;if(mode==='ERROR')return {ok:false,status:403,json:async()=>({})};if(mode==='MISSING_ALT'&&String(url).includes('/places/other-place'))return {ok:false,status:404};if(mode==='EMPTY')return {ok:true,json:async()=>({places:[]})};return {ok:true,json:async()=>String(url).includes(':search')?{places:['AMBIGUOUS','RESOLVED'].includes(mode)?[place,{...place,id:'other-place'}]:[place]}:{...place,id:new URL(url).pathname.split('/').at(-1),...(mode==='RESOLVED'?{formattedAddress:String(url).includes('other-place')?'Jl Melati Selatan No 12, Kota Bandung':place.formattedAddress}:{})}};}
  if(String(url).startsWith('https://maps.googleapis.com/')){calls++;return {ok:true,json:async()=>({status:'ZERO_RESULTS'})};}
  return realFetch(url,options);
 };
@@ -35,6 +35,10 @@ try{
  const c=await prisma.cluster.create({data:{name:tag,region:'Bandung',supervisorId:spv.id,assignedSalesId:sales.id}});clusters.push(c.id);
  const make=async(extra={})=>{const o=await prisma.outlet.create({data:{name:'Toko Sumber Berkah',address:'Jl Melati No 12, Kota Bandung',latitude:null,longitude:null,clusterId:c.id,...extra}});outlets.push(o.id);return o;};
  const deniedAdmin=await person('ADMIN',{permissions:{can_apply_outlet_review:false,can_assign_outlet_review:false}});
+ const clear=await make({latitude:-6.9,longitude:107.6,source:'REGISTRATION'});
+ eq((await api(`/outlets/${clear.id}/reviews`,spv,'POST',{reason:'Pemeriksaan tanpa flag oleh Supervisor'})).status,422);
+ eq((await api('/outlets/validation-jobs',spv,'POST',{requestId:randomUUID(),outletIds:[clear.id],reason:'Batch tanpa flag oleh Supervisor'})).status,422);
+ const clearReview=await open(clear.id,admin);eq((await open(clear.id,spv)).id,clearReview.id);
  const o=await make();let r=await open(o.id,spv);
  const legacyBody={revision:r.revision,action:'KEEP',note:'Tidak boleh melewati alur keputusan terbaru',evidence:'Referensi internal yang dapat ditelusuri'};eq((await api(`/outlets/${o.id}/reviews/${r.id}`,spv,'PATCH',legacyBody)).status,409);eq((await api(`/outlets/${o.id}/reviews/${r.id}`,deniedAdmin,'PATCH',legacyBody)).status,403);eq((await api(`/outlets/${o.id}/reviews/${r.id}/assignment`,deniedAdmin,'PATCH',{revision:r.revision,ownerId:spv.id,dueAt:null,reason:'Izin eksplisit dicabut untuk penugasan'})).status,403);
  eq((await api(`/outlets/${o.id}/validate`,sales,'POST',{reviewId:r.id,revision:r.revision})).status,403);
@@ -58,10 +62,17 @@ try{
  const masterChanged=await digital(r,spv,'DIGITAL_KEEP',{runId:r.runs[0].id});eq(masterChanged.status,409);eq(masterChanged.body.errors.map(x=>x.code),['MASTER_CHANGED']);eq(masterChanged.body.errors[0].fields,['name']);assert.match(masterChanged.body.message,/nama outlet/);assert.doesNotMatch(masterChanged.body.message,/kedaluwarsa|metode pencocokan/);checks+=2;
  const ambiguous=await make();r=await open(ambiguous.id,spv);mode='AMBIGUOUS';
  eq((await api(`/outlets/${ambiguous.id}/validate`,spv,'POST',{reviewId:r.id,revision:r.revision})).body.data.code,'AMBIGUOUS');r=await detail(r,spv);
- const ambiguousDecision=await digital(r,spv,'DIGITAL_KEEP',{runId:r.runs[0].id});eq(ambiguousDecision.status,422);eq(ambiguousDecision.body.errors.map(x=>x.code),['CANDIDATES_AMBIGUOUS']);assert.match(ambiguousDecision.body.message,/Beberapa kandidat Google/);checks++;
+ const ambiguousDecision=await digital(r,spv,'DIGITAL_KEEP',{runId:r.runs[0].id});eq(ambiguousDecision.status,422);eq(ambiguousDecision.body.errors.map(x=>x.code),['IDENTITY_UNRESOLVED','CANDIDATES_AMBIGUOUS']);assert.match(ambiguousDecision.body.message,/Beberapa kandidat Google/);checks++;
+ const evolving=await make();let evolvingCase=await open(evolving.id,spv);mode='MATCH';await api(`/outlets/${evolving.id}/validate`,spv,'POST',{reviewId:evolvingCase.id,revision:evolvingCase.revision});evolvingCase=await detail(evolvingCase,spv);const olderStrong=evolvingCase.runs[0].id;mode='AMBIGUOUS';await api(`/outlets/${evolving.id}/validate`,spv,'POST',{reviewId:evolvingCase.id,revision:evolvingCase.revision});evolvingCase=await detail(evolvingCase,spv);
+ const historicalAttempt=await digital(evolvingCase,spv,'DIGITAL_KEEP',{runId:olderStrong});eq(historicalAttempt.status,409);assert.match(historicalAttempt.body.message,/lebih baru dapat memuat kandidat alternatif/);checks++;
+ mode='MATCH';eq((await api(`/outlets/${evolving.id}/validate`,spv,'POST',{reviewId:evolvingCase.id,revision:evolvingCase.revision})).body.data.code,'AMBIGUOUS');mode='AMBIGUOUS';
+ evolvingCase=await detail(evolvingCase,spv);rememberOutletCandidates(evolvingCase.runs[0].id,[]);mode='MISSING_ALT';
+ for(let retry=0;retry<2;retry++){eq((await api(`/outlets/${evolving.id}/validate`,spv,'POST',{reviewId:evolvingCase.id,revision:evolvingCase.revision})).body.data.code,'REVIEW');evolvingCase=await detail(evolvingCase,spv);eq(evolvingCase.runs[0].result.identityReview.missingPlaceIds,['other-place']);eq((await digital(evolvingCase,admin,'ADMIN_DIGITAL_KEEP',{runId:evolvingCase.runs[0].id,acknowledgeWarnings:true})).status,422);}mode='AMBIGUOUS';
  const adminOutlet=await make({name:'Toko Sumber Berkah',source:'IMPORT'});let adminCase=await open(adminOutlet.id,admin);
  eq((await api(`/outlets/${adminOutlet.id}/validate`,admin,'POST',{reviewId:adminCase.id,revision:adminCase.revision})).body.data.code,'AMBIGUOUS');adminCase=await detail(adminCase,admin);
  const adminBody={runId:adminCase.runs[0].id,acknowledgeWarnings:true,reason:'Alamat dan titik sudah saya bandingkan dengan informasi pelanggan yang dikenal'};
+ const unresolvedAdmin=await digital(adminCase,admin,'ADMIN_DIGITAL_KEEP',adminBody);eq(unresolvedAdmin.status,422);eq(unresolvedAdmin.body.errors.some(e=>e.code==='ADMIN_IDENTITY_UNRESOLVED'),true);
+ await prisma.outlet.update({where:{id:adminOutlet.id},data:{phone:'081234567890'}});mode='RESOLVED';await api(`/outlets/${adminOutlet.id}/validate`,admin,'POST',{reviewId:adminCase.id,revision:adminCase.revision});adminCase=await detail(adminCase,admin);adminBody.runId=adminCase.runs[0].id;eq(adminCase.runs[0].result.identityReview.resolved,true);
  eq((await digital(adminCase,spv,'ADMIN_DIGITAL_KEEP',adminBody)).status,403);
  eq((await digital(adminCase,deniedAdmin,'ADMIN_DIGITAL_KEEP',adminBody)).status,403);
  eq((await digital(adminCase,admin,'ADMIN_DIGITAL_KEEP',{...adminBody,acknowledgeWarnings:false})).status,422);
@@ -72,6 +83,7 @@ try{
  adminCase=await detail(adminCase,admin);eq(adminCase.decision.action,'ADMIN_DIGITAL_KEEP');eq(adminCase.decision.adminReview.originalCode,'AMBIGUOUS');eq(adminCase.decision.adminReview.policy.OUTLET_REVIEW_ADMIN_ENABLED,true);
  eq(adminCase.outlet.validationDetails.code,'AMBIGUOUS');eq(adminCase.outlet.validationDetails.decisionSource,'ADMIN_DIGITAL');eq(adminCase.outlet.googleLocation.approvalMode,'ADMIN_REVIEW');eq(adminCase.outlet.googleLocation.nextRefreshAt,adminCase.outlet.googleLocation.expiresAt);eq(adminCase.outlet.latitude,null);
  const adminRefresh=await api(`/outlets/${adminOutlet.id}/google-location/refresh`,admin,'POST');eq(adminRefresh.status,409);assert.match(adminRefresh.body.message,/pertimbangan Admin/);checks++;
+ mode='AMBIGUOUS';
  eq((await api(`/outlets/${ambiguous.id}/validate`,spv,'POST',{reviewId:r.id,revision:r.revision,candidatePlaceId:'unknown-place'})).status,422);
  eq((await api(`/outlets/${ambiguous.id}/validate`,spv,'POST',{reviewId:r.id,revision:r.revision,candidatePlaceId:'other-place'})).body.data.code,'AMBIGUOUS');r=await detail(r,spv);eq(r.runs[0].result.selectedPlaceId,'other-place');
  const assignment={revision:r.revision,ownerId:sales.id,reviewerId:spv.id,instructions:'Periksa papan toko dan ambil lokasi aktual'};

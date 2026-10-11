@@ -19,6 +19,7 @@ try{
  const old={latitude:-6.9,longitude:107.6},google={placeId:'google',latitude:-6.91,longitude:107.61},other={placeId:'other',latitude:-6.89,longitude:107.59};
  const points=outletComparisonPoints({previous:old,recommended:google,candidate:other,fieldPoints:[{latitude:null,longitude:null},{latitude:-6.92,longitude:107.6}]});
  assert.deepEqual(points.map(p=>p.label),['M','G','P','L']);assert.equal(outletComparisonPoints({previous:{},recommended:google,candidate:google}).length,1);
+ const all=outletComparisonPoints({previous:old,recommended:google,candidate:other,alternatives:[google,other,{...old,placeId:'third',name:'Cabang ketiga'}]});assert.deepEqual(all.map(p=>p.label),['M','G','P','K3']);assert.equal(all[3].title,'Cabang ketiga');
  assert.equal(comparisonDistance(old,old),0);assert.equal(comparisonDistance({},google),null);assert.ok(comparisonDistance(old,google)>1000);
  const controls=await mountOutletComparisonMap(maps,{},points,{mapId:'configured-map'});
  assert.equal(markers.length,4);assert.equal(mapsCreated[0].bounds.points.length,4);assert.equal(mapsCreated[0].options.mapId,'configured-map');assert.equal(mapsCreated[0].zoom,18);

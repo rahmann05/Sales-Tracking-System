@@ -20,8 +20,7 @@ RUN npx prisma generate
 COPY server/src ./src
 COPY server/index.js ./
 
-# Copy production environment if available (fallback to environment injected by platform)
-COPY server/.env.production ./.env
+# Runtime credentials are injected by the deployment platform.
 
 ENV NODE_ENV=production
 ENV PORT=5000

@@ -80,7 +80,8 @@ try{
  const disabledSub=await previewPlan({...substitution,status:'DRAFT'},spv);eq(disabledSub.problems.some(p=>p.code==='SUBSTITUTION_DISABLED'),true);
  const movedDraft=await savePlan(null,{...body,requestId:randomUUID(),startsOn:next,endsOn:next,rules:[{...body.rules[0],anchorDate:next}]},spv);plans.push(movedDraft.id);
  await prisma.cluster.update({where:{id:c.id},data:{supervisorId:foreign.id}});r=await previewPlan(movedDraft,spv);eq(r.problems.some(p=>p.code==='OUTLET_UNAVAILABLE'),true);await reject(()=>publishPlan(movedDraft.id,{revision:1,note:'Uji perpindahan wilayah',acknowledgeWarnings:true},spv),409);
- settings.PJP_WORKING_DAYS='1,2,3,4,5,6';invalidateConfigCache();eq((await planDayStatus('2026-10-11',a.id,spv)).state,'NON_WORKING_DAY');
+ settings.PJP_WORKING_DAYS='1,2,3,4,5,6';invalidateConfigCache();eq((await planDayStatus(date,a.id,spv)).state,'PUBLISHED');
+ const unusedSunday=offset(84+(7-new Date(date).getUTCDay())%7);eq((await planDayStatus(unusedSunday,a.id,spv)).state,'NON_WORKING_DAY');
  console.log(`PJP planning integration passed: ${checks} checks for read-only GET, drafts/revisions, publication replay, cadence, scope, conflicts, impact tokens, multiple clusters and consistent import.`);
 }finally{
  await prisma.auditEvent.deleteMany({where:{entityType:'RJP_IMPORT',actorId:{in:users}}});

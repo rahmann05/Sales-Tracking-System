@@ -9,6 +9,8 @@ export function adminOutletDecisionReadiness(run,outlet,actor,values={},options=
  if(actor?.role!=='ADMIN'||actor?.permissions?.can_apply_outlet_review!==true)add('ADMIN_PERMISSION_REQUIRED','Konfirmasi ini memerlukan role Admin dan izin menyimpan keputusan.','Hubungi Admin berizin.');
  if(policy.OUTLET_REVIEW_ADMIN_ENABLED!==true)add('ADMIN_REVIEW_DISABLED','Konfirmasi dengan pertimbangan Admin dinonaktifkan pada parameter.','Gunakan syarat standar atau ubah parameter sesuai kebijakan.');
  const result=run?.result||{},id=options.placeId??result.selectedPlaceId;
+ if(result.identityReview?.required&&!result.identityReview.resolved)add('ADMIN_IDENTITY_UNRESOLVED','Pembeda identitas/cabang belum memadai. Pertimbangan Admin tidak dapat melewati identitas yang belum terpecahkan.','Lengkapi data master dengan sumber internal lalu periksa ulang, atau tugaskan Sales.');
+ if(result.identityReview?.comparisonIncomplete)add('ADMIN_COMPARISON_INCOMPLETE','Pendalaman pencarian atau perbandingan kandidat alternatif belum selesai.');
  const assessment=Array.isArray(result.assessments)?result.assessments.find(c=>c.placeId===id):null;
  const point=run?.providerContent?.candidates?.find(c=>c.placeId===id);
  if(run){

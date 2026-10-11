@@ -15,3 +15,14 @@ export function reportSelection(key,raw){
 }
 export const selectedReportItems=(values,key)=>reportSelection(key,values?.[key]??REPORT_PRESENTATION[key].join(','));
 export const reportExportAllowed=(user,values={})=>Boolean(user)&&(!values.FEATURE_EXPORT_MODE||values.FEATURE_EXPORT_MODE==='ACTIVE')&&values.REPORT_EXPORT_ENABLED!==false&&user.permissions?.can_export_reports!==false;
+
+// Report rows carry the process snapshot mode; never infer a missing OUT from
+// today's settings or from an outlet which has not been visited yet.
+export function reportVisitAttendance(row={}){
+ const valid=value=>Boolean(value&&value!=='-'&&value!=='—');
+ const mode=row.attendanceMode||'IN_OUT',state=row.visitSession?.state;
+ if(row.validationOnly||mode==='VALIDATION')return {entry:row.validationResult?.submittedAt?'Bukti validasi dikirim':'Validasi belum dikerjakan',exit:'Bukti foto dan GPS terpisah dari IN/OUT',duration:null};
+ const entry=valid(row.timeIn)?`Masuk ${row.timeIn}`:mode==='NONE'?state==='FINISHED'?'Kegiatan selesai':state==='ACTIVE'?'Kegiatan berlangsung':'Kegiatan belum dimulai':'Belum ada presensi masuk';
+ const exit=valid(row.timeOut)?`Keluar ${row.timeOut}`:mode!=='IN_OUT'?'OUT tidak diwajibkan':state==='INCOMPLETE'?'OUT terlewat · perlu ditinjau SPV':valid(row.timeIn)?'Keluar belum tercatat':null;
+ return {entry,exit,duration:mode==='IN_OUT'&&valid(row.timeIn)&&valid(row.timeOut)&&valid(row.durationFormatted)?row.durationFormatted:null};
+}

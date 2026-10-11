@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 const client=fileURLToPath(new URL('../../client/',import.meta.url)),require=createRequire(`${client}/package.json`),esbuild=require('esbuild');
-const built=await esbuild.build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,stdin:{resolveDir:client,contents:"export {useFormDraft} from './src/shared/hooks/useFormDraft.js'; export {useDriverEvidenceDraft} from './src/pages/Driver/useDriverEvidenceDraft.js';"},plugins:[{name:'draft-fixtures',setup(build){
+const built=await esbuild.build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,define:{'import.meta.env':'{}'},stdin:{resolveDir:client,contents:"export {useFormDraft} from './src/shared/hooks/useFormDraft.js'; export {useDriverEvidenceDraft} from './src/pages/Driver/useDriverEvidenceDraft.js';"},plugins:[{name:'draft-fixtures',setup(build){
  build.onResolve({filter:/^react$|context\/AppContext$|services\/api$/},args=>({path:args.path,namespace:'fixture'}));
- build.onLoad({filter:/.*/,namespace:'fixture'},({path})=>({contents:path==='react'?'export const useState=(...a)=>globalThis.runtime.state(...a),useRef=(...a)=>globalThis.runtime.ref(...a),useCallback=fn=>fn;':path.includes('AppContext')?'export const useApp=()=>globalThis.app;':'export const deliveryApi={findRequest:(...args)=>globalThis.findDriverRequest(...args)};',loader:'js'}));
+ build.onLoad({filter:/.*/,namespace:'fixture'},({path})=>({contents:path==='react'?'export const useState=(...a)=>globalThis.runtime.state(...a),useRef=(...a)=>globalThis.runtime.ref(...a),useCallback=fn=>fn,useEffect=()=>{};':path.includes('AppContext')?'export const useApp=()=>globalThis.app;':'export const deliveryApi={cancelRequest:(...args)=>globalThis.findDriverRequest(...args)};',loader:'js'}));
 }}]});
 const mod={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(require,mod,mod.exports);
 const store=()=>{const data=new Map();return {data,getItem:key=>data.get(key)||null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)};};

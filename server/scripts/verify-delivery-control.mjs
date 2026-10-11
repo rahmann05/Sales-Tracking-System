@@ -39,7 +39,7 @@ try{
   await rejects(()=>routeAction(r1.id,{action:'START',note:'Skip loading',odometer:0},driver));
   await routeAction(r1.id,{action:'ASSIGN_PREPARATION',stage:'PICK',ownerId:admin.id,dueAt:new Date(Date.now()+3600000).toISOString(),note:'Assign preparation'},warehouse);
   await rejects(()=>routeAction(r1.id,{action:'PICK',note:'Wrong assignee',cartons:4,quantities:{[`${r1.stops[0].id}:${p.items[0].lineId}`]:40}},warehouse));
-  await routeAction(r1.id,{action:'ASSIGN_PREPARATION',stage:'PICK',ownerId:warehouse.id,dueAt:new Date(Date.now()+3600000).toISOString(),note:'Transfer preparation to warehouse'},warehouse);
+  await routeAction(r1.id,{action:'ASSIGN_PREPARATION',stage:'PICK',ownerId:warehouse.id,assignmentRevision:1,dueAt:new Date(Date.now()+3600000).toISOString(),note:'Transfer preparation to warehouse'},warehouse);
   await prepare(r1);await routeAction(r1.id,{action:'START',note:'Dispatch',odometer:0},driver);
   const gps={latitude:-6.8,longitude:107.5,accuracy:12,observedAt:new Date().toISOString()};
   check((await reportDriverLocation(r1.id,gps,driver.id)).accepted,true);
@@ -51,11 +51,11 @@ try{
   let trackedRoute=(await operationsDashboard(today)).routes.find(r=>r.id===r1.id);
   check(trackedRoute.location.source,'GPS');check(trackedRoute.location.isLive,true);
   check(routeLocation(trackedRoute,+new Date(gps.observedAt)+122000).isLive,false);
-  await prisma.deliveryPosition.update({where:{routeId:r1.id},data:{observedAt:new Date(Date.now()-121000),receivedAt:new Date(Date.now()-11000)}});
+  await prisma.deliveryPosition.update({where:{routeId:r1.id},data:{observedAt:new Date(Date.now()-121000),receivedAt:new Date(Date.now()-31000)}});
   trackedRoute=(await operationsDashboard(today)).routes.find(r=>r.id===r1.id);check(trackedRoute.location.isLive,false);
   check((await reportDriverLocation(r1.id,{...gps,observedAt:new Date(Date.now()-1000).toISOString()},driver.id)).accepted,true);
   check((await prisma.deliveryPosition.findUnique({where:{routeId:r1.id}})).breadcrumbs.length,2);
-  const attend=async(r,result)=>{const s=r.stops[0];const data={latitude:-6.8,longitude:107.5,photoUrl:'data:image/png;base64,dGVzdA=='};await submitDriverAttendance(s.id,{...data,type:'IN'},driver.id);await submitDriverAttendance(s.id,{...data,type:'OUT',result},driver.id);};
+  const attend=async(r,result)=>{const s=r.stops[0];const data={latitude:-6.8,longitude:107.5,photoUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9sAAAAASUVORK5CYII='};await submitDriverAttendance(s.id,{...data,type:'IN'},driver.id);await submitDriverAttendance(s.id,{...data,type:'OUT',result},driver.id);};
   await attend(r1,{status:'DELIVERED'});
   trackedRoute=(await operationsDashboard(today)).routes.find(r=>r.id===r1.id);check(trackedRoute.location.source,'ATTENDANCE');check(trackedRoute.location.isLive,false);
   check((await prisma.invoice.findUnique({where:{id:p.invoices[0].id}})).isDelivered,true);

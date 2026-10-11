@@ -44,11 +44,14 @@ export function outletDigitalReadiness(run,outlet,{now=Date.now(),placeId}={}) {
   return {current:false,canConfirm:false,evidenceIssues,issues:evidenceIssues};
  }
  const result=run.result||{};
- if(result.version!==OUTLET_DIGITAL_VERSION) add('EVALUATION_METHOD_CHANGED','Hasil ini belum memakai metode pencocokan nama, alamat, dan lokasi yang digunakan saat ini.');
+ const selected=run.providerContent?.candidates?.find(c=>c.placeId===(placeId??result.selectedPlaceId));
+ if(selected?.descriptionAvailable===false)add('GOOGLE_DESCRIPTION_UNAVAILABLE','Nama dan alamat kandidat tidak lagi tersedia untuk ditinjau pada server ini. Koordinat dan skor tersimpan saja belum cukup untuk keputusan baru.');
+ if(result.version!==OUTLET_DIGITAL_VERSION) add('EVALUATION_METHOD_CHANGED','Hasil ini belum memakai metode pencocokan nama, alamat, dan lokasi yang digunakan saat ini, termasuk pembeda cabang dan penemuan usaha di sekitar titik.');
  if(!run.snapshot||typeof run.snapshot!=='object'||Array.isArray(run.snapshot)) add('MASTER_SNAPSHOT_MISSING','Data outlet saat pemeriksaan sebelumnya tidak tersimpan, sehingga kesesuaiannya dengan master saat ini tidak dapat diperiksa.');
  else {
   const changedFields=Object.keys(fields).filter(key=>(run.snapshot[key]??null)!==(outlet?.[key]??null));
   if(changedFields.length) add('MASTER_CHANGED',`Data master berubah sejak pemeriksaan Google terakhir: ${[...new Set(changedFields.map(key=>fields[key]))].join(', ')}. Hasil lama belum menilai data yang sekarang.`,recheck,{fields:changedFields});
+  if(result.identityReview?.supports?.includes('trustedGps')&&['source','accuracyMeters','capturedAt','taskId'].some(key=>(run.snapshot.locationEvidence?.[key]??null)!==(outlet?.locationEvidence?.[key]??null)))add('GPS_IDENTITY_EVIDENCE_CHANGED','Sumber, akurasi atau bukti GPS lapangan yang menjadi pembeda identitas telah berubah. Periksa ulang memakai bukti yang sekarang.');
  }
  if(result.expiresAt!=null){
   const expiry=timestamp(result.expiresAt);
@@ -63,6 +66,8 @@ export function outletDigitalReadiness(run,outlet,{now=Date.now(),placeId}={}) {
  else if(!run.providerExpiresAt||!Number.isFinite(timestamp(run.providerExpiresAt))) add('GOOGLE_CACHE_VALIDITY_UNKNOWN','Masa berlaku cache hasil Google belum tercatat dengan benar.');
 
  const issues=[...evidenceIssues];
+ if(result.identityReview?.required&&!result.identityReview.resolved)issues.push({code:'IDENTITY_UNRESOLVED',message:'Identitas usaha/cabang belum dibedakan secara meyakinkan dari kandidat lain atau nama pemilik.',action:'Perjelas nomor cabang, jalan dan nomor alamat, telepon usaha, atau gunakan bukti internal/lapangan.',details:result.identityReview.reasons});
+ if(result.identityReview?.comparisonIncomplete)issues.push({code:'CANDIDATE_COMPARISON_INCOMPLETE',message:'Pendalaman lokasi/alamat atau perbandingan kandidat sebelumnya belum selesai. Hasil yang belum ditemukan kembali tidak boleh dianggap sudah tersisih.',action:'Periksa kondisi layanan dan batas panggilan, lalu periksa dengan Google kembali atau gunakan bukti internal/lapangan.'});
  const reasons=outcomeDetails(result);
  if(result.code!=='STRONG') {
   const outcome={

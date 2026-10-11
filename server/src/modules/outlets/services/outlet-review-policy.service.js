@@ -1,7 +1,7 @@
 import { outletClusterScope } from '../../../utils/team-scope.js';
 import { AppError } from '../../../utils/errors.js';
 export const actorSnapshot = actor => ({ id:actor?.id || 'SYSTEM', name:actor?.name || 'Sistem', role:actor?.role || 'SYSTEM' });
-export const locationSnapshot = outlet => ({ name:outlet.name,address:outlet.address,latitude:outlet.latitude,longitude:outlet.longitude,clusterId:outlet.clusterId,phone:outlet.phone??null });
+export const locationSnapshot = outlet => ({ name:outlet.name,address:outlet.address,latitude:outlet.latitude,longitude:outlet.longitude,clusterId:outlet.clusterId,phone:outlet.phone??null,locationEvidence:outlet.locationEvidence??null });
 export const sameSnapshot = (a,b) => JSON.stringify(locationSnapshot(a)) === JSON.stringify(locationSnapshot(b));
 export async function reviewScope(actor,db) {
   if (!actor) throw new AppError('Identitas pengguna diperlukan',401);

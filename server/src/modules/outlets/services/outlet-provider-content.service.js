@@ -9,7 +9,7 @@ export function rememberOutletCandidates(id,candidates){
 export function presentOutletRun(run){
  if(!run.providerExpiresAt||+run.providerExpiresAt<=Date.now())return {...run,providerContent:null};
  const memory=descriptions.get(run.id);
- const candidates=run.providerContent?.candidates?.map(c=>({...c,...run.result?.assessments?.find(a=>a.placeId===c.placeId),...(memory?.until>Date.now()?memory.candidates.find(m=>m.placeId===c.placeId):{}),descriptionAvailable:memory?.until>Date.now()}))||[];
+ const candidates=run.providerContent?.candidates?.map(c=>{const description=memory?.until>Date.now()?memory.candidates.find(m=>m.placeId===c.placeId):null;return {...c,...run.result?.assessments?.find(a=>a.placeId===c.placeId),...description,descriptionAvailable:!!description?.name&&!!description?.address};})||[];
  return {...run,providerContent:{candidates}};
 }
 export async function purgeOutletProviderContent(db){

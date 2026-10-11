@@ -1,4 +1,6 @@
 import {orderSnapshot} from '../../../../../shared/order-snapshot.mjs';
+import {fulfillment} from '../../../../../shared/delivery-operations.mjs';
+import {packingOrderWhere} from '../../../../../shared/packing-orders.mjs';
 import {loadOrderReviewAssignments,salesOrderHistory} from './order-review-assignment.service.js';
 import {assertSalesAccess} from '../../../utils/team-scope.js';
 /** getOrderById - single-responsibility service (extracted from orders.service.js). */
@@ -25,6 +27,7 @@ export const getOrderById = async (id, currentUser) => {
   if (!isOwner && !isPrivileged) throw new AppError('Anda tidak memiliki akses ke order ini', 403);
 
   await assertSalesAccess(currentUser,order.createdBy);
+  const packings=await prisma.packingList.findMany({where:packingOrderWhere([id]),include:{deliveryStops:true}});
   const assignments=isPrivileged?await loadOrderReviewAssignments([order]):new Map();
-  return {...orderSnapshot(order),...(currentUser.role==='SALES'?{history:salesOrderHistory(order.history||[])}:{}),...(isPrivileged?{approvalAssignment:assignments.get(id)||null}:{})};
+  return {...fulfillment(orderSnapshot(order),packings),...(currentUser.role==='SALES'?{history:salesOrderHistory(order.history||[])}:{}),...(isPrivileged?{approvalAssignment:assignments.get(id)||null}:{})};
 };

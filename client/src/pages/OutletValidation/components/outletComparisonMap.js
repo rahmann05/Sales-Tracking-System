@@ -6,10 +6,11 @@ export function comparisonDistance(a,b){
  return Math.round(6371000*2*Math.asin(Math.sqrt(Math.min(1,h))));
 }
 
-export function outletComparisonPoints({previous,recommended,candidate,fieldPoints=[]}) {
+export function outletComparisonPoints({previous,recommended,candidate,fieldPoints=[],alternatives=[]}) {
  const points=[{...previous,key:'previous',label:'M',title:'Titik master sebelumnya',kind:'previous'},
   {...recommended,key:'recommended',label:'G',title:'Rekomendasi Google terkuat',kind:'recommended'}];
  if(candidate&&candidate.placeId!==recommended?.placeId)points.push({...candidate,key:'selected',label:'P',title:'Kandidat yang sedang ditinjau',kind:'selected'});
+ alternatives.forEach((point,index)=>{if(point.placeId!==recommended?.placeId&&point.placeId!==candidate?.placeId)points.push({...point,key:`alternative-${point.placeId}`,label:`K${index+1}`,title:point.name||`Kandidat ${index+1}`,kind:'selected'});});
  fieldPoints.forEach((point,index)=>points.push({...point,key:`field-${index}`,label:'L',title:'GPS pemeriksaan lapangan',kind:'field'}));
  return points.filter(knownPoint).map(({key,label,title,kind,latitude,longitude})=>({key,label,title,kind,latitude,longitude}));
 }

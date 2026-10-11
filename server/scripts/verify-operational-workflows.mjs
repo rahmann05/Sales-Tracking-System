@@ -39,6 +39,7 @@ import {receiveReturn} from '../src/modules/delivery/services/receive-return.ser
 import {packingBalance} from '../../shared/packing.mjs';
 import {visitSalesResult,wibDateKey,wibDayRange} from '../../shared/visit-metrics.mjs';
 import {importRjp} from '../src/modules/clusters/services/import-rjp.service.js';
+import {previewRjpImport} from '../src/modules/clusters/services/rjp-import-preview.service.js';
 import {createClusterFull} from '../src/modules/clusters/services/create-cluster-full.service.js';
 import {updateClusterOutlets} from '../src/modules/clusters/services/update-cluster-outlets.service.js';
 import {updateClusterRoutes} from '../src/modules/clusters/services/update-cluster-routes.service.js';
@@ -47,7 +48,7 @@ import {approveRegistration} from '../src/modules/customer-registrations/service
 import {rejectRegistration} from '../src/modules/customer-registrations/services/reject-registration.service.js';
 import {userAssignment,resolveIdentity} from '../src/modules/roles/role-assignment.service.js';
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL).hostname),'Local database only');
-const prefix=`verify-${randomUUID()}`;const photo='data:image/png;base64,dGVzdA==';
+const prefix=`verify-${randomUUID()}`;const photo='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9sAAAAASUVORK5CYII=';
 const users=[],clusters=[],outlets=[],packing=[],registrations=[],routes=[];let product,vehicle;
 let count=0;const check=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
 const rejects=async(fn,status)=>{await assert.rejects(fn,status?e=>e.statusCode===status:undefined);count++;};
@@ -98,7 +99,7 @@ try{
  const checkins=await Promise.allSettled([checkIn(stopA.id,sales.id,-7,107.6,photo),checkIn(stopA.id,sales.id,-7,107.6,photo)]);check(checkins.filter(r=>r.status==='fulfilled').length,1);
  await rejects(()=>recordShift(sales.id,'SHIFT_OUT'),409);
  const visitOutcome={purpose:'COLLECTION',reference:`${prefix}-external-invoice`,result:'PROMISED',promiseDate:wibDateKey(),note:'Pemilik berjanji membayar di luar aplikasi'};
- const checkout=await checkOut(stopA.id,sales.id,-7,107.6,photo,{visitOutcome});check(checkout.visitOutcome,visitOutcome);
+ const checkout=await checkOut(stopA.id,sales.id,-7,107.6,photo,{visitOutcome});check(checkout.visitOutcome,{...visitOutcome,referenceLabels:{purpose:'Penagihan order sebelumnya',result:'Janji pembayaran'}});
  check(visitSalesResult({attendances:[checkout],orders:[]}).orderAmount,0);
  const extraVisit=await createOffPjpAttendance(sales.id,{outletName:'Toko penagihan',address:'Alamat toko pengujian',reason:'Menagih faktur sebelumnya',latitude:-6.9,longitude:107.6,photoUrl:photo,visitOutcome});
  check(extraVisit.reportingContext.userId,sales.id);check(extraVisit.reportSupervisorId,spv.id);check(extraVisit.reportingContext.source,'OFF_PJP_SUBMISSION');
@@ -135,15 +136,16 @@ try{
  const sourceDeliveryOrder=await prisma.order.findUnique({where:{id:deliveryOrder.id},include:{items:true}});
  await checkOut(stopB.id,sales.id,-6.9,107.6,photo,{});await recordShift(sales.id,'SHIFT_OUT');
  const extra=await prisma.pjpStop.create({data:{pjpId:pjp.id,outletId:c.id,sequence:3}});
+ policy({REROUTE_REQUIRE_ADMIN_APPROVAL:true});
  const closed=await reportClosedOutlet(sales.id,extra.id,'Tutup',photo);
  await rejects(()=>submitSkip(foreignSpv.id,closed.id),403);
- policy({REROUTE_REQUIRE_ADMIN_APPROVAL:true});await submitReroute(spv.id,closed.id,d.id);
+ await submitReroute(spv.id,closed.id,d.id);
  check((await prisma.pjpStop.count({where:{pjpId:pjp.id,outletId:d.id}})),0);
  await rejects(()=>approveReroute(spv.id,closed.id),403);const rerouted=await approveReroute(admin.id,closed.id);check(rerouted.createdPjpStop.outletId,d.id);
  check((await prisma.pjp.findUnique({where:{id:pjp.id}})).status,'IN_PROGRESS');
  const closure=await reportClosedOutlet(sales.id,rerouted.createdPjpStop.id,'Tutup',photo);await rejectReroute(spv.id,closure.id);check((await prisma.pjpStop.findUnique({where:{id:rerouted.createdPjpStop.id}})).status,'PENDING');
  const retryClosed=await reportClosedOutlet(sales.id,rerouted.createdPjpStop.id,'Tutup',photo);await submitSkip(spv.id,retryClosed.id);check((await prisma.pjp.findUnique({where:{id:pjp.id}})).status,'COMPLETED');
- const reg=await prisma.customerRegistration.create({data:{name:`${prefix}-NOO`,address:'Alamat NOO',salesmanId:sales.id,registrationStatus:'SPV_APPROVED',latitude:-6.9,longitude:107.6,paymentType:'TOP',termOfPaymentDays:14,visitDays:'Senin',visitWeekSchedule:'ALL_WEEK'}});registrations.push(reg.id);
+ const reg=await prisma.customerRegistration.create({data:{name:`${prefix}-NOO`,address:'Alamat NOO',salesmanId:sales.id,registrationStatus:'SPV_APPROVED',latitude:-6.9,longitude:107.6,paymentType:'TOP',termOfPaymentDays:14,visitDays:'SENIN',visitWeekSchedule:'ALL_WEEK'}});registrations.push(reg.id);
  await rejects(()=>finalizeAndRegisterByAdmin(reg.id,{customerCode:`${prefix}-CODE`},admin),400);
  await rejects(()=>finalizeAndRegisterByAdmin(reg.id,{clusterId:clusterA.id,customerCode:`${prefix}-CODE`,latitude:100},admin),400);
  const pendingReg=await prisma.customerRegistration.create({data:{name:`${prefix}-Pending NOO`,address:'Alamat NOO',salesmanId:sales.id,registrationStatus:'SUBMITTED',latitude:-6.9,longitude:107.6}});registrations.push(pendingReg.id);
@@ -151,7 +153,7 @@ try{
  const decisions=await Promise.allSettled([approveRegistration(pendingReg.id,'',spv),rejectRegistration(pendingReg.id,'Tidak sesuai',spv)]);
  check(decisions.filter(r=>r.status==='fulfilled').length,1);
  check(decisions.filter(r=>r.status==='rejected').length,1);
- const active=await finalizeAndRegisterByAdmin(reg.id,{clusterId:clusterA.id,customerCode:`${prefix}-CODE`,duplicateReason:'Fixture sengaja memakai nama dan titik yang berdekatan'},admin);outlets.push(active.outlet.id);check(active.outlet.validationStatus,'UNVALIDATED');check(active.outlet.termOfPaymentDays,14);check(active.outlet.visitSchedule.days,'Senin');check((await finalizeAndRegisterByAdmin(reg.id,{clusterId:clusterA.id},admin)).outlet.id,active.outlet.id);
+ const active=await finalizeAndRegisterByAdmin(reg.id,{clusterId:clusterA.id,customerCode:`${prefix}-CODE`,duplicateReason:'Fixture sengaja memakai nama dan titik yang berdekatan'},admin);outlets.push(active.outlet.id);check(active.outlet.validationStatus,'UNVALIDATED');check(active.outlet.termOfPaymentDays,14);check(active.outlet.visitSchedule.days,'SENIN');check((await finalizeAndRegisterByAdmin(reg.id,{clusterId:clusterA.id},admin)).outlet.id,active.outlet.id);
  await recordShift(spv.id,'SHIFT_IN');await recordSupervisorVisit(spv,{action:'VISIT_IN',visitMode:'PRIORITY_AUDIT',stopId:stopA.id,latitude:-6.9,longitude:107.6,photoUrl:photo});
  await rejects(()=>recordSupervisorVisit(spv,{action:'VISIT_IN',stopId:stopB.id,latitude:-6.9,longitude:107.6,photoUrl:photo}),409);
  await rejects(()=>recordSupervisorVisit(spv,{action:'AUDIT',stopId:stopA.id,followUp:{ownerId:foreignSales.id,dueDate:wibDateKey(),note:'Forbidden'}}),403);
@@ -208,7 +210,9 @@ try{
  check((await prisma.invoice.findFirst({where:{packingListId:fullyRejectedPacking.id}})).isDelivered,false);
  check(packingBalance(await prisma.packingList.findUnique({where:{id:fullyRejectedPacking.id},include:{deliveryStops:true}})).remainingCartons,0);
  check((await prisma.vehicle.findUnique({where:{id:vehicle.id}})).totalKm,40);
- const impCode=`${prefix}-IMPORTED`;const imported=await importRjp([{clusterName:`${prefix}-Import`,outletCode:impCode,customerName:'Outlet impor',address:'Alamat impor',area:'Area impor',latitude:0,longitude:0}],spv);check(imported.importedOutletsCount,1);
+ const impCode=`${prefix}-IMPORTED`,importRows=[{clusterName:`${prefix}-Import`,outletCode:impCode,customerName:'Outlet impor',address:'Alamat impor',area:'Area impor',latitude:0,longitude:0}];
+ await rejects(()=>importRjp(importRows,spv),409);
+ const preview=await previewRjpImport(importRows,spv),imported=await importRjp(importRows,spv,preview.token);check(imported.importedOutletsCount,1);
  const importedOutlet=await prisma.outlet.findUnique({where:{outletCode:impCode}});outlets.push(importedOutlet.id);clusters.push(importedOutlet.clusterId);check(importedOutlet.latitude,0);
  await rejects(()=>importRjp([{clusterName:clusterB.name,outletCode:`${prefix}-INVALID`,customerName:'Invalid',address:'Alamat',area:'Area',latitude:-6,longitude:107}],spv),403);
  await new Promise(resolve=>httpServer.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${httpServer.address().port}/api/v1`;

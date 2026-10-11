@@ -1,19 +1,29 @@
 import {outletOperationalPoint} from './outlet-location.mjs';
-export const OUTLET_DIGITAL_VERSION='2026-10-10.3';
+export const OUTLET_DIGITAL_VERSION='2026-10-11.1';
 export const OUTLET_RESULT_LABELS={UNEXAMINED:'Belum diperiksa',STRONG:'Identitas dan lokasi kuat',REVIEW:'Kandidat perlu ditinjau',ADDRESS_ONLY:'Hanya alamat ditemukan',AMBIGUOUS:'Kandidat ambigu',NOT_FOUND:'Tidak ditemukan di Google',INCOMPLETE:'Petunjuk belum cukup',ERROR:'Layanan belum berhasil'};
 export const OUTLET_STAGE_LABELS={OPEN:'Belum diperiksa',REVIEW:'Siap ditinjau',NEEDS_FIELD:'Perlu lapangan',WAITING_FIELD:'Tugas lapangan berjalan',SUBMITTED:'Bukti menunggu pemeriksaan',COMPLETED:'Selesai',CANCELLED:'Dibatalkan'};
 export const knownPoint=p=>Number.isFinite(p?.latitude)&&Number.isFinite(p?.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180;
 export const outletNameUnusable=name=>!name?.trim()||/^(toko|warung|outlet|customer|pelanggan|unknown|[-?.\d\s]+)$/i.test(name.trim());
+// A flag requests clarification, not a claim that a person's name cannot be a business.
+export function outletNameNeedsReview(name){
+ const value=String(name||'').trim();
+ if(outletNameUnusable(value))return true;
+ if(value.split(/\s+/).length===1||/^(pak|bapak|bpk\.?|bu|ibu|hj\.?|haji|h\.)\s+/i.test(value))return true;
+ if(!value.replace(/\b(toko|tk|warung|wr|kios|kedai|grosir|agen|depot|minimarket|supermarket|swalayan|toserba|mart|store|shop|unknown|pelanggan|customer|outlet)\b|[^a-z]/gi,'').trim())return true;
+ if(/\b(toko|tk\.?|warung|wr\.?|kios|kedai|grosir|agen|depot|minimarket|supermarket|swalayan|toserba|mart|store|shop|bakery|cafe|kafe|restoran|rumah makan|pt|cv|ud|indomaret|alfamart|alfamidi|borma|yogya|yomart|superindo|transmart|hypermart)\b/i.test(value))return false;
+ return true;
+}
+export const canOpenOutletReview=(outlet,actor)=>actor?.role==='ADMIN'||actor?.role==='SUPERVISOR'&&outletIssues(outlet).length>0;
 export function outletIssues(o){
- const q=o.validationDetails?.qualityConfirmed,confirmed=['FIELD','DIGITAL','ADMIN_DIGITAL'].includes(q?.source)&&q.name===o.name&&q.address===o.address&&!o.validationDetails?.stale;
+ const q=o.validationDetails?.qualityConfirmed,confirmed=(q?.source==='FIELD'||['DIGITAL','ADMIN_DIGITAL'].includes(q?.source)&&q.version===OUTLET_DIGITAL_VERSION)&&q.name===o.name&&q.address===o.address&&!o.validationDetails?.stale;
  const operational=outletOperationalPoint(o),issues=[];if(!knownPoint(operational))issues.push('MISSING_POINT');
- if(!confirmed&&(!o.name?.trim()||/^\S+$/.test(o.name.trim())||/^(toko|warung|outlet|customer|pelanggan|unknown|[-?.\d\s]+)$/i.test(o.name.trim())))issues.push('UNCLEAR_NAME');
+ if(!confirmed&&outletNameNeedsReview(o.name))issues.push('UNCLEAR_NAME');
  const address=o.address?.trim()||'',parts=address.split(/\s+/),specific=/\b(jl\.?|jalan|gg\.?|gang|kp\.?|kampung|komplek|kompleks|perum|pasar|ruko|rt|rw|no\.?|nomor|dusun|blok|depan|belakang|sebelah|dekat|patokan)\b/i.test(address);
  if(!confirmed&&(!address||address.length<8||parts.length<3||!specific&&(parts.length<4||/\b(kabupaten|kecamatan|kelurahan|provinsi|kota|jawa)\b/i.test(address))))issues.push('INCOMPLETE_ADDRESS');
  if(operational.source!=='GOOGLE'&&knownPoint(o)&&['IMPORT','MANUAL'].includes(o.locationEvidence?.source||o.source))issues.push('UNCONFIRMED_POINT');
  if(o.validationDetails?.stale||operational.source==='GOOGLE'&&operational.status!=='ACTIVE')issues.push('CHANGED');return issues;
 }
-export const OUTLET_ISSUE_LABELS={MISSING_POINT:'Titik operasional belum tersedia',UNCLEAR_NAME:'Nama belum jelas',INCOMPLETE_ADDRESS:'Alamat kurang lengkap',UNCONFIRMED_POINT:'Titik perlu diperiksa',CHANGED:'Perlu pemeriksaan ulang'};
+export const OUTLET_ISSUE_LABELS={MISSING_POINT:'Titik operasional belum tersedia',UNCLEAR_NAME:'Identitas/nama usaha perlu diperjelas',INCOMPLETE_ADDRESS:'Alamat kurang lengkap',UNCONFIRMED_POINT:'Titik perlu diperiksa',CHANGED:'Perlu pemeriksaan ulang'};
 export function outletEvidenceCurrent(run,outlet,now=Date.now()){
  if(!run)return false;
  return ['name','address','latitude','longitude','clusterId','phone'].every(k=>(run.snapshot?.[k]??null)===(outlet?.[k]??null))&&(!run.result?.expiresAt||Date.parse(run.result.expiresAt)>now);

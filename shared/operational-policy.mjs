@@ -179,8 +179,8 @@ export const OPERATIONAL_CONFIG_GROUPS=[
  ]),
  group('OUTLET_REVIEW_SEARCH','Validasi outlet · pencarian Google','Pencarian nama/alamat tidak bergantung pada titik lama. Perluasan dan detail tunduk pada batas panggilan.',[
   num('OUTLET_REVIEW_MAX_CALLS','Batas panggilan per outlet',6,2,12,'panggilan'),
-  num('OUTLET_REVIEW_MAX_CANDIDATES','Kandidat maksimum yang ditinjau',5,2,10,'kandidat'),
-  bool('OUTLET_REVIEW_EXPAND_SEARCH','Perluas pencarian melalui alamat/wilayah',true,'Titik lama yang diragukan tidak menjadi jangkar wajib.'),
+  num('OUTLET_REVIEW_MAX_CANDIDATES','Batas hasil setiap pencarian teks',5,2,10,'kandidat','Kandidat dari seluruh pencarian digabung tanpa duplikat. Pencarian sekitar titik mengambil minimal 10 usaha agar cabang terdekat tidak mudah terlewat.'),
+  bool('OUTLET_REVIEW_EXPAND_SEARCH','Perluas pencarian melalui alamat/wilayah',true,'Cari usaha di sekitar titik lama dan berdasarkan alamat secara terpisah dari nama. Titik lama hanya petunjuk penemuan, bukan bukti identitas. Pencarian tetap dibatasi kuota.'),
   num('OUTLET_REVIEW_SEARCH_RADIUS_METERS','Radius pencarian kandidat dekat',comparison.searchRadiusMeters,50,5000,'meter'),
   num('OUTLET_REVIEW_TIMEOUT_SECONDS','Batas tunggu setiap permintaan pemeriksaan peta',comparison.timeoutSeconds,2,60,'detik'),
  ]),
@@ -188,13 +188,14 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   num('OUTLET_REVIEW_STRONG_NAME_PERCENT','Nama minimum untuk bukti kuat',90,80,100,'%'),
   num('OUTLET_REVIEW_STRONG_ADDRESS_PERCENT','Alamat minimum untuk bukti kuat',80,60,100,'%'),
   num('OUTLET_REVIEW_CANDIDATE_GAP','Selisih minimum kandidat kuat',15,5,40,'poin'),
+  num('OUTLET_REVIEW_IDENTITY_GPS_RADIUS_METERS','Jarak GPS lapangan sebagai pembeda identitas',100,5,500,'meter','Hanya GPS/FIELD dengan akurasi tercatat dalam batas ini. Jarak ditambah ketidakpastian GPS harus di dalam batas; semua kandidat alternatif harus di luar batas setelah dikurangi ketidakpastian. Titik impor/manual bukan bukti identitas.'),
   num('OUTLET_REVIEW_EVIDENCE_DAYS','Masa berlaku hasil perbandingan peta',comparison.evidenceDays,0,3650,'hari','Nol tanpa kedaluwarsa penilaian berdasarkan umur. Cache koordinat Google tetap maksimal 30 hari; setelah cache berakhir pemeriksaan ulang wajib untuk keputusan digital.'),
  ]),
  group('OUTLET_REVIEW_ADMIN','Validasi outlet · pertimbangan Admin','Admin berizin dapat menerima kandidat di bawah syarat standar setelah meninjau peta dan mencatat alasan. Skor asli tetap tercatat. Kandidat tanpa detail/titik sah, tutup/pindah, hasil kedaluwarsa atau master berubah tetap perlu pemeriksaan baru.',[
   bool('OUTLET_REVIEW_ADMIN_ENABLED','Izinkan konfirmasi dengan pertimbangan Admin',true,'Hanya role Admin dengan izin menyimpan keputusan. Tidak berlaku untuk persetujuan otomatis atau Supervisor.'),
   num('OUTLET_REVIEW_ADMIN_NAME_PERCENT','Kemiripan nama minimum untuk Admin',70,0,100,'%','Minimal nama atau alamat memenuhi ambang Admin, atau telepon usaha cocok. Nol mengabaikan ambang sinyal ini.'),
   num('OUTLET_REVIEW_ADMIN_ADDRESS_PERCENT','Kemiripan alamat minimum untuk Admin',60,0,100,'%','Dipakai sebagai alternatif kecocokan nama. Nilai lebih rendah membantu tinjauan alamat lama yang tidak lengkap; alasan keputusan tetap wajib.'),
-  bool('OUTLET_REVIEW_ADMIN_ALLOW_AMBIGUOUS','Admin boleh memilih kandidat ambigu',true,'Wajib memeriksa ulang kandidat yang dipilih dan menyatakan sudah meninjau perbedaannya.'),
+  bool('OUTLET_REVIEW_ADMIN_ALLOW_AMBIGUOUS','Admin boleh memilih kandidat ambigu',true,'Wajib ada pembeda identitas yang unik terhadap alternatif, memeriksa ulang kandidat pilihan dan mencatat alasan. Tidak melewati identitas/cabang yang belum terpecahkan.'),
   bool('OUTLET_REVIEW_ADMIN_ALLOW_CONFLICTS','Admin boleh menerima konflik data',false,'Meliputi perbedaan telepon, nomor/cabang, kota, atau jarak dari GPS terpercaya. Profil tutup/pindah dan titik tidak sah tetap tidak dapat diterima.'),
  ]),
  group('OUTLET_FIELD_POLICY','Validasi outlet · tugas Sales','Bukti lapangan terpisah dari presensi. Persyaratan dibekukan saat tugas dibuat.',[

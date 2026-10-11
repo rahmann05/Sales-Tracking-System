@@ -37,9 +37,10 @@ test('address-only places never become confirmed businesses',()=>{
  assert.equal(result.code,'REVIEW');assert.equal(result.recommendedPlaceId,null);
  assert.equal(adminOutletDecisionReadiness(makeRun([{...candidate,types:['route']}]),outlet,admin).canConfirm,false);
 });
-test('default Admin review accepts ambiguity deliberately and retains original scoring',()=>{
+test('Admin cannot accept unresolved ambiguity even with relaxed configuration',()=>{
  const run=makeRun([candidate,{...candidate,placeId:'alternative'}]);
- assert.equal(run.result.code,'AMBIGUOUS');assert.equal(adminOutletDecisionReadiness(run,outlet,admin).canConfirm,true);
+ assert.equal(run.result.code,'AMBIGUOUS');assert.equal(adminOutletDecisionReadiness(run,outlet,admin).canConfirm,false);
+ assert.ok(adminOutletDecisionReadiness(run,outlet,admin,{OUTLET_REVIEW_ADMIN_ALLOW_AMBIGUOUS:true,OUTLET_REVIEW_ADMIN_ALLOW_CONFLICTS:true,OUTLET_REVIEW_ADMIN_NAME_PERCENT:0,OUTLET_REVIEW_ADMIN_ADDRESS_PERCENT:0}).issues.some(i=>i.code==='ADMIN_IDENTITY_UNRESOLVED'));
  assert.equal(run.result.code,'AMBIGUOUS');
  assert.equal(adminOutletDecisionReadiness(run,outlet,{...admin,role:'SUPERVISOR'}).canConfirm,false);
  assert.equal(adminOutletDecisionReadiness(run,outlet,{...admin,permissions:{}}).canConfirm,false);
@@ -58,12 +59,12 @@ test('Admin thresholds, conflicts, changed selection and incomplete/expired evid
  const legacy={...outlet,name:'Usman',address:'Cimahi'};
  const named={...candidate,name:'Toko Usman',address:'Jl Melati No 12, Kota Cimahi',city:'Kota Cimahi'};
  const legacyRun=makeRun([named],legacy);assert.notEqual(legacyRun.result.code,'STRONG');
- assert.equal(adminOutletDecisionReadiness(legacyRun,legacy,admin).canConfirm,true);
+ assert.equal(adminOutletDecisionReadiness(legacyRun,legacy,admin).canConfirm,false);
 });
 test('detail calls are reserved within budget and the selected ID must match its response',async()=>{
- const calls=[];const fetcher=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>String(url).includes(':searchText')?{places:[payload(candidate),payload({...candidate,placeId:'alt'})]}:{...payload(candidate),id:new URL(url).pathname.split('/').at(-1)}};};
+ const calls=[];const fetcher=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>String(url).includes(':search')?{places:[payload(candidate),payload({...candidate,placeId:'alt'})]}:{...payload(candidate),id:new URL(url).pathname.split('/').at(-1)}};};
  const result=await searchGoogleOutlet(outlet,'fixture',{OUTLET_REVIEW_MAX_CALLS:4},{},fetcher);
- assert.ok(calls.length<=4);assert.equal(calls.filter(c=>!c.url.includes(':searchText')).length,2);assert.equal(result.candidates.filter(c=>c.detailsConfirmed).length,2);
+ assert.ok(calls.length<=4);assert.equal(calls.filter(c=>!c.url.includes(':search')).length,2);assert.equal(result.candidates.filter(c=>c.detailsConfirmed).length,2);
  const bad=await searchGoogleOutlet(outlet,'fixture',{OUTLET_REVIEW_MAX_CALLS:2},{},async url=>({ok:true,json:async()=>String(url).includes(':searchText')?{places:[payload(candidate)]}:{...payload(candidate),id:'different'}}));
  assert.ok(bad.steps.some(s=>s.error==='MAP_PLACE_ID_MISMATCH'));assert.notEqual(evaluateDigitalOutlet(outlet,bad.candidates,bad.steps).code,'STRONG');
 });

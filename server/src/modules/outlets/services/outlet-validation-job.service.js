@@ -10,6 +10,7 @@ import {effectivePolicy} from '../../config/services/policy-resolver.service.js'
 import {withPolicy} from '../../config/services/policy-context.service.js';
 import {getDynamicConfig} from '../../config/config.service.js';
 import {actionNames} from '../../../../../shared/business-actions.mjs';
+import {canOpenOutletReview} from '../../../../../shared/outlet-validation.mjs';
 const input=z.object({requestId:z.string().uuid(),outletIds:z.array(z.string().min(1)).min(1).max(100),reason:z.string().trim().min(10).max(2000)}).strict();
 export const jobActionInput=z.object({action:z.enum(actionNames('OUTLET_BATCH')),reason:z.string().trim().min(5).max(1000)}).strict();
 const jobLock=async(db,id)=>db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`outlet-job:${id}`}))`;
@@ -17,6 +18,10 @@ export async function startValidationJob(raw,user){
  const b=input.parse(raw),actor=await reviewActor(prisma,user,'can_run_outlet_review');
  if(new Set(b.outletIds).size!==b.outletIds.length||b.outletIds.length>await getDynamicConfig('OUTLET_REVIEW_BATCH_LIMIT',30))throw new AppError('Daftar outlet duplikat atau melebihi batas batch.',422);
  if(await prisma.outlet.count({where:{id:{in:b.outletIds},...await reviewScope(actor,prisma)}})!==b.outletIds.length)throw new AppError('Sebagian outlet di luar wilayah.',403);
+ if(actor.role==='SUPERVISOR'){
+  const outlets=await prisma.outlet.findMany({where:{id:{in:b.outletIds}},include:{reviews:{where:{status:{in:['OPEN','WAITING_FIELD']}},select:{id:true}}}});
+  if(outlets.some(o=>!o.reviews.length&&!canOpenOutletReview(o,actor)))throw new AppError('Batch Supervisor hanya dapat memuat outlet berflag atau kasus yang sudah terbuka.',422);
+ }
  return prisma.$transaction(async db=>{
   await jobLock(db,b.requestId);const old=await db.outletValidationJob.findUnique({where:{requestId:b.requestId}});
   if(old){if(old.actorId!==actor.id||JSON.stringify(old.items.map(i=>i.outletId).sort())!==JSON.stringify([...b.outletIds].sort())||old.reason!==b.reason)throw new AppError('Identitas batch dipakai untuk isi berbeda.',409);return old;}

@@ -8,15 +8,17 @@ import { invalidateOutletCache } from './outlets.helpers.js';
 import {outletReviewEvidenceState} from '../../../../../shared/outlet-evidence-policy.mjs';
 import {reviewActor,fieldActors} from './outlet-review-access.service.js';
 import {presentOutletRun} from './outlet-provider-content.service.js';
-import {outletIssues} from '../../../../../shared/outlet-validation.mjs';
+import {outletIssues,canOpenOutletReview} from '../../../../../shared/outlet-validation.mjs';
 const opening=z.object({reason:z.string().trim().min(10).max(1000)});
 const decision=z.object({revision:z.number().int().positive(),action:z.enum(actionNames('OUTLET_REVIEW')),note:z.string().trim().min(10).max(2000),evidence:z.string().trim().max(2000).optional()});
 export async function openOutletReview(id,body,actor) {
   const {reason}=opening.parse(body);
   const result=await prisma.$transaction(async tx=>{
+    actor=await reviewActor(tx,actor,'can_validate_outlet');
     await lockOutlet(tx,id);const outlet=await reviewOutlet(tx,actor,id);
     const existing=await tx.outletReview.findFirst({where:{outletId:id,status:{in:['OPEN','WAITING_FIELD']}},include:reviewInclude});
     if(existing)return existing;
+    if(!canOpenOutletReview(outlet,actor))throw new AppError('Supervisor hanya dapat membuka validasi untuk outlet dengan flag kualitas data. Admin dapat melakukan pemeriksaan opsional tanpa flag.',422);
     const assignment=await initialReviewAssignment(tx,outlet,actor);
     return tx.outletReview.create({data:{outletId:id,reason,requestedBy:actorSnapshot(actor),workflow:{stage:'OPEN',resultCode:'UNEXAMINED'},...assignment},include:reviewInclude});
   });

@@ -19,8 +19,8 @@ globalThis.fetch=async(url,options)=>{
   mapCalls++;
   if(mode==='ERROR')return {ok:false,status:403,json:async()=>({})};
   if(mode==='EMPTY')return {ok:true,json:async()=>({places:[]})};
-  const place={id:'mock',displayName:{text:'Toko Sumber Berkah'},formattedAddress:mode==='CONFLICT'?'Jl Mawar Jakarta':'Jl Melati Bandung',location:{latitude:-6.9,longitude:107.6},businessStatus:'OPERATIONAL'};
-  return {ok:true,json:async()=>String(url).includes(':searchText')?{places:[place]}:place};
+  const place={id:'mock',displayName:{text:'Toko Sumber Berkah'},formattedAddress:mode==='CONFLICT'?'Jl Mawar Jakarta':'Jl Melati Bandung',location:{latitude:-6.9,longitude:107.6},businessStatus:'OPERATIONAL',types:['store','establishment']};
+  return {ok:true,json:async()=>String(url).includes(':search')?{places:[place]}:place};
  }
  if(String(url).startsWith('https://maps.googleapis.com/')) {
   mapCalls++;const u=new URL(url);
@@ -39,14 +39,15 @@ try {
  const admin=await person('ADMIN'),spv=await person('SUPERVISOR'),foreign=await person('SUPERVISOR'),sales=await person('SALES',{supervisorId:spv.id,permissions:{can_validate_outlet:true}});
  const cluster=await prisma.cluster.create({data:{name:tag,region:'Bandung',supervisorId:spv.id,assignedSalesId:sales.id}});clusters.push(cluster.id);
  const other=await prisma.cluster.create({data:{name:tag+'-foreign',region:'Bandung',supervisorId:foreign.id}});clusters.push(other.id);
- for(const c of [cluster,other]) {const o=await prisma.outlet.create({data:{name:'Toko Sumber Berkah',address:'Jl Melati Bandung',outletCode:`${tag}-${c.id}`,latitude:-6.9,longitude:107.6,clusterId:c.id}});outlets.push(o.id);}
+ for(const c of [cluster,other]) {const o=await prisma.outlet.create({data:{name:'Toko Sumber Berkah',source:'IMPORT',address:'Jl Melati Bandung',outletCode:`${tag}-${c.id}`,latitude:-6.9,longitude:107.6,clusterId:c.id}});outlets.push(o.id);}
  const id=outlets[0],foreignId=outlets[1];
  eq((await api('/outlets/directory',spv)).body.pagination.total,1);
- eq((await api('/outlets/directory',sales)).body.pagination.total,1);
+ eq((await api('/outlets/directory',sales)).status,403);
  eq((await api(`/outlets/${foreignId}/reviews`,sales,'POST',{reason:'Periksa data database lama'})).status,403);
  eq((await api('/outlets/batch-validate',sales,'POST',{outletIds:[foreignId],reason:'Periksa database lama'})).status,403);
  eq((await api('/outlets/batch-validate',spv,'POST',{outletIds:[],reason:'Periksa database lama'})).status,400);
- eq((await api('/outlets/validation-summary',sales)).body.data,{OPEN:0,WAITING_FIELD:0,COMPLETED:0});
+ eq((await api('/outlets/validation-summary',sales)).status,403);
+ eq((await api('/outlets/validation-summary',spv)).body.data,{OPEN:0,WAITING_FIELD:0,COMPLETED:0});
  let response=await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Data lama perlu diperiksa lokasinya'});eq(response.status,200);let review=response.body.data;
  eq((await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Data lama perlu diperiksa lokasinya'})).body.data.id,review.id);
  eq((await api(`/outlets/reviews/${review.id}`,foreign)).status,404);
@@ -71,7 +72,7 @@ try {
  eq((await api(`/outlets/${id}/reviews/${review.id}`,spv,'PATCH',{revision:detail.revision,action:'KEEP',note:'Data lapangan telah diperiksa ulang'})).status,409);
  eq((await api(`/outlets/${id}/reviews/${review.id}/digital`,spv,'PATCH',{revision:detail.revision,action:'INTERNAL_KEEP',reason:'Titik sudah dikoreksi dengan bukti internal',reference:'Dokumen pelanggan dan konfirmasi lokasi pemilik'})).body.data.status,'COMPLETED');
  eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:review.id,revision:detail.revision})).status,409);
- eq((await api('/outlets/validation-summary',sales)).body.data.COMPLETED,1);
+ eq((await api('/outlets/validation-summary',spv)).body.data.COMPLETED,1);
  profile=(await api(`/outlets/${id}/profile`,spv)).body.data;
  eq((await api(`/outlets/${id}`,spv,'DELETE',{updatedAt:profile.updatedAt,reason:'Outlet berhenti beroperasi berdasarkan konfirmasi'})).status,200);
  eq((await api('/outlets/directory?status=INACTIVE',spv)).body.pagination.total,1);
@@ -106,7 +107,7 @@ try {
  const scheduled=(await api(`/outlets/${active.id}/profile`,spv)).body.data;eq(scheduled.operational.scheduled,1);
  eq((await api(`/outlets/${active.id}`,spv,'DELETE',{updatedAt:scheduled.updatedAt,reason:'Uji penonaktifan dengan kunjungan mendatang'})).status,409);
  await prisma.pjp.delete({where:{id:pjp.id}});
- mode='EMPTY';let follow=(await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Tinjau bukti lapangan database lama'})).body.data;
+ mode='EMPTY';eq((await api(`/outlets/${id}/reviews`,spv,'POST',{reason:'Tinjau tanpa flag setelah koreksi lapangan'})).status,422);let follow=(await api(`/outlets/${id}/reviews`,admin,'POST',{reason:'Tinjau bukti lapangan database lama'})).body.data;
  eq((await api(`/outlets/${id}/validate`,spv,'POST',{reviewId:follow.id,revision:follow.revision})).body.data.code,'NOT_FOUND');
  follow=(await api(`/outlets/reviews/${follow.id}`,spv)).body.data;
  const latestRun=follow.runs[0];

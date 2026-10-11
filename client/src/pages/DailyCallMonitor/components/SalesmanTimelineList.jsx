@@ -36,7 +36,7 @@ export function SalesmanTimelineList({
                       </span>
 
                       {sales.travelAnomalies === 0 && sales.durationAnomalies === 0 && <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold inline-flex items-center gap-1">
-                          <LuCheck className="text-[10px]" /> 100% Tertib SOP
+                          <LuCheck className="text-[10px]" /> Tidak ada indikasi durasi/jeda tercatat
                         </span>}
                     </div>
 

@@ -29,7 +29,7 @@ export function ShiftAttendanceWidget() {
         />
         <div className="min-w-0">
           <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-            Shift Hari Ini
+            Shift · {dateKey} WIB
           </p>
           <p className="text-xs font-semibold text-on-surface truncate">
             {shift.finished&&!shift.clockOutTime?'Kegiatan shift selesai (tanpa bukti keluar)':shift.clockOutTime

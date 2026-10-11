@@ -3,6 +3,7 @@ import React from 'react';
 import { LuX, LuMapPin, LuCamera, LuShoppingBag, LuExternalLink, LuCircleCheck } from "react-icons/lu";
 import { FiAlertTriangle } from 'react-icons/fi';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
+import {reportVisitAttendance} from '../../../../../shared/report-presentation.mjs';
 
 /**
  * DailyCallDetailModal Component
@@ -10,6 +11,7 @@ import { NativeDialog } from '../../../shared/components/common/NativeDialog';
  */
 export const DailyCallDetailModal = ({ row, onClose }) => {
   if (!row) return null;
+  const attendance=reportVisitAttendance(row);
 
   const googleMapsUrl = [row.customerLat,row.customerLng].every(Number.isFinite)?`https://www.google.com/maps/search/?api=1&query=${row.customerLat},${row.customerLng}`:null;
 
@@ -67,12 +69,12 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
           </div>
           <div>
             <span className="text-[10px] text-on-surface-variant font-semibold block">Jam Kunjungan</span>
-            <strong className="text-emerald-600">In: {row.timeIn}</strong>
-            <span className="text-[11px] text-on-surface-variant block">Out: {row.timeOut}</span>
+            <strong className="text-on-surface">{attendance.entry}</strong>
+            {attendance.exit&&<span className="text-[11px] text-on-surface-variant block">{attendance.exit}</span>}
           </div>
           <div>
             <span className="text-[10px] text-on-surface-variant font-semibold block">Durasi Kunjungan</span>
-            <strong className="text-on-surface font-mono">{row.durationFormatted}</strong>
+            <strong className="text-on-surface font-mono">{attendance.duration||'Tidak tersedia'}</strong>
             {row.durationMinutes!=null&&<span className="text-[10px] text-on-surface-variant block">({row.durationMinutes} menit)</span>}
           </div>
           <div>
@@ -81,15 +83,16 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
               {row.effectiveCall === 'Y' ? (
                 <>
                   <LuCircleCheck className="text-xs text-purple-600" />
-                  <span>Ya (Order Masuk)</span>
+                  <span>Ya (hasil penjualan diakui)</span>
                 </>
               ) : (
                 <>
                   <LuX className="text-xs text-amber-600" />
-                  <span>Tidak Ada Order</span>
+                  <span>Belum efektif</span>
                 </>
               )}
             </strong>
+            <span className="text-[10px] text-on-surface-variant block">Mengikuti penjualan yang diakui laporan. Order menunggu persetujuan dan catatan pembayaran tidak otomatis menjadi EC.</span>
           </div>
         </div>
 

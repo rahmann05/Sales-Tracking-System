@@ -13,6 +13,7 @@ import {lockOutlet,reviewOutlet,actorSnapshot} from './outlet-review-policy.serv
 import {recordOutletChange} from './outlet-change-policy.service.js';
 import {invalidateOutletCache} from './outlets.helpers.js';
 import {createNotification} from '../../notifications/services/create-notification.service.js';
+import {presentOutletRun} from './outlet-provider-content.service.js';
 export const digitalDecisionInput=z.object({action:z.enum(actionNames('OUTLET_DIGITAL')),revision:z.number().int().positive(),reason:z.string().trim().min(10).max(2000),acknowledgeWarnings:z.boolean().optional(),runId:z.string().optional(),placeId:z.string().optional(),updatedAt:z.string().datetime().optional(),reference:z.string().trim().max(2000).optional(),changes:z.object({name:z.string().trim().min(2).max(200).optional(),address:z.string().trim().min(5).max(1000).optional(),latitude:z.number().finite().min(-90).max(90).optional(),longitude:z.number().finite().min(-180).max(180).optional()}).strict().optional()}).strict();
 export async function decideDigitalOutlet(outletId,id,raw,user){
  const b=digitalDecisionInput.parse(raw),permission=b.action==='PROPOSE'?'can_propose_outlet_review':'can_apply_outlet_review';
@@ -40,14 +41,15 @@ export async function decideDigitalOutlet(outletId,id,raw,user){
    if(['DIGITAL_KEEP','ADMIN_DIGITAL_KEEP'].includes(b.action)){
     const run=r.runs.find(x=>x.id===b.runId),adminReview=b.action==='ADMIN_DIGITAL_KEEP';
     if(adminReview&&actor.role!=='ADMIN')throw new AppError('Konfirmasi dengan pertimbangan Admin hanya tersedia untuk role Admin.',403);
-    if(adminReview&&run&&run.id!==r.runs[0]?.id)throw new AppError('Gunakan hasil pemeriksaan Google terakhir untuk pertimbangan Admin. Muat ulang kasus.',409);
+    if(run&&run.id!==r.runs[0]?.id)throw new AppError('Gunakan hasil pemeriksaan Google terakhir. Hasil yang lebih baru dapat memuat kandidat alternatif atau konflik yang belum ada pada hasil lama. Muat ulang kasus.',409);
     const policy=adminReview?Object.fromEntries(await Promise.all(Object.entries(OUTLET_ADMIN_DEFAULTS).map(async([key,value])=>[key,await getDynamicConfig(key,value)]))):{};
-    const readiness=adminReview?adminOutletDecisionReadiness(run,outlet,actor,policy,{placeId:b.placeId}):outletDigitalReadiness(run,outlet,{placeId:b.placeId});
+    const visibleRun=run?presentOutletRun(run):run;
+    const readiness=adminReview?adminOutletDecisionReadiness(visibleRun,outlet,actor,policy,{placeId:b.placeId}):outletDigitalReadiness(visibleRun,outlet,{placeId:b.placeId});
     if(!readiness.canConfirm)throw new AppError(outletDigitalRejectionMessage(readiness),readiness.current?422:409,readiness.issues);
     if(adminReview&&(!b.acknowledgeWarnings||b.reason.length<20))throw new AppError('Tinjau peta dan perbedaan kandidat, centang pernyataan peninjauan, lalu isi alasan Admin minimal 20 karakter.',422);
     const selectedPlaceId=b.placeId||run.result.selectedPlaceId;
     const googleLocation=await getDynamicConfig('OUTLET_GOOGLE_LOCATION_ENABLED',true)?await acceptGoogleLocation(db,outlet,run,actor,b.reason,{adminReview}):undefined;
-    await db.outlet.update({where:{id:outletId},data:{...(googleLocation?{googleLocation}:{}),validationStatus:'VALID',validationDetails:{...outlet.validationDetails,qualityConfirmed:{source:adminReview?'ADMIN_DIGITAL':'DIGITAL',name:outlet.name,address:outlet.address},code:run.result.code,decisionSource:adminReview?'ADMIN_DIGITAL':'DIGITAL',placeId:selectedPlaceId,runId:run.id,expiresAt:run.result.expiresAt,stale:false}}});
+    await db.outlet.update({where:{id:outletId},data:{...(googleLocation?{googleLocation}:{}),validationStatus:'VALID',validationDetails:{...outlet.validationDetails,qualityConfirmed:{source:adminReview?'ADMIN_DIGITAL':'DIGITAL',version:run.result.version,name:outlet.name,address:outlet.address},code:run.result.code,decisionSource:adminReview?'ADMIN_DIGITAL':'DIGITAL',placeId:selectedPlaceId,runId:run.id,expiresAt:run.result.expiresAt,stale:false}}});
     if(adminReview)event.adminReview={policy:readiness.policy,warnings:readiness.warnings,originalCode:run.result.code,acknowledged:true};
     event.runId=run.id;event.placeId=selectedPlaceId;
    }else if(b.action==='FIELD_KEEP'){
