@@ -9,8 +9,9 @@ export function vehicleServiceStatus(vehicle,values={}){
  const warningPercent=values.VEHICLE_SERVICE_WARNING_PERCENT??80;
  return VEHICLE_SERVICE_TYPES.map(type=>{
   const override=custom.intervals?.[type.key],threshold=override??values[type.config]??type.defaultKm;
-  const known=Number.isFinite(vehicle.totalKm)&&Number.isFinite(vehicle[type.field])&&threshold>0;
-  const used=known?Math.max(0,vehicle.totalKm-vehicle[type.field]):null,percentage=known?Math.min(100,used/threshold*100):null;
-  return {...type,enabled,threshold,source:override==null?'PROFILE':'VEHICLE',known,used,percentage,remaining:known?Math.max(0,threshold-used):null,state:!enabled?'DISABLED':!known?'UNKNOWN':used>=threshold?'OVERDUE':percentage>=warningPercent?'DUE_SOON':'OK'};
+  const effectiveKm=Math.max(Number(vehicle.totalKm)||0,Number(vehicle.estimatedKm)||0);
+  const known=Number.isFinite(effectiveKm)&&Number.isFinite(vehicle[type.field])&&threshold>0;
+  const used=known?Math.max(0,effectiveKm-vehicle[type.field]):null,percentage=known?Math.min(100,used/threshold*100):null;
+  return {...type,enabled,threshold,source:override==null?'PROFILE':'VEHICLE',distanceEstimated:Number(vehicle.estimatedKm)>Number(vehicle.totalKm),known,used,percentage,remaining:known?Math.max(0,threshold-used):null,state:!enabled?'DISABLED':!known?'UNKNOWN':used>=threshold?'OVERDUE':percentage>=warningPercent?'DUE_SOON':'OK'};
  });
 }

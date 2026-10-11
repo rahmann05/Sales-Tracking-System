@@ -2,7 +2,9 @@ import React from 'react';
 import {POLICY_OPTION_LABELS,POLICY_SECRET_KEYS} from '../../../../shared/operational-policy.mjs';
 import '../../styles/pages/AdminConfig.css';
 import {parseReferenceCatalog} from '../../../../shared/reference-catalog.mjs';
+import {parseDeliveryDepots} from '../../../../shared/delivery-depots.mjs';
 const catalogDisplay=value=>{try{return parseReferenceCatalog(value).map(r=>`${r.label} (${r.code}${r.active?'':', nonaktif'})`).join('; ');}catch{return 'Referensi tidak valid';}};
+const depotDisplay=value=>{try{return parseDeliveryDepots(value).map(point=>`${point.name} (${point.id})`).join(' · ');}catch{return 'Daftar lokasi perlu diperbaiki';}};
 export const optionLabels = {
   ...POLICY_OPTION_LABELS,
   DISABLED: 'Nonaktif',
@@ -24,4 +26,4 @@ export const optionLabel=(param,value)=>{
  if(value==='NONE'&&param.key.startsWith('CODE_'))return 'Tidak direset';
  return optionLabels[value]||value;
 };
-export const displayValue = (param, value) => POLICY_SECRET_KEYS.includes(param.key)&&value ? '••••••••' : param.type==='catalog'?catalogDisplay(value): param.type==='field-requirements' ? String(value||'').split(',').filter(Boolean).map(key=>param.optionLabels?.[key]||key).join(', ')||'Tidak ada data tambahan wajib' : param.type==='checklist'?Array.isArray(value)?value.map(item=>item.label+(item.required?' (wajib)':'')).join('; ')||'Tanpa pertanyaan':'Belum tersedia': param.type === 'boolean' ? String(value) === 'true' ? 'Aktif' : 'Nonaktif' : optionLabel(param,value) || String(value) || '(kosong)';
+export const displayValue = (param, value) => POLICY_SECRET_KEYS.includes(param.key)&&value ? '••••••••' : param.type==='catalog'?catalogDisplay(value):param.type==='depot-list'?depotDisplay(value): param.type==='field-requirements' ? String(value||'').split(',').filter(Boolean).map(key=>param.optionLabels?.[key]||key).join(', ')||'Tidak ada data tambahan wajib' : param.type==='checklist'?Array.isArray(value)?value.map(item=>item.label+(item.required?' (wajib)':'')).join('; ')||'Tanpa pertanyaan':'Belum tersedia': param.type === 'boolean' ? String(value) === 'true' ? 'Aktif' : 'Nonaktif' : optionLabel(param,value) || String(value) || '(kosong)';

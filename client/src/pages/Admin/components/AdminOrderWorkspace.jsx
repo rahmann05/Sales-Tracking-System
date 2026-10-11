@@ -5,7 +5,11 @@ import {PendingOrderCard} from './PendingOrderCard';
 import {UnlockRequestCard} from './UnlockRequestCard';
 import {ManualSalesReview} from '../../../shared/components/common/ManualSalesReview';
 import {AdminOrderTable} from './AdminOrderTable';
+import {AdminCreateOrderDialog} from './AdminCreateOrderDialog';
+import {useApp} from '../../../context/AppContext';
 export function AdminOrderWorkspace({orders,filteredOrders,pendingOrders,approvedOrders,orderFilter,setOrderFilter,selectedSales,setSelectedSales,salesOptions,loading,loadApprovalData,handleDecision,pendingUnlockCount,manualPendingCount,unlockRequests,handleApproveUnlock,handleRejectUnlock,loadError,ordersOnly=false,hideHeading=false}){
+  const {user}=useApp();
+  const [createOpen,setCreateOpen]=useState(false);
   const [section,setSection]=useState('orders');
   const [search,setSearch]=useWorkspaceState('orderSearch',''),[selectedId,setSelectedId]=useWorkspaceState('orderDetail','');
   const [page,setPage]=useState(1);
@@ -17,7 +21,7 @@ export function AdminOrderWorkspace({orders,filteredOrders,pendingOrders,approve
   useEffect(()=>{if(selected?.id){detailRef.current?.focus({preventScroll:true});if(window.matchMedia('(max-width:1199px)').matches)detailRef.current?.scrollIntoView({block:'start'});else detailRef.current?.closest('main')?.scrollTo({top:0});}},[selected?.id]);
   const changeFilter=value=>{setOrderFilter(value);setPage(1);};
   return <div className="workspace-page admin-order-workspace">
-    {!hideHeading&&<header className="admin-page-heading"><div><p className="admin-eyebrow">Order / Pemeriksaan</p><h1>Order & persetujuan</h1><p>Periksa pesanan dan tetapkan keputusan sebelum diproses ke packing.</p></div><button className="admin-button" type="button" disabled={loading} onClick={loadApprovalData}><LuRefreshCw/>{loading?'Memuat…':'Perbarui'}</button></header>}
+    {!hideHeading&&<header className="admin-page-heading"><div><p className="admin-eyebrow">Order / Pemeriksaan</p><h1>Order & persetujuan</h1><p>Periksa pesanan dan tetapkan keputusan sebelum diproses ke packing.</p></div><div className="app-actions">{user?.role==='ADMIN'&&<button className="admin-button primary" type="button" onClick={()=>setCreateOpen(true)}>Buat order Admin</button>}<button className="admin-button" type="button" disabled={loading} onClick={loadApprovalData}><LuRefreshCw/>{loading?'Memuat…':'Perbarui'}</button></div></header>}
     {loadError&&<p className="admin-feedback error" role="alert">{loadError} Data terakhir tetap ditampilkan.</p>}
     {!ordersOnly&&<nav className="admin-local-tabs" aria-label="Jenis pemeriksaan">{[['orders','Order',pendingOrders.length],['unlock','Izin presensi outlet',pendingUnlockCount],['manual','Hasil manual',manualPendingCount]].map(([id,label,count])=><button type="button" key={id} aria-pressed={section===id} onClick={()=>setSection(id)}>{label}<span>{count}</span></button>)}</nav>}
     {section==='orders'&&<>
@@ -30,5 +34,6 @@ export function AdminOrderWorkspace({orders,filteredOrders,pendingOrders,approve
     </>}
     {section==='unlock'&&<section className="admin-review-queue"><div><h2>Izin presensi outlet</h2><p>Pengecualian untuk sales yang belum menuntaskan presensi sebelumnya.</p></div>{unlockRequests.length?unlockRequests.map(request=><UnlockRequestCard key={request.id} request={request} onApprove={handleApproveUnlock} onReject={handleRejectUnlock}/>):<p className="admin-empty">Tidak ada permintaan izin presensi.</p>}</section>}
     {section==='manual'&&<section className="admin-panel admin-manual-review"><h2>Pemeriksaan hasil penjualan manual</h2><ManualSalesReview/></section>}
+    {createOpen&&<AdminCreateOrderDialog onClose={()=>setCreateOpen(false)} onSaved={loadApprovalData}/>}
   </div>;
 }

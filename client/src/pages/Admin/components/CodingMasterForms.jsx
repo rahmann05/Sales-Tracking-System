@@ -5,10 +5,10 @@ import {vehiclesApi,divisionsApi} from '../../../services/api';
 import {useApp} from '../../../context/AppContext';
 import {BusinessCodeInput} from '../../../shared/components/common/BusinessCodeInput';
 
-export function CodingMasterForms() {
+export function CodingMasterForms({initialKind='DIVISION',fixedKind=false,onCreated=()=>{}}) {
   const {fetchDivisions}=useApp();
   const canDivision=useDomainPermission('MANAGE_DIVISION'),canVehicle=useDomainPermission('MANAGE_VEHICLE');
-  const [kind,setKind]=useState('DIVISION'),[form,setForm]=useState({}),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+  const [kind,setKind]=useState(initialKind),[form,setForm]=useState({}),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
   const field=(key,value)=>setForm({...form,[key]:value});
   const fields=[['maxCartons','Kapasitas karton'],['maxWeightKg','Kapasitas berat (kg)'],['fuelKmPerLiter','Konsumsi BBM (km/liter)'],['fuelPricePerLiter','Harga BBM per liter (Rp)']];
   async function save(e){
@@ -16,14 +16,14 @@ export function CodingMasterForms() {
     try {
       const result=kind==='DIVISION'?await divisionsApi.create({name:form.name,code:form.code}):await vehiclesApi.create({name:form.name,code:form.code,fuelType:form.fuelType,...Object.fromEntries(fields.map(([key])=>[key,Number(form[key])]))});
       setMessage(`${kind==='DIVISION'?'Divisi':'Kendaraan'} tersimpan: ${result.data?.code || result.data?.name}.`);setForm({});
-      if(kind==='DIVISION')await fetchDivisions();
+      if(kind==='DIVISION')await fetchDivisions();onCreated();
     }catch(e){setMessage(e.message);}finally{setBusy(false);}
   }
   return <details className="p-5 rounded-2xl border border-border-glass space-y-3">
-    <summary className="font-semibold cursor-pointer">Tambah master divisi / kendaraan</summary>
+    <summary className="font-semibold cursor-pointer">{fixedKind?(kind==='VEHICLE'?'Tambah kendaraan':'Tambah divisi'):'Tambah master divisi / kendaraan'}</summary>
     {canVehicle&&<MasterImportPanel kind="vehicles"/>}
     <form onSubmit={save} className="space-y-3 pt-3">
-      <label className="app-field">Jenis master<select value={kind} disabled={busy} onChange={e=>{setKind(e.target.value);setForm({});setMessage('');}}><option value="DIVISION">Divisi</option><option value="VEHICLE">Kendaraan</option></select></label>
+      {!fixedKind&&<label className="app-field">Jenis master<select value={kind} disabled={busy} onChange={e=>{setKind(e.target.value);setForm({});setMessage('');}}><option value="DIVISION">Divisi</option><option value="VEHICLE">Kendaraan</option></select></label>}
       <BusinessCodeInput entity={kind} value={form.code || ''} onChange={value=>field('code',value)} optional={kind==='DIVISION'} disabled={busy}/>
       <label className="app-field">Nama<input required minLength={2} maxLength={150} value={form.name || ''} onChange={e=>field('name',e.target.value)} disabled={busy}/></label>
       {kind==='VEHICLE'&&<>

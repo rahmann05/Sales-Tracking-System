@@ -78,7 +78,7 @@ export const getDeliveryRouteById = async (req, res, next) => {
 
 export const updateRouteStatus = async (req, res, next) => {
   try {
-    const result = await deliveryService.updateRouteStatus(req.params.id, req.body.status, req.body.totalDistanceKm);
+    const result = await deliveryService.updateRouteStatus(req.params.id, req.body.status);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

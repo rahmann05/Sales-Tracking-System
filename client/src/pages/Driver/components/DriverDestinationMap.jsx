@@ -1,15 +1,14 @@
-import {projectOperationalOutlet} from '../../../../../shared/outlet-location.mjs';
 import {DriverGoogleDestinationMap} from './DriverGoogleDestinationMap';
 import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import {DriverMapFit} from './DriverMapFit';
 import React from 'react';
 import {MapContainer,TileLayer,Marker,Popup} from 'react-leaflet';
 import L from 'leaflet';
-import {validOutletPoint,deliveryNavigationUrl} from '../../../../../shared/driver-workspace.mjs';
+import {validOutletPoint,deliveryNavigationUrl,stopDestinationOutlet} from '../../../../../shared/driver-workspace.mjs';
 import {deliveryStopLabel} from '../../Warehouse/deliveryLabels';
 export function DriverDestinationMap({stops,selectedId,onSelect}){
  const mapPolicy=useFeaturePolicy('MAPS');
- const valid=React.useMemo(()=>stops.map(s=>({...s,outlet:projectOperationalOutlet(s.outlet)})).filter(s=>validOutletPoint(s.outlet)),[stops]);
+ const valid=React.useMemo(()=>stops.map(s=>({...s,outlet:stopDestinationOutlet(s)})).filter(s=>validOutletPoint(s.outlet)),[stops]);
  if(!mapPolicy.canStart)return <p className="app-notice" role="status">{mapPolicy.reason} Gunakan daftar alamat tujuan.</p>;
  if(!valid.length)return <p className="admin-empty">Koordinat tujuan belum tersedia. Hubungi Kepala Gudang untuk memeriksa data outlet.</p>;
  if(valid.some(s=>s.outlet.googleMapsOnly))return <DriverGoogleDestinationMap stops={valid} selectedId={selectedId} onSelect={onSelect}/>;

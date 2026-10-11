@@ -15,6 +15,8 @@ import { AppError } from '../../../utils/errors.js';
 import { createBulkNotificationByRoles } from "../../notifications/notifications.service.js";
 import { ORDER_STATUS, ROLES, NOTIFICATION_TYPES } from '../../../utils/constants.js';
 import {assertOutletAccess} from '../../../utils/team-scope.js';
+import {outletOperationalPoint} from '../../../../../shared/outlet-location.mjs';
+import {resolveAdminOrderPlace} from './admin-order-place.service.js';
 
 
 export const createOrder = async (salesId, pjpStopId, items, paymentType, manualCode, options = {}) => {
@@ -22,14 +24,17 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType, manual
   const priceOverrideReason=options.priceOverrideReason?.trim()||null;
   const contextReason=options.contextReason?.trim()||null;
   if(Boolean(pjpStopId)===Boolean(options.outletId))throw new AppError('Pilih satu konteks: kunjungan PJP atau outlet langsung.',400);
-  const requestHash=createHash('sha256').update(JSON.stringify({salesId,pjpStopId,items,paymentType,manualCode,...(priceOverrideReason?{priceOverrideReason}:{}),...(options.outletId?{outletId:options.outletId,contextReason}:{})})).digest('hex');
+  const requestHash=createHash('sha256').update(JSON.stringify({salesId,pjpStopId,items,paymentType,manualCode,...(priceOverrideReason?{priceOverrideReason}:{}),...(options.outletId?{outletId:options.outletId,contextReason,adminPlaceId:options.adminPlaceId}:{})})).digest('hex');
   const saved=await withUserTransaction(salesId,async tx=>{
   if(options.requestId){const existing=await tx.order.findUnique({where:{requestId:options.requestId},include:{items:{include:{product:true}},pjpStop:{include:{outlet:true}},createdByUser:{select:{id:true,name:true}}}});if(existing){if(existing.createdBy!==salesId||existing.requestHash!==requestHash)throw new AppError('Identitas pengiriman sudah dipakai untuk isi order berbeda. Periksa order sebelumnya.',409);return existing;}}
   if(await getDynamicConfig('FEATURE_ORDERS_MODE','ACTIVE')!=='ACTIVE')throw new AppError('Pembuatan order baru dijeda oleh Admin',409);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
   const actor=await tx.user.findUnique({where:{id:salesId}});
-  if(!actor||actor.deletedAt||actor.role!=='SALES')throw new AppError('Akun Sales aktif diperlukan.',403);
+  if(!actor||actor.deletedAt||!['SALES','ADMIN'].includes(actor.role))throw new AppError('Akun Sales atau Admin aktif diperlukan.',403);
+  const adminOrder=actor.role==='ADMIN';
+  if(adminOrder&&(!options.outletId||pjpStopId||!options.adminPlaceId))throw new AppError('Order Admin wajib memilih outlet dan titik toko dari Google.',422);
+  if(!adminOrder&&options.adminPlaceId)throw new AppError('Titik Google khusus order Admin tidak dapat digunakan Sales.',403);
   const stop = pjpStopId?await tx.pjpStop.findUnique({
     where: { id: pjpStopId },
     include: { pjp: true, attendances: true, outlet: true },
@@ -38,13 +43,14 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType, manual
   if (pjpStopId&&!stop) throw new AppError('Stop PJP tidak ditemukan', 404);
   let outlet=stop?.outlet;
   if(!stop){
-    if(!await getDynamicConfig('ORDER_ALLOW_OUTSIDE_PJP',false))throw new AppError('Order tanpa kunjungan PJP tidak diizinkan Admin.',403);
-    if(await getDynamicConfig('ORDER_OUTSIDE_PJP_REQUIRE_REASON',true)&&(!contextReason||contextReason.length<5))throw new AppError('Alasan order tanpa PJP minimal 5 karakter wajib diisi.',422);
+    if(!adminOrder&&!await getDynamicConfig('ORDER_ALLOW_OUTSIDE_PJP',false))throw new AppError('Order tanpa kunjungan PJP tidak diizinkan Admin.',403);
+    if(!adminOrder&&await getDynamicConfig('ORDER_OUTSIDE_PJP_REQUIRE_REASON',true)&&(!contextReason||contextReason.length<5))throw new AppError('Alasan order tanpa PJP minimal 5 karakter wajib diisi.',422);
     await assertOutletAccess(actor,options.outletId,tx);
     outlet=await tx.outlet.findFirst({where:{id:options.outletId,deletedAt:null}});
     if(!outlet)throw new AppError('Outlet aktif tidak ditemukan.',404);
   }
   if(outlet.deletedAt)throw new AppError('Outlet sudah nonaktif.',409);
+  const adminDeliveryPoint=adminOrder?{...await resolveAdminOrderPlace(options.adminPlaceId),outletId:outlet.id}:null;
   if(stop?.validationOnly)throw new AppError('Tugas validasi bukan konteks order kunjungan. Gunakan kunjungan rutin atau order tanpa PJP jika diizinkan.',409);
 
   if (stop&&stop.pjp.userId !== salesId) {
@@ -93,24 +99,24 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType, manual
   if(options.expectedTermDays!=null&&options.expectedTermDays!==termOfPaymentDays)throw new AppError('Termin berubah. Muat ulang dan konfirmasi syarat pembayaran.',409);
   if(['SKIPPED','CLOSED_REPORTED'].includes(stop?.status))throw new AppError('Order tidak dapat dibuat pada toko dilewati atau dilaporkan tutup',409);
   if(priceOverrides.length&&snapshot.values.ORDER_PRICE_OVERRIDE_REQUIRE_REASON&&(!priceOverrideReason||priceOverrideReason.length<5))throw new AppError('Alasan perubahan harga minimal 5 karakter wajib sesuai aturan Admin',422);
-  const approval=orderApprovalDecision({totalValue,hasPriceOverride:priceOverrides.length>0},snapshot.values);
+  const approval=adminOrder?{mode:'NONE',source:'ADMIN_DIRECT'}:orderApprovalDecision({totalValue,hasPriceOverride:priceOverrides.length>0},snapshot.values);
   snapshot.orderApproval={...approval,priceOverrides,reason:priceOverrideReason};
   snapshot.values={...snapshot.values,ORDER_APPROVAL_MODE:approval.mode};
   const autoApprove=snapshot.values.ORDER_APPROVAL_MODE==='NONE';
-  await assertNewWorkReviewers(tx,'ORDER',{policySnapshot:snapshot},salesId);
+  if(!adminOrder)await assertNewWorkReviewers(tx,'ORDER',{policySnapshot:snapshot},salesId);
   const order = await tx.order.create({
     data: {
       policySnapshot:snapshot,
       code: await resolveBusinessCode('ORDER',manualCode,{db:tx}),
       requestId:options.requestId||null,requestHash:options.requestId?requestHash:null,taxIncluded,
-      customerSnapshot:{id:outlet.id,name:outlet.name,address:outlet.address,outletCode:outlet.outletCode,channel:outlet.channel,subChannel:outlet.subChannel},
-      history:[{action:'CREATE',actorId:salesId,at:new Date().toISOString(),paymentType:payment,previousPaymentType:outlet.paymentType,context:stop?'PJP':'OUTLET',contextReason}],
+      customerSnapshot:{id:outlet.id,name:outlet.name,address:outlet.address,outletCode:outlet.outletCode,channel:outlet.channel,subChannel:outlet.subChannel,deliveryPoint:adminDeliveryPoint||{...outletOperationalPoint(outlet),outletId:outlet.id,recordedAt:new Date().toISOString()}},
+      history:[{action:adminOrder?'CREATE_ADMIN':'CREATE',actorId:salesId,at:new Date().toISOString(),paymentType:payment,previousPaymentType:outlet.paymentType,context:adminOrder?'ADMIN_GOOGLE':stop?'PJP':'OUTLET',contextReason,placeId:adminDeliveryPoint?.placeId||null}],
       pjpStopId:pjpStopId||null,outletId:outlet.id,
       createdBy: salesId,
       totalValue,
       paymentType:payment,termOfPaymentDays,taxRatePercent,taxAmount,
       status: autoApprove?ORDER_STATUS.APPROVED:ORDER_STATUS.PENDING_APPROVAL,
-      ...(autoApprove?{approvedAt:new Date(),history:[{action:'POLICY_AUTO_APPROVE',at:new Date().toISOString(),source:'CONFIGURATION',versions:snapshot.versions,context:stop?'PJP':'OUTLET',contextReason}]}:{}),
+      ...(autoApprove?{approvedAt:new Date(),history:[{action:adminOrder?'ADMIN_DIRECT_APPROVE':'POLICY_AUTO_APPROVE',actorId:salesId,at:new Date().toISOString(),source:adminOrder?'ADMIN_GOOGLE':'CONFIGURATION',versions:snapshot.versions,context:adminOrder?'ADMIN_GOOGLE':stop?'PJP':'OUTLET',contextReason,placeId:adminDeliveryPoint?.placeId||null}]}:{}),
       items: { create: orderItemsData },
     },
     include: {
@@ -121,11 +127,12 @@ export const createOrder = async (salesId, pjpStopId, items, paymentType, manual
   });
 
   if(autoApprove)await draftFromApprovedOrder(tx,order.id,salesId);
+  if(adminOrder)await tx.auditEvent.create({data:{actorId:salesId,actorName:actor.name,action:'ADMIN_ORDER_GOOGLE_POINT',entityType:'ORDER',entityId:order.id,before:{outletPoint:outletOperationalPoint(outlet)},after:{deliveryPoint:adminDeliveryPoint,approval:'ADMIN_DIRECT'}}});
   await createBulkNotificationByRoles(
     [ROLES.SUPERVISOR, ROLES.ADMIN],
     NOTIFICATION_TYPES.ORDER_CREATED,
     autoApprove?'Order Baru Diterima Sesuai Aturan':'Order Baru Perlu Persetujuan',
-    `Sales ${order.createdByUser.name} menginput order Rp ${totalValue.toLocaleString('id-ID')} di outlet ${outlet.name}`,
+    `${adminOrder?'Admin':'Sales'} ${order.createdByUser.name} menginput order Rp ${totalValue.toLocaleString('id-ID')} di outlet ${outlet.name}`,
     { orderId: order.id, salesId },
     tx
   );

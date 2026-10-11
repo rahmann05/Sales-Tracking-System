@@ -2,6 +2,7 @@ import {printOperationalDocument} from '../../../services/operationalExportServi
 import React from 'react';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { LuPrinter } from 'react-icons/lu';
+import '../../../styles/pages/OperationalDocument.css';
 
 export function PackingListPrintModal({ document: doc, onClose }) {
   if (!doc) return null;
@@ -17,20 +18,22 @@ export function PackingListPrintModal({ document: doc, onClose }) {
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: 'Asia/Jakarta',
       })
     : '-';
 
   return (
     <NativeDialog
       open={Boolean(doc)}
-      title={`Cetak Dokumen: ${doc.code}`}
+      title={`Surat perintah muat · ${doc.code}`}
       onClose={onClose}
+      className="packing-document-dialog"
     >
       <div className="space-y-6 text-on-surface p-1">
         {/* Print Action Bar */}
         <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container/60 border border-border-glass no-print">
           <div className="text-xs text-on-surface-variant font-medium">
-            Dokumen resmi siap cetak untuk operasional gudang dan pengiriman.
+            Periksa isi surat dan statusnya sebelum dicetak untuk operasional.
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -52,32 +55,33 @@ export function PackingListPrintModal({ document: doc, onClose }) {
         </div>
 
         {/* Printable Sheet */}
-        <div className="printable-sheet bg-white text-slate-900 p-6 md:p-8 rounded-2xl border border-slate-300 shadow-sm space-y-6">
+        <article className="operational-document packing-document printable-sheet bg-white text-slate-900 p-6 md:p-8 border border-slate-300 space-y-6">
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4">
             <div>
               <h2 className="text-xl font-black tracking-tight text-slate-950 uppercase">
-                PT. SINAR ANUGRAH
+                CV. SINAR ANUGRAH
               </h2>
               <p className="text-xs text-slate-600 font-medium">
                 Distribusi & Logistik Terpadu
               </p>
-              <p className="text-xs text-slate-600">
-                {doc.documentKind==='MANIFEST'?'Manifest Pengiriman':'Surat Perintah Muat / Packing List Muatan'}
-              </p>
+              <p className="text-xs text-slate-600">Distribusi barang ke outlet</p>
             </div>
             <div className="text-right">
-              <span className="text-sm font-mono font-black text-slate-900 block">
-                {doc.code}
-              </span>
-              <span className="text-xs text-slate-600 block">
-                Tanggal: {formattedDate}
-              </span>
+              <span className="text-sm font-mono font-black text-slate-900 block">{doc.code}</span>
+              <span className="text-xs text-slate-600 block">{formattedDate}</span>
               <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-300 inline-block mt-1">
                 Status: {doc.status === 'DRAFT' ? 'DRAFT ADMIN' : 'DIKIRIM KE GUDANG'} (Rev. {doc.revision || 1})
               </span>
             </div>
           </div>
+
+          <div className="operational-document-title">
+            <p>DOKUMEN OPERASIONAL PENGIRIMAN</p>
+            <h2>{doc.documentKind==='MANIFEST'?'MANIFEST PENGIRIMAN':'SURAT PERINTAH MUAT / PACKING LIST'}</h2>
+          </div>
+          <dl className="packing-letter-meta"><dt>Nomor</dt><dd>: {doc.code}</dd><dt>Tanggal</dt><dd>: {formattedDate}</dd><dt>Tujuan</dt><dd>: {doc.outlet?.name||'Outlet belum ditentukan'}</dd></dl>
+          <p className="packing-letter-intro">Mohon siapkan dan periksa muatan berikut sesuai rincian dokumen ini. Jumlah fisik dan penerimaan dicatat oleh pihak terkait pada saat pelaksanaan.</p>
 
           {/* Store & Delivery Info Grid */}
           <div className="grid grid-cols-2 gap-4 text-xs border border-slate-200 rounded-xl p-3.5 bg-slate-50/50">
@@ -212,7 +216,7 @@ export function PackingListPrintModal({ document: doc, onClose }) {
               <p className="text-slate-700 font-bold mt-1">( Stempel & Ttd Toko )</p>
             </div>
           </div>
-        </div>
+        </article>
       </div>
     </NativeDialog>
   );

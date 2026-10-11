@@ -54,8 +54,9 @@ export const createDeliveryRouteSchema = z.object({
     plannedEndAt: z.string().datetime().optional(),
     vehicleId: z.string().trim().min(1).max(128),
     driverId: z.string().trim().min(1).max(128),
+    departureDepotId:z.string().trim().min(1).max(20).optional(),
+    returnDepotId:z.string().trim().min(1).max(20).optional(),
     notes: z.string().optional(),
-    totalDistanceKm: z.number().nonnegative().optional(),
     stops: z.array(deliveryStopItemSchema).min(1, 'Minimal 1 toko tujuan'),
   }),
 });
@@ -63,7 +64,6 @@ export const createDeliveryRouteSchema = z.object({
 export const updateRouteStatusSchema = z.object({
   body: z.object({
     status: z.enum(['DRAFT', 'READY', 'IN_TRANSIT', 'COMPLETED', 'PARTIAL']),
-    totalDistanceKm: z.number().nonnegative().optional(),
   }),
   params: z.object({
     id: z.string().trim().min(1).max(128),
@@ -119,6 +119,7 @@ export const routeActionSchema = z.object({ body: z.object({
   stage:z.enum(['PICK','CHECK','LOAD']).optional(),ownerId:z.string().uuid().optional(),dueAt:z.string().datetime().optional(),assignmentRevision:z.number().int().nonnegative().optional(),
   note: z.string().trim().min(1).max(2000), cartons:z.number().int().nonnegative().optional(),
   quantities:z.record(z.number().int().nonnegative()).optional(), odometer:z.number().nonnegative().optional(), fuelLiters:z.number().nonnegative().optional(), documentsReturned:z.boolean().optional(),
+  latitude:z.number().min(-90).max(90).optional(),longitude:z.number().min(-180).max(180).optional(),accuracy:z.number().nonnegative().optional(),observedAt:z.string().datetime().optional(),photoUrl:z.string().optional(),
   plannedStartAt:z.string().datetime().optional(), plannedEndAt:z.string().datetime().optional(), vehicleId:z.string().min(1).optional(), driverId:z.string().min(1).optional()
 }) });
 export const locationSchema = z.object({ body:z.object({latitude:z.number().min(-90).max(90),longitude:z.number().min(-180).max(180),accuracy:z.number().nonnegative().max(100000),observedAt:z.string().datetime()}) });

@@ -1,4 +1,5 @@
 import { CODE_CONFIG_GROUPS } from './coding.mjs';
+import {DEFAULT_DELIVERY_DEPOTS,formatDeliveryDepots} from './delivery-depots.mjs';
 import { OPERATIONAL_CONFIG_GROUPS } from './operational-policy.mjs';
 import {parseAuditItems} from './supervision-checklist.mjs';
 import {parseReasonOptions} from './visit-reasons.mjs';
@@ -151,6 +152,13 @@ export const CONFIG_DEFINITIONS = [
         defaultValue: 107.489953,
         min: -180,
         max: 180,
+      },
+      {
+        key: 'DELIVERY_DEPOT_LOCATIONS',
+        label: 'Titik berangkat dan kembali pengiriman',
+        description: 'Satu lokasi per baris: kode|nama|latitude|longitude. Pilih titik berangkat dan kembali secara terpisah saat membuat trip; perubahan daftar tidak mengubah trip lama.',
+        type: 'depot-list',
+        defaultValue: DEFAULT_DELIVERY_DEPOTS,
       },
     ],
   },
@@ -341,7 +349,8 @@ export const CONFIG_DEFINITIONS = [
     groupColor: 'violet',
     params: [
       {key:'DELIVERY_REQUIRE_PHOTO',label:'Wajib bukti foto pengiriman',description:'Foto wajib pada absensi supir dan hasil pengiriman.',type:'boolean',defaultValue:true},
-      {key:'DELIVERY_REQUIRE_GEOFENCE',label:'Batasi absensi supir dengan radius toko',description:'Berlaku saat bukti presensi tujuan diwajibkan. Memerlukan GPS; radius mengikuti master outlet.',type:'boolean',defaultValue:false},
+      {key:'DELIVERY_REQUIRE_GEOFENCE',label:'Periksa selisih GPS supir dan titik toko',description:'Memerlukan GPS dan titik toko. Absensi di luar radius tetap disimpan, lalu ditandai untuk pemeriksaan Admin agar titik toko yang keliru dan bukti supir dapat dibedakan.',type:'boolean',defaultValue:false},
+      {key:'DELIVERY_LOCATION_REVIEW_METERS',label:'Ambang selisih lokasi pengiriman',description:'Jarak GPS absensi dari titik toko yang memicu tugas pemeriksaan Admin. Tidak otomatis menyimpulkan kesalahan supir atau master toko.',type:'number',defaultValue:200,min:20,max:10000,unit:'meter'},
       {key:'DELIVERY_ALLOW_REDELIVERY',label:'Izinkan pengiriman ulang barang retur',description:'Sisa barang dapat dialokasikan kembali hanya setelah gudang mengonfirmasi penerimaan retur.',type:'boolean',defaultValue:true},
       {key:'ORDER_PRICES_INCLUDE_TAX',label:'Harga produk sudah termasuk pajak',description:'Aktif: nominal order tetap harga katalog, komponen pajak dicatat. Nonaktif: pajak parameter ditambahkan ke nominal.',type:'boolean',defaultValue:true},
 
@@ -448,6 +457,7 @@ for(let index=CONFIG_DEFINITIONS.length-1;index>=0;index--)if(!CONFIG_DEFINITION
 export const CONFIG_PARAMS = CONFIG_DEFINITIONS.flatMap(group => group.params);
 export const CONFIG_DEFAULTS = Object.fromEntries(CONFIG_PARAMS.map(param => [param.key, param.defaultValue]));
 export function parseConfigValue(param, raw) {
+  if(param.type==='depot-list')return formatDeliveryDepots(raw);
   if(param.key==='EVIDENCE_IMAGE_FORMATS')return evidenceImageFormats(raw).join(',');
   if(param.type==='catalog')return VISIT_REFERENCE_CATALOGS[param.key]?visitCatalog(param.key,{[param.key]:raw}):parseReferenceCatalog(raw);
   if(Object.hasOwn(REPORT_PRESENTATION,param.key))return reportSelection(param.key,raw).join(',');

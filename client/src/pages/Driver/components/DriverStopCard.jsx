@@ -1,5 +1,5 @@
 import {DeliveryReceiptSummary} from '../../../shared/components/common/DeliveryReceiptSummary';
-import {deliveryNavigationUrl} from '../../../../../shared/driver-workspace.mjs';
+import {deliveryNavigationUrl,stopDestinationOutlet} from '../../../../../shared/driver-workspace.mjs';
 import {unitDescription} from '../../../../../shared/product-units.mjs';
 import React from 'react';
 import { LuMapPin, LuPackage, LuFileText, LuCamera, LuCircleCheck, LuCircleX, LuClock, LuNavigation } from 'react-icons/lu';
@@ -98,9 +98,9 @@ export const DriverStopCard = ({ stop, index, totalStops, onAbsenIn, onMarkDeliv
       {stop.status==='PENDING' && (
         <div className="px-4 pb-4 space-y-2.5">
           {/* Navigation button (min 48px) */}
-          {deliveryNavigationUrl(stop.outlet) && (
+          {deliveryNavigationUrl(stopDestinationOutlet(stop)) && (
             <a
-              href={deliveryNavigationUrl(stop.outlet)}
+              href={deliveryNavigationUrl(stopDestinationOutlet(stop))}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 text-sm font-bold transition-all shadow-xs"

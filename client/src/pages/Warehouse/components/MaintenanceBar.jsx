@@ -2,7 +2,7 @@ import React from 'react';
 import { FiAlertTriangle } from "react-icons/fi"; // Use fi-icons for missing lu-icons
 
 export const MaintenanceBar = ({status}) => {
-  const {label,used,percentage,remaining,threshold,enabled,known,source,state}=status;
+  const {label,used,percentage,remaining,threshold,enabled,known,source,state,distanceEstimated}=status;
   let colorClass = 'bg-primary';
   let alert = false;
   if (state==='OVERDUE') {
@@ -27,7 +27,7 @@ export const MaintenanceBar = ({status}) => {
       }} />
       </div>
       <div className="text-[10px] text-right mt-1 text-on-surface-variant">
-        {!enabled?'Pengingat dinonaktifkan':!known?'Belum dapat dihitung':alert?'Interval servis terlampaui':`Sisa ${Math.round(remaining).toLocaleString('id-ID')} km`} · {source==='VEHICLE'?'Interval khusus kendaraan':'Interval profil'}
+        {!enabled?'Pengingat dinonaktifkan':!known?'Belum dapat dihitung':alert?'Interval servis terlampaui':`Sisa ${Math.round(remaining).toLocaleString('id-ID')} km`} · {distanceEstimated?'berdasarkan jarak rute perkiraan · ':''}{source==='VEHICLE'?'Interval khusus kendaraan':'Interval profil'}
       </div>
     </div>;
 };

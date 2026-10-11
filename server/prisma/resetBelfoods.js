@@ -18,7 +18,8 @@ try{
  assert.ok(dry||args.includes('--reset'),'Specify --reset or --dry-run explicitly');
  assert.equal(sourceData().outlets.length,20);
  const tables=await db.$queryRaw`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
- assert.deepEqual(tables.map(t=>t.tablename).filter(t=>t!=='_prisma_migrations').sort(),models.map(m=>m.table).sort(),'Unknown/missing tables; reset refuses to cascade into unclassified data');
+ const auxiliary=['socket_io_attachments'];
+ assert.deepEqual(tables.map(t=>t.tablename).filter(t=>t!=='_prisma_migrations'&&!auxiliary.includes(t)).sort(),models.map(m=>m.table).sort(),'Unknown/missing tables; reset refuses to cascade into unclassified data');
  const migrations=await db.$queryRaw`SELECT migration_name,finished_at,rolled_back_at FROM _prisma_migrations ORDER BY migration_name`;
  assert.ok(migrations.every(m=>m.finished_at||m.rolled_back_at),'Unfinished migration');
  const before=await snapshot(db),counts=Object.fromEntries(Object.entries(before).map(([key,rows])=>[key,rows.length]));
@@ -35,7 +36,7 @@ try{
   writeFileSync(`${backup}.json`,JSON.stringify({target,host:url.hostname,date:new Date().toISOString(),sha256:createHash('sha256').update(readFileSync(backup)).digest('hex'),counts,note:'pg_restore --list passed; backup includes the full previous database. Not a tested restoration.'},null,2));
   console.log(`Backup verified: ${backup}`);
  }
- const date=seedDate(),quoted=models.map(m=>{assert.match(m.table,/^[A-Za-z_][A-Za-z0-9_]*$/);return `"public"."${m.table}"`;}).join(', ');
+ const date=seedDate(),quoted=[...models.map(m=>m.table),...auxiliary.filter(name=>tables.some(table=>table.tablename===name))].map(name=>{assert.match(name,/^[A-Za-z_][A-Za-z0-9_]*$/);return `"public"."${name}"`;}).join(', ');
  let report;
  try{await db.$transaction(async tx=>{
   await tx.$executeRawUnsafe(`TRUNCATE TABLE ${quoted} RESTART IDENTITY`);

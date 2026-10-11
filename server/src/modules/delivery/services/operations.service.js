@@ -2,6 +2,7 @@ import {canTripAction} from '../../../../../shared/trip-permissions.mjs';
 import {canDomainAction} from '../../../../../shared/domain-permissions.mjs';
 import {freshDomainActor} from '../../../middlewares/domain-permission.middleware.js';
 import {assertEvidenceImages} from '../../../utils/evidence-images.js';
+import {gpsEvidence} from '../../../utils/gps-evidence.js';
 import {locationExpired} from '../../../../../shared/location-retention.mjs';
 import {policyNotification} from '../../notifications/services/notification-policy.service.js';
 import {preparationStages,preparationReady,preparationOwnerProblem,departureChecklist} from '../../../../../shared/warehouse-policy.mjs';
@@ -19,10 +20,18 @@ import { packingBalance } from '../../../../../shared/packing.mjs';
 import {invoiceReconciliation} from '../../../../../shared/invoice-reconciliation.mjs';
 import { wibDayRange, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import {inTransaction} from '../../../utils/in-transaction.js';
+import {recordMileageReturn,mileagePlanForRoute} from './vehicle-mileage-ledger.service.js';
+import {calculateDistanceMeters} from '../../../utils/geolocation.js';
 
 export const operationsInclude = { vehicle: true, driver: { select: { id: true, name: true } }, position: true, stops: { orderBy: { sequence: 'asc' }, include: { outlet: true, attendances: { orderBy: { timestamp: 'asc' } }, packingList: { include: { invoices: true } } } } };
 const fail = message => { throw new AppError(message, 409); };
 export const routeEvent = (route, action, actor, detail) => [...(route.history || []), { action, actorId: actor.id, actorName: actor.name, at: new Date().toISOString(), detail }];
+async function flagEndpointMismatch(tx,route,user,kind,planned,actual){
+ if(planned?.latitude==null||planned?.longitude==null)return;
+ const distance=calculateDistanceMeters(planned.latitude,planned.longitude,actual.latitude,actual.longitude);
+ if(distance<=await getDynamicConfig('DELIVERY_LOCATION_REVIEW_METERS',200))return;
+ await tx.deliveryIssue.create({data:{routeId:route.id,title:`Periksa titik ${kind} trip`,reason:`GPS ${kind} berjarak ${Math.round(distance)} meter dari lokasi operasional yang direncanakan. Periksa foto, akurasi GPS, serta pilihan titik; penyebab belum ditentukan.`,ownerId:route.createdById,createdById:user.id,dueAt:new Date(Date.now()+(await getDynamicConfig('DELIVERY_ISSUE_DEFAULT_HOURS',24))*3600000),history:[{action:'TRIP_ENDPOINT_DISCREPANCY',actorId:user.id,at:new Date().toISOString(),distanceMeters:distance,planned,actual}]}});
+}
 
 export async function routeAction(id, data, user, attempt=0,{db=prisma,validateOnly=false}={}) {
   if(!canTripAction(user,data.action))throw new AppError('Anda tidak memiliki izin untuk tindakan trip ini.',403);
@@ -34,7 +43,7 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
     if (user.role === 'SUPIR' && (r.driverId !== user.id || !['START', 'RETURN'].includes(data.action))) throw new AppError('Aksi bukan tugas Anda', 403);
     if (r.closedAt || r.cancelledAt) fail('Trip sudah ditutup/dibatalkan');
     const { action, note } = data;
-    const stages=preparationStages(r.policySnapshot?.values),odometerRequired=await processValue(r,'TRIP_REQUIRE_ODOMETER',true);
+    const stages=preparationStages(r.policySnapshot?.values),odometerRequired=await processValue(r,'TRIP_REQUIRE_ODOMETER',false);
     if (!note?.trim()) throw new AppError('Catatan tindakan wajib', 400);
     let change = {};
     if (['PICK', 'CHECK', 'LOAD'].includes(action)) {
@@ -66,17 +75,32 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
       await policyNotification(tx,{data:{userId:owner.id,type:'DELIVERY_PREPARATION',title:`Tugas persiapan ${r.code}`,message:note,payload:{routeId:id,stage:data.stage,dueAt:data.dueAt}}});
     } else if (action === 'START') {
       if (r.status !== 'READY' || !preparationReady(r) || r.onHold) fail('Loading harus selesai dan trip tidak ditahan');
+      if(!Number.isFinite(data.latitude)||!Number.isFinite(data.longitude)||Math.abs(data.latitude)>90||Math.abs(data.longitude)>180||!data.photoUrl)throw new AppError('Foto dan titik GPS saat berangkat wajib diambil dari perangkat supir.',422);
+      await assertEvidenceImages({photoUrl:data.photoUrl},{entity:r,values:r.policySnapshot?.warehouseEvidence?.values});
+      const departureGps=await gpsEvidence(data,(key,fallback)=>processValue(r,key,fallback));
       await assertEvidenceImages({photos:Object.values(data.departureAnswers?._evidence||{})},{entity:r,values:r.policySnapshot?.warehouseEvidence?.values});
       let checklist;
       try{const values=r.policySnapshot?.values||{TRIP_DEPARTURE_CHECKLIST:await processValue(r,'TRIP_DEPARTURE_CHECKLIST',[]),TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST:await processValue(r,'TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST',true)};checklist=departureChecklist(values,data.departureAnswers||{});}catch(error){throw new AppError(error.message,422);}
       const vehicle = await assertResources(tx, r);
       if (odometerRequired&&(!Number.isFinite(data.odometer) || data.odometer < vehicle.totalKm) || data.odometer!=null&&(!Number.isFinite(data.odometer)||data.odometer<vehicle.totalKm)) fail('Odometer awal harus minimal kilometer kendaraan saat ini');
-      change = { status: 'IN_TRANSIT', departedAt: new Date(), odometerStart: data.odometer??null,preparation:{...r.preparation,DEPARTURE:{...checklist,actorId:user.id,actorName:user.name,at:new Date().toISOString(),note}} };
+      const departurePlan=await mileagePlanForRoute(tx,r);
+      await flagEndpointMismatch(tx,r,user,'berangkat',departurePlan.depot,{latitude:data.latitude,longitude:data.longitude,accuracy:data.accuracy??null});
+      change = { status: 'IN_TRANSIT', departedAt: new Date(), odometerStart: data.odometer??null,mileagePlan:{...departurePlan,actualDeparture:{latitude:data.latitude,longitude:data.longitude,accuracy:data.accuracy??null,observedAt:departureGps?.observedAt||null}},preparation:{...r.preparation,DEPARTURE:{...checklist,actorId:user.id,actorName:user.name,at:new Date().toISOString(),note,photoUrl:data.photoUrl,gps:{latitude:data.latitude,longitude:data.longitude,...departureGps}}} };
+      if(data.odometer!=null){
+        await tx.vehicle.update({where:{id:vehicle.id},data:{totalKm:data.odometer,estimatedKm:data.odometer}});
+        await tx.auditEvent.create({data:{actorId:user.id,actorName:user.name,action:'VEHICLE_MILEAGE_START',entityType:'VEHICLE',entityId:vehicle.id,before:{totalKm:vehicle.totalKm,estimatedKm:vehicle.estimatedKm},after:{totalKm:data.odometer,estimatedKm:data.odometer,routeId:id,source:'DRIVER_ODOMETER'}}});
+      }
     } else if (action === 'RETURN') {
       if (!r.stops.length || !r.stops.every(s => terminalStop(s.status))) fail('Selesaikan hasil semua toko sebelum kembali gudang');
       if (r.returnedAt) fail('Kembali gudang sudah tercatat');
+      if(!Number.isFinite(data.latitude)||!Number.isFinite(data.longitude)||Math.abs(data.latitude)>90||Math.abs(data.longitude)>180||!data.photoUrl)throw new AppError('Foto dan titik GPS saat kembali wajib diambil dari perangkat.',422);
+      await assertEvidenceImages({photoUrl:data.photoUrl},{entity:r,values:r.policySnapshot?.warehouseEvidence?.values});
+      const returnGps=await gpsEvidence(data,(key,fallback)=>processValue(r,key,fallback));
       if ((odometerRequired||data.odometer!=null)&&(!Number.isFinite(r.odometerStart) || !Number.isFinite(data.odometer) || data.odometer < r.odometerStart)) fail('Odometer akhir/awal belum valid; gunakan rekonsiliasi trip lama bila diperlukan');
-      change = { returnedAt: new Date(), odometerEnd: data.odometer??null, actualDistanceKm: data.odometer!=null&&r.odometerStart!=null?data.odometer-r.odometerStart:null, actualFuelLiters: data.fuelLiters ?? null };
+      const returnPlan={...await mileagePlanForRoute(tx,r),actualReturn:{latitude:data.latitude,longitude:data.longitude,accuracy:data.accuracy??null,observedAt:returnGps?.observedAt||null}};
+      await flagEndpointMismatch(tx,r,user,'kembali',returnPlan.returnDepot||returnPlan.depot,returnPlan.actualReturn);
+      const {mileagePlan,estimatedTravelKm,mileagePendingCount,history}=await recordMileageReturn(tx,{...r,mileagePlan:returnPlan},user.id);
+      change = { returnedAt: new Date(), odometerEnd: data.odometer??null, actualDistanceKm: data.odometer!=null&&r.odometerStart!=null?data.odometer-r.odometerStart:null, actualFuelLiters: data.fuelLiters ?? null,mileagePlan,estimatedTravelKm,mileagePendingCount,history,preparation:{...r.preparation,RETURN:{actorId:user.id,actorName:user.name,at:new Date().toISOString(),note,photoUrl:data.photoUrl,gps:{latitude:data.latitude,longitude:data.longitude,...returnGps}}} };
     } else if (action === 'LEGACY_ODOMETER') {
       if (r.odometerStart != null || r.departedAt || !['IN_TRANSIT', 'COMPLETED', 'PARTIAL'].includes(r.status)) fail('Koreksi ini hanya untuk trip lama tanpa odometer awal');
       if (!Number.isFinite(data.odometer)) fail('Isi odometer awal aktual trip lama');
@@ -84,13 +108,20 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
     } else if (action === 'CLOSE') {
       if (!r.returnedAt || !r.stops.every(s => terminalStop(s.status))) fail('Catat kembali gudang dan selesaikan semua toko');
       if (await processValue(r,'TRIP_REQUIRE_RETURN_INSPECTION',true)&&r.stops.some(s => s.rejectedCartons > 0 && !s.returnInspection)) fail('Selesaikan pemeriksaan retur terlebih dahulu');
-      if (await processValue(r,'TRIP_BLOCK_OPEN_ISSUES',true)&&await tx.deliveryIssue.count({ where: { routeId: id, status: 'OPEN' } })) fail('Masih ada masalah trip yang belum diselesaikan');
+      if (await processValue(r,'TRIP_BLOCK_OPEN_ISSUES',true)){
+        const openIssues=await tx.deliveryIssue.findMany({where:{routeId:id,status:'OPEN'},select:{history:true}});
+        if(openIssues.some(issue=>!(issue.history||[]).some(event=>event.action==='LOCATION_DISCREPANCY')))fail('Masih ada masalah trip yang belum diselesaikan');
+      }
       if (await processValue(r,'TRIP_REQUIRE_DOCUMENT_RETURN',true)&&!data.documentsReturned) fail('Konfirmasi dokumen pengiriman telah direkonsiliasi');
       change = { closedAt: new Date(), documentsReturned: data.documentsReturned===true, onHold: false, odometerPostedAt: new Date() };
-      // Actual odometer is authoritative; never add planned distance to vehicle mileage.
+      // Actual odometer reconciles the trip estimate; both values retain an audit event.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`vehicle:${r.vehicleId}`}))`;
       const v = await tx.vehicle.findUnique({ where: { id: r.vehicleId } });
-      if(Number.isFinite(r.odometerEnd))await tx.vehicle.update({ where: { id: r.vehicleId }, data: { totalKm: Math.max(v.totalKm, r.odometerEnd) } });
+      if(Number.isFinite(r.odometerEnd)){
+        const actualKm=Math.max(v.totalKm,r.odometerEnd);
+        await tx.vehicle.update({ where: { id: r.vehicleId }, data: { totalKm:actualKm,estimatedKm:actualKm } });
+        await tx.auditEvent.create({data:{actorId:user.id,actorName:user.name,action:'VEHICLE_MILEAGE_RECONCILED',entityType:'VEHICLE',entityId:r.vehicleId,before:{totalKm:v.totalKm,estimatedKm:v.estimatedKm},after:{totalKm:actualKm,estimatedKm:actualKm,routeId:id,odometerEnd:r.odometerEnd,estimatedTravelKm:r.estimatedTravelKm}}});
+      }
     } else if (action === 'HOLD') {
       change = { onHold: true };
     } else if (action === 'RESUME') {
@@ -111,8 +142,9 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
       await tx.deliveryStop.deleteMany({ where: { deliveryRouteId: id } });
       change = { cancelledAt: new Date(), onHold: false };
     } else throw new AppError('Aksi tidak dikenal', 400);
-    return tx.deliveryRoute.update({ where: { id }, data: { ...change, history: routeEvent(r, action, user, { ...data, ...(action === 'CANCEL' ? { stops: r.stops.map(s=>({id:s.id,packingListId:s.packingListId,allocatedCartons:s.allocatedCartons,allocatedItems:s.allocatedItems,allocatedInvoices:s.allocatedInvoices})) } : {}) }) }, include: operationsInclude });
-  }, { isolationLevel: 'Serializable' }).catch(error=>{
+    const {photoUrl,...historyData}=data;
+    return tx.deliveryRoute.update({ where: { id }, data: { ...change, history: routeEvent({...r,history:change.history||r.history}, action, user, { ...historyData,...(photoUrl?{photoCaptured:true}:{}), ...(action === 'CANCEL' ? { stops: r.stops.map(s=>({id:s.id,packingListId:s.packingListId,allocatedCartons:s.allocatedCartons,allocatedItems:s.allocatedItems,allocatedInvoices:s.allocatedInvoices})) } : {}) }) }, include: operationsInclude });
+  }, { isolationLevel: 'Serializable',timeout:40000 }).catch(error=>{
     if(error.code==='P2034'&&attempt<2&&db===prisma)return routeAction(id,data,user,attempt+1,{db,validateOnly});
     throw error;
   });
@@ -120,11 +152,12 @@ export async function routeAction(id, data, user, attempt=0,{db=prisma,validateO
 
 export async function operationsDashboard(date) {
   if(date && (!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(+new Date(date))))throw new AppError('Tanggal pemantauan tidak valid',400);
-  const [routes, packings, orders, issues, people] = await Promise.all([
-    prisma.deliveryRoute.findMany({ where: { OR: [{ closedAt: null, cancelledAt: null }, { date: wibDayRange(date || new Date()) }] }, include: operationsInclude, orderBy: { date: 'asc' } }),
+  const issues=await prisma.deliveryIssue.findMany({ where: { status: 'OPEN' }, orderBy: { dueAt: 'asc' } });
+  const reviewRouteIds=issues.filter(issue=>(issue.history||[]).some(item=>item.action==='LOCATION_DISCREPANCY')).map(issue=>issue.routeId).filter(Boolean);
+  const [routes, packings, orders, people] = await Promise.all([
+    prisma.deliveryRoute.findMany({ where: { OR: [{ closedAt: null, cancelledAt: null }, { date: wibDayRange(date || new Date()) }, { mileagePendingCount:{gt:0} }, {id:{in:reviewRouteIds}}] }, include: operationsInclude, orderBy: { date: 'asc' } }),
     prisma.packingList.findMany({ include: { outlet: true, invoices: true, deliveryStops: true }, orderBy: { createdAt: 'asc' } }),
     prisma.order.findMany({ where: { deletedAt: null, status: { in: ['APPROVED', 'PENDING_APPROVAL'] } }, include: { items: { include: { product: true } }, pjpStop: { include: { outlet: true } }, createdByUser: { select: { name: true } } }, orderBy: { createdAt: 'asc' } }),
-    prisma.deliveryIssue.findMany({ where: { status: 'OPEN' }, orderBy: { dueAt: 'asc' } }),
     prisma.user.findMany({ where: { deletedAt: null, role: { in: ['ADMIN', 'KEPALA_GUDANG', 'SUPIR'] } }, select: { id: true, name: true, role: true,roleCode:true,permissions:true } }),
   ]);
   const enriched = orders.map(o => fulfillment(orderSnapshot(o), packings));
@@ -140,6 +173,8 @@ export async function operationsDashboard(date) {
       !r.cancelledAt && !r.closedAt && !r.departedAt && r.plannedStartAt && +new Date(r.plannedStartAt) < now ? 'Lewat jadwal berangkat' : null,
       !r.closedAt && !r.cancelledAt && r.plannedEndAt && +new Date(r.plannedEndAt) < now ? 'Lewat target selesai' : null,
       r.onHold ? 'Trip ditahan' : null,
+      r.mileagePendingCount>0?`${r.mileagePendingCount} leg jarak menunggu layanan rute jalan`:null,
+      r.departedAt&&!r.returnedAt&&!r.closedAt&&!r.cancelledAt&&policies.get(r.driverId)?.enabled!==false&&!routeLocation(r,now,policies.get(r.driverId))?.isLive?'GPS kendaraan tidak terkini; posisi terakhir atau absensi tetap ditampilkan':null,
       ...Object.entries(r.preparation?.tasks||{}).filter(([stage,task])=>!r.preparation?.[stage]&&+new Date(task.dueAt)<now&&!r.cancelledAt&&!r.closedAt).map(([stage,task])=>`${{PICK:'Penyiapan',CHECK:'Pemeriksaan',LOAD:'Loading'}[stage]} terlambat · ${task.ownerName}`),
       r.stops.some(s => s.rejectedCartons > 0 && !s.returnInspection) ? 'Retur belum diperiksa' : null,
     ].filter(Boolean) })) };
@@ -164,7 +199,12 @@ export const resolveIssue = (id, resolution, user) => prisma.$transaction(async 
   const issue = await tx.deliveryIssue.findUnique({ where: { id } });
   if (!issue || issue.status !== 'OPEN') fail('Masalah tidak ditemukan atau sudah selesai');
   if(user.role==='SUPIR' && issue.ownerId!==user.id)throw new AppError('Tindak lanjut bukan tugas Anda',403);
-  const changed = await tx.deliveryIssue.updateMany({ where: { id, status: 'OPEN' }, data: { status: 'DONE', resolution, resolvedAt: new Date(), history: [...issue.history, { action: 'RESOLVE', actorId: user.id, at: new Date().toISOString(), resolution }] } });
+  const locationReview=(issue.history||[]).some(item=>item.action==='LOCATION_DISCREPANCY');
+  if(locationReview){
+    if(user.role!=='ADMIN')throw new AppError('Selisih titik toko dan absensi harus diputuskan Admin.',403);
+    if(!/^(MASTER_POINT_WRONG|DRIVER_ATTENDANCE_INVALID|GPS_INACCURATE|LEGITIMATE_DIFFERENCE):\s*.{10,}$/s.test(resolution))throw new AppError('Pilih hasil pemeriksaan lokasi dan tulis alasan minimal 10 karakter. Jika belum dapat dipastikan, biarkan tugas tetap terbuka.',400);
+  }
+  const changed = await tx.deliveryIssue.updateMany({ where: { id, status: 'OPEN' }, data: { status: 'DONE', resolution, resolvedAt: new Date(), history: [...issue.history, { action: 'RESOLVE', actorId: user.id, at: new Date().toISOString(), resolution,locationOutcome:locationReview?resolution.split(':')[0]:null }] } });
   if (!changed.count) fail('Masalah telah diproses');
   return { id, status: 'DONE' };
 }, { timeout:15000 });

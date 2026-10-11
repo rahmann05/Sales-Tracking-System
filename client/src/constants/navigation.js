@@ -35,6 +35,7 @@ export const TAB_IDS = Object.freeze({
     ADMIN_PJP: 'admin-pjp',
     ADMIN_ATTENDANCE: 'admin-attendance',
     ADMIN_MASTERS: 'admin-masters',
+    ADMIN_VEHICLES: 'admin-vehicles',
     DASHBOARD: 'dashboard',
     DAILY_CALL_MONITOR: 'daily-call-monitor',
     ROUTE_PLANNING: 'route-planning',
@@ -106,7 +107,8 @@ export const getNavigationTabs = (userOrRole) => {
         {id:TAB_IDS.ADMIN_PRODUCTS,label:'Katalog produk',icon:LuPackage},
         {id:TAB_IDS.ADMIN_PJP,label:'Siapkan PJP',icon:LuClipboardList},
         {id:TAB_IDS.ADMIN_ATTENDANCE,label:'Absensi staf',icon:LuUsers},
-        {id:TAB_IDS.ADMIN_MASTERS,label:'Divisi & kendaraan',icon:LuTruck}
+        {id:TAB_IDS.ADMIN_MASTERS,label:'Master divisi',icon:LuLayoutGrid},
+        {id:TAB_IDS.ADMIN_VEHICLES,label:'Kendaraan & servis',icon:LuTruck}
     );
 
     // 0. Persetujuan Order & Unlock (Admin atau yang punya izin)
@@ -293,7 +295,7 @@ export function isTabPermissionAllowed(tabId,user) {
   }
   if(tabId===TAB_IDS.SYSTEM_CONFIG)return user?.role===ROLES.ADMIN&&user.permissions?.can_manage_system_config!==false;
   if(tabId===TAB_IDS.USER_MANAGEMENT)return user?.role===ROLES.ADMIN&&['can_manage_users','can_manage_roles'].some(key=>user.permissions?.[key]!==false);
-  if ([TAB_IDS.SYSTEM_CONFIG,TAB_IDS.USER_MANAGEMENT,TAB_IDS.ADMIN_ATTENTION,TAB_IDS.ADMIN_PRODUCTS,TAB_IDS.ADMIN_PJP,TAB_IDS.ADMIN_ATTENDANCE,TAB_IDS.ADMIN_MASTERS].includes(tabId)) return user.role===ROLES.ADMIN;
+  if ([TAB_IDS.SYSTEM_CONFIG,TAB_IDS.USER_MANAGEMENT,TAB_IDS.ADMIN_ATTENTION,TAB_IDS.ADMIN_PRODUCTS,TAB_IDS.ADMIN_PJP,TAB_IDS.ADMIN_ATTENDANCE,TAB_IDS.ADMIN_MASTERS,TAB_IDS.ADMIN_VEHICLES].includes(tabId)) return user.role===ROLES.ADMIN;
   const keys=TAB_PERMISSION_KEYS[tabId];
   return !keys || keys.some(key=>user.permissions?.[key]!==false);
 }

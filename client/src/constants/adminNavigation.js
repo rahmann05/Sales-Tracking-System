@@ -3,7 +3,7 @@ import {LuFileCheck,LuTruck,LuStore,LuUsers,LuClipboardList,LuChartColumn,LuSett
 
 const GROUPS=[
   {id:'orders',label:'Order',icon:LuFileCheck,description:'Periksa order, rincian barang, dan keputusan persetujuan.',tabs:[TAB_IDS.ADMIN_APPROVAL,TAB_IDS.ADMIN_PRODUCTS]},
-  {id:'delivery',label:'Packing & pengiriman',icon:LuTruck,description:'Siapkan packing, alokasikan kendaraan, dan pantau perjalanan.',tabs:[TAB_IDS.DELIVERY_PACKING_LIST,TAB_IDS.DELIVERY_ROUTES,TAB_IDS.DELIVERY_MONITOR]},
+  {id:'delivery',label:'Packing & pengiriman',icon:LuTruck,description:'Siapkan packing, armada, dan pantau perjalanan.',tabs:[TAB_IDS.DELIVERY_PACKING_LIST,TAB_IDS.DELIVERY_ROUTES,TAB_IDS.DELIVERY_MONITOR,TAB_IDS.ADMIN_VEHICLES]},
   {id:'outlets',label:'Outlet',icon:LuStore,description:'Kelola pelanggan, persetujuan, dan ketepatan lokasi.',tabs:[TAB_IDS.OUTLET_MANAGEMENT,TAB_IDS.OUTLET_APPROVAL,TAB_IDS.OUTLET_VALIDATION,TAB_IDS.DASHBOARD]},
   {id:'sales',label:'Sales & wilayah',icon:LuUsers,description:'Pantau kunjungan, atur tim, wilayah, dan jadwal kerja.',tabs:[TAB_IDS.DAILY_CALL_MONITOR,TAB_IDS.TEAM_TRACKING,TAB_IDS.ROUTE_PLANNING,TAB_IDS.ADMIN_PJP]},
   {id:'attention',label:'Tindak lanjut',icon:LuClipboardList,description:'Tuntaskan pekerjaan yang membutuhkan penanggung jawab dan keputusan.',tabs:[TAB_IDS.ADMIN_ATTENTION]},
@@ -14,7 +14,8 @@ const TOOLS=[
   {id:TAB_IDS.ADMIN_PRODUCTS,label:'Katalog produk',description:'Kelola produk, satuan dan harga referensi order.',icon:LuPackage},
   {id:TAB_IDS.ADMIN_PJP,label:'Siapkan PJP',description:'Siapkan penomoran dan jadwal kunjungan harian.',icon:LuCalendarDays},
   {id:TAB_IDS.ADMIN_ATTENDANCE,label:'Absensi staf',description:'Periksa rekap kehadiran staf.',icon:LuUsers},
-  {id:TAB_IDS.ADMIN_MASTERS,label:'Divisi & kendaraan',description:'Kelola referensi divisi dan kapasitas armada.',icon:LuTruck},
+  {id:TAB_IDS.ADMIN_MASTERS,label:'Master divisi',description:'Kelola referensi divisi.',icon:LuSettings},
+  {id:TAB_IDS.ADMIN_VEHICLES,label:'Kendaraan & servis',description:'Kelola armada, kilometer, dan servis.',icon:LuTruck},
 ];
 const DETAILS={
   [TAB_IDS.ADMIN_ATTENTION]:['Tindak lanjut','Periksa tenggat, penanggung jawab, dan pekerjaan lintas modul.'],
@@ -30,6 +31,7 @@ const DETAILS={
   [TAB_IDS.DELIVERY_PACKING_LIST]:['Packing list','Susun dokumen muatan dan kirim ke kepala gudang.'],
   [TAB_IDS.DELIVERY_ROUTES]:['Rute & alokasi mobil','Bagi muatan ke kendaraan dan tetapkan supir.'],
   [TAB_IDS.DELIVERY_MONITOR]:['Monitor pengiriman','Pantau perjalanan, hasil pengiriman, dan retur.'],
+  [TAB_IDS.ADMIN_VEHICLES]:['Kendaraan & servis','Kelola armada, kilometer, kondisi, dan riwayat servis.'],
   [TAB_IDS.REPORTS]:['Laporan operasional','Buka rekap kunjungan, absensi, dan penjualan.'],
   [TAB_IDS.OUTLET_REGISTRATION_REPORT]:['Laporan registrasi outlet','Telusuri status dan riwayat pengajuan toko baru.'],
   [TAB_IDS.USER_MANAGEMENT]:['Pengguna & hak akses','Kelola akun, role, dan izin fitur.'],

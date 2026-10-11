@@ -16,6 +16,7 @@ import {runScheduledPublications} from '../modules/pjp/services/publication-sche
 import {runAssignmentSchedules} from '../modules/config/services/assignment-schedules.service.js';
 import {runOutletChanges} from '../modules/outlets/services/outlet-change-queue.service.js';
 import {runAutoDelegation} from '../modules/config/services/auto-delegation.service.js';
+import {reconcilePendingMileage} from '../modules/delivery/services/reconcile-pending-mileage.service.js';
 
 export const initScheduler = () => {
   schedulerMonitor.register('AUTO_DELEGATION','Pengalihan pekerjaan otomatis',Date.now()+60000,60000);
@@ -36,6 +37,8 @@ export const initScheduler = () => {
   cron.schedule('0 * * * *',()=>{schedulerMonitor.run('HISTORY_RETENTION',retainSystemHistory,now=>now+3600000).catch(()=>console.error('[Scheduler]: History retention scan failed.'));},{timezone:'Asia/Jakarta'});
   schedulerMonitor.register('VEHICLE_SERVICE','Pengingat servis berkala',Date.now()+3600000,3600000);
   cron.schedule('0 * * * *',()=>{schedulerMonitor.run('VEHICLE_SERVICE',remindVehicleServices,now=>now+3600000).catch(()=>console.error('[Scheduler]: Vehicle service reminder scan failed.'));},{timezone:'Asia/Jakarta'});
+  schedulerMonitor.register('MILEAGE_ROAD_RECONCILE','Hitung ulang leg jalan tertunda',Date.now()+5*60000,5*60000);
+  cron.schedule('*/5 * * * *',()=>{schedulerMonitor.run('MILEAGE_ROAD_RECONCILE',reconcilePendingMileage,now=>now+5*60000).catch(()=>console.error('[Scheduler]: Pending road mileage reconciliation failed.'));},{timezone:'Asia/Jakarta'});
   schedulerMonitor.register('GPS_RETENTION','Masa simpan telemetri GPS',Date.now()+3600000,3600000);
   cron.schedule('0 * * * *',()=>{schedulerMonitor.run('GPS_RETENTION',purgeExpiredLocations,now=>now+3600000).catch(()=>console.error('[Scheduler]: GPS telemetry retention scan failed.'));},{timezone:'Asia/Jakarta'});
   schedulerMonitor.register('NOTIFICATIONS','Siaran notifikasi setelah transaksi',Date.now()+5000,15000);

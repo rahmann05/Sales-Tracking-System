@@ -2,8 +2,8 @@ import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
 import { PackingAllocationFields } from './PackingAllocationFields';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 import { useApp } from '../../../context/AppContext';
-import { calculateFuelCost, evaluateDropProfitability } from '../../../services/logisticsOptimizerService';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import {DEFAULT_DELIVERY_DEPOTS,parseDeliveryDepots} from '../../../../../shared/delivery-depots.mjs';
 import React, { useState, useEffect,useRef } from 'react';
 import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
 import { deliveryApi, vehiclesApi } from '../../../services/api';
@@ -20,7 +20,6 @@ export const CreateRouteForm = ({
   const {
     settings
   } = useApp();
-  const [estimatedKm, setEstimatedKm] = useState('');
   const [date, setDate] = useState(() => wibDateKey());
   const [startTime,setStartTime]=useState('08:00');
   const [endTime,setEndTime]=useState('17:00');
@@ -29,10 +28,13 @@ export const CreateRouteForm = ({
   const [packingLists, setPackingLists] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [selectedDriver, setSelectedDriver] = useState('');
+  const depots=parseDeliveryDepots(settings.DELIVERY_DEPOT_LOCATIONS||DEFAULT_DELIVERY_DEPOTS);
+  const [departureDepotId,setDepartureDepotId]=useState('');
+  const [returnDepotId,setReturnDepotId]=useState('');
   const [selectedPLs, setSelectedPLs] = useState([]); // Array of { packingListId, outletId, outletName, totalCartons }
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const snapshot=JSON.stringify([code,estimatedKm,date,startTime,endTime,selectedVehicle,selectedDriver,selectedPLs,notes]);
+  const snapshot=JSON.stringify([code,date,startTime,endTime,selectedVehicle,selectedDriver,departureDepotId,returnDepotId,selectedPLs,notes]);
   const initialSnapshot=useRef(snapshot);
   const dirty=snapshot!==initialSnapshot.current;
   useUnsavedNavigation(dirty,submitting);
@@ -98,13 +100,6 @@ export const CreateRouteForm = ({
   const totalCartons = selectedPLs.reduce((sum, s) => sum + (s.totalCartons || 0), 0);
   const selectedVehicleObj = vehicles.find(v => v.id === selectedVehicle);
   const overCapacity = selectedVehicleObj && totalCartons > selectedVehicleObj.maxCartons;
-  const fuelEstimate = calculateFuelCost(Number(estimatedKm) || 0, selectedVehicleObj);
-  const marginEstimate = evaluateDropProfitability({
-    cartonCount: totalCartons,
-    pricePerCarton: settings.LOGISTICS_PRICE_PER_CARTON,
-    grossMarginPercent: settings.LOGISTICS_MARGIN_PERCENT,
-    estimatedDropCost: selectedPLs.length * settings.LOGISTICS_BASE_DROP_COST + fuelEstimate.totalCost
-  });
   const handleSubmit = async () => {
     if (submitting) return;
     if (overCapacity) {setError('Muatan melebihi kapasitas kendaraan. Kurangi alokasi atau pilih kendaraan lain.');return;}
@@ -116,14 +111,13 @@ export const CreateRouteForm = ({
     try {
       await deliveryApi.createDeliveryRoute({
         code,
-        ...(estimatedKm !== '' ? {
-          totalDistanceKm: Number(estimatedKm)
-        } : {}),
         date,
         plannedStartAt: new Date(`${date}T${startTime}:00+07:00`).toISOString(),
         plannedEndAt: new Date(`${date}T${endTime}:00+07:00`).toISOString(),
         vehicleId: selectedVehicle,
         driverId: selectedDriver,
+        departureDepotId:departureDepotId||depots[0].id,
+        returnDepotId:returnDepotId||departureDepotId||depots[0].id,
         notes: notes || undefined,
         stops: selectedPLs.map((s, idx) => ({
           packingListId: s.packingListId,
@@ -153,13 +147,8 @@ export const CreateRouteForm = ({
       <div className="grid grid-cols-2 gap-3"><label>Berangkat WIB<input className="form-input block w-full" type="time" required value={startTime} onChange={e=>setStartTime(e.target.value)}/></label><label>Target kembali WIB<input className="form-input block w-full" type="time" required value={endTime} onChange={e=>setEndTime(e.target.value)}/></label></div>
       <p className="text-sm text-on-surface-variant">Pilih kendaraan dan supir, tambahkan packing list, lalu simpan sebagai draft. Konfirmasi penyiapan, pemeriksaan, dan serah terima muatan sebelum berangkat.</p>
       <section className="rounded-xl border border-border-glass bg-surface-container p-4 space-y-3">
-        <label className="block text-sm">Estimasi jarak perjalanan (km, opsional)<input type="number" min="0" step="0.1" className="form-input mt-1 w-full" value={estimatedKm} onChange={e => setEstimatedKm(e.target.value)} placeholder="Masukkan estimasi jarak" /></label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <p>Muatan: <strong>{totalCartons} karton</strong></p>
-          <p>Estimasi BBM: <strong>{estimatedKm !== '' && selectedVehicleObj ? `Rp ${fuelEstimate.totalCost.toLocaleString('id-ID')}` : 'Belum dihitung'}</strong></p>
-          <p>Estimasi margin: <strong>{settings.LOGISTICS_PRICE_PER_CARTON > 0 && settings.LOGISTICS_MARGIN_PERCENT > 0 ? `Rp ${marginEstimate.netMargin.toLocaleString('id-ID')}` : 'Parameter belum diisi admin'}</strong></p>
-        </div>
-        <p className="text-xs text-on-surface-variant">Estimasi memakai spesifikasi kendaraan serta nilai karton, margin, dan biaya per titik dari pengaturan admin.</p>
+        <p className="text-sm">Muatan: <strong>{totalCartons} karton</strong> · {selectedPLs.length} tujuan</p>
+        <p className="text-xs text-on-surface-variant">Jarak dan perkiraan BBM mengikuti rute jalan ke tiap toko hingga titik kembali. Bila layanan rute sedang tidak tersedia, trip tetap tersimpan dan jarak dihitung otomatis saat layanan pulih. Titik tujuan tetap wajib lengkap.</p>
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -186,6 +175,10 @@ export const CreateRouteForm = ({
             {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="text-sm font-semibold">Titik berangkat<select className="form-input mt-1 block w-full" value={departureDepotId||depots[0].id} onChange={event=>{setDepartureDepotId(event.target.value);if(!returnDepotId)setReturnDepotId(event.target.value);}}>{depots.map(point=><option key={point.id} value={point.id}>{point.name} · {point.latitude}, {point.longitude}</option>)}</select></label>
+        <label className="text-sm font-semibold">Titik kembali<select className="form-input mt-1 block w-full" value={returnDepotId||departureDepotId||depots[0].id} onChange={event=>setReturnDepotId(event.target.value)}>{depots.map(point=><option key={point.id} value={point.id}>{point.name} · {point.latitude}, {point.longitude}</option>)}</select></label>
       </div>
 
       {/* Available Packing Lists */}

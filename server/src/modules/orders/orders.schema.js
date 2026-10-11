@@ -18,6 +18,7 @@ export const createOrderSchema = z.object({
     code: z.string().trim().max(128).optional(),
     pjpStopId: z.string().uuid('pjpStopId harus berformat UUID').optional(),
     outletId:z.string().uuid().optional(),
+    adminPlaceId:z.string().trim().min(3).max(250).optional(),
     contextReason:z.string().trim().max(2000).optional(),
     paymentType: z.enum(['CASH', 'TOP', 'TRANSFER']).optional(),
     items: z

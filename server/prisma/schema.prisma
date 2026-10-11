@@ -703,6 +703,7 @@ model Vehicle {
   isActive          Boolean   @default(true)
   condition         VehicleCondition @default(AVAILABLE)
   totalKm                 Float    @default(0)
+  estimatedKm             Float    @default(0)
   lastOilChangeKm         Float    @default(0)
   lastOilFilterChangeKm   Float    @default(0)
   lastBrakePadChangeKm    Float    @default(0)
@@ -1108,6 +1109,9 @@ model Invoice {
 
 model DeliveryRoute {
   policySnapshot Json?
+  mileagePlan Json?
+  estimatedTravelKm Float @default(0)
+  mileagePendingCount Int @default(0)
   plannedStartAt DateTime?
   plannedEndAt DateTime?
   departedAt DateTime?
@@ -1153,6 +1157,9 @@ model DeliveryRoute {
 }
 
 model DeliveryStop {
+  targetLatitude Float?
+  targetLongitude Float?
+  targetPointSource String?
   returnInspection Json?
   reusableCartons Int @default(0)
   reusableItems Json @default("[]")
@@ -1229,6 +1236,7 @@ model DeliveryIssue {
 
 model DeliveryAttendance {
   gpsEvidence Json?
+  mileageEvidence Json?
   id             String         @id @default(uuid())
   deliveryStopId String
   deliveryStop   DeliveryStop   @relation(fields: [deliveryStopId], references: [id], onDelete: Cascade)

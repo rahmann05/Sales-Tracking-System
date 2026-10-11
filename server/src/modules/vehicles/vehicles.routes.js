@@ -7,6 +7,7 @@ import {z} from 'zod';
 import {prisma} from '../../config/prisma.js';
 import {AppError} from '../../utils/errors.js';
 import {setMaintenancePolicy} from './services/maintenance-policy.service.js';
+import {vehicleMileage,correctVehicleMileage} from './services/vehicle-mileage.service.js';
 
 const router = Router();
 
@@ -18,6 +19,13 @@ router.use((req,res,next)=>{
 });
 router.patch('/:id/service-policy',authorize('ADMIN'),async(req,res,next)=>{
  try{res.json({status:'success',data:await setMaintenancePolicy(req.params.id,req.body,req.user)});}catch(error){next(error);}
+});
+router.get('/:id/mileage',authorize('ADMIN','KEPALA_GUDANG'),async(req,res,next)=>{try{res.json({data:await vehicleMileage(req.params.id)});}catch(error){next(error);}});
+router.patch('/:id/mileage',authorize('ADMIN'),async(req,res,next)=>{
+ try{
+  const data=z.object({odometerKm:z.number().finite().nonnegative(),reason:z.string().trim().min(5).max(2000),updatedAt:z.string().datetime()}).strict().parse(req.body);
+  res.json({data:await correctVehicleMileage(req.params.id,data,req.user)});
+ }catch(error){next(error);}
 });
 router.patch('/:id/condition', authorize('ADMIN','SUPERVISOR','KEPALA_GUDANG'), async(req,res,next)=>{
   try {

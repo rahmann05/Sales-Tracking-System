@@ -237,7 +237,7 @@ export const OPERATIONAL_CONFIG_GROUPS=[
   select('DELIVERY_SIGNATURE_MODE','Tanda tangan penerima','DISABLED',['DISABLED','OPTIONAL','REQUIRED'],'Bukti penerimaan barang. Jika diisi, nama penerima wajib. Tidak menjadi bukti pembayaran.'),
   bool('WAREHOUSE_REQUIRE_PICK','Wajib tahap penyiapan'),bool('WAREHOUSE_REQUIRE_CHECK','Wajib pemeriksaan muatan'),bool('WAREHOUSE_REQUIRE_LOAD','Wajib konfirmasi loading'),
   bool('WAREHOUSE_SEPARATE_CHECKER','Pemeriksa berbeda dari penyiap',false),
-  bool('TRIP_REQUIRE_ODOMETER','Wajib kilometer aktual'),
+  bool('TRIP_REQUIRE_ODOMETER','Wajib kilometer aktual',false,'Jika nonaktif, jarak jalan tetap bertambah otomatis dari bukti GPS dan titik tujuan. Odometer fisik dapat diisi sebagai pembanding.'),
   {key:'TRIP_DEPARTURE_CHECKLIST',label:'Checklist sebelum keberangkatan',type:'checklist',defaultValue:[],description:'Pertanyaan ya/tidak, teks, angka atau pilihan beserta alasan/foto ketika gagal. Kosongkan untuk menonaktifkan. Checklist dibekukan pada trip dan jawaban disimpan bersama pelaku serta waktu keberangkatan.'},
   bool('TRIP_BLOCK_FAILED_DEPARTURE_CHECKLIST','Tahan keberangkatan jika jawaban checklist gagal',true,'Berlaku pada pertanyaan yang memiliki kondisi gagal; petugas perlu memperbaiki kondisi sebelum berangkat. Jika nonaktif, kegagalan tetap disimpan pada bukti keberangkatan.'),
   bool('TRIP_REQUIRE_DOCUMENT_RETURN','Wajib rekonsiliasi dokumen saat tutup'),

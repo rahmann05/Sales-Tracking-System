@@ -40,6 +40,6 @@ export const TAB_FEATURES={
  'admin-products':'PRODUCTS','admin-pjp':'PJP','route-planning':'PJP','create-cluster':'CLUSTERS','master-clusters':'CLUSTERS',
  'team-tracking':'TEAMS','outlet-management':'OUTLET_MASTER','outlet-registration':'REGISTRATION','outlet-approval':'REGISTRATION','outlet-registration-report':'REGISTRATION',
  'outlet-validation':'OUTLET_REVIEW','reports':'REPORTS','daily-call-monitor':'REPORTS',
- 'delivery-packing-list':'PACKING','delivery-routes':'DELIVERY','delivery-monitor':'DELIVERY','delivery-driver-map':'DELIVERY','driver-trips':'DELIVERY','warehouse-vehicles':'VEHICLES',
+ 'delivery-packing-list':'PACKING','delivery-routes':'DELIVERY','delivery-monitor':'DELIVERY','delivery-driver-map':'DELIVERY','driver-trips':'DELIVERY','warehouse-vehicles':'VEHICLES','admin-vehicles':'VEHICLES',
  'dashboard':'MAPS',
 };

@@ -7,6 +7,7 @@ import { getDynamicConfig } from '../../config/config.service.js';
 import { finalizeRoute, terminalStop, reconcilePackingInvoices } from './route-lifecycle.service.js';
 import {lockDestinationRoute,assertDestinationStart,flagIncompleteDestinations,flagMissingCheckout} from './destination-policy.service.js';
 import {deliveryRequest} from './delivery-request.service.js';
+import {recordMileageCheckpoint} from './vehicle-mileage-ledger.service.js';
 export async function recordStopResult(tx,stopId,data,driverId) {
   const stop=await tx.deliveryStop.findUnique({where:{id:stopId},include:{deliveryRoute:true,packingList:true,attendances:true}});
   if(!stop)throw new AppError('Stop pengiriman tidak ditemukan',404);
@@ -42,6 +43,7 @@ export async function recordStopResult(tx,stopId,data,driverId) {
     for(const i of rejectedInvoices)if(!Number.isInteger(i.cartons)||i.cartons<=0||i.cartons>((stop.allocatedInvoices||[]).find(a=>a.invoiceId===i.invoiceId)?.cartons||0))throw new AppError('Penolakan faktur melebihi alokasi',400);
   }
   const incomplete=await assertDestinationStart(tx,stop);
+  if(!stop.attendances.some(attendance=>attendance.type==='IN'))await recordMileageCheckpoint(tx,{routeId:stop.deliveryRouteId,stopId,kind:'STOP_RESULT',driverId});
   const changed=await tx.deliveryStop.updateMany({where:{id:stopId,status:'PENDING'},data:{status,rejectReason:status==='DELIVERED'?null:rejectReason.trim(),rejectedCartons,rejectedItems,rejectedInvoices,notes,photoUrl,receiptEvidence,completedAt:new Date()}});
   if(!changed.count)throw new AppError('Hasil sudah disimpan',409);
   await flagIncompleteDestinations(tx,stop,incomplete,driverId);
@@ -56,4 +58,4 @@ export const updateStopStatus=(stopId,data,driverId)=>prisma.$transaction(async 
  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
  await lockDestinationRoute(tx,stopId);
  return deliveryRequest(tx,{stopId,data,driverId,kind:'RESULT'},()=>recordStopResult(tx,stopId,data,driverId));
-},{isolationLevel:'ReadCommitted'});
+},{isolationLevel:'ReadCommitted',timeout:40000});

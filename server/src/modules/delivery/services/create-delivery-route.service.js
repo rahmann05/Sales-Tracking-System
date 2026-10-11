@@ -9,6 +9,8 @@ import { resolveBusinessCode } from '../../config/services/business-code.service
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { assertResources } from './resource-policy.service.js';
+import {createVehicleMileagePlan,mileagePoint} from './vehicle-mileage-plan.service.js';
+import {DEFAULT_DELIVERY_DEPOTS,parseDeliveryDepots} from '../../../../../shared/delivery-depots.mjs';
 
 
 /**
@@ -19,6 +21,25 @@ export const createDeliveryRoute = async (data, userId) => {
 
   const allowRedelivery = await getDynamicConfig('DELIVERY_ALLOW_REDELIVERY',true)&&await getDynamicConfig('FEATURE_RETURNS_MODE','ACTIVE')==='ACTIVE';
   const allowSplit = await getDynamicConfig('PACKING_ALLOW_SPLIT', true);
+  const outletIds=[...new Set(stops.map(stop=>stop.outletId))],packingIds=[...new Set(stops.map(stop=>stop.packingListId))];
+  const [routeOutlets,routePackings]=await Promise.all([
+    prisma.outlet.findMany({where:{id:{in:outletIds},deletedAt:null}}),
+    prisma.packingList.findMany({where:{id:{in:packingIds}},select:{id:true,outletId:true,sourceOrderId:true,sourceOrderIds:true,updatedAt:true}}),
+  ]);
+  const sourceIds=[...new Set(routePackings.flatMap(packing=>[packing.sourceOrderId,...(packing.sourceOrderIds||[])].filter(Boolean)))];
+  const sourceOrders=sourceIds.length?await prisma.order.findMany({where:{id:{in:sourceIds},deletedAt:null},select:{id:true,outletId:true,customerSnapshot:true,createdAt:true}}):[];
+  const mileageStops=stops.map(stop=>{
+    const outlet=routeOutlets.find(row=>row.id===stop.outletId);
+    const packing=routePackings.find(row=>row.id===stop.packingListId);
+    const order=sourceOrders.filter(row=>row.outletId===stop.outletId&&[packing?.sourceOrderId,...(packing?.sourceOrderIds||[])].includes(row.id)).sort((a,b)=>+b.createdAt-+a.createdAt)[0];
+    return {...stop,point:outlet?mileagePoint(outlet,order?.customerSnapshot?.deliveryPoint):null};
+  });
+  if(mileageStops.some(stop=>!stop.point))throw new AppError('Titik pengiriman satu atau lebih outlet belum tersedia. Lengkapi atau validasi titik toko sebelum membuat trip.',422);
+  const depots=parseDeliveryDepots(await getDynamicConfig('DELIVERY_DEPOT_LOCATIONS',DEFAULT_DELIVERY_DEPOTS));
+  const departureDepot=depots.find(point=>point.id===(data.departureDepotId||depots[0].id));
+  const returnDepot=depots.find(point=>point.id===(data.returnDepotId||data.departureDepotId||depots[0].id));
+  if(!departureDepot||!returnDepot)throw new AppError('Titik berangkat atau kembali tidak tersedia dalam pengaturan Admin. Muat ulang lokasi operasional.',422);
+  const mileagePlan=await createVehicleMileagePlan(mileageStops,{office:departureDepot,returnOffice:returnDepot,allowPending:true});
   return prisma.$transaction(async tx => {
   await assertResources(tx, { ...data, date: new Date(date) });
   // Verify vehicle exists and is active
@@ -38,6 +59,12 @@ export const createDeliveryRoute = async (data, userId) => {
   if (packingLists.length !== plIds.length) {
     throw new AppError('Satu atau lebih packing list tidak ditemukan', 404);
   }
+  const changedOutlet=await tx.outlet.findMany({where:{id:{in:outletIds}},select:{id:true,updatedAt:true}});
+  if(changedOutlet.length!==routeOutlets.length||changedOutlet.some(row=>+row.updatedAt!==+routeOutlets.find(outlet=>outlet.id===row.id)?.updatedAt))throw new AppError('Lokasi outlet berubah saat rute disiapkan. Muat ulang tujuan.',409);
+  if(packingLists.some(row=>{
+    const before=routePackings.find(packing=>packing.id===row.id);
+    return !before||+before.updatedAt!==+row.updatedAt;
+  }))throw new AppError('Packing list berubah saat rute disiapkan. Muat ulang muatan.',409);
 
   if (new Set(plIds).size !== plIds.length) throw new AppError('Packing list tidak boleh dipilih dua kali', 400);
   const allocations = [];
@@ -72,7 +99,7 @@ export const createDeliveryRoute = async (data, userId) => {
   snapshot.driver={id:driverId,versions:driverSettings.versions,at:driverSettings.at};
   const route = await tx.deliveryRoute.create({
     data: {
-      code,policySnapshot:snapshot,
+      code,policySnapshot:snapshot,mileagePlan,
       date: new Date(date),
       plannedStartAt: data.plannedStartAt ? new Date(data.plannedStartAt) : null,
       plannedEndAt: data.plannedEndAt ? new Date(data.plannedEndAt) : null,
@@ -80,8 +107,8 @@ export const createDeliveryRoute = async (data, userId) => {
       driverId,
       status:preparationStages(snapshot.values).length?'DRAFT':'READY',
       totalCartons,
-      totalDistanceKm: data.totalDistanceKm,
-      fuelConsumedLiters: data.totalDistanceKm != null ? data.totalDistanceKm / vehicle.fuelKmPerLiter : null,
+      totalDistanceKm: mileagePlan.totalKm,
+      fuelConsumedLiters: mileagePlan.totalKm != null && vehicle.fuelKmPerLiter>0 ? mileagePlan.totalKm / vehicle.fuelKmPerLiter : null,
       totalWeight: totalWeight || null,
       notes,
       createdById: userId,
@@ -89,6 +116,9 @@ export const createDeliveryRoute = async (data, userId) => {
         create: allocations.map((s) => ({
           packingListId: s.packingListId,
           outletId: s.outletId,
+          targetLatitude:mileagePlan.points.find(point=>point.sequence===s.sequence)?.latitude??null,
+          targetLongitude:mileagePlan.points.find(point=>point.sequence===s.sequence)?.longitude??null,
+          targetPointSource:mileagePlan.points.find(point=>point.sequence===s.sequence)?.googleMapsOnly?'GOOGLE':mileagePlan.points.find(point=>point.sequence===s.sequence)?.source??null,
           sequence: s.sequence,
           allocatedCartons: s.allocatedCartons, allocatedWeight: s.allocatedWeight, allocatedItems: s.allocatedItems,
           allocatedInvoices: s.allocatedInvoices,

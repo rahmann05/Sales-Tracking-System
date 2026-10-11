@@ -1,12 +1,13 @@
 import { request } from "../httpClient";
 import { queryString } from "./helpers";
 export const ordersApi = {
+  adminPlaces:(outletId,q='')=>request(`/orders/admin-places?${new URLSearchParams({outletId,q})}`),
   getReviewAssignment:id=>request(`/orders/${id}/review-assignment`),
   saveReviewAssignment:(id,data)=>request(`/orders/${id}/review-assignment`,{method:'PUT',body:JSON.stringify(data)}),
   findRequest:requestId=>request(`/orders/requests/${requestId}`),
   cancelRemainder:(id,data)=>request(`/orders/${id}/cancel-remainder`,{method:'PATCH',body:JSON.stringify(data)}),
   createOrder: async ({
-    code,requestId,expectedTotal,expectedTermDays,priceOverrideReason,outletId,contextReason,
+    code,requestId,expectedTotal,expectedTermDays,priceOverrideReason,outletId,adminPlaceId,contextReason,
     pjpStopId,
     items,
     paymentType
@@ -14,7 +15,7 @@ export const ordersApi = {
     return await request('/orders', {
       method: 'POST',
       body: JSON.stringify({
-        code,requestId,expectedTotal,expectedTermDays,priceOverrideReason,outletId,contextReason,
+        code,requestId,expectedTotal,expectedTermDays,priceOverrideReason,outletId,adminPlaceId,contextReason,
         pjpStopId,
         items,
         paymentType

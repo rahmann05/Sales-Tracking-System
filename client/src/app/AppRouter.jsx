@@ -221,6 +221,7 @@ export const AppRouter = ({
     case TAB_IDS.ADMIN_PRODUCTS:
     case TAB_IDS.ADMIN_PJP:
     case TAB_IDS.ADMIN_MASTERS:
+    case TAB_IDS.ADMIN_VEHICLES:
     case TAB_IDS.ADMIN_ATTENDANCE:
       tabContent = <Interactive><AdminToolPage /></Interactive>;
       break;

@@ -25,6 +25,9 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
           <LuMapPin className="text-primary text-xs shrink-0" />
           <span>{item.address}</span>
         </div>
+        <div className={`mt-2 text-[11px] font-semibold ${item.photoUrl ? 'text-emerald-700' : 'text-amber-700'}`}>
+          {item.photoUrl ? 'Foto outlet terlampir' : 'Foto outlet belum dilampirkan'}
+        </div>
       </td>
 
       {/* Salesman */}
