@@ -12,72 +12,72 @@ import { AbsenOffPjpModal } from './AbsenOffPjpModal';
  * Extracted from SalesFieldView to keep the parent orchestrator clean.
  */
 export const SalesModals = ({
-    modalType,
-    selectedStop,
-    activeVisitingStop,
-    isOpen,
-    onClose,
-    handlers,
+  modalType,
+  selectedStop,
+  activeVisitingStop,
+  isOpen,
+  onClose,
+  handlers,
 }) => {
-    if (!modalType) return null;
+  if (!modalType) return null;
 
-    switch (modalType) {
-        case 'ABSEN_IN':
-            return (
-                <AbsenInModal
-                    stop={selectedStop}
-                    onClose={onClose}
-                    onConfirm={handlers.handleSalesAbsenIn}
-                />
-            );
+  switch (modalType) {
+    case 'ABSEN_IN':
+      return (
+        <AbsenInModal
+          stop={selectedStop}
+          onClose={onClose}
+          onConfirm={handlers.handleSalesAbsenIn}
+        />
+      );
 
-        case 'ABSEN_OUT':
-            return (
-                <AbsenOutModal
-                    stop={selectedStop}
-                    onClose={onClose}
-                    onConfirm={handlers.handleSalesAbsenOut}
-                />
-            );
+    case 'ABSEN_OUT':
+      return (
+        <AbsenOutModal
+          stop={selectedStop}
+          onClose={onClose}
+          onConfirm={handlers.handleSalesAbsenOut}
+        />
+      );
 
-        case 'UNLOCK_REQUEST':
-            return (
-                <RequestUnlockModal
-                    stop={selectedStop}
-                    activeVisitingStop={activeVisitingStop}
-                    onClose={onClose}
-                    onSubmitUnlockRequest={handlers.handleRequestUnlockOutlet}
-                />
-            );
+    case 'UNLOCK_REQUEST':
+      return (
+        <RequestUnlockModal
+          stop={selectedStop}
+          activeVisitingStop={activeVisitingStop}
+          onClose={onClose}
+          onSubmitUnlockRequest={handlers.handleRequestUnlockOutlet}
+        />
+      );
 
-        case 'ORDER':
-            return (
-                <InputOrderModal
-                    stop={selectedStop}
-                    onClose={onClose}
-                    onSubmitOrder={handlers.handleSubmitOrder}
-                />
-            );
+    case 'ORDER':
+      return (
+        <InputOrderModal
+          stop={selectedStop}
+          onClose={onClose}
+          onSubmitOrder={handlers.handleSubmitOrder}
+        />
+      );
 
-        case 'CLOSED_REPORT':
-            return (
-                <ReportClosedModal
-                    stop={selectedStop}
-                    onClose={onClose}
-                    onSubmitReport={handlers.handleReportClosedOutlet}
-                />
-            );
+    case 'CLOSED_REPORT':
+      return (
+        <ReportClosedModal
+          stop={selectedStop}
+          onClose={onClose}
+          onSubmitReport={handlers.handleReportClosedOutlet}
+        />
+      );
 
-        case 'OFFPJP_ABSEN':
-            return (
-                <AbsenOffPjpModal
-                    isOpen={isOpen('OFFPJP_ABSEN')}
-                    onClose={onClose}
-                    onSubmit={handlers.handleSalesAbsenOffPJP}
-                />
-            );
+    case 'OFFPJP_ABSEN':
+      return (
+        <AbsenOffPjpModal
+          isOpen={isOpen('OFFPJP_ABSEN')}
+          onClose={onClose}
+          onSubmit={handlers.handleSalesAbsenOffPJP}
+        />
+      );
 
-        default:
-            return null;
-    }
+    default:
+      return null;
+  }
 };

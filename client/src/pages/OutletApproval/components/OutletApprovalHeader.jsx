@@ -1,9 +1,7 @@
 import React from 'react';
 import { LuFileCheck, LuSearch, LuFileText, LuRotateCw } from 'react-icons/lu';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
-import {
-  exportCustomerNd6Txt,
-} from '../../../utils/customerExport';
+import { exportCustomerNd6Txt } from '../../../utils/customerExport';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 import {
   exportOutletMasterDocx,
@@ -46,7 +44,11 @@ export const OutletApprovalHeader = ({
         title="Pengajuan & aktivasi outlet"
         subtitle="Verifikasi identitas toko, alamat, dan lokasi sebelum outlet diaktifkan untuk kunjungan sales."
         stats={[
-          { label: 'Menunggu Approval', value: statusCounts.SUBMITTED || 0, color: (statusCounts.SUBMITTED || 0) > 0 ? 'rose' : 'emerald' },
+          {
+            label: 'Menunggu Approval',
+            value: statusCounts.SUBMITTED || 0,
+            color: (statusCounts.SUBMITTED || 0) > 0 ? 'rose' : 'emerald',
+          },
           { label: 'Siap aktivasi', value: statusCounts.SPV_APPROVED || 0, color: 'neutral' },
           { label: 'Total Pengajuan', value: statusCounts.TOTAL || 0, color: 'neutral' },
         ]}
@@ -56,7 +58,8 @@ export const OutletApprovalHeader = ({
               <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs" />
               <input
                 type="text"
-                aria-label="Cari pengajuan outlet" placeholder="Cari toko atau sales…"
+                aria-label="Cari pengajuan outlet"
+                placeholder="Cari toko atau sales…"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="outlet-reg-input pl-8 py-2 text-xs w-full sm:w-56 rounded-xl"
@@ -65,15 +68,45 @@ export const OutletApprovalHeader = ({
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <ExportFormatMenu
-                onExportDocx={() => exportOutletMasterDocx(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.docx`)}
-                onExportExcel={() => exportOutletMasterXlsx(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.xlsx`)}
-                onExportCsv={() => exportOutletMasterCsv(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.csv`)}
-                onExportTxt={() => exportOutletMasterTxt(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.txt`)}
-                onExportPdf={() => exportOutletMasterPdf(items, `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.pdf`)}
+                onExportDocx={() =>
+                  exportOutletMasterDocx(
+                    items,
+                    `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.docx`
+                  )
+                }
+                onExportExcel={() =>
+                  exportOutletMasterXlsx(
+                    items,
+                    `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.xlsx`
+                  )
+                }
+                onExportCsv={() =>
+                  exportOutletMasterCsv(
+                    items,
+                    `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.csv`
+                  )
+                }
+                onExportTxt={() =>
+                  exportOutletMasterTxt(
+                    items,
+                    `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.txt`
+                  )
+                }
+                onExportPdf={() =>
+                  exportOutletMasterPdf(
+                    items,
+                    `Approval_Outlet_${filterStatus}_${new Date().toISOString().split('T')[0]}.pdf`
+                  )
+                }
               />
               <button
                 type="button"
-                onClick={() => exportCustomerNd6Txt(items, `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`)}
+                onClick={() =>
+                  exportCustomerNd6Txt(
+                    items,
+                    `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`
+                  )
+                }
                 className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-surface border border-border-glass hover:bg-surface-container text-on-surface text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer"
                 title="Ekspor Format ND6 TXT"
               >
@@ -96,7 +129,8 @@ export const OutletApprovalHeader = ({
       {/* Status Filter Pills */}
       <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full mobile-filter-pills">
         {STATUS_FILTERS.map((st) => {
-          const count = st.id === 'ALL' ? statusCounts.TOTAL || items.length : statusCounts[st.id] || 0;
+          const count =
+            st.id === 'ALL' ? statusCounts.TOTAL || items.length : statusCounts[st.id] || 0;
           const isActive = filterStatus === st.id;
 
           return (

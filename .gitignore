@@ -55,3 +55,8 @@ skills-lock.json
 neon.ts
 .vercel
 .env*
+storage/
+tmp/
+output/
+dokumen perancangan/
+DEMO/dist-client/

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import {useApp} from '../../context/AppContext';
-import {reportExportAllowed} from '../../../../shared/report-presentation.mjs';
+import { useApp } from '../../context/AppContext';
+import { reportExportAllowed } from '../../../../shared/report-presentation.mjs';
 import { useDailyCallMonitor } from './hooks/useDailyCallMonitor';
 import { DailyCallHeaderKpi } from './components/DailyCallHeaderKpi';
 import { DailyCallFilterBar } from './components/DailyCallFilterBar';
@@ -11,7 +11,15 @@ import { DailyCallDetailModal } from './components/DailyCallDetailModal';
 import { DailyCallPdfView } from './components/DailyCallPdfView';
 import { ReportBasisNote } from '../Reports/components/ReportBasisNote';
 import { PageHeader } from '../../shared/components/common/PageHeader';
-import { LuPhoneCall, LuCalendar, LuListOrdered, LuShieldAlert, LuUserCheck, LuRefreshCw, LuPrinter } from 'react-icons/lu';
+import {
+  LuPhoneCall,
+  LuCalendar,
+  LuListOrdered,
+  LuShieldAlert,
+  LuUserCheck,
+  LuRefreshCw,
+  LuPrinter,
+} from 'react-icons/lu';
 import { ExportFormatMenu } from '../../shared/components/common/ExportFormatMenu';
 import {
   exportDailyCallDocx,
@@ -26,7 +34,8 @@ import {
  * Single Responsibility: Orchestrator for Daily Call Visit Monitoring & Dedicated Anomaly/Suspicious Attendance Audit.
  */
 export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHeader = true }) => {
-  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
+  const { user, settings } = useApp(),
+    canExport = reportExportAllowed(user, settings);
   const {
     date,
     setDate,
@@ -38,7 +47,8 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
     setSearch,
     salesTeam,
     reportData,
-    isLoading, error,
+    isLoading,
+    error,
     selectedRow,
     setSelectedRow,
     refreshData,
@@ -68,8 +78,17 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
   });
 
   return (
-    <div className={`space-y-5 w-full max-w-[1800px] mx-auto ${showHeader ? 'workspace-page' : ''}`}>
-      {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={refreshData} disabled={isLoading}>Coba lagi</button></div>}
+    <div
+      className={`space-y-5 w-full max-w-[1800px] mx-auto ${showHeader ? 'workspace-page' : ''}`}
+    >
+      {error && (
+        <div className="app-error" role="alert">
+          <p>Laporan belum berhasil diperbarui: {error}</p>
+          <button type="button" className="app-button" onClick={refreshData} disabled={isLoading}>
+            Coba lagi
+          </button>
+        </div>
+      )}
       {/* 1. Page Header Title Banner (Only rendered when standalone) */}
       {showHeader && (
         <PageHeader
@@ -89,10 +108,16 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       )}
 
       {/* 2. Top Summary KPI Cards (Clicking Anomalies switches to dedicated table) */}
-      {isLoading ? <p role="status">Memuat ringkasan kunjungan…</p> : reportData?.summary && <DailyCallHeaderKpi
-        summary={reportData?.summary}
-        onSelectAnomalies={() => setActiveTableView('ANOMALIES_ONLY')}
-      />}
+      {isLoading ? (
+        <p role="status">Memuat ringkasan kunjungan…</p>
+      ) : (
+        reportData?.summary && (
+          <DailyCallHeaderKpi
+            summary={reportData?.summary}
+            onSelectAnomalies={() => setActiveTableView('ANOMALIES_ONLY')}
+          />
+        )
+      )}
       <ReportBasisNote basis={reportData?.basis} />
 
       {/* 3. Unified Data & Audit Workspace Card */}
@@ -116,7 +141,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               </div>
               <span
                 className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
-                  activeTableView === 'ALL_VISITS' ? 'bg-white/20 text-white' : 'bg-surface-container'
+                  activeTableView === 'ALL_VISITS'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-surface-container'
                 }`}
               >
                 {isLoading || error ? '—' : reportData?.rows?.length || 0}
@@ -139,7 +166,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               </div>
               <span
                 className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
-                  activeTableView === 'SALESMAN_TIMELINE' ? 'bg-white/20 text-white' : 'bg-surface-container'
+                  activeTableView === 'SALESMAN_TIMELINE'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-surface-container'
                 }`}
               >
                 {isLoading || error ? '—' : reportData?.salesmanSummaries?.length || 0}
@@ -173,7 +202,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               ) : (
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
-                    activeTableView === 'ANOMALIES_ONLY' ? 'bg-white/20 text-white' : 'bg-surface-container'
+                    activeTableView === 'ANOMALIES_ONLY'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-surface-container'
                   }`}
                 >
                   {isLoading || error ? '—' : 0}
@@ -195,7 +226,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             </button>
 
             <ExportFormatMenu
-              disabled={!canExport||isLoading||Boolean(error)}
+              disabled={!canExport || isLoading || Boolean(error)}
               onExportDocx={() => exportDailyCallDocx(reportData, date)}
               onExportExcel={() => exportDailyCallExcel(reportData, date)}
               onExportCsv={() => exportDailyCallCsv(reportData, date)}
@@ -265,10 +296,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
 
       {/* 6. Detail Modal */}
       {selectedRow && (
-        <DailyCallDetailModal
-          row={selectedRow}
-          onClose={() => setSelectedRow(null)}
-        />
+        <DailyCallDetailModal row={selectedRow} onClose={() => setSelectedRow(null)} />
       )}
 
       {/* 7. Official Printable PDF Document View */}
@@ -283,4 +311,3 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
     </div>
   );
 };
-

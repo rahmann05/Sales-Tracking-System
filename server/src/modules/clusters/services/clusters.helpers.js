@@ -5,7 +5,6 @@ import { CACHE_KEYS } from '../../../config/cache.js';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
 import { haversineKm } from '../cluster-generator.service.js';
 
-
 export const invalidateClusterCache = (id = null) => {
   invalidateCache('clusters');
   invalidateCache('outlets');
@@ -17,44 +16,61 @@ export const invalidateClusterCache = (id = null) => {
 };
 
 /**
- * 2-Opt Local Search Optimizer for TSP path (eliminates intersecting lines and reduces total distance)
+ * 2-Opt Local Search Optimizer for open TSP path (O(N^2) delta distance + in-place segment reversal)
  */
 export const optimize2Opt = (initialRoute) => {
-  let bestRoute = [...initialRoute];
-  let improved = true;
-  let iterations = 0;
+  const bestRoute = [...initialRoute];
+  const n = bestRoute.length;
 
-  const calcDist = (route) => {
-    let d = 0;
-    for (let i = 0; i < route.length - 1; i++) {
-      const seg = haversineKm(route[i].latitude, route[i].longitude, route[i + 1].latitude, route[i + 1].longitude);
-      if (!isNaN(seg)) d += seg;
-    }
-    return d;
+  const edgeDist = (a, b) => {
+    const seg = haversineKm(a.latitude, a.longitude, b.latitude, b.longitude);
+    return Number.isFinite(seg) ? seg : 0;
   };
 
-  let bestDist = calcDist(bestRoute);
+  const calcDist = (route) => {
+    let total = 0;
+    for (let i = 0; i < route.length - 1; i++) {
+      total += edgeDist(route[i], route[i + 1]);
+    }
+    return total;
+  };
+
+  if (n < 3) {
+    return { route: bestRoute, distanceKm: calcDist(bestRoute) };
+  }
+
+  let improved = true;
+  let iterations = 0;
 
   while (improved && iterations < 50) {
     improved = false;
     iterations++;
 
-    for (let i = 0; i < bestRoute.length - 1; i++) {
-      for (let k = i + 1; k < bestRoute.length; k++) {
-        const newRoute = [
-          ...bestRoute.slice(0, i),
-          ...bestRoute.slice(i, k + 1).reverse(),
-          ...bestRoute.slice(k + 1),
-        ];
-        const newDist = calcDist(newRoute);
-        if (newDist < bestDist - 0.005) {
-          bestRoute = newRoute;
-          bestDist = newDist;
+    for (let i = 0; i < n - 1; i++) {
+      for (let k = i + 1; k < n; k++) {
+        if (i === 0 && k === n - 1) continue;
+        const oldEdges =
+          (i > 0 ? edgeDist(bestRoute[i - 1], bestRoute[i]) : 0) +
+          (k < n - 1 ? edgeDist(bestRoute[k], bestRoute[k + 1]) : 0);
+        const newEdges =
+          (i > 0 ? edgeDist(bestRoute[i - 1], bestRoute[k]) : 0) +
+          (k < n - 1 ? edgeDist(bestRoute[i], bestRoute[k + 1]) : 0);
+
+        if (newEdges - oldEdges < -0.005) {
+          let left = i;
+          let right = k;
+          while (left < right) {
+            const tmp = bestRoute[left];
+            bestRoute[left] = bestRoute[right];
+            bestRoute[right] = tmp;
+            left++;
+            right--;
+          }
           improved = true;
         }
       }
     }
   }
 
-  return { route: bestRoute, distanceKm: bestDist };
+  return { route: bestRoute, distanceKm: calcDist(bestRoute) };
 };

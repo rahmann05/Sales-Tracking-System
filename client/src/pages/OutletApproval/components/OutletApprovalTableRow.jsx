@@ -20,13 +20,19 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       {/* Nama & Alamat */}
       <td data-label="Nama Toko" className="">
         <div className="font-bold text-on-surface text-sm">{item.name}</div>
-        {item.registrationCode&&<div className="text-xs font-mono">{item.registrationCode}</div>}
+        {item.registrationCode && <div className="text-xs font-mono">{item.registrationCode}</div>}
         <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
           <LuMapPin className="text-primary text-xs shrink-0" />
           <span>{item.address}</span>
         </div>
-        <div className={`mt-2 text-[11px] font-semibold ${item.photoUrl ? 'text-emerald-700' : 'text-amber-700'}`}>
-          {item.photoUrl ? 'Foto outlet terlampir' : 'Foto outlet belum dilampirkan'}
+        <div
+          className={`mt-2 text-[11px] font-semibold ${
+            Boolean(item.hasPhoto ?? item.photoUrl) ? 'text-emerald-700' : 'text-amber-700'
+          }`}
+        >
+          {Boolean(item.hasPhoto ?? item.photoUrl)
+            ? 'Foto outlet terlampir'
+            : 'Foto outlet belum dilampirkan'}
         </div>
       </td>
 
@@ -45,7 +51,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       <td data-label="Wilayah" className="">
         <span className="font-bold text-on-surface">{item.area}</span>
         <div className="text-[10px] text-on-surface-variant font-semibold mt-0.5">
-          Divisi: {item.division}
+          Divisi: {item.division || item.divisionName || '-'}
         </div>
       </td>
 
@@ -55,7 +61,8 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
           {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
         </span>
         <div className="text-[10px] text-on-surface-variant mt-1">
-          Payment: {item.paymentType} {item.termOfPaymentDays > 0 ? `(${item.termOfPaymentDays} Hari)` : ''}
+          Payment: {item.paymentType}{' '}
+          {item.termOfPaymentDays > 0 ? `(${item.termOfPaymentDays} Hari)` : ''}
         </div>
       </td>
 
@@ -66,10 +73,10 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
             item.registrationStatus === 'REGISTERED_ACTIVE'
               ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
               : item.registrationStatus === 'SPV_APPROVED'
-              ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
-              : item.registrationStatus === 'REJECTED'
-              ? 'bg-red-500/10 text-red-600 border-red-500/20'
-              : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+                : item.registrationStatus === 'REJECTED'
+                  ? 'bg-red-500/10 text-red-600 border-red-500/20'
+                  : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
           }`}
         >
           {item.registrationStatus}
@@ -82,7 +89,10 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
       </td>
 
       {/* Aksi */}
-      <td data-label="Aksi" className="text-center mobile-full-width whitespace-nowrap min-w-[110px]">
+      <td
+        data-label="Aksi"
+        className="text-center mobile-full-width whitespace-nowrap min-w-[110px]"
+      >
         <button
           type="button"
           onClick={() => onReview(item)}

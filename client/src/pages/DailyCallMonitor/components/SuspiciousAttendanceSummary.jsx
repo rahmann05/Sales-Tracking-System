@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
-import { LuClock, LuMapPin, LuShieldAlert, LuCar } from "react-icons/lu";
+import { LuClock, LuMapPin, LuShieldAlert, LuCar } from 'react-icons/lu';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 
 /**
@@ -38,7 +38,9 @@ export function SuspiciousAttendanceSummary({
             </span>
           </div>
           <p className="text-xs text-rose-800/80 m-0 mt-0.5">
-            Kunjungan yang memerlukan evaluasi: durasi di bawah batas aturan, posisi di luar radius, jeda perjalanan yang perlu diperiksa, atau jadwal terlewat. Penilaian mengikuti aturan dan bukti yang tersedia.
+            Kunjungan yang memerlukan evaluasi: durasi di bawah batas aturan, posisi di luar radius,
+            jeda perjalanan yang perlu diperiksa, atau jadwal terlewat. Penilaian mengikuti aturan
+            dan bukti yang tersedia.
           </p>
         </div>
       </div>

@@ -7,7 +7,7 @@ export const createDivision = async ({ name, code }) => {
   return prisma.division.create({
     data: {
       name: name.trim().toUpperCase(),
-      code: await resolveBusinessCode('DIVISION',code?.trim().toUpperCase(),{optional:true}),
+      code: await resolveBusinessCode('DIVISION', code?.trim().toUpperCase(), { optional: true }),
     },
   });
 };

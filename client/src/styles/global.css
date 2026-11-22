@@ -1,33 +1,43 @@
-@import "tailwindcss";
-@import "./theme.css";
-@import "./common/Layout.css";
-@import "./common/Typography.css";
-@import "./common/Card.css";
-@import "./common/Badge.css";
-@import "./common/Modal.css";
-@import "./common/Button.css";
-@import "./common/Input.css";
-@import "./animations.css";
-@import "./common/MobileResponsive.css";
-@import "./common/Workspace.css";
-@import "./common/DataTable.css";
-@import "./common/Editorial.css";
+@import 'tailwindcss';
+@import './theme.css';
+@import './common/Layout.css';
+@import './common/Typography.css';
+@import './common/Card.css';
+@import './common/Badge.css';
+@import './common/Modal.css';
+@import './common/Button.css';
+@import './common/Input.css';
+@import './animations.css';
+@import './common/MobileResponsive.css';
+@import './common/Workspace.css';
+@import './common/DataTable.css';
+@import './common/Editorial.css';
+@import './common/Toast.css';
 
 :root {
+  color-scheme: light;
   --surface: #ffffff;
-  --surface-dim: #E8E8ED;
+  --surface-dim: #e8e8ed;
   --surface-bright: #ffffff;
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #FBFBFD;
-  --surface-container: #F5F5F7;
-  --surface-container-high: #E8E8ED;
-  --surface-container-highest: #D2D2D7;
+  --surface-container-low: #fbfbfd;
+  --surface-container: #f5f5f7;
+  --surface-container-high: #e8e8ed;
+  --surface-container-highest: #d2d2d7;
 
-  --on-surface: #1D1D1F;
-  --on-surface-variant: #61616A;
-  --primary: #1D1D1F;
+  --on-surface: #1d1d1f;
+  --on-surface-variant: #475569;
+  --primary: #0869cf;
+  --primary-hover: #0656ab;
+  --primary-light: #eff6ff;
   --on-primary: #ffffff;
   --border-glass: rgba(0, 0, 0, 0.08);
+  --border-subtle: var(--border-glass);
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
+  --border-color: var(--border-subtle);
+  --surface-card: var(--surface);
+  --surface-bg: #f5f5f7;
 }
 
 @layer base {
@@ -39,12 +49,22 @@
 
   html,
   body {
+    color-scheme: light;
     width: 100%;
     height: 100%;
     overscroll-behavior: none;
-    font-family: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #F5F5F7;
-    color: #1D1D1F;
+    font-family:
+      'SF Pro Text',
+      'Inter',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
+    background-color: #f5f5f7;
+    color: #1d1d1f;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -91,7 +111,7 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background-color: #34C759;
+  background-color: #34c759;
   animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
   opacity: 0.6;
 }
@@ -102,11 +122,10 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #34C759;
+  background-color: #34c759;
 }
 
 @keyframes ping {
-
   75%,
   100% {
     transform: scale(2.4);
@@ -114,15 +133,30 @@
   }
 }
 /* Shared operational form ergonomics and keyboard access. */
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
-.modal-backdrop button, .modal-backdrop input:not([type="checkbox"]), .modal-backdrop select {
+.modal-backdrop button,
+.modal-backdrop input:not([type='checkbox']),
+.modal-backdrop select {
   min-height: 44px;
 }
-.modal-backdrop { padding: 16px; }
-.modal-backdrop > div { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.modal-backdrop {
+  padding: 16px;
+}
+.modal-backdrop > div {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

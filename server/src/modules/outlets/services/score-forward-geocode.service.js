@@ -23,7 +23,12 @@ export const scoreForwardGeocode = (result, outlet) => {
     };
   }
 
-  const distance = calculateDistanceMeters(outlet.latitude, outlet.longitude, result.lat, result.lng);
+  const distance = calculateDistanceMeters(
+    outlet.latitude,
+    outlet.longitude,
+    result.lat,
+    result.lng
+  );
   let score;
 
   if (distance <= 50) score = 100;

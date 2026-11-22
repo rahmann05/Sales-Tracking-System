@@ -1,18 +1,19 @@
-import {getPjpById} from '../pjp/services/get-pjp-by-id.service.js';
+import { getPjpById } from '../pjp/services/get-pjp-by-id.service.js';
 import * as absensiService from './absensi.service.js';
 import { successResponse } from '../../utils/response.js';
 
 export const checkIn = async (req, res, next) => {
   try {
     const { pjpStopId } = req.params;
-    const { latitude, longitude, photoUrl, notes,accuracy,observedAt } = req.body;
+    const { latitude, longitude, photoUrl, notes, accuracy, observedAt } = req.body;
     const data = await absensiService.checkIn(
       pjpStopId,
       req.user.id,
       latitude == null ? null : Number(latitude),
       longitude == null ? null : Number(longitude),
       photoUrl,
-      notes,{accuracy,observedAt}
+      notes,
+      { accuracy, observedAt }
     );
     return successResponse(res, 201, data, 'Absen IN berhasil');
   } catch (error) {
@@ -33,7 +34,9 @@ export const checkOut = async (req, res, next) => {
       orderAmount,
       skuSold,
       productIds,
-      visitOutcome,accuracy,observedAt,
+      visitOutcome,
+      accuracy,
+      observedAt,
     } = req.body;
 
     const data = await absensiService.checkOut(
@@ -49,7 +52,9 @@ export const checkOut = async (req, res, next) => {
         orderAmount,
         skuSold,
         productIds,
-        visitOutcome,accuracy,observedAt,
+        visitOutcome,
+        accuracy,
+        observedAt,
       }
     );
     return successResponse(res, 201, data, 'Absen OUT berhasil');
@@ -69,7 +74,7 @@ export const history = async (req, res, next) => {
 
 export const getPjpRecap = async (req, res, next) => {
   try {
-    await getPjpById(req.params.pjpId,req.user);
+    await getPjpById(req.params.pjpId, req.user);
     const data = await absensiService.getPjpAttendanceRecap(req.params.pjpId);
     return successResponse(res, 200, data);
   } catch (error) {

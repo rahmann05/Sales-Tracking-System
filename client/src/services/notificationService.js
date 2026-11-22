@@ -1,32 +1,33 @@
 /**
  * Notification Service
- * Single Responsibility: Centralize user-facing notifications (alerts).
- * Open/Closed: Replace `alert` with a toast library later without changing consumers.
+ * Single Responsibility: Centralize non-blocking toast notifications via Top-Layer ToastRegion.
  */
 
-/**
- * Show a success notification.
- * @param {string} message
- */
-export const notifySuccess = (message) => {
-    // TODO: Replace with toast library (e.g., react-toastify, sonner)
-    alert(message);
+const emitToast = (tone, message) => {
+  if (!message || typeof window === 'undefined') return;
+  const id =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`;
+  window.dispatchEvent(
+    new CustomEvent('app:toast', { detail: { id, tone, message: String(message) } })
+  );
 };
 
-/**
- * Show an error notification.
- * @param {string} message
- */
-export const notifyError = (message) => {
-    // TODO: Replace with toast library
-    alert(`Error: ${message}`);
-};
+export const notifySuccess = (message) => emitToast('success', message);
+export const notifyError = (message) => emitToast('error', `Error: ${message}`);
+export const notifyInfo = (message) => emitToast('info', message);
 
-/**
- * Show an info notification.
- * @param {string} message
- */
-export const notifyInfo = (message) => {
-    // TODO: Replace with toast library
-    alert(message);
+export const confirmAction = (message, options = {}) => {
+  if (typeof window === 'undefined') return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const event = new CustomEvent('app:confirm', {
+      cancelable: true,
+      detail: { ...options, message: String(message || ''), resolve },
+    });
+    const notHandled = window.dispatchEvent(event);
+    if (notHandled) {
+      resolve(window.confirm(String(message || '')));
+    }
+  });
 };

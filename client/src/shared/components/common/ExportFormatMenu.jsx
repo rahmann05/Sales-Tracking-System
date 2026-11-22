@@ -1,4 +1,4 @@
-import {notifyError} from '../../../services/notificationService';
+import { notifyError } from '../../../services/notificationService';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   LuDownload,

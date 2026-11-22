@@ -1,6 +1,7 @@
 /** Shared helpers for customer-registrations services (internal). */
 
-export const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || '';
+export const GOOGLE_API_KEY =
+  process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 // Helper: Calculate distance in meters between two lat/lng points
 export function getDistanceInMeters(lat1, lon1, lat2, lon2) {

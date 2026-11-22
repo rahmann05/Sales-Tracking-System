@@ -1,4 +1,4 @@
-import {notifyError} from '../../../services/notificationService';
+import { notifyError } from '../../../services/notificationService';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { useDomainPermission } from '../../../shared/hooks/useDomainPermission';
 import { featureAvailable } from '../../../../../shared/operational-policy.mjs';
@@ -25,8 +25,9 @@ import {
   exportWeeklyPdf,
 } from '../../../utils/export/reports/weeklyReportExport';
 
-const timestamp = value => new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-const download = (content, type, name) => downloadOperationalFile(content, name, type).catch(error=>notifyError(error.message));
+const timestamp = (value) => new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+const download = (content, type, name) =>
+  downloadOperationalFile(content, name, type).catch((error) => notifyError(error.message));
 
 export function ReportArchivePanel({ kind, period }) {
   const canCreate = useDomainPermission('REPORT_ARCHIVE');
@@ -43,7 +44,10 @@ export function ReportArchivePanel({ kind, period }) {
   const revision = useRef(0);
 
   const allowed = user?.role === 'ADMIN' && user.permissions?.can_view_reports !== false;
-  const creationEnabled = canCreate && (Boolean(pending.current) || (settings?.REPORT_ARCHIVE_ENABLED !== false && featureAvailable(settings, 'REPORTS')));
+  const creationEnabled =
+    canCreate &&
+    (Boolean(pending.current) ||
+      (settings?.REPORT_ARCHIVE_ENABLED !== false && featureAvailable(settings, 'REPORTS')));
 
   useEffect(() => {
     const version = ++revision.current;
@@ -56,14 +60,15 @@ export function ReportArchivePanel({ kind, period }) {
     setBusy(true);
     setItems([]);
     setCursor(null);
-    reportsApi.listArchives({ kind, period })
-      .then(res => {
+    reportsApi
+      .listArchives({ kind, period })
+      .then((res) => {
         if (version === revision.current) {
           setItems(res.data.items);
           setCursor(res.data.nextCursor);
         }
       })
-      .catch(err => {
+      .catch((err) => {
         if (version === revision.current) setError(err.message);
       })
       .finally(() => {
@@ -76,7 +81,7 @@ export function ReportArchivePanel({ kind, period }) {
 
   if (!allowed || targetPeriodError(kind, period)) return null;
 
-  const save = async event => {
+  const save = async (event) => {
     event.preventDefault();
     if (!creationEnabled) return;
     if (!pending.current && reason.trim().length < 5) {
@@ -86,7 +91,12 @@ export function ReportArchivePanel({ kind, period }) {
     const version = revision.current;
     setBusy(true);
     setError('');
-    const payload = pending.current || { kind, period, reason: reason.trim(), requestId: crypto.randomUUID() };
+    const payload = pending.current || {
+      kind,
+      period,
+      reason: reason.trim(),
+      requestId: crypto.randomUUID(),
+    };
     pending.current = payload;
     try {
       const res = await reportsApi.createArchive(payload);
@@ -101,14 +111,16 @@ export function ReportArchivePanel({ kind, period }) {
       }
     } catch (err) {
       if (version === revision.current) {
-        setError(`${err.message} Jika koneksi terputus, coba lagi untuk mengambil arsip dari permintaan yang sama.`);
+        setError(
+          `${err.message} Jika koneksi terputus, coba lagi untuk mengambil arsip dari permintaan yang sama.`
+        );
       }
     } finally {
       if (version === revision.current) setBusy(false);
     }
   };
 
-  const view = async id => {
+  const view = async (id) => {
     const version = revision.current;
     setBusy(true);
     setError('');
@@ -131,7 +143,7 @@ export function ReportArchivePanel({ kind, period }) {
     try {
       const res = await reportsApi.listArchives({ kind, period, cursor });
       if (version === revision.current) {
-        setItems(rows => [...rows, ...res.data.items]);
+        setItems((rows) => [...rows, ...res.data.items]);
         setCursor(res.data.nextCursor);
       }
     } catch (err) {
@@ -193,9 +205,15 @@ export function ReportArchivePanel({ kind, period }) {
         >
           <div className="space-y-4">
             <p className="text-sm">
-              Arsip mengambil laporan terbaru seluruh sales dari server, tanpa filter sales atau pencarian di layar. Isinya tidak dapat ditimpa. Ini bukan penutupan transaksi; periode berjalan tetap dapat berubah.
+              Arsip mengambil laporan terbaru seluruh sales dari server, tanpa filter sales atau
+              pencarian di layar. Isinya tidak dapat ditimpa. Ini bukan penutupan transaksi; periode
+              berjalan tetap dapat berubah.
             </p>
-            {error && <p role="alert" className="app-error">{error}</p>}
+            {error && (
+              <p role="alert" className="app-error">
+                {error}
+              </p>
+            )}
             {busy && <p role="status">Memproses arsip…</p>}
             <form onSubmit={save} className="space-y-2">
               <label className="block">
@@ -207,15 +225,18 @@ export function ReportArchivePanel({ kind, period }) {
                   className="app-input w-full"
                   value={reason}
                   disabled={busy || !!pending.current}
-                  onChange={event => setReason(event.target.value)}
+                  onChange={(event) => setReason(event.target.value)}
                 />
               </label>
               <button className="app-button" type="submit" disabled={busy || !creationEnabled}>
-                {pending.current ? 'Coba lagi permintaan arsip' : 'Simpan arsip baru seluruh perusahaan'}
+                {pending.current
+                  ? 'Coba lagi permintaan arsip'
+                  : 'Simpan arsip baru seluruh perusahaan'}
               </button>
               {!creationEnabled && (
                 <p className="text-xs">
-                  Pembuatan arsip baru tidak tersedia untuk izin atau aturan saat ini. Arsip sebelumnya tetap dapat dibuka.
+                  Pembuatan arsip baru tidak tersedia untuk izin atau aturan saat ini. Arsip
+                  sebelumnya tetap dapat dibuka.
                 </p>
               )}
             </form>
@@ -223,9 +244,14 @@ export function ReportArchivePanel({ kind, period }) {
               Koreksi disimpan sebagai arsip baru dengan alasan; arsip sebelumnya tetap tersedia.
             </p>
             <ul className="space-y-2">
-              {items.map(item => (
+              {items.map((item) => (
                 <li key={item.id} className="border-b py-2 text-sm">
-                  <button type="button" className="app-button" disabled={busy} onClick={() => view(item.id)}>
+                  <button
+                    type="button"
+                    className="app-button"
+                    disabled={busy}
+                    onClick={() => view(item.id)}
+                  >
                     Buka
                   </button>{' '}
                   {timestamp(item.createdAt)} WIB · {item.createdByName || 'Admin'} · {item.reason}
@@ -242,18 +268,29 @@ export function ReportArchivePanel({ kind, period }) {
               <section className="border rounded p-3 space-y-2">
                 <h4 className="font-bold">Arsip tersimpan {selected.id}</h4>
                 <p className="text-xs">
-                  {timestamp(selected.createdAt)} WIB · {selected.createdByName || 'Admin'} · {selected.reason}
+                  {timestamp(selected.createdAt)} WIB · {selected.createdByName || 'Admin'} ·{' '}
+                  {selected.reason}
                 </p>
                 <p>
                   Sales: {selected.report.salesmen?.length || 0} · Nilai order: Rp{' '}
-                  {Number(selected.report.summary?.mtdActualAmount ?? selected.report.summary?.totalOrderAmount ?? 0).toLocaleString('id-ID')}
+                  {Number(
+                    selected.report.summary?.mtdActualAmount ??
+                      selected.report.summary?.totalOrderAmount ??
+                      0
+                  ).toLocaleString('id-ID')}
                 </p>
                 <p className="text-xs break-all">SHA-256 isi laporan: {selected.digest}</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     className="app-button"
-                    onClick={() => download(JSON.stringify(selected, null, 2), 'application/json', `${file}.json`)}
+                    onClick={() =>
+                      download(
+                        JSON.stringify(selected, null, 2),
+                        'application/json',
+                        `${file}.json`
+                      )
+                    }
                   >
                     Unduh arsip lengkap JSON
                   </button>
@@ -265,19 +302,36 @@ export function ReportArchivePanel({ kind, period }) {
                     onExportPdf={handleExportArchivePdf}
                     compact={true}
                   />
-                  <button type="button" className="app-button" onClick={() => setPrint(value => !value)}>
+                  <button
+                    type="button"
+                    className="app-button"
+                    onClick={() => setPrint((value) => !value)}
+                  >
                     {print ? 'Tutup pratinjau' : 'Pratinjau / cetak arsip'}
                   </button>
                 </div>
                 {print &&
                   (selected.kind === 'MONTH' ? (
-                    <MtdReportPdfView reportData={selected.report} salesmanName="Seluruh perusahaan · arsip" onClose={() => setPrint(false)} />
+                    <MtdReportPdfView
+                      reportData={selected.report}
+                      salesmanName="Seluruh perusahaan · arsip"
+                      onClose={() => setPrint(false)}
+                    />
                   ) : (
-                    <WeeklyReportPdfView reportData={selected.report} salesmanName="Seluruh perusahaan · arsip" onClose={() => setPrint(false)} />
+                    <WeeklyReportPdfView
+                      reportData={selected.report}
+                      salesmanName="Seluruh perusahaan · arsip"
+                      onClose={() => setPrint(false)}
+                    />
                   ))}
               </section>
             )}
-            <button type="button" className="app-button" disabled={busy} onClick={() => setOpen(false)}>
+            <button
+              type="button"
+              className="app-button"
+              disabled={busy}
+              onClick={() => setOpen(false)}
+            >
               Tutup
             </button>
           </div>

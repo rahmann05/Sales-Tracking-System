@@ -1,22 +1,162 @@
-.create-cluster-page{position:absolute;inset:0;display:flex;pointer-events:none;z-index:2;overflow:hidden}
-.create-cluster-page .map-spacer{flex:1;min-width:0;position:relative;pointer-events:none}
-.cluster-map-hint{margin:16px;display:inline-block;padding:10px 14px;background:var(--color-surface,#fff);border:1px solid var(--color-border-glass,#e5e7eb);border-radius:12px;font-size:13px;box-shadow:0 2px 8px #0000000a}
-.create-cluster-page .control-panel-container{width:clamp(360px,42%,560px);height:100%;min-height:0;pointer-events:auto;background:var(--color-surface,#fff);border-left:1px solid var(--color-border-glass,#e5e7eb);box-shadow:-4px 0 20px #00000008}
-.cluster-control-panel{height:100%;display:flex;flex-direction:column;min-height:0;color:var(--color-on-surface,#171717)}
-.cluster-panel-header,.cluster-panel-footer{padding:18px 20px;flex-shrink:0}
-.cluster-panel-header{border-bottom:1px solid var(--color-border-glass,#e5e7eb)}
-.cluster-panel-header h1{font-size:20px;font-weight:750;margin:0 0 4px}
-.cluster-panel-header p{font-size:13px;color:var(--color-on-surface-variant,#6b7280)}
-.cluster-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:16px 0 0}
-.cluster-steps li{display:flex;flex-direction:column;gap:6px;font-size:11px;overflow-wrap:anywhere;color:var(--color-on-surface-variant,#6b7280)}
-.cluster-steps li span{display:grid;place-items:center;border:1px solid #d4d4d4;border-radius:50%;width:26px;height:26px;font-weight:700}
-.cluster-steps li[aria-current=step]{color:var(--color-on-surface,#171717);font-weight:700}
-.cluster-steps li[aria-current=step] span{background:#202020;color:#fff;border-color:#202020}
-.cluster-panel-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px;font-size:14px}
-.cluster-panel-body p{line-height:1.6;margin:0}
-.cluster-panel-footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid var(--color-border-glass,#e5e7eb)}
-.cluster-summary{display:grid;grid-template-columns:minmax(90px,1fr) minmax(0,2fr);gap:12px;padding:16px;border:1px solid #e5e7eb;border-radius:14px}
-.cluster-summary dt{color:var(--color-on-surface-variant,#6b7280)}
-.cluster-summary dd{margin:0;font-weight:600;overflow-wrap:anywhere}
-@media(max-width:1024px){.create-cluster-page{flex-direction:column}.create-cluster-page .map-spacer{flex:0 0 25%;min-height:90px}.create-cluster-page .control-panel-container{width:100%;height:auto;min-height:0;flex:1;border-left:0;border-top:1px solid #e5e7eb}.cluster-map-hint{font-size:12px;margin:10px}}
-@media(max-width:767px){.create-cluster-page{bottom:calc(72px + env(safe-area-inset-bottom))}.cluster-panel-header,.cluster-panel-footer{padding:12px 16px}.cluster-panel-body{padding:16px}.cluster-steps{margin-top:10px}}
+.create-cluster-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+.create-cluster-page .map-spacer {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  pointer-events: none;
+}
+.cluster-map-hint {
+  margin: 16px;
+  display: inline-block;
+  padding: 10px 14px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border-glass, #e5e7eb);
+  border-radius: 12px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px #0000000a;
+}
+.create-cluster-page .control-panel-container {
+  width: clamp(360px, 42%, 560px);
+  height: 100%;
+  min-height: 0;
+  pointer-events: auto;
+  background: var(--color-surface, #fff);
+  border-left: 1px solid var(--color-border-glass, #e5e7eb);
+  box-shadow: -4px 0 20px #00000008;
+}
+.cluster-control-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: var(--color-on-surface, #171717);
+}
+.cluster-panel-header,
+.cluster-panel-footer {
+  padding: 18px 20px;
+  flex-shrink: 0;
+}
+.cluster-panel-header {
+  border-bottom: 1px solid var(--color-border-glass, #e5e7eb);
+}
+.cluster-panel-header h1 {
+  font-size: 20px;
+  font-weight: 750;
+  margin: 0 0 4px;
+}
+.cluster-panel-header p {
+  font-size: 13px;
+  color: var(--color-on-surface-variant, #6b7280);
+}
+.cluster-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.cluster-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  color: var(--color-on-surface-variant, #6b7280);
+}
+.cluster-steps li span {
+  display: grid;
+  place-items: center;
+  border: 1px solid #d4d4d4;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-weight: 700;
+}
+.cluster-steps li[aria-current='step'] {
+  color: var(--color-on-surface, #171717);
+  font-weight: 700;
+}
+.cluster-steps li[aria-current='step'] span {
+  background: #202020;
+  color: #fff;
+  border-color: #202020;
+}
+.cluster-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  font-size: 14px;
+}
+.cluster-panel-body p {
+  line-height: 1.6;
+  margin: 0;
+}
+.cluster-panel-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-top: 1px solid var(--color-border-glass, #e5e7eb);
+}
+.cluster-summary {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+.cluster-summary dt {
+  color: var(--color-on-surface-variant, #6b7280);
+}
+.cluster-summary dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1024px) {
+  .create-cluster-page {
+    flex-direction: column;
+  }
+  .create-cluster-page .map-spacer {
+    flex: 0 0 25%;
+    min-height: 90px;
+  }
+  .create-cluster-page .control-panel-container {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    flex: 1;
+    border-left: 0;
+    border-top: 1px solid #e5e7eb;
+  }
+  .cluster-map-hint {
+    font-size: 12px;
+    margin: 10px;
+  }
+}
+@media (max-width: 767px) {
+  .create-cluster-page {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+  .cluster-panel-header,
+  .cluster-panel-footer {
+    padding: 12px 16px;
+  }
+  .cluster-panel-body {
+    padding: 16px;
+  }
+  .cluster-steps {
+    margin-top: 10px;
+  }
+}

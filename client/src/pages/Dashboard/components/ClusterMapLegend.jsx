@@ -27,7 +27,9 @@ export const ClusterMapLegend = ({
       }
     };
     fetchClusters();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const visibleClusters = isSalesRole
@@ -46,9 +48,7 @@ export const ClusterMapLegend = ({
         <h4 className="cluster-map-legend__title">
           {isSalesRole ? 'Klaster Saya' : 'Peta Klaster Regional'}
         </h4>
-        <span className="cluster-map-legend__badge">
-          {totalOutletsCount} Outlet
-        </span>
+        <span className="cluster-map-legend__badge">{totalOutletsCount} Outlet</span>
       </div>
 
       <div className="cluster-map-legend__grid">

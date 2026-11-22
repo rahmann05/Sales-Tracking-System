@@ -6,34 +6,58 @@ import { useState, useEffect } from 'react';
  * Single Responsibility: watches device geolocation while a user
  * is logged in and exposes the latest known position.
  */
-export const useLiveGeolocation = (user,settings={},shiftActive=false,visitActive=false) => {
+export const useLiveGeolocation = (
+  user,
+  settings = {},
+  shiftActive = false,
+  visitActive = false
+) => {
   const [currentLocation, setCurrentLocation] = useState(null);
 
   useEffect(() => {
     // Only track device GPS hardware for field roles that need real-time location check-in
-    if (!user || user.role!=='SALES' || settings.SALES_TRACKING_MODE==='OFF' || settings.SALES_TRACKING_MODE==='SHIFT'&&!shiftActive || settings.SALES_TRACKING_MODE==='VISIT'&&!visitActive) {
+    if (
+      !user ||
+      user.role !== 'SALES' ||
+      settings.SALES_TRACKING_MODE === 'OFF' ||
+      (settings.SALES_TRACKING_MODE === 'SHIFT' && !shiftActive) ||
+      (settings.SALES_TRACKING_MODE === 'VISIT' && !visitActive)
+    ) {
       setCurrentLocation(null);
       return;
     }
 
     if (!navigator.geolocation) return;
 
-    let active=true,lastReport = 0;
+    let active = true,
+      lastReport = 0;
     let lastLat = null;
     let lastLng = null;
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        if(!active)return;
+        if (!active) return;
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
 
-        if (user.role==='SALES' && Date.now()-lastReport>=(settings.TRACKING_SEND_INTERVAL_SECONDS||30)*1000) {
-          lastReport=Date.now();
-          const loc={lat,lng};
-          localStorage.setItem('user_gps_location',JSON.stringify(loc));
-          window.dispatchEvent(new CustomEvent('gps_location_updated',{detail:loc}));
-          usersApi.updateLocation({latitude:lat,longitude:lng,accuracy:pos.coords.accuracy,observedAt:new Date(pos.timestamp).toISOString(),speed:pos.coords.speed??null,heading:pos.coords.heading??null}).catch(()=>{});
+        if (
+          user.role === 'SALES' &&
+          Date.now() - lastReport >= (settings.TRACKING_SEND_INTERVAL_SECONDS || 30) * 1000
+        ) {
+          lastReport = Date.now();
+          const loc = { lat, lng };
+          localStorage.setItem('user_gps_location', JSON.stringify(loc));
+          window.dispatchEvent(new CustomEvent('gps_location_updated', { detail: loc }));
+          usersApi
+            .updateLocation({
+              latitude: lat,
+              longitude: lng,
+              accuracy: pos.coords.accuracy,
+              observedAt: new Date(pos.timestamp).toISOString(),
+              speed: pos.coords.speed ?? null,
+              heading: pos.coords.heading ?? null,
+            })
+            .catch(() => {});
         }
         // Skip re-rendering if position didn't meaningfully change (> 5 meters)
         if (
@@ -51,7 +75,7 @@ export const useLiveGeolocation = (user,settings={},shiftActive=false,visitActiv
         setCurrentLocation({
           lat,
           lng,
-          accuracy: Number.isFinite(pos.coords.accuracy)?Math.round(pos.coords.accuracy):null,
+          accuracy: Number.isFinite(pos.coords.accuracy) ? Math.round(pos.coords.accuracy) : null,
         });
       },
       (err) => {
@@ -60,8 +84,18 @@ export const useLiveGeolocation = (user,settings={},shiftActive=false,visitActiv
       { enableHighAccuracy: false, maximumAge: 30000, timeout: 20000 }
     );
 
-    return () => {active=false;navigator.geolocation.clearWatch(watchId);};
-  }, [user?.id,user?.role,settings.SALES_TRACKING_MODE,settings.TRACKING_SEND_INTERVAL_SECONDS,shiftActive,visitActive]);
+    return () => {
+      active = false;
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [
+    user?.id,
+    user?.role,
+    settings.SALES_TRACKING_MODE,
+    settings.TRACKING_SEND_INTERVAL_SECONDS,
+    shiftActive,
+    visitActive,
+  ]);
 
   return currentLocation;
 };

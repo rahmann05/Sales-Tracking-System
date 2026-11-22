@@ -1,9 +1,38 @@
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {createRequire} from 'node:module';
-const client=fileURLToPath(new URL('../../client/',import.meta.url)),require=createRequire(path.join(client,'package.json'));
-const esbuild=require('esbuild');
-const result=await esbuild.build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,define:{'import.meta.env':'{}'},loader:{'.css':'empty'},plugins:[{name:'context-fixture',setup(build){build.onResolve({filter:/context\/AppContext(?:\.jsx)?$/},()=>({path:'context',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:"import {CONFIG_DEFAULTS} from '../shared/config.mjs'; export const useApp=()=>({...globalThis.outletMonitoringFixture,settings:{...CONFIG_DEFAULTS,...globalThis.outletMonitoringFixture?.settings},settingsReady:true});",resolveDir:client,loader:'js'}));}}],stdin:{resolveDir:client,loader:'jsx',contents:`
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const client = fileURLToPath(new URL('../../client/', import.meta.url)),
+  require = createRequire(path.join(client, 'package.json'));
+const esbuild = require('esbuild');
+const result = await esbuild.build({
+  absWorkingDir: client,
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  write: false,
+  define: { 'import.meta.env': '{}' },
+  loader: { '.css': 'empty' },
+  plugins: [
+    {
+      name: 'context-fixture',
+      setup(build) {
+        build.onResolve({ filter: /context\/AppContext(?:\.jsx)?$/ }, () => ({
+          path: 'context',
+          namespace: 'fixture',
+        }));
+        build.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({
+          contents:
+            "import {CONFIG_DEFAULTS} from '../shared/config.mjs'; export const useApp=()=>({...globalThis.outletMonitoringFixture,settings:{...CONFIG_DEFAULTS,...globalThis.outletMonitoringFixture?.settings},settingsReady:true});",
+          resolveDir: client,
+          loader: 'js',
+        }));
+      },
+    },
+  ],
+  stdin: {
+    resolveDir: client,
+    loader: 'jsx',
+    contents: `
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import assert from 'node:assert/strict';
@@ -63,5 +92,9 @@ globalThis.outletMonitoringFixture.settings={MAPS_BROWSER_API_KEY:'fixture-brows
 html=renderToStaticMarkup(<GoogleOutletEvidence run={{...adminRun,snapshot:{...review.outlet,latitude:null,longitude:null}}} outlet={review.outlet}/>);assert.match(html,/Koordinat lama kosong/);assert.match(html,/tidak ada penanda M/);
 assert.ok(categories.find(c=>c.key==='outlet').groups.includes('OUTLET_REVIEW_ADMIN'));assert.equal(CONFIG_DEFINITIONS.find(g=>g.groupKey==='OUTLET_REVIEW_ADMIN').params.length,5);
 console.log('Outlet monitoring UI contracts passed: Admin/SPV/Sales filters, proof history, reviewer authorization, permission/config actions, specific digital blockers and preserved completed decisions (SSR, not device UAT).');
-`}});
-require('node:vm').runInThisContext(`(function(require){${result.outputFiles[0].text}\n})`)(require);
+`,
+  },
+});
+require('node:vm').runInThisContext(`(function(require){${result.outputFiles[0].text}\n})`)(
+  require
+);

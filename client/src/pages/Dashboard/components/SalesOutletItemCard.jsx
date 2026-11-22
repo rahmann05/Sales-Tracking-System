@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuMapPin, LuNavigation, LuExternalLink } from "react-icons/lu";
+import { LuMapPin, LuNavigation, LuExternalLink } from 'react-icons/lu';
 
 /**
  * SalesOutletItemCard Component
@@ -35,8 +35,8 @@ export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => 
             stop.status === 'ORDERED' || stop.status === 'COMPLETED'
               ? 'bg-emerald-500/15 text-emerald-600'
               : stop.status === 'CLOSED' || stop.status === 'SKIPPED'
-              ? 'bg-slate-500/15 text-slate-600'
-              : 'bg-primary/15 text-primary'
+                ? 'bg-slate-500/15 text-slate-600'
+                : 'bg-primary/15 text-primary'
           }`}
         >
           {stop.status || 'PENDING'}
@@ -45,7 +45,9 @@ export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => 
 
       <p className="text-xs text-on-surface-variant flex items-center gap-1">
         <LuMapPin className="text-primary text-xs shrink-0" />
-        <span className="min-w-0 whitespace-normal break-words">{stop.address || 'Alamat outlet'}</span>
+        <span className="min-w-0 whitespace-normal break-words">
+          {stop.address || 'Alamat outlet'}
+        </span>
       </p>
 
       <div className="flex items-center justify-between text-[11px] text-on-surface-variant pt-1 border-t border-border-glass/60">
@@ -56,7 +58,9 @@ export const SalesOutletItemCard = ({ stop, sequence, isSelected, onClick }) => 
           </span>
         ) : (
           <span className="text-[10px] text-on-surface-variant">
-            {stop.latitude && stop.longitude ? `${Number(stop.latitude).toFixed(4)}, ${Number(stop.longitude).toFixed(4)}` : 'Koordinat DB'}
+            {stop.latitude && stop.longitude
+              ? `${Number(stop.latitude).toFixed(4)}, ${Number(stop.longitude).toFixed(4)}`
+              : 'Koordinat DB'}
           </span>
         )}
         <span className="text-[10px] text-primary font-semibold flex items-center gap-1 group-hover:underline">

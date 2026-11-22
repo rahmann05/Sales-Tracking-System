@@ -40,8 +40,8 @@
 
 .feature-num {
   @apply w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0;
-  background: #F5F5F7;
-  color: #86868B;
+  background: #f5f5f7;
+  color: #86868b;
 }
 
 .feature-content {

@@ -1,16 +1,184 @@
-import React,{useEffect,useRef,useState} from 'react';
-import {outletValidationApi} from '../../../services/api';
-import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
-import {point} from '../../OutletManagement/outletPresentation';
-export function OutletCoordinateForm({outlet,onSaved,onClose,suggestion}) {
- const [form,setForm]=useState({latitude:outlet.latitude==null?'':String(outlet.latitude),longitude:outlet.longitude==null?'':String(outlet.longitude),reason:'',source:'MANUAL'}),[busy,setBusy]=useState(false),[locating,setLocating]=useState(false),[error,setError]=useState(''),[gps,setGps]=useState(null),[dirty,setDirty]=useState(false);
- useUnsavedNavigation(dirty,busy);
- const mounted=useRef(true);
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
- const update=(key,value)=>{setDirty(true);setForm(p=>({...p,[key]:value,...(['latitude','longitude'].includes(key)?{source:'MANUAL'}:{})}));};
- const locate=()=>{if(!navigator.geolocation){setError('Perangkat tidak mendukung lokasi.');return;}setLocating(true);setError('');navigator.geolocation.getCurrentPosition(p=>{if(!mounted.current)return;setGps({accuracyMeters:p.coords.accuracy,capturedAt:new Date(p.timestamp).toISOString()});setForm(f=>({...f,latitude:String(p.coords.latitude),longitude:String(p.coords.longitude),source:'GPS'}));setDirty(true);setLocating(false);},()=>{if(!mounted.current)return;setError('Lokasi belum diperoleh. Aktifkan izin lokasi dan coba lagi saat berada di outlet.');setLocating(false);},{enableHighAccuracy:true,timeout:15000,maximumAge:0});};
- const save=async e=>{e.preventDefault();if(busy)return;setBusy(true);setError('');try{const r=await outletValidationApi.correctCoordinates(outlet.id,{latitude:Number(form.latitude),longitude:Number(form.longitude),updatedAt:outlet.updatedAt,reason:form.reason,locationEvidence:{source:form.source,...(form.source==='GPS'?gps:{})}});setDirty(false);await onSaved(r.data);onClose();}catch(e){setError(e.message);}finally{setBusy(false);}};
- return <form className="outlet-coordinate-form app-form" onSubmit={save}><h3>Koreksi lokasi master</h3><p className="outlet-muted">Titik saat ini: {point(outlet)}. Perubahan memengaruhi radius kunjungan berikutnya. Pastikan sumber titik dan alasan dapat dijelaskan.</p><div className="app-actions"><button type="button" className="app-button" disabled={busy||locating} onClick={locate}>{locating?'Mengambil lokasi…':'Ambil GPS · saya berada di outlet'}</button>{suggestion&&<button type="button" className="app-button" disabled={busy||locating} onClick={()=>{setForm(f=>({...f,latitude:String(suggestion.latitude),longitude:String(suggestion.longitude),source:'MAP'}));setDirty(true);}}>Salin kandidat peta ({suggestion.distanceMeters} m)</button>}</div>{gps&&form.source==='GPS'&&<p className="outlet-muted">Akurasi perangkat ±{Math.round(gps.accuracyMeters)} m. Periksa titik sebelum menyimpan.</p>}
-  <div className="outlet-form-grid">{[['latitude','Latitude',-90,90],['longitude','Longitude',-180,180]].map(([key,label,min,max])=><label key={key} className="app-field">{label}<input type="number" required min={min} max={max} step="any" value={form[key]} disabled={busy||locating} onChange={e=>update(key,e.target.value)}/></label>)}</div><label className="app-field">Alasan & referensi pengecekan<textarea required minLength={10} maxLength={1000} value={form.reason} disabled={busy} onChange={e=>update('reason',e.target.value)}/></label><p className="outlet-muted">Sumber perubahan: {form.source==='GPS'?'GPS perangkat':form.source==='MAP'?'Kandidat peta · perlu dipastikan':'Input manual'}</p>{error&&<p className="app-error" role="alert">{error}</p>}<footer className="outlet-form-footer"><button type="button" className="app-button" disabled={busy||locating} onClick={()=>{if(!dirty||window.confirm('Tutup koreksi yang belum disimpan?'))onClose();}}>Batal</button><button type="submit" className="app-button app-button-primary" disabled={busy||locating}>{busy?'Menyimpan…':'Simpan koreksi'}</button></footer>
- </form>;
+import React, { useEffect, useRef, useState } from 'react';
+import { outletValidationApi } from '../../../services/api';
+import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
+import { point } from '../../OutletManagement/outletPresentation';
+export function OutletCoordinateForm({ outlet, onSaved, onClose, suggestion }) {
+  const [form, setForm] = useState({
+      latitude: outlet.latitude == null ? '' : String(outlet.latitude),
+      longitude: outlet.longitude == null ? '' : String(outlet.longitude),
+      reason: '',
+      source: 'MANUAL',
+    }),
+    [busy, setBusy] = useState(false),
+    [locating, setLocating] = useState(false),
+    [error, setError] = useState(''),
+    [gps, setGps] = useState(null),
+    [dirty, setDirty] = useState(false);
+  useUnsavedNavigation(dirty, busy);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const update = (key, value) => {
+    setDirty(true);
+    setForm((p) => ({
+      ...p,
+      [key]: value,
+      ...(['latitude', 'longitude'].includes(key) ? { source: 'MANUAL' } : {}),
+    }));
+  };
+  const locate = () => {
+    if (!navigator.geolocation) {
+      setError('Perangkat tidak mendukung lokasi.');
+      return;
+    }
+    setLocating(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        if (!mounted.current) return;
+        setGps({
+          accuracyMeters: p.coords.accuracy,
+          capturedAt: new Date(p.timestamp).toISOString(),
+        });
+        setForm((f) => ({
+          ...f,
+          latitude: String(p.coords.latitude),
+          longitude: String(p.coords.longitude),
+          source: 'GPS',
+        }));
+        setDirty(true);
+        setLocating(false);
+      },
+      () => {
+        if (!mounted.current) return;
+        setError(
+          'Lokasi belum diperoleh. Aktifkan izin lokasi dan coba lagi saat berada di outlet.'
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+  const save = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const r = await outletValidationApi.correctCoordinates(outlet.id, {
+        latitude: Number(form.latitude),
+        longitude: Number(form.longitude),
+        updatedAt: outlet.updatedAt,
+        reason: form.reason,
+        locationEvidence: { source: form.source, ...(form.source === 'GPS' ? gps : {}) },
+      });
+      setDirty(false);
+      await onSaved(r.data);
+      onClose();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form className="outlet-coordinate-form app-form" onSubmit={save}>
+      <h3>Koreksi lokasi master</h3>
+      <p className="outlet-muted">
+        Titik saat ini: {point(outlet)}. Perubahan memengaruhi radius kunjungan berikutnya. Pastikan
+        sumber titik dan alasan dapat dijelaskan.
+      </p>
+      <div className="app-actions">
+        <button type="button" className="app-button" disabled={busy || locating} onClick={locate}>
+          {locating ? 'Mengambil lokasi…' : 'Ambil GPS · saya berada di outlet'}
+        </button>
+        {suggestion && (
+          <button
+            type="button"
+            className="app-button"
+            disabled={busy || locating}
+            onClick={() => {
+              setForm((f) => ({
+                ...f,
+                latitude: String(suggestion.latitude),
+                longitude: String(suggestion.longitude),
+                source: 'MAP',
+              }));
+              setDirty(true);
+            }}
+          >
+            Salin kandidat peta ({suggestion.distanceMeters} m)
+          </button>
+        )}
+      </div>
+      {gps && form.source === 'GPS' && (
+        <p className="outlet-muted">
+          Akurasi perangkat ±{Math.round(gps.accuracyMeters)} m. Periksa titik sebelum menyimpan.
+        </p>
+      )}
+      <div className="outlet-form-grid">
+        {[
+          ['latitude', 'Latitude', -90, 90],
+          ['longitude', 'Longitude', -180, 180],
+        ].map(([key, label, min, max]) => (
+          <label key={key} className="app-field">
+            {label}
+            <input
+              type="number"
+              required
+              min={min}
+              max={max}
+              step="any"
+              value={form[key]}
+              disabled={busy || locating}
+              onChange={(e) => update(key, e.target.value)}
+            />
+          </label>
+        ))}
+      </div>
+      <label className="app-field">
+        Alasan & referensi pengecekan
+        <textarea
+          required
+          minLength={10}
+          maxLength={1000}
+          value={form.reason}
+          disabled={busy}
+          onChange={(e) => update('reason', e.target.value)}
+        />
+      </label>
+      <p className="outlet-muted">
+        Sumber perubahan:{' '}
+        {form.source === 'GPS'
+          ? 'GPS perangkat'
+          : form.source === 'MAP'
+            ? 'Kandidat peta · perlu dipastikan'
+            : 'Input manual'}
+      </p>
+      {error && (
+        <p className="app-error" role="alert">
+          {error}
+        </p>
+      )}
+      <footer className="outlet-form-footer">
+        <button
+          type="button"
+          className="app-button"
+          disabled={busy || locating}
+          onClick={() => {
+            if (!dirty || window.confirm('Tutup koreksi yang belum disimpan?')) onClose();
+          }}
+        >
+          Batal
+        </button>
+        <button type="submit" className="app-button app-button-primary" disabled={busy || locating}>
+          {busy ? 'Menyimpan…' : 'Simpan koreksi'}
+        </button>
+      </footer>
+    </form>
+  );
 }

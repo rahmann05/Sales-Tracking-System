@@ -2,7 +2,7 @@
  * AdminPermissionsModal.jsx
  * Single Responsibility: Dedicated modal for inspecting and customizing granular permissions
  * of an existing user, supporting one-click template application from any role.
- * 
+ *
  * NOTE: Strict compliance - Zero emojis. Pure React Icons.
  */
 
@@ -12,14 +12,15 @@ import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { notifySuccess, notifyError } from '../../../services/notificationService';
 import { PermissionsCustomizer } from './PermissionsCustomizer';
 import { BUILT_IN_ROLE_TEMPLATES, getEmptyPermissions } from '../../../constants/permissions';
-import {effectiveUserPermissions} from '../../../utils/userPermissions';
+import { effectiveUserPermissions } from '../../../utils/userPermissions';
 
 export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
   const [permissions, setPermissions] = useState({});
   const [availableRoles, setAvailableRoles] = useState([]);
   const [templateToApply, setTemplateToApply] = useState('');
   const [loading, setLoading] = useState(false);
-  const [rolesLoaded,setRolesLoaded]=useState(false),[roleError,setRoleError]=useState('');
+  const [rolesLoaded, setRolesLoaded] = useState(false),
+    [roleError, setRoleError] = useState('');
 
   // Fetch roles to allow template switching
   useEffect(() => {
@@ -32,25 +33,28 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
           setRolesLoaded(true);
         }
       } catch (err) {
-        if(isMounted)setRoleError(err.message||'Template peran gagal dimuat. Tutup lalu buka kembali.');
+        if (isMounted)
+          setRoleError(err.message || 'Template peran gagal dimuat. Tutup lalu buka kembali.');
       }
     };
     fetchRoles();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Initialize permissions from user
   useEffect(() => {
-    if (user&&rolesLoaded) {
-      setPermissions(effectiveUserPermissions(user,availableRoles));
-      setTemplateToApply(user.roleCode||user.role||'SALES');
+    if (user && rolesLoaded) {
+      setPermissions(effectiveUserPermissions(user, availableRoles));
+      setTemplateToApply(user.roleCode || user.role || 'SALES');
     }
-  }, [user,availableRoles,rolesLoaded]);
+  }, [user, availableRoles, rolesLoaded]);
 
   // Current user's role definition
   const userRoleDef = useMemo(() => {
-    return availableRoles.find((r) => r.code === (user?.roleCode||user?.role));
-  }, [availableRoles, user?.role,user?.roleCode]);
+    return availableRoles.find((r) => r.code === (user?.roleCode || user?.role));
+  }, [availableRoles, user?.role, user?.roleCode]);
 
   // Check if permissions differ from current role template
   const isModifiedFromTemplate = useMemo(() => {
@@ -74,7 +78,10 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
 
   // Reset to the user's current role template
   const handleResetToUserRole = () => {
-    const template = userRoleDef?.defaultPermissions || BUILT_IN_ROLE_TEMPLATES[user?.role] || getEmptyPermissions();
+    const template =
+      userRoleDef?.defaultPermissions ||
+      BUILT_IN_ROLE_TEMPLATES[user?.role] ||
+      getEmptyPermissions();
     setPermissions(template);
   };
 
@@ -82,14 +89,17 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
   const handleApplyTemplate = () => {
     if (!templateToApply) return;
     const targetDef = availableRoles.find((r) => r.code === templateToApply);
-    const template = targetDef?.defaultPermissions || BUILT_IN_ROLE_TEMPLATES[templateToApply] || getEmptyPermissions();
+    const template =
+      targetDef?.defaultPermissions ||
+      BUILT_IN_ROLE_TEMPLATES[templateToApply] ||
+      getEmptyPermissions();
     setPermissions(template);
     notifySuccess(`Template role ${targetDef?.name || templateToApply} diterapkan`);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if(!rolesLoaded||loading)return;
+    if (!rolesLoaded || loading) return;
     setLoading(true);
 
     try {
@@ -99,7 +109,7 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error(err);
-      notifyError(err.response?.data?.message || err.message || 'Terjadi kesalahan sistem');
+      notifyError(err?.message || err?.response?.data?.message || 'Terjadi kesalahan sistem');
     } finally {
       setLoading(false);
     }
@@ -107,16 +117,62 @@ export const AdminPermissionsModal = ({ user, onClose, onSuccess }) => {
 
   if (!user) return null;
 
-  return <NativeDialog open title={`Izin akses · ${user.name}`} onClose={onClose} busy={loading} className="admin-permissions-dialog">
-    <p className="admin-dialog-description">Tinjau izin untuk {user.email}. Perubahan berlaku setelah disimpan.</p>
-    {!rolesLoaded&&!roleError&&<p role="status">Memuat template dan izin efektif…</p>}{roleError&&<p role="alert">{roleError}</p>}
-    <p className="admin-dialog-description">Izin awal menggabungkan template peran dan penyesuaian akun. Batas role, wilayah dan perlindungan petugas pekerjaan aktif tetap berlaku. Penyimpanan mencabut sesi pengguna yang diubah.</p>
-    <form onSubmit={handleSubmit}>
-      <fieldset disabled={loading||!rolesLoaded} className="admin-permissions-fields">
-        <div className="admin-template-picker"><label>Template peran<select value={templateToApply} onChange={event=>setTemplateToApply(event.target.value)}>{availableRoles.map(role=><option key={role.code} value={role.code}>{role.name}</option>)}</select></label><button type="button" onClick={handleApplyTemplate}>Gunakan template</button></div>
-        <PermissionsCustomizer permissions={permissions} onTogglePermission={handleToggle} onBulkSet={setPermissions} onResetToTemplate={handleResetToUserRole} selectedRoleName={userRoleDef?.name||user.role} isModified={isModifiedFromTemplate}/>
-      </fieldset>
-      <footer className="admin-dialog-actions"><button type="button" disabled={loading} onClick={onClose}>Batal</button><button type="submit" disabled={loading||!rolesLoaded} className="admin-primary-button">{loading?'Menyimpan…':'Simpan izin akses'}</button></footer>
-    </form>
-  </NativeDialog>;
+  return (
+    <NativeDialog
+      open
+      title={`Izin akses · ${user.name}`}
+      onClose={onClose}
+      busy={loading}
+      className="admin-permissions-dialog"
+    >
+      <p className="admin-dialog-description">
+        Tinjau izin untuk {user.email}. Perubahan berlaku setelah disimpan.
+      </p>
+      {!rolesLoaded && !roleError && <p role="status">Memuat template dan izin efektif…</p>}
+      {roleError && <p role="alert">{roleError}</p>}
+      <p className="admin-dialog-description">
+        Izin awal menggabungkan template peran dan penyesuaian akun. Batas role, wilayah dan
+        perlindungan petugas pekerjaan aktif tetap berlaku. Penyimpanan mencabut sesi pengguna yang
+        diubah.
+      </p>
+      <form onSubmit={handleSubmit}>
+        <fieldset disabled={loading || !rolesLoaded} className="admin-permissions-fields">
+          <div className="admin-template-picker">
+            <label>
+              Template peran
+              <select
+                value={templateToApply}
+                onChange={(event) => setTemplateToApply(event.target.value)}
+              >
+                {availableRoles.map((role) => (
+                  <option key={role.code} value={role.code}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={handleApplyTemplate}>
+              Gunakan template
+            </button>
+          </div>
+          <PermissionsCustomizer
+            permissions={permissions}
+            onTogglePermission={handleToggle}
+            onBulkSet={setPermissions}
+            onResetToTemplate={handleResetToUserRole}
+            selectedRoleName={userRoleDef?.name || user.role}
+            isModified={isModifiedFromTemplate}
+          />
+        </fieldset>
+        <footer className="admin-dialog-actions">
+          <button type="button" disabled={loading} onClick={onClose}>
+            Batal
+          </button>
+          <button type="submit" disabled={loading || !rolesLoaded} className="admin-primary-button">
+            {loading ? 'Menyimpan…' : 'Simpan izin akses'}
+          </button>
+        </footer>
+      </form>
+    </NativeDialog>
+  );
 };

@@ -1,4 +1,4 @@
-import {documentImages, fitImage} from './documentImages';
+import { documentImages, fitImage } from './documentImages';
 import * as ExcelJSpkg from 'exceljs';
 import { formatDateTimeId, safeStr } from './formatters';
 
@@ -46,7 +46,9 @@ export async function buildDocumentExcel(blueprint) {
       });
     }
     for (const row of firstSection.rows || []) {
-      const r = sheet.addRow(row.map((v) => typeof v === 'number' && Number.isFinite(v) ? v : safeStr(v, '')));
+      const r = sheet.addRow(
+        row.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : safeStr(v, '')))
+      );
       r.height = 19;
       r.eachCell((cell) => {
         cell.font = { name: 'Calibri', size: 10 };
@@ -59,10 +61,7 @@ export async function buildDocumentExcel(blueprint) {
     return workbook.xlsx.writeBuffer();
   }
 
-  const maxCols = Math.max(
-    4,
-    ...(blueprint.sections || []).map((s) => (s.headers || []).length)
-  );
+  const maxCols = Math.max(4, ...(blueprint.sections || []).map((s) => (s.headers || []).length));
 
   const companyRow = sheet.addRow([blueprint.companyName || 'CV. SINAR ANUGRAH']);
   sheet.mergeCells(companyRow.number, 1, companyRow.number, maxCols);
@@ -134,7 +133,12 @@ export async function buildDocumentExcel(blueprint) {
   for (const section of blueprint.sections || []) {
     if (section.title) {
       const secRow = sheet.addRow([section.title.toUpperCase()]);
-      sheet.mergeCells(secRow.number, 1, secRow.number, Math.max(2, (section.headers || []).length));
+      sheet.mergeCells(
+        secRow.number,
+        1,
+        secRow.number,
+        Math.max(2, (section.headers || []).length)
+      );
       secRow.getCell(1).font = {
         name: 'Calibri',
         size: 10,
@@ -190,8 +194,11 @@ export async function buildDocumentExcel(blueprint) {
     sheet.addRow([image.caption || 'Foto outlet']);
     const size = fitImage(image, 500, 300);
     const anchor = sheet.rowCount;
-    const id = workbook.addImage({base64: image.dataUrl, extension: image.type === 'jpg' ? 'jpeg' : image.type});
-    sheet.addImage(id, {tl: {col: 0, row: anchor}, ext: size});
+    const id = workbook.addImage({
+      base64: image.dataUrl,
+      extension: image.type === 'jpg' ? 'jpeg' : image.type,
+    });
+    sheet.addImage(id, { tl: { col: 0, row: anchor }, ext: size });
     for (let n = 0; n < Math.ceil(size.height / 20) + 1; n++) sheet.addRow(['']).height = 15;
   }
 
@@ -232,13 +239,16 @@ export async function buildDocumentExcel(blueprint) {
     column.width = Math.min(Math.max(maxLen + 3, colIdx === 0 ? 6 : 12), 42);
   });
 
-  sheet.eachRow(row => {
+  sheet.eachRow((row) => {
     let lineCount = 1;
-    row.eachCell(cell => {
+    row.eachCell((cell) => {
       const text = String(cell.value ?? '');
       const width = Math.max(8, sheet.getColumn(cell.col).width || 12);
-      lineCount = Math.max(lineCount, ...text.split('\n').map(line => Math.ceil(line.length / (width - 2))));
-      cell.alignment = {...cell.alignment, wrapText: true, vertical: 'middle'};
+      lineCount = Math.max(
+        lineCount,
+        ...text.split('\n').map((line) => Math.ceil(line.length / (width - 2)))
+      );
+      cell.alignment = { ...cell.alignment, wrapText: true, vertical: 'middle' };
     });
     row.height = Math.min(409, Math.max(row.height || 18, lineCount * 14 + 6));
   });

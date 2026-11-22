@@ -3,16 +3,13 @@ import { SuspiciousAttendanceSummary } from './SuspiciousAttendanceSummary';
 import { SuspiciousAttendanceRows } from './SuspiciousAttendanceRows';
 import React, { useState } from 'react';
 import { LuSearch } from 'react-icons/lu';
+import { notifyInfo } from '../../../services/notificationService';
 
 /**
  * SuspiciousAttendanceTable Component
  * Single Responsibility: Dedicated table and audit dashboard for abnormal / suspicious attendances.
  */
-export const SuspiciousAttendanceTable = ({
-  rows = [],
-  isLoading = false,
-  onSelectRow,
-}) => {
+export const SuspiciousAttendanceTable = ({ rows = [], isLoading = false, onSelectRow }) => {
   const [filterAnomalyType, setFilterAnomalyType] = useState('ALL');
   const [search, setSearch] = useState('');
 
@@ -46,7 +43,8 @@ export const SuspiciousAttendanceTable = ({
   const exporters = exportSuspiciousAttendance({ rows: filteredRows, date: currentDate });
   const guardExport = (fn) => () => {
     if (filteredRows.length === 0) {
-      return alert('Tidak ada data absensi janggal untuk diekspor.');
+      notifyInfo('Tidak ada data absensi janggal untuk diekspor.');
+      return;
     }
     return fn();
   };

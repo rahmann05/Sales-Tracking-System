@@ -2,7 +2,6 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 
-
 export const markNotificationAsRead = async (id, userId) => {
   const result = await prisma.notification.updateMany({
     where: { id, userId },

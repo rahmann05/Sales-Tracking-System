@@ -8,7 +8,7 @@ import { customerRegistrationsApi, collectPages } from '../../../services/api';
 export const useOutletRegistrationHistory = () => {
   const [submissions, setSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [historyError,setHistoryError]=useState('');
+  const [historyError, setHistoryError] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   const fetchHistory = useCallback(async () => {
@@ -16,10 +16,12 @@ export const useOutletRegistrationHistory = () => {
     try {
       const res = await collectPages(customerRegistrationsApi.getAll);
       if (res?.data) {
-        setSubmissions(res.data);setHistoryError('');
+        setSubmissions(res.data);
+        setHistoryError('');
       }
     } catch (err) {
-      setSubmissions([]);setHistoryError(err.message);
+      setSubmissions([]);
+      setHistoryError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -30,7 +32,8 @@ export const useOutletRegistrationHistory = () => {
   }, [fetchHistory]);
 
   return {
-    submissions,historyError,
+    submissions,
+    historyError,
     isLoading,
     selectedSubmission,
     setSelectedSubmission,

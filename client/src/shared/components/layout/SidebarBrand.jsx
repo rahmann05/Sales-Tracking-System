@@ -7,12 +7,12 @@ import '../../../styles/layout/Sidebar.css';
  * Single Responsibility: Display the app brand/logo section.
  */
 
-export
-/**
+export /**
  * SidebarBrand Component
  * Single Responsibility: Display the app brand/logo section.
  */
-const SidebarBrand = () => <div className="sidebar-brand">
+const SidebarBrand = () => (
+  <div className="sidebar-brand">
     <div className="flex items-center gap-3">
       <div className="sidebar-brand-icon">
         <LuLayers />
@@ -22,7 +22,8 @@ const SidebarBrand = () => <div className="sidebar-brand">
         <span className="sidebar-brand-subtitle">PJP & ABSENSI SYSTEM</span>
       </div>
     </div>
-  </div>;
+  </div>
+);
 
 /**
  * SidebarNavItem Component

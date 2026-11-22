@@ -40,15 +40,24 @@ export const useDomainState = () => {
   };
 
   return {
-    salesStops, setSalesStops,
-    teamMembers, setTeamMembers,
-    activeRoutes, setActiveRoutes,
-    masterRoutes, setMasterRoutes,
-    salesList, setSalesList,
-    offPjpAttendances, setOffPjpAttendances,
-    orders, setOrders,
-    products, setProducts,
-    incidents, setIncidents,
+    salesStops,
+    setSalesStops,
+    teamMembers,
+    setTeamMembers,
+    activeRoutes,
+    setActiveRoutes,
+    masterRoutes,
+    setMasterRoutes,
+    salesList,
+    setSalesList,
+    offPjpAttendances,
+    setOffPjpAttendances,
+    orders,
+    setOrders,
+    products,
+    setProducts,
+    incidents,
+    setIncidents,
     resetDomainState,
   };
 };

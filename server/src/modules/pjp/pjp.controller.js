@@ -32,4 +32,9 @@ export const getPjpById = async (req, res, next) => {
   }
 };
 
-export const generatePjps = async (req,res) => res.status(410).json({success:false,message:'Penerbitan PJP dilakukan melalui Planner kunjungan. Susun draft, tinjau kalender, lalu terbitkan.'});
+export const generatePjps = async (req, res) =>
+  res.status(410).json({
+    success: false,
+    message:
+      'Penerbitan PJP dilakukan melalui Planner kunjungan. Susun draft, tinjau kalender, lalu terbitkan.',
+  });

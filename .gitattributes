@@ -1,0 +1,5 @@
+# Applied migration checksums depend on exact bytes. Preserve these canonical
+# files on Windows as well as deployment hosts; do not rewrite historical SQL.
+server/prisma/migrations/20261011120000_vehicle_service_evidence_photo/migration.sql -text
+server/prisma/migrations/20261013040000_driver_service_permission/migration.sql -text
+server/prisma/migrations/20261013040100_remove_placeholder_photo_evidence/migration.sql -text

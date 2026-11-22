@@ -25,9 +25,7 @@ export const ActiveRoutesList = ({
   const isSalesRole = userRole === 'SALES';
 
   return (
-    <Card
-      className="!p-0 rounded-[28px] flex flex-col shadow-xl overflow-hidden border border-border-glass max-h-[520px] w-full bg-white/95 backdrop-blur-xl transition-all"
-    >
+    <Card className="!p-0 rounded-[28px] flex flex-col shadow-xl overflow-hidden border border-border-glass max-h-[520px] w-full bg-white/95 backdrop-blur-xl transition-all">
       {/* Header Section */}
       <div className="p-4 border-b border-border-glass flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -137,16 +135,20 @@ export const ActiveRoutesList = ({
                               <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                                 {sIdx + 1}
                               </span>
-                              <span className="min-w-0 whitespace-normal break-words leading-tight">{stop.outletName || stop.customerName || `Toko #${sIdx + 1}`}</span>
+                              <span className="min-w-0 whitespace-normal break-words leading-tight">
+                                {stop.outletName || stop.customerName || `Toko #${sIdx + 1}`}
+                              </span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                stop.status === 'VISITED'
-                                  ? 'bg-green-100 text-green-700'
-                                  : stop.status === 'ARRIVED'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-surface-container text-on-surface-variant'
-                              }`}>
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                  stop.status === 'VISITED'
+                                    ? 'bg-green-100 text-green-700'
+                                    : stop.status === 'ARRIVED'
+                                      ? 'bg-blue-100 text-blue-700'
+                                      : 'bg-surface-container text-on-surface-variant'
+                                }`}
+                              >
                                 {stop.status || 'PENDING'}
                               </span>
                               <LuExternalLink

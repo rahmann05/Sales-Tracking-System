@@ -4,7 +4,12 @@ import { successResponse } from '../../utils/response.js';
 export const reportClosed = async (req, res, next) => {
   try {
     const { pjpStopId, reason, photoUrl } = req.body;
-    const data = await routeChangeService.reportClosedOutlet(req.user.id, pjpStopId, reason, photoUrl);
+    const data = await routeChangeService.reportClosedOutlet(
+      req.user.id,
+      pjpStopId,
+      reason,
+      photoUrl
+    );
     return successResponse(res, 201, data, 'Laporan outlet tutup berhasil dikirim');
   } catch (error) {
     next(error);
@@ -14,8 +19,13 @@ export const reportClosed = async (req, res, next) => {
 export const reroute = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { replacementOutletId,reason } = req.body;
-    const data = await routeChangeService.submitReroute(req.user.id, id, replacementOutletId,reason);
+    const { replacementOutletId, reason } = req.body;
+    const data = await routeChangeService.submitReroute(
+      req.user.id,
+      id,
+      replacementOutletId,
+      reason
+    );
     return successResponse(res, 200, data, 'Reroute berhasil diproses dan jadwal sales diperbarui');
   } catch (error) {
     next(error);

@@ -1,33 +1,196 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {planDates,ruleDue,buildPlanCalendar,validPlanDate,ruleSalesAt} from '../../shared/pjp-planning.mjs';
-import {parseSpreadsheetCsv} from '../../client/src/services/spreadsheetImportService.js';
-import {mapSalesPjpStops} from '../../client/src/context/hooks/mapSalesPjpStops.js';
-const sales=[{id:'a',name:'Sales A',supervisorId:'s'},{id:'b',name:'Sales B',supervisorId:'s'}];
-const outlets=[{id:'o',name:'Outlet',itineraryCode:'F2',cluster:{supervisorId:'s',assignedSalesId:'a'}}];
-const rule={userId:'a',outletId:'o',intervalWeeks:2,anchorDate:'2026-10-05'};
-const plan={startsOn:'2026-10-01',endsOn:'2026-11-01',rules:[rule]};
-test('temporary substitution keeps original cadence, covers inclusive dates and returns to primary',()=>{
- const r={...rule,intervalWeeks:1,substitute:{userId:'b',startsOn:'2026-10-12',endsOn:'2026-10-19',reason:'Sales utama cuti'}};
- const result=buildPlanCalendar({...plan,rules:[r]},sales,outlets,undefined,{PJP_ALLOW_TEMPORARY_SUBSTITUTION:true});
- assert.deepEqual(result.problems.filter(p=>p.code.startsWith('SUBSTITUTE')),[]);
- assert.equal(ruleSalesAt(r,'2026-10-05'),'a');assert.equal(ruleSalesAt(r,'2026-10-12'),'b');assert.equal(ruleSalesAt(r,'2026-10-19'),'b');assert.equal(ruleSalesAt(r,'2026-10-26'),'a');
- assert.deepEqual(result.days.filter(d=>d.outletIds.length).map(d=>[d.date,d.userId]),[['2026-10-05','a'],['2026-10-12','b'],['2026-10-19','b'],['2026-10-26','a']]);
- assert.equal(result.days.find(d=>d.date==='2026-10-12'&&d.userId==='a').outletIds.length,0);
+import {
+  planDates,
+  ruleDue,
+  buildPlanCalendar,
+  validPlanDate,
+  ruleSalesAt,
+} from '../../shared/pjp-planning.mjs';
+import { parseSpreadsheetCsv } from '../../client/src/services/spreadsheetImportService.js';
+import { mapSalesPjpStops } from '../../client/src/context/hooks/mapSalesPjpStops.js';
+const sales = [
+  { id: 'a', name: 'Sales A', supervisorId: 's' },
+  { id: 'b', name: 'Sales B', supervisorId: 's' },
+];
+const outlets = [
+  {
+    id: 'o',
+    name: 'Outlet',
+    itineraryCode: 'F2',
+    cluster: { supervisorId: 's', assignedSalesId: 'a' },
+  },
+];
+const rule = { userId: 'a', outletId: 'o', intervalWeeks: 2, anchorDate: '2026-10-05' };
+const plan = { startsOn: '2026-10-01', endsOn: '2026-11-01', rules: [rule] };
+test('temporary substitution keeps original cadence, covers inclusive dates and returns to primary', () => {
+  const r = {
+    ...rule,
+    intervalWeeks: 1,
+    substitute: {
+      userId: 'b',
+      startsOn: '2026-10-12',
+      endsOn: '2026-10-19',
+      reason: 'Sales utama cuti',
+    },
+  };
+  const result = buildPlanCalendar({ ...plan, rules: [r] }, sales, outlets, undefined, {
+    PJP_ALLOW_TEMPORARY_SUBSTITUTION: true,
+  });
+  assert.deepEqual(
+    result.problems.filter((p) => p.code.startsWith('SUBSTITUTE')),
+    []
+  );
+  assert.equal(ruleSalesAt(r, '2026-10-05'), 'a');
+  assert.equal(ruleSalesAt(r, '2026-10-12'), 'b');
+  assert.equal(ruleSalesAt(r, '2026-10-19'), 'b');
+  assert.equal(ruleSalesAt(r, '2026-10-26'), 'a');
+  assert.deepEqual(
+    result.days.filter((d) => d.outletIds.length).map((d) => [d.date, d.userId]),
+    [
+      ['2026-10-05', 'a'],
+      ['2026-10-12', 'b'],
+      ['2026-10-19', 'b'],
+      ['2026-10-26', 'a'],
+    ]
+  );
+  assert.equal(
+    result.days.find((d) => d.date === '2026-10-12' && d.userId === 'a').outletIds.length,
+    0
+  );
 });
-test('temporary substitute rejects disabled policy, foreign team, invalid period and missing reason',()=>{
- const r={...rule,substitute:{userId:'foreign',startsOn:'2026-09-01',endsOn:'2026-10-19',reason:''}};
- const result=buildPlanCalendar({...plan,rules:[r]},sales,outlets);
- for(const code of ['SUBSTITUTION_DISABLED','SUBSTITUTE_UNAVAILABLE','SUBSTITUTE_PERIOD','SUBSTITUTE_REASON'])assert.ok(result.problems.some(p=>p.code===code));
- const empty={...rule,substitute:{userId:'b',startsOn:'2026-10-06',endsOn:'2026-10-10',reason:'Cuti sementara'}};
- assert.ok(buildPlanCalendar({...plan,rules:[empty]},sales,outlets,undefined,{PJP_ALLOW_TEMPORARY_SUBSTITUTION:true}).warnings.some(w=>w.code==='SUBSTITUTE_NOT_DUE'));
+test('temporary substitute rejects disabled policy, foreign team, invalid period and missing reason', () => {
+  const r = {
+    ...rule,
+    substitute: { userId: 'foreign', startsOn: '2026-09-01', endsOn: '2026-10-19', reason: '' },
+  };
+  const result = buildPlanCalendar({ ...plan, rules: [r] }, sales, outlets);
+  for (const code of [
+    'SUBSTITUTION_DISABLED',
+    'SUBSTITUTE_UNAVAILABLE',
+    'SUBSTITUTE_PERIOD',
+    'SUBSTITUTE_REASON',
+  ])
+    assert.ok(result.problems.some((p) => p.code === code));
+  const empty = {
+    ...rule,
+    substitute: {
+      userId: 'b',
+      startsOn: '2026-10-06',
+      endsOn: '2026-10-10',
+      reason: 'Cuti sementara',
+    },
+  };
+  assert.ok(
+    buildPlanCalendar({ ...plan, rules: [empty] }, sales, outlets, undefined, {
+      PJP_ALLOW_TEMPORARY_SUBSTITUTION: true,
+    }).warnings.some((w) => w.code === 'SUBSTITUTE_NOT_DUE')
+  );
 });
-test('frequency repeats across months and years from a fixed anchor',()=>{assert.equal(ruleDue(rule,'2026-10-05'),true);assert.equal(ruleDue(rule,'2026-10-12'),false);assert.equal(ruleDue(rule,'2026-10-19'),true);assert.equal(ruleDue(rule,'2026-11-02'),true);assert.equal(ruleDue({...rule,intervalWeeks:4,anchorDate:'2026-12-21'},'2027-01-18'),true);assert.equal(ruleDue(rule,'2026-09-21'),false);});
-test('dates reject impossible dates, inverted and excessive periods',()=>{assert.equal(validPlanDate('2026-02-30'),false);assert.equal(validPlanDate('2028-02-29'),true);assert.throws(()=>planDates('2026-11-01','2026-10-01'));assert.throws(()=>planDates('2026-01-01','2026-04-01'));assert.equal(planDates('2026-10-01','2026-10-01').length,1);});
-test('calendar distinguishes not due from no rules and reports uncovered outlets',()=>{const r=buildPlanCalendar(plan,sales,[...outlets,{id:'other',name:'Other',cluster:{supervisorId:'s'}}]);assert.equal(r.summary.visits,2);assert.equal(r.days.find(d=>d.userId==='a'&&d.date==='2026-10-12').state,'NOT_DUE');assert.equal(r.days.find(d=>d.userId==='b').state,'UNPLANNED');assert.equal(r.uncovered.length,1);});
-test('conflicts are detected on real dates, including different intervals',()=>{const r=buildPlanCalendar({...plan,rules:[rule,{...rule,userId:'b',intervalWeeks:1,reason:'Kunjungan pengganti'}]},sales,outlets);assert.ok(r.problems.some(p=>p.code==='DUPLICATE_VISIT'&&p.date==='2026-10-05'));});
-test('moved, missing and non-working assignments block publication instead of disappearing',()=>{const r=buildPlanCalendar({...plan,rules:[rule,{...rule,outletId:'missing'}, {...rule,anchorDate:'2026-10-04'}]},sales,[{...outlets[0],cluster:{supervisorId:'other'}}]);assert.ok(r.problems.some(p=>p.code==='TEAM_MISMATCH'));assert.ok(r.problems.some(p=>p.code==='OUTLET_UNAVAILABLE'));assert.ok(r.problems.some(p=>p.code==='NON_WORKING_DAY'));});
-test('substitution and frequency changes require a business reason',()=>{const r=buildPlanCalendar({...plan,rules:[{...rule,userId:'b',intervalWeeks:4}]},sales,outlets);assert.ok(r.problems.some(p=>p.code==='OWNER_REASON'));assert.ok(r.problems.some(p=>p.code==='FREQUENCY_REASON'));});
-test('CSV headers can be reordered and quoted fields preserve embedded commas',()=>{const rows=parseSpreadsheetCsv('\uFEFFOutletCode,CustomerName,ClusterName,Area,Address,Lng,Lat,Frequency\nO-1,"Toko, Jaya",Wilayah,Bandung,Alamat,107.6,-6.9,F4');assert.equal(rows[0].customerName,'Toko, Jaya');assert.equal(rows[0].latitude,-6.9);assert.equal(rows[0].callFrequency,'F4');});
-test('blank CSV frequency preserves existing interval and invalid coordinates fail early',()=>{const header='ClusterName,OutletCode,CustomerName,Address,Area,Lat,Lng,Frequency\n';assert.equal(parseSpreadsheetCsv(header+'Wilayah,O-1,Toko,Alamat,Bandung,-6.9,107.6,')[0].callFrequency,undefined);assert.throws(()=>parseSpreadsheetCsv(header+'Wilayah,O-1,Toko,Alamat,Bandung,,107.6,F1'),/koordinat/);});
-test('Sales sees published interval and outlet territory rather than a guessed legacy frequency',()=>{const stop={id:'stop',outletId:'o',outlet:{id:'o',name:'Outlet',itineraryCode:'F4',cluster:{name:'Wilayah kedua',supervisor:{name:'SPV'}}}};const route={weekType:'ALL',user:{cluster:{name:'Utama'}},reportingContext:{planning:{rules:[{outletId:'o',intervalWeeks:2}]}},stops:[stop]};const mapped=mapSalesPjpStops(route,{name:'Sales'});assert.equal(mapped[0].callFrequency,'F2');assert.equal(mapped[0].clusterName,'Wilayah kedua');assert.equal(mapped[0].supervisorName,'SPV');assert.equal(mapSalesPjpStops({weekType:'ALL',stops:[{...stop,outlet:{name:'Legacy'}}]},{} )[0].callFrequency,null);});
+test('frequency repeats across months and years from a fixed anchor', () => {
+  assert.equal(ruleDue(rule, '2026-10-05'), true);
+  assert.equal(ruleDue(rule, '2026-10-12'), false);
+  assert.equal(ruleDue(rule, '2026-10-19'), true);
+  assert.equal(ruleDue(rule, '2026-11-02'), true);
+  assert.equal(
+    ruleDue({ ...rule, intervalWeeks: 4, anchorDate: '2026-12-21' }, '2027-01-18'),
+    true
+  );
+  assert.equal(ruleDue(rule, '2026-09-21'), false);
+});
+test('dates reject impossible dates, inverted and excessive periods', () => {
+  assert.equal(validPlanDate('2026-02-30'), false);
+  assert.equal(validPlanDate('2028-02-29'), true);
+  assert.throws(() => planDates('2026-11-01', '2026-10-01'));
+  assert.throws(() => planDates('2026-01-01', '2026-04-01'));
+  assert.equal(planDates('2026-10-01', '2026-10-01').length, 1);
+});
+test('calendar distinguishes not due from no rules and reports uncovered outlets', () => {
+  const r = buildPlanCalendar(plan, sales, [
+    ...outlets,
+    { id: 'other', name: 'Other', cluster: { supervisorId: 's' } },
+  ]);
+  assert.equal(r.summary.visits, 2);
+  assert.equal(r.days.find((d) => d.userId === 'a' && d.date === '2026-10-12').state, 'NOT_DUE');
+  assert.equal(r.days.find((d) => d.userId === 'b').state, 'UNPLANNED');
+  assert.equal(r.uncovered.length, 1);
+});
+test('conflicts are detected on real dates, including different intervals', () => {
+  const r = buildPlanCalendar(
+    {
+      ...plan,
+      rules: [rule, { ...rule, userId: 'b', intervalWeeks: 1, reason: 'Kunjungan pengganti' }],
+    },
+    sales,
+    outlets
+  );
+  assert.ok(r.problems.some((p) => p.code === 'DUPLICATE_VISIT' && p.date === '2026-10-05'));
+});
+test('moved, missing and non-working assignments block publication instead of disappearing', () => {
+  const r = buildPlanCalendar(
+    {
+      ...plan,
+      rules: [rule, { ...rule, outletId: 'missing' }, { ...rule, anchorDate: '2026-10-04' }],
+    },
+    sales,
+    [{ ...outlets[0], cluster: { supervisorId: 'other' } }]
+  );
+  assert.ok(r.problems.some((p) => p.code === 'TEAM_MISMATCH'));
+  assert.ok(r.problems.some((p) => p.code === 'OUTLET_UNAVAILABLE'));
+  assert.ok(r.problems.some((p) => p.code === 'NON_WORKING_DAY'));
+});
+test('substitution and frequency changes require a business reason', () => {
+  const r = buildPlanCalendar(
+    { ...plan, rules: [{ ...rule, userId: 'b', intervalWeeks: 4 }] },
+    sales,
+    outlets
+  );
+  assert.ok(r.problems.some((p) => p.code === 'OWNER_REASON'));
+  assert.ok(r.problems.some((p) => p.code === 'FREQUENCY_REASON'));
+});
+test('CSV headers can be reordered and quoted fields preserve embedded commas', () => {
+  const rows = parseSpreadsheetCsv(
+    '\uFEFFOutletCode,CustomerName,ClusterName,Area,Address,Lng,Lat,Frequency\nO-1,"Toko, Jaya",Wilayah,Bandung,Alamat,107.6,-6.9,F4'
+  );
+  assert.equal(rows[0].customerName, 'Toko, Jaya');
+  assert.equal(rows[0].latitude, -6.9);
+  assert.equal(rows[0].callFrequency, 'F4');
+});
+test('blank CSV frequency preserves existing interval and invalid coordinates fail early', () => {
+  const header = 'ClusterName,OutletCode,CustomerName,Address,Area,Lat,Lng,Frequency\n';
+  assert.equal(
+    parseSpreadsheetCsv(header + 'Wilayah,O-1,Toko,Alamat,Bandung,-6.9,107.6,')[0].callFrequency,
+    undefined
+  );
+  assert.throws(
+    () => parseSpreadsheetCsv(header + 'Wilayah,O-1,Toko,Alamat,Bandung,,107.6,F1'),
+    /koordinat/
+  );
+});
+test('Sales sees published interval and outlet territory rather than a guessed legacy frequency', () => {
+  const stop = {
+    id: 'stop',
+    outletId: 'o',
+    outlet: {
+      id: 'o',
+      name: 'Outlet',
+      itineraryCode: 'F4',
+      cluster: { name: 'Wilayah kedua', supervisor: { name: 'SPV' } },
+    },
+  };
+  const route = {
+    weekType: 'ALL',
+    user: { cluster: { name: 'Utama' } },
+    reportingContext: { planning: { rules: [{ outletId: 'o', intervalWeeks: 2 }] } },
+    stops: [stop],
+  };
+  const mapped = mapSalesPjpStops(route, { name: 'Sales' });
+  assert.equal(mapped[0].callFrequency, 'F2');
+  assert.equal(mapped[0].clusterName, 'Wilayah kedua');
+  assert.equal(mapped[0].supervisorName, 'SPV');
+  assert.equal(
+    mapSalesPjpStops({ weekType: 'ALL', stops: [{ ...stop, outlet: { name: 'Legacy' } }] }, {})[0]
+      .callFrequency,
+    null
+  );
+});

@@ -1,53 +1,53 @@
 @theme {
   /* ── Apple Editorial Monochrome ── */
-  --color-background: #F5F5F7;
-  --color-surface: #FFFFFF;
-  --color-surface-dim: #E8E8ED;
-  --color-surface-bright: #FFFFFF;
-  --color-surface-container-lowest: #FFFFFF;
-  --color-surface-container-low: #FBFBFD;
-  --color-surface-container: #F5F5F7;
-  --color-surface-container-high: #E8E8ED;
-  --color-surface-container-highest: #D2D2D7;
+  --color-background: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-surface-dim: #e8e8ed;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #fbfbfd;
+  --color-surface-container: #f5f5f7;
+  --color-surface-container-high: #e8e8ed;
+  --color-surface-container-highest: #d2d2d7;
 
-  --color-on-surface: #1D1D1F;
-  --color-on-surface-variant: #61616A;
+  --color-on-surface: #1d1d1f;
+  --color-on-surface-variant: #475569;
 
-  --color-inverse-surface: #1D1D1F;
-  --color-inverse-on-surface: #F5F5F7;
+  --color-inverse-surface: #1d1d1f;
+  --color-inverse-on-surface: #f5f5f7;
 
-  /* Primary — Near Black */
-  --color-primary: #1D1D1F;
-  --color-on-primary: #FFFFFF;
-  --color-primary-container: #333336;
-  --color-on-primary-container: #E8E8ED;
+  /* Primary — Royal Blue (Selaras 23 Wireframe REVISI 5) */
+  --color-primary: #0869cf;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #0656ab;
+  --color-on-primary-container: #eff6ff;
 
   /* Secondary — Mid Gray */
-  --color-secondary: #86868B;
-  --color-on-secondary: #FFFFFF;
-  --color-secondary-container: #E8E8ED;
-  --color-on-secondary-container: #1D1D1F;
+  --color-secondary: #86868b;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e8e8ed;
+  --color-on-secondary-container: #1d1d1f;
 
   /* Semantic — Good */
-  --color-tertiary: #15803D;
-  --color-on-tertiary: #FFFFFF;
-  --color-tertiary-container: #E4F7EA;
-  --color-on-tertiary-container: #1E7E34;
+  --color-tertiary: #15803d;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #e4f7ea;
+  --color-on-tertiary-container: #1e7e34;
 
   /* Semantic — Warning */
-  --color-warning: #B45309;
-  --color-on-warning: #FFFFFF;
-  --color-warning-container: #FFF0D9;
-  --color-on-warning-container: #B36A00;
+  --color-warning: #b45309;
+  --color-on-warning: #ffffff;
+  --color-warning-container: #fff0d9;
+  --color-on-warning-container: #b36a00;
 
   /* Semantic — Alert */
-  --color-error: #DC2626;
-  --color-on-error: #FFFFFF;
-  --color-error-container: #FFE5E3;
-  --color-on-error-container: #B3261E;
+  --color-error: #dc2626;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffe5e3;
+  --color-on-error-container: #b3261e;
 
-  --color-outline: #D2D2D7;
-  --color-outline-variant: #E8E8ED;
+  --color-outline: #d2d2d7;
+  --color-outline-variant: #e8e8ed;
   --color-border-glass: rgba(24, 24, 27, 0.09);
 
   /* Typography */

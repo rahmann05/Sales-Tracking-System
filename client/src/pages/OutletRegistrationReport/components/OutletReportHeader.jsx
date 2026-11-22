@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LuClipboardList, LuFileText, LuSettings, LuCheck, LuIdCard } from 'react-icons/lu';
 import { configApi } from '../../../services/api';
+import { notifyError } from '../../../services/notificationService';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 
 /**
@@ -42,7 +43,7 @@ export const OutletReportHeader = ({
       setDivUpdateSuccess(true);
       setTimeout(() => setDivUpdateSuccess(false), 2000);
     } catch (err) {
-      alert('Gagal memperbarui konfigurasi divisi: ' + err.message);
+      notifyError('Gagal memperbarui konfigurasi divisi: ' + err.message);
     } finally {
       setIsUpdatingDiv(false);
     }
@@ -61,7 +62,9 @@ export const OutletReportHeader = ({
             </span>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-high rounded-full text-xs border border-border-glass">
               <LuSettings className="text-primary text-xs" />
-              <span className="text-[11px] font-bold text-on-surface-variant">Divisi Aktif Sistem:</span>
+              <span className="text-[11px] font-bold text-on-surface-variant">
+                Divisi Aktif Sistem:
+              </span>
               <select
                 value={activeDivision}
                 disabled={isUpdatingDiv}

@@ -6,12 +6,18 @@
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
 import { BUILT_IN_ROLES, ALL_PERMISSIONS, getEmptyPermissions } from './roles.constants.js';
-import {persistRoleDefinitions} from './persist-role-definitions.service.js';
+import { persistRoleDefinitions } from './persist-role-definitions.service.js';
 
 function validatedPermissions(value = {}) {
-  const keys=new Set(ALL_PERMISSIONS.map(p=>p.key));
-  if(!value || typeof value!=='object' || Array.isArray(value) || Object.entries(value).some(([k,v])=>!keys.has(k)||typeof v!=='boolean')) throw new AppError('Template hak akses tidak valid',400);
-  return {...getEmptyPermissions(),...value};
+  const keys = new Set(ALL_PERMISSIONS.map((p) => p.key));
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.entries(value).some(([k, v]) => !keys.has(k) || typeof v !== 'boolean')
+  )
+    throw new AppError('Template hak akses tidak valid', 400);
+  return { ...getEmptyPermissions(), ...value };
 }
 
 const CONFIG_KEY = 'ROLE_DEFINITIONS';
@@ -55,7 +61,7 @@ export const getAllRoles = async () => {
 
   // Get active user count per role
   const userCounts = await prisma.user.groupBy({
-    by: ['role','roleCode'],
+    by: ['role', 'roleCode'],
     where: { deletedAt: null },
     _count: { id: true },
   });
@@ -71,7 +77,9 @@ export const getAllRoles = async () => {
     // Stored built-in templates may predate newly registered permissions.
     // Keep explicit overrides, including false, consistent with resolveIdentity.
     defaultPermissions: {
-      ...(r.isSystem ? BUILT_IN_ROLES.find(role => role.code === r.code)?.defaultPermissions : {}),
+      ...(r.isSystem
+        ? BUILT_IN_ROLES.find((role) => role.code === r.code)?.defaultPermissions
+        : {}),
       ...r.defaultPermissions,
     },
     baseRole: r.isSystem ? r.code : r.baseRole || 'SALES',
@@ -95,8 +103,10 @@ export const getRoleByCode = async (code) => {
 /**
  * Create a new custom role.
  */
-export const createRole = async (data,actor={}) => {
-  const rawCode = String(data.code || '').trim().toUpperCase();
+export const createRole = async (data, actor = {}) => {
+  const rawCode = String(data.code || '')
+    .trim()
+    .toUpperCase();
   const cleanCode = rawCode.replace(/[^A-Z0-9_]/g, '_');
 
   if (!cleanCode || cleanCode.length < 3) {
@@ -109,7 +119,8 @@ export const createRole = async (data,actor={}) => {
   }
 
   const baseRole = data.baseRole || 'SALES';
-  if (!BUILT_IN_ROLES.some(r=>r.code===baseRole)) throw new AppError('Pilih role dasar bawaan',400);
+  if (!BUILT_IN_ROLES.some((r) => r.code === baseRole))
+    throw new AppError('Pilih role dasar bawaan', 400);
   const newRole = {
     baseRole,
     code: cleanCode,
@@ -123,7 +134,7 @@ export const createRole = async (data,actor={}) => {
 
   const updatedList = [...existingRoles.map(({ userCount, ...rest }) => rest), newRole];
 
-  await persistRoleDefinitions(existingRoles,updatedList,{actor});
+  await persistRoleDefinitions(existingRoles, updatedList, { actor });
 
   return newRole;
 };
@@ -131,7 +142,7 @@ export const createRole = async (data,actor={}) => {
 /**
  * Update role definition or permission template.
  */
-export const updateRole = async (code, data,actor={}) => {
+export const updateRole = async (code, data, actor = {}) => {
   const normalized = String(code).trim().toUpperCase();
   const existingRoles = await getAllRoles();
   const roleIndex = existingRoles.findIndex((r) => r.code === normalized);
@@ -145,7 +156,8 @@ export const updateRole = async (code, data,actor={}) => {
   const updatedRole = {
     ...current,
     name: data.name !== undefined ? String(data.name).trim() : current.name,
-    description: data.description !== undefined ? String(data.description).trim() : current.description,
+    description:
+      data.description !== undefined ? String(data.description).trim() : current.description,
     badgeColor: data.badgeColor || current.badgeColor,
     workspaceTab: data.workspaceTab || current.workspaceTab,
     defaultPermissions: data.defaultPermissions
@@ -157,12 +169,15 @@ export const updateRole = async (code, data,actor={}) => {
   updatedRole.isSystem = current.isSystem;
   updatedRole.code = current.code;
 
-  const previousRoles=[...existingRoles];
+  const previousRoles = [...existingRoles];
   existingRoles[roleIndex] = updatedRole;
 
   const strippedList = existingRoles.map(({ userCount, ...rest }) => rest);
 
-  await persistRoleDefinitions(previousRoles,strippedList,{revokeCode:data.defaultPermissions?normalized:undefined,actor});
+  await persistRoleDefinitions(previousRoles, strippedList, {
+    revokeCode: data.defaultPermissions ? normalized : undefined,
+    actor,
+  });
 
   return updatedRole;
 };
@@ -170,7 +185,7 @@ export const updateRole = async (code, data,actor={}) => {
 /**
  * Delete a custom role. Built-in roles cannot be deleted.
  */
-export const deleteRole = async (code,actor={}) => {
+export const deleteRole = async (code, actor = {}) => {
   const normalized = String(code).trim().toUpperCase();
   const existingRoles = await getAllRoles();
   const target = existingRoles.find((r) => r.code === normalized);
@@ -199,7 +214,7 @@ export const deleteRole = async (code,actor={}) => {
     .filter((r) => r.code !== normalized)
     .map(({ userCount, ...rest }) => rest);
 
-  await persistRoleDefinitions(existingRoles,updatedList,{deleteCode:normalized,actor});
+  await persistRoleDefinitions(existingRoles, updatedList, { deleteCode: normalized, actor });
 
   return { success: true, message: `Role '${normalized}' berhasil dihapus` };
 };

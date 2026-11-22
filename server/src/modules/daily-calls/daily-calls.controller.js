@@ -10,4 +10,3 @@ export const getDailyCalls = async (req, res, next) => {
     next(err);
   }
 };
-

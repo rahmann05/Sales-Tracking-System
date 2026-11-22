@@ -1,5 +1,15 @@
 import React from 'react';
-import { LuMapPin, LuClock, LuCamera, LuEye, LuPlus, LuHourglass, LuCar, LuShieldAlert, LuTriangleAlert } from "react-icons/lu";
+import {
+  LuMapPin,
+  LuClock,
+  LuCamera,
+  LuEye,
+  LuPlus,
+  LuHourglass,
+  LuCar,
+  LuShieldAlert,
+  LuTriangleAlert,
+} from 'react-icons/lu';
 
 /**
  * DailyCallTableRow Component
@@ -17,13 +27,18 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       }`}
     >
       {/* 1. No */}
-      <td data-label="No" className="text-center font-mono font-bold text-on-surface-variant w-10 py-2.5 px-2 whitespace-nowrap">
+      <td
+        data-label="No"
+        className="text-center font-mono font-bold text-on-surface-variant w-10 py-2.5 px-2 whitespace-nowrap"
+      >
         {row.no}
       </td>
 
       {/* 2. Salesman */}
       <td data-label="Salesman" className="whitespace-nowrap py-2.5 px-2.5">
-        <div className="font-bold text-on-surface text-xs whitespace-nowrap">{row.salesmanName}</div>
+        <div className="font-bold text-on-surface text-xs whitespace-nowrap">
+          {row.salesmanName}
+        </div>
         <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5 whitespace-nowrap">
           <LuMapPin className="text-primary text-[10px] shrink-0" />
           <span>{row.clusterName}</span>
@@ -34,10 +49,15 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       <td data-label="Jam In/Out" className="whitespace-nowrap py-2.5 px-2">
         {isActual && row.timeIn && row.timeIn !== '-' ? (
           <div>
-            <div className="font-bold text-on-surface font-mono text-xs whitespace-nowrap">{row.timeIn} – {row.timeOut || '-'}</div>
+            <div className="font-bold text-on-surface font-mono text-xs whitespace-nowrap">
+              {row.timeIn} – {row.timeOut || '-'}
+            </div>
             <div className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5 whitespace-nowrap">
               <LuClock className="text-[10px] text-primary shrink-0" />
-              <span>{row.durationFormatted || (row.durationMinutes==null?'Tidak tersedia':`${row.durationMinutes}m`)}</span>
+              <span>
+                {row.durationFormatted ||
+                  (row.durationMinutes == null ? 'Tidak tersedia' : `${row.durationMinutes}m`)}
+              </span>
             </div>
           </div>
         ) : (
@@ -52,8 +72,14 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             <LuTriangleAlert className="text-xs" /> Di bawah batas
           </span>
         ) : isActual ? (
-          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${row.durationMinutes==null||row.durationCheckEnabled===false?'bg-surface-container text-on-surface-variant':'bg-emerald-500/10 text-emerald-600'}`}>
-            {row.durationMinutes==null?'Tidak tersedia':row.durationCheckEnabled===false?'Tidak diwajibkan':'Sesuai batas'}
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${row.durationMinutes == null || row.durationCheckEnabled === false ? 'bg-surface-container text-on-surface-variant' : 'bg-emerald-500/10 text-emerald-600'}`}
+          >
+            {row.durationMinutes == null
+              ? 'Tidak tersedia'
+              : row.durationCheckEnabled === false
+                ? 'Tidak diwajibkan'
+                : 'Sesuai batas'}
           </span>
         ) : (
           <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
@@ -78,7 +104,10 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           )}
         </div>
         <div className="font-bold text-on-surface text-xs mt-1">{row.customerName}</div>
-        <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5" title={row.customerAddress}>
+        <div
+          className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5"
+          title={row.customerAddress}
+        >
           <LuMapPin className="text-primary text-[10px] shrink-0" />
           <span className="line-clamp-1">{row.customerAddress}</span>
         </div>
@@ -89,8 +118,14 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             }`}
           >
             <LuCar className="text-[10px] shrink-0" />
-            <span>Antartitik outlet dari "{row.prevStopName}": {row.travelDistanceKm==null?'Jarak tidak tersedia':`${row.travelDistanceKm} km`} · Jeda OUT–IN: {row.travelDurationFormatted}</span>
-            {row.isTravelAnomaly && <LuShieldAlert className="text-[10px] text-rose-600 shrink-0" />}
+            <span>
+              Antartitik outlet dari "{row.prevStopName}":{' '}
+              {row.travelDistanceKm == null ? 'Jarak tidak tersedia' : `${row.travelDistanceKm} km`}{' '}
+              · Jeda OUT–IN: {row.travelDurationFormatted}
+            </span>
+            {row.isTravelAnomaly && (
+              <LuShieldAlert className="text-[10px] text-rose-600 shrink-0" />
+            )}
           </div>
         )}
       </td>
@@ -98,7 +133,9 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       {/* 6. Sub Channel & Itinerary */}
       <td data-label="Sub Channel" className="whitespace-nowrap py-2.5 px-2">
         <div className="font-bold text-on-surface text-xs whitespace-nowrap">{row.subChannel}</div>
-        <div className="text-[10px] text-on-surface-variant font-mono mt-0.5 whitespace-nowrap">{row.itny}</div>
+        <div className="text-[10px] text-on-surface-variant font-mono mt-0.5 whitespace-nowrap">
+          {row.itny}
+        </div>
       </td>
 
       {/* 7. Call Indicators (Plan / Actual / EC) */}
@@ -106,7 +143,9 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
         <div className="inline-flex items-center justify-center gap-1 bg-surface-container/60 p-1 rounded-lg border border-border-glass whitespace-nowrap">
           <span
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-              row.planCall === 'Y' ? 'bg-blue-500/15 text-blue-600' : 'bg-slate-200/50 text-slate-500 dark:bg-slate-800'
+              row.planCall === 'Y'
+                ? 'bg-blue-500/15 text-blue-600'
+                : 'bg-slate-200/50 text-slate-500 dark:bg-slate-800'
             }`}
             title="Plan Call"
           >
@@ -125,8 +164,8 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
               isEc
                 ? 'bg-purple-500/15 text-purple-600 font-black'
                 : isActual
-                ? 'bg-amber-500/15 text-amber-600'
-                : 'bg-slate-200/50 text-slate-400 dark:bg-slate-800'
+                  ? 'bg-amber-500/15 text-amber-600'
+                  : 'bg-slate-200/50 text-slate-400 dark:bg-slate-800'
             }`}
             title="Effective Call"
           >
@@ -142,7 +181,9 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             <div className="font-bold text-emerald-600 font-mono text-xs whitespace-nowrap">
               Rp {row.orderAmount.toLocaleString('id-ID')}
             </div>
-            <div className="text-[10px] text-purple-600 font-semibold whitespace-nowrap">{row.skuSold} SKU Terjual</div>
+            <div className="text-[10px] text-purple-600 font-semibold whitespace-nowrap">
+              {row.skuSold} SKU Terjual
+            </div>
           </div>
         ) : (
           <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
@@ -158,18 +199,27 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           </div>
         )}
         {row.reason ? (
-          <div className="text-xs font-semibold text-rose-600 leading-snug break-words" title={row.reason}>
+          <div
+            className="text-xs font-semibold text-rose-600 leading-snug break-words"
+            title={row.reason}
+          >
             {row.reason}
           </div>
         ) : row.remark ? (
-          <div className="text-xs text-on-surface-variant leading-snug break-words" title={row.remark}>
+          <div
+            className="text-xs text-on-surface-variant leading-snug break-words"
+            title={row.remark}
+          >
             {row.remark}
           </div>
         ) : (
           <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
         )}
         {row.earlyReason && (
-          <div className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1" title={row.earlyReason}>
+          <div
+            className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1"
+            title={row.earlyReason}
+          >
             <LuTriangleAlert className="text-[10px] shrink-0" />
             <span>{row.earlyReason}</span>
           </div>
@@ -183,10 +233,14 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             className={`inline-flex px-2 py-0.5 rounded-full font-mono text-[10px] font-bold whitespace-nowrap ${
               row.distanceWarning === 'WARNING'
                 ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                : row.deviationMeters==null?'bg-surface-container text-on-surface-variant':'bg-emerald-500/10 text-emerald-600'
+                : row.deviationMeters == null
+                  ? 'bg-surface-container text-on-surface-variant'
+                  : 'bg-emerald-500/10 text-emerald-600'
             }`}
           >
-            {row.deviationMeters==null?'Tidak tersedia':`${row.deviationMeters}m (${row.distanceWarning})`}
+            {row.deviationMeters == null
+              ? 'Tidak tersedia'
+              : `${row.deviationMeters}m (${row.distanceWarning})`}
           </span>
         ) : (
           <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
@@ -219,4 +273,3 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
     </tr>
   );
 };
-

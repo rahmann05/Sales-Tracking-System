@@ -4,16 +4,25 @@ import { RoleTemplateEditModal } from './RoleTemplateEditModal';
  * RoleTemplateManager.jsx
  * Single Responsibility: Master hub for viewing system and custom roles,
  * creating new custom roles, and editing their default permission templates.
- * 
+ *
  * NOTE: Strict compliance - Zero emojis. Pure React Icons.
  */
 
-import {useDomainPermission} from '../../../shared/hooks/useDomainPermission';
+import { useDomainPermission } from '../../../shared/hooks/useDomainPermission';
 import React, { useState, useEffect } from 'react';
 import { rolesApi } from '../../../services/api';
-import { LuPlus, LuShield, LuShieldCheck, LuUsers, LuPackage, LuTruck, LuNavigation, LuSave, LuX } from 'react-icons/lu';
-import { FiEdit } from 'react-icons/fi';
-import { notifySuccess, notifyError } from '../../../services/notificationService';
+import {
+  LuPlus,
+  LuShield,
+  LuShieldCheck,
+  LuUsers,
+  LuPackage,
+  LuTruck,
+  LuNavigation,
+  LuSave,
+} from 'react-icons/lu';
+import { notifySuccess, notifyError, confirmAction } from '../../../services/notificationService';
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { PermissionsCustomizer } from './PermissionsCustomizer';
 import { getEmptyPermissions, BUILT_IN_ROLE_TEMPLATES } from '../../../constants/permissions';
 const ROLE_ICONS = {
@@ -21,10 +30,10 @@ const ROLE_ICONS = {
   SUPERVISOR: LuUsers,
   SALES: LuNavigation,
   KEPALA_GUDANG: LuPackage,
-  SUPIR: LuTruck
+  SUPIR: LuTruck,
 };
 export const RoleTemplateManager = () => {
-  const canManage=useDomainPermission('ROLES');
+  const canManage = useDomainPermission('ROLES');
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +49,7 @@ export const RoleTemplateManager = () => {
     description: '',
     badgeColor: 'indigo',
     cloneFromRole: 'SALES',
-    defaultPermissions: {}
+    defaultPermissions: {},
   });
 
   // Edit role template form
@@ -71,55 +80,60 @@ export const RoleTemplateManager = () => {
       description: '',
       badgeColor: 'indigo',
       cloneFromRole: 'SALES',
-      defaultPermissions: defaultTemplate
+      defaultPermissions: defaultTemplate,
     });
     setIsCreateModalOpen(true);
   };
 
   // When clone source changes
-  const handleCloneChange = sourceRoleCode => {
-    const source = roles.find(r => r.code === sourceRoleCode);
-    const template = source?.defaultPermissions || BUILT_IN_ROLE_TEMPLATES[sourceRoleCode] || getEmptyPermissions();
-    setNewRoleForm(prev => ({
+  const handleCloneChange = (sourceRoleCode) => {
+    const source = roles.find((r) => r.code === sourceRoleCode);
+    const template =
+      source?.defaultPermissions ||
+      BUILT_IN_ROLE_TEMPLATES[sourceRoleCode] ||
+      getEmptyPermissions();
+    setNewRoleForm((prev) => ({
       ...prev,
       cloneFromRole: sourceRoleCode,
-      defaultPermissions: template
+      defaultPermissions: template,
     }));
   };
 
   // Submit create new role
-  const handleCreateRole = async e => {
+  const handleCreateRole = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       await rolesApi.create({
-        baseRole: roles.find(r => r.code === newRoleForm.cloneFromRole)?.baseRole || newRoleForm.cloneFromRole,
+        baseRole:
+          roles.find((r) => r.code === newRoleForm.cloneFromRole)?.baseRole ||
+          newRoleForm.cloneFromRole,
         code: newRoleForm.code,
         name: newRoleForm.name,
         description: newRoleForm.description,
         badgeColor: newRoleForm.badgeColor,
-        defaultPermissions: newRoleForm.defaultPermissions
+        defaultPermissions: newRoleForm.defaultPermissions,
       });
       notifySuccess(`Role baru '${newRoleForm.name}' berhasil dibuat`);
       setIsCreateModalOpen(false);
       fetchRoles();
     } catch (err) {
       console.error(err);
-      notifyError(err.response?.data?.message || err.message || 'Gagal membuat role baru');
+      notifyError(err?.message || err?.response?.data?.message || 'Gagal membuat role baru');
     } finally {
       setSubmitting(false);
     }
   };
 
   // Handle open edit template modal
-  const handleOpenEditModal = role => {
+  const handleOpenEditModal = (role) => {
     setActiveRole(role);
     setEditPermissions(role.defaultPermissions || {});
     setIsEditModalOpen(true);
   };
 
   // Submit update role template
-  const handleUpdateTemplate = async e => {
+  const handleUpdateTemplate = async (e) => {
     e.preventDefault();
     if (!activeRole) return;
     setSubmitting(true);
@@ -127,26 +141,31 @@ export const RoleTemplateManager = () => {
       await rolesApi.update(activeRole.code, {
         name: activeRole.name,
         description: activeRole.description,
-        defaultPermissions: editPermissions
+        defaultPermissions: editPermissions,
       });
       notifySuccess(`Template default untuk role '${activeRole.name}' berhasil diperbarui`);
       setIsEditModalOpen(false);
       fetchRoles();
     } catch (err) {
       console.error(err);
-      notifyError(err.response?.data?.message || err.message || 'Gagal memperbarui template role');
+      notifyError(
+        err?.message || err?.response?.data?.message || 'Gagal memperbarui template role'
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   // Delete custom role
-  const handleDeleteRole = async role => {
+  const handleDeleteRole = async (role) => {
     if (role.isSystem) {
       notifyError('Role bawaan sistem tidak dapat dihapus');
       return;
     }
-    const confirmed = window.confirm(`Apakah Anda yakin ingin menghapus role '${role.name}' (${role.code})?`);
+    const confirmed = await confirmAction(
+      `Apakah Anda yakin ingin menghapus role '${role.name}' (${role.code})?`,
+      { title: 'Hapus Role', confirmLabel: 'Hapus', danger: true }
+    );
     if (!confirmed) return;
     try {
       await rolesApi.delete(role.code);
@@ -154,10 +173,11 @@ export const RoleTemplateManager = () => {
       fetchRoles();
     } catch (err) {
       console.error(err);
-      notifyError(err.response?.data?.message || err.message || 'Gagal menghapus role');
+      notifyError(err?.message || err?.response?.data?.message || 'Gagal menghapus role');
     }
   };
-  return <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       {/* Top Banner & Action */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-2xl bg-surface border border-border-glass">
         <div>
@@ -166,65 +186,107 @@ export const RoleTemplateManager = () => {
             Master Role & Template Hak Akses
           </h4>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Role kustom mengikuti alur role dasar yang disalin. Template izin berlaku saat akses, dan izin khusus akun dapat menimpa template.
+            Role kustom mengikuti alur role dasar yang disalin. Template izin berlaku saat akses,
+            dan izin khusus akun dapat menimpa template.
           </p>
         </div>
 
-        <button type="button" disabled={!canManage} onClick={handleOpenCreateModal} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer">
+        <button
+          type="button"
+          disabled={!canManage}
+          onClick={handleOpenCreateModal}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
+        >
           <LuPlus className="text-sm" />
           <span>Tambah Role Baru</span>
         </button>
       </div>
 
       {/* Roles Grid */}
-      {loading ? <div className="p-12 text-center text-xs text-on-surface-variant">
+      {loading ? (
+        <div className="p-12 text-center text-xs text-on-surface-variant">
           Memuat daftar role dan template...
-        </div> : <RoleTemplateGrid canManage={canManage} ROLE_ICONS={ROLE_ICONS} handleDeleteRole={handleDeleteRole} handleOpenEditModal={handleOpenEditModal} roles={roles} />}
+        </div>
+      ) : (
+        <RoleTemplateGrid
+          canManage={canManage}
+          ROLE_ICONS={ROLE_ICONS}
+          handleDeleteRole={handleDeleteRole}
+          handleOpenEditModal={handleOpenEditModal}
+          roles={roles}
+        />
+      )}
 
       {/* Modal: Tambah Role Baru */}
-      {canManage&&isCreateModalOpen && <RoleTemplateEditModal handleCloneChange={handleCloneChange} handleCreateRole={handleCreateRole} newRoleForm={newRoleForm} roles={roles} setIsCreateModalOpen={setIsCreateModalOpen} setNewRoleForm={setNewRoleForm} submitting={submitting} />}
+      {canManage && isCreateModalOpen && (
+        <RoleTemplateEditModal
+          handleCloneChange={handleCloneChange}
+          handleCreateRole={handleCreateRole}
+          newRoleForm={newRoleForm}
+          roles={roles}
+          setIsCreateModalOpen={setIsCreateModalOpen}
+          setNewRoleForm={setNewRoleForm}
+          submitting={submitting}
+        />
+      )}
 
       {/* Modal: Edit Template Default Role */}
-      {canManage&&isEditModalOpen && activeRole && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-surface border border-border-glass rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="px-6 py-4 border-b border-border-glass flex items-center justify-between bg-surface-container/30 shrink-0">
-              <div className="flex items-center gap-2">
-                <FiEdit className="text-primary text-lg" />
-                <div>
-                  <h3 className="font-bold text-sm text-on-surface">
-                    Ubah Template Hak Akses: {activeRole.name}
-                  </h3>
-                  <p className="text-[11px] text-on-surface-variant">
-                    Pengguna baru yang memilih role ini akan otomatis mendapatkan konfigurasi izin ini.
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-on-surface-variant hover:text-on-surface p-1">
-                <LuX className="text-lg" />
-              </button>
+      <NativeDialog
+        open={Boolean(canManage && isEditModalOpen && activeRole)}
+        title={
+          activeRole ? `Ubah Template Hak Akses: ${activeRole.name}` : 'Ubah Template Hak Akses'
+        }
+        onClose={() => setIsEditModalOpen(false)}
+        busy={submitting}
+        className="wide-modal-dialog"
+      >
+        {activeRole && (
+          <form onSubmit={handleUpdateTemplate} className="space-y-4">
+            <p className="text-xs text-on-surface-variant">
+              Pengguna baru yang memilih role ini akan otomatis mendapatkan konfigurasi izin ini.
+            </p>
+            <div className="bg-surface-container/20 border border-border-glass rounded-xl p-4">
+              <PermissionsCustomizer
+                permissions={editPermissions}
+                onTogglePermission={(key) =>
+                  setEditPermissions((prev) => ({
+                    ...prev,
+                    [key]: !prev[key],
+                  }))
+                }
+                onBulkSet={setEditPermissions}
+                onResetToTemplate={() => setEditPermissions(activeRole.defaultPermissions || {})}
+                selectedRoleName={activeRole.name}
+                isModified={false}
+              />
             </div>
 
-            <form onSubmit={handleUpdateTemplate} className="p-6 overflow-y-auto space-y-4">
-              <div className="bg-surface-container/20 border border-border-glass rounded-xl p-4">
-                <PermissionsCustomizer permissions={editPermissions} onTogglePermission={key => setEditPermissions(prev => ({
-              ...prev,
-              [key]: !prev[key]
-            }))} onBulkSet={setEditPermissions} onResetToTemplate={() => setEditPermissions(activeRole.defaultPermissions || {})} selectedRoleName={activeRole.name} isModified={false} />
-              </div>
-
-              <div className="pt-4 border-t border-border-glass flex justify-end gap-2">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-bold bg-surface-container text-on-surface hover:bg-surface-variant transition-colors cursor-pointer">
-                  Batal
-                </button>
-                <button type="submit" disabled={submitting} className="px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-neutral-800 transition-colors flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50">
-                  {submitting ? 'Menyimpan...' : <>
-                      <LuSave className="text-sm" />
-                      <span>Simpan Template</span>
-                    </>}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>}
-    </div>;
+            <div className="pt-4 border-t border-border-glass flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-surface-container text-on-surface hover:bg-surface-variant transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover transition-colors flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                {submitting ? (
+                  'Menyimpan...'
+                ) : (
+                  <>
+                    <LuSave className="text-sm" />
+                    <span>Simpan Template</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+      </NativeDialog>
+    </div>
+  );
 };

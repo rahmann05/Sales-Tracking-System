@@ -1,46 +1,395 @@
-import React,{useCallback,useEffect,useRef,useState} from 'react';
-import {LuArrowRight,LuRefreshCw,LuSearch,LuClock} from 'react-icons/lu';
-import {request} from '../../../services/httpClient';
-import {useWorkspaceState} from '../../hooks/useWorkspaceState';
-import {setWorkspaceValues} from '../../utils/workspaceNavigation';
-import {useApp} from '../../../context/AppContext';
-import {TAB_IDS,getNavigationTabs} from '../../../constants/navigation';
-import {NativeDialog} from './NativeDialog';
-import {FollowUpActions} from './FollowUpActions';
-import {AttentionExceptionActions} from './AttentionExceptionActions';
-import {AttentionLocationActions} from './AttentionLocationActions';
-import {BlockedFollowUpActions} from './BlockedFollowUpActions';
-import {AttentionEscalations} from './AttentionEscalations';
-import {SupervisorExceptionLink} from '../../../pages/Supervisor/components/SupervisorExceptionLink';
-import {OperationalIssues} from '../../../pages/Warehouse/components/OperationalIssues';
-import {presentAttention} from '../../../../../shared/operational-attention.mjs';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { LuArrowRight, LuRefreshCw, LuSearch, LuClock } from 'react-icons/lu';
+import { request } from '../../../services/httpClient';
+import { useWorkspaceState } from '../../hooks/useWorkspaceState';
+import { setWorkspaceValues } from '../../utils/workspaceNavigation';
+import { useApp } from '../../../context/AppContext';
+import { TAB_IDS, getNavigationTabs } from '../../../constants/navigation';
+import { NativeDialog } from './NativeDialog';
+import { FollowUpActions } from './FollowUpActions';
+import { AttentionExceptionActions } from './AttentionExceptionActions';
+import { AttentionLocationActions } from './AttentionLocationActions';
+import { BlockedFollowUpActions } from './BlockedFollowUpActions';
+import { AttentionEscalations } from './AttentionEscalations';
+import { SupervisorExceptionLink } from '../../../pages/Supervisor/components/SupervisorExceptionLink';
+import { OperationalIssues } from '../../../pages/Warehouse/components/OperationalIssues';
+import { presentAttention } from '../../../../../shared/operational-attention.mjs';
 import '../../../styles/operational-workspace.css';
-const categories={ALL:'Semua pekerjaan',ORDER:'Order',PACKING:'Dokumen muatan',TRIP:'Perjalanan',PREPARATION:'Persiapan gudang',ISSUE:'Masalah & keluhan',VISIT:'Arahan kunjungan',EXCEPTION:'Pemeriksaan kejadian',OUTLET_REVIEW:'Validasi outlet',OUTLET_LOCATION:'Lokasi outlet',RETURN:'Barang kembali'};
-const stamp=value=>value?new Date(value).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}):null;
-export function AttentionPanel(){
- const {user,setActiveTab,settings}=useApp();
- const [pageValue,setPage]=useWorkspaceState('attentionPage','1'),[filter]=useWorkspaceState('attentionFilter',settings.ATTENTION_DEFAULT_FILTER||'WORK'),[category]=useWorkspaceState('attentionCategory',settings.ATTENTION_DEFAULT_CATEGORY||'ALL'),[search]=useWorkspaceState('attentionSearch',''),[selectedKey,setSelectedKey]=useWorkspaceState('attentionItem','');
- const [data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState('');
- const page=Math.max(1,Number(pageValue)||1),limit=settings.WORKSPACE_PAGE_SIZE||25,flight=useRef(0),scope=`${page}:${filter}:${category}:${search}`;
- const reload=useCallback(async()=>{const seq=++flight.current;setLoading(true);try{const response=await request(`/attention?${new URLSearchParams({page,limit,filter,category,search})}`);if(seq===flight.current){setData({...response.data,scope});setError('');}}catch(e){if(seq===flight.current)setError(e.message);}finally{if(seq===flight.current)setLoading(false);}},[scope,limit]);
- useEffect(()=>{const delay=setTimeout(reload,200),timer=setInterval(reload,60000);window.addEventListener('focus',reload);window.addEventListener('operational-data-changed',reload);return()=>{flight.current++;clearTimeout(delay);clearInterval(timer);window.removeEventListener('focus',reload);window.removeEventListener('operational-data-changed',reload);};},[reload]);
- const change=(key,value)=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true})))setWorkspaceValues({[key]:value,attentionPage:1,attentionItem:''});};
- const close=()=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true})))setSelectedKey('');};
- const rows=data?.scope===scope?data.rows.map(row=>presentAttention(row,user)):[],selected=rows.find(row=>row.key===selectedKey);
- const targets={SYSTEM_CONFIG:TAB_IDS.SYSTEM_CONFIG,OUTLET_REVIEW:TAB_IDS.OUTLET_VALIDATION,APPROVAL:user.role==='SUPERVISOR'?TAB_IDS.SPV_APPROVAL:TAB_IDS.ADMIN_APPROVAL,PACKING:TAB_IDS.DELIVERY_PACKING_LIST,PACKING_ORDER:TAB_IDS.DELIVERY_PACKING_LIST,ROUTE:TAB_IDS.DELIVERY_ROUTES,DELIVERY:TAB_IDS.DELIVERY_MONITOR};
- const allowed=getNavigationTabs(user).map(tab=>tab.id);
- const open=row=>{const target=targets[row.target];if(!target||!allowed.includes(target))return;if(!window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true})))return;setWorkspaceValues({...(row.target==='APPROVAL'?{orderDetail:row.reference?.orderId}:{}),...(row.target==='PACKING_ORDER'?{packingOrder:row.reference?.orderId}:{}),...(row.target==='PACKING'?{packingDetail:row.reference?.packingListId,warehousePacking:row.reference?.packingListId}:{}),...(row.reference?.routeId?{deliveryRoute:row.reference.routeId,deliveryStop:row.reference?.stopId||''}:{}),...(row.target==='OUTLET_REVIEW'?{outletReview:row.reference?.outletReviewId}:{}),attentionItem:''});setActiveTab(target);};
- const hasInline=row=>['ISSUE','FOLLOW_UP','AUTO_FOLLOW_UP','EXCEPTION'].includes(row.target)||row.locationAlert;
- const related=selected?.target==='ISSUE'?(selected.reference?.routeId?{...selected,target:'ROUTE'}:selected.reference?.packingListId?{...selected,target:'PACKING'}:selected.reference?.orderId?{...selected,target:'APPROVAL'}:null):selected;
- return <section className="workspace-page work-center" aria-label="Perlu tindakan">
-  <header className="admin-page-heading"><div><p className="admin-eyebrow">Pekerjaan operasional</p><h1>Perlu tindakan</h1><p>Lihat apa yang perlu dilakukan, siapa yang melanjutkan, lalu buka pekerjaan terkait. Masalah dan keluhan dilaporkan hanya bila ada kendala.</p></div><button type="button" className="admin-button" disabled={loading} onClick={reload}><LuRefreshCw/>{loading?'Memperbarui…':'Perbarui'}</button></header>
-  <nav className="work-tabs" aria-label="Lingkup pekerjaan">{[['WORK','Untuk saya / tim saya'],['WAITING','Menunggu pihak lain'],['ALL','Semua terbuka'],['HISTORY','Riwayat 30 hari']].map(([key,label])=><button type="button" key={key} aria-pressed={filter===key} onClick={()=>change('attentionFilter',key)}>{label}</button>)}</nav>
-  {filter!=='HISTORY'&&<div className="work-summary">{[['WORK','Perlu dikerjakan',data?.summary.actionable],['OVERDUE','Lewat tenggat',data?.summary.overdue],['REVIEW','Menunggu pemeriksaan',data?.summary.awaitingReview]].map(([key,label,value])=><button type="button" key={key} aria-pressed={filter===key} onClick={()=>change('attentionFilter',key)}><span>{label}</span><strong>{data?.scope===scope?value??0:'—'}</strong></button>)}</div>}
-  <div className="admin-toolbar"><label className="admin-search"><LuSearch aria-hidden="true"/><input type="search" value={search} aria-label="Cari pekerjaan" placeholder="Cari toko, dokumen, atau pekerjaan…" onChange={e=>change('attentionSearch',e.target.value)}/></label><label className="admin-select-label">Jenis pekerjaan<select value={category} onChange={e=>change('attentionCategory',e.target.value)}>{Object.entries(categories).filter(([key])=>user.role!=='SUPERVISOR'||['ALL','ORDER','ISSUE','VISIT','EXCEPTION','OUTLET_REVIEW','OUTLET_LOCATION'].includes(key)).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>{!['WORK','WAITING','ALL','HISTORY'].includes(filter)&&<button className="admin-button" onClick={()=>change('attentionFilter','WORK')}>Hapus filter lanjutan</button>}</div>
-  {error&&<p role="alert" className="admin-feedback error">{error} Perbarui untuk mendapatkan pekerjaan terkini.</p>}
-  <p role="status" className="admin-footnote">{loading?'Memuat pekerjaan…':`Diperbarui ${stamp(data?.generatedAt)||'—'} WIB · Otomatis setiap menit`}</p>
-  {!error&&<div className="admin-panel work-list" aria-busy={loading}>{rows.map(row=><article className="work-row" key={row.key}><div className="work-row-main"><span className="work-kind">{categories[row.category]}</span><h2>{row.actionTitle}</h2><strong className="work-reference">{row.title}</strong><p>{row.explanation||row.nextAction}</p>{!row.completed&&<p className="work-owner">Ditangani oleh: <strong>{row.handledBy}</strong></p>}</div><div className="work-row-status">{row.completed?<span className="admin-status admin-status-approved">Tercatat {stamp(row.since)}</span>:<><span className={`admin-status ${row.overdue?'admin-status-rejected':''}`}>{row.overdue?'Lewat tenggat':row.actionableForUser?'Giliran Anda / tim Anda':'Menunggu pihak lain'}</span><span className="admin-footnote"><LuClock/> {stamp(row.status==='SUBMITTED'?row.reviewDueAt:row.dueAt)||(row.status!=='SUBMITTED'?row.dueDate:null)||'Tanpa tenggat khusus'}</span></>}</div><button className={`admin-button ${row.actionableForUser?'primary':''}`} type="button" disabled={loading||!hasInline(row)&&!allowed.includes(targets[row.target])} onClick={()=>hasInline(row)?setSelectedKey(row.key):open(row)}>{hasInline(row)?row.completed?'Lihat hasil':row.actionableForUser?'Tangani':'Lihat rincian':row.buttonLabel}<LuArrowRight/></button></article>)}{!loading&&!rows.length&&<div className="admin-empty"><h2>{filter==='WORK'?'Tidak ada pekerjaan untuk Anda / tim Anda':'Tidak ada pekerjaan dalam pilihan ini'}</h2><p>{filter==='WORK'?'Anda dapat melihat pekerjaan yang sedang ditangani pihak lain.':'Ubah pencarian atau jenis pekerjaan untuk melihat hasil lainnya.'}</p></div>}<footer className="admin-pagination"><span>{data?.scope===scope?data.total:'—'} pekerjaan · Halaman {page}</span><div><button disabled={loading||page===1} onClick={()=>setPage(page-1)}>Sebelumnya</button><button disabled={loading||!data||page*limit>=data.total} onClick={()=>setPage(page+1)}>Berikutnya</button></div></footer></div>}
-  {user.role==='ADMIN'&&<details className="work-advanced"><summary>Pengingat dan pengaturan lanjutan</summary><AttentionEscalations/>{data?.policyNote&&<p className="admin-footnote">{data.policyNote}</p>}</details>}
-  <NativeDialog open={Boolean(selected)} title={selected?.actionTitle||'Rincian pekerjaan'} onClose={close} className="work-detail-dialog">{selected&&<><p className="work-reference">{selected.title}</p>{!selected.completed&&<p>Ditangani oleh: <strong>{selected.handledBy}</strong></p>}{selected.target==='ISSUE'?<OperationalIssues issues={[selected.issue]} people={data.people||[]} onChanged={reload}/>:selected.target==='FOLLOW_UP'?<FollowUpActions id={selected.activityId} followUp={selected.followUp} policySnapshot={selected.policySnapshot} onChanged={reload}/>:selected.target==='AUTO_FOLLOW_UP'?<BlockedFollowUpActions row={selected} onChanged={reload}/>:selected.target==='EXCEPTION'?(user.role==='SUPERVISOR'&&!['SHIFT_TIME_RANGE','MISSING_OUT','UNCLOSED_SHIFT','OPEN_SPV_VISIT','MANUAL_RESULT'].includes(selected.exception?.kind)?<SupervisorExceptionLink row={selected}/>:<AttentionExceptionActions row={selected} onChanged={reload}/>):null}{selected.locationAlert&&<AttentionLocationActions row={selected} onChanged={reload}/>}<div className="admin-dialog-actions">{related&&targets[related.target]&&allowed.includes(targets[related.target])&&<button className="admin-button primary" onClick={()=>open(related)}>Buka dokumen terkait</button>}<button className="admin-button" onClick={close}>Kembali ke daftar</button></div></>}</NativeDialog>
- </section>;
+const categories = {
+  ALL: 'Semua pekerjaan',
+  ORDER: 'Order',
+  PACKING: 'Dokumen muatan',
+  TRIP: 'Perjalanan',
+  PREPARATION: 'Persiapan gudang',
+  ISSUE: 'Masalah & keluhan',
+  VISIT: 'Arahan kunjungan',
+  EXCEPTION: 'Pemeriksaan kejadian',
+  OUTLET_REVIEW: 'Validasi outlet',
+  OUTLET_LOCATION: 'Lokasi outlet',
+  RETURN: 'Barang kembali',
+};
+const stamp = (value) =>
+  value ? new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : null;
+export function AttentionPanel() {
+  const { user, setActiveTab, settings } = useApp();
+  const [pageValue, setPage] = useWorkspaceState('attentionPage', '1'),
+    [filter] = useWorkspaceState('attentionFilter', settings.ATTENTION_DEFAULT_FILTER || 'WORK'),
+    [category] = useWorkspaceState(
+      'attentionCategory',
+      settings.ATTENTION_DEFAULT_CATEGORY || 'ALL'
+    ),
+    [search] = useWorkspaceState('attentionSearch', ''),
+    [selectedKey, setSelectedKey] = useWorkspaceState('attentionItem', '');
+  const [data, setData] = useState(null),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState('');
+  const page = Math.max(1, Number(pageValue) || 1),
+    limit = settings.WORKSPACE_PAGE_SIZE || 25,
+    flight = useRef(0),
+    scope = `${page}:${filter}:${category}:${search}`;
+  const reload = useCallback(async () => {
+    const seq = ++flight.current;
+    setLoading(true);
+    try {
+      const response = await request(
+        `/attention?${new URLSearchParams({ page, limit, filter, category, search })}`
+      );
+      if (seq === flight.current) {
+        setData({ ...response.data, scope });
+        setError('');
+      }
+    } catch (e) {
+      if (seq === flight.current) setError(e.message);
+    } finally {
+      if (seq === flight.current) setLoading(false);
+    }
+  }, [scope, limit]);
+  useEffect(() => {
+    const delay = setTimeout(reload, 200),
+      timer = setInterval(reload, 60000);
+    window.addEventListener('focus', reload);
+    window.addEventListener('operational-data-changed', reload);
+    return () => {
+      flight.current++;
+      clearTimeout(delay);
+      clearInterval(timer);
+      window.removeEventListener('focus', reload);
+      window.removeEventListener('operational-data-changed', reload);
+    };
+  }, [reload]);
+  const change = (key, value) => {
+    if (window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true })))
+      setWorkspaceValues({ [key]: value, attentionPage: 1, attentionItem: '' });
+  };
+  const close = () => {
+    if (window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true })))
+      setSelectedKey('');
+  };
+  const pending = loading || (!error && data?.scope !== scope);
+  const rows = data?.scope === scope ? data.rows.map((row) => presentAttention(row, user)) : [],
+    selected = rows.find((row) => row.key === selectedKey);
+  const targets = {
+    SYSTEM_CONFIG: TAB_IDS.SYSTEM_CONFIG,
+    OUTLET_REVIEW: TAB_IDS.OUTLET_VALIDATION,
+    APPROVAL: user.role === 'SUPERVISOR' ? TAB_IDS.SPV_APPROVAL : TAB_IDS.ADMIN_APPROVAL,
+    PACKING: TAB_IDS.DELIVERY_PACKING_LIST,
+    PACKING_ORDER: TAB_IDS.DELIVERY_PACKING_LIST,
+    ROUTE: TAB_IDS.DELIVERY_ROUTES,
+    DELIVERY: TAB_IDS.DELIVERY_MONITOR,
+  };
+  const allowed = getNavigationTabs(user).map((tab) => tab.id);
+  const open = (row) => {
+    const target = targets[row.target];
+    if (!target || !allowed.includes(target)) return;
+    if (!window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true }))) return;
+    setWorkspaceValues(
+      {
+        ...(row.target === 'APPROVAL' ? { orderDetail: row.reference?.orderId } : {}),
+        ...(row.target === 'PACKING_ORDER' ? { packingOrder: row.reference?.orderId } : {}),
+        ...(row.target === 'PACKING'
+          ? {
+              packingDetail: row.reference?.packingListId,
+              warehousePacking: row.reference?.packingListId,
+            }
+          : {}),
+        ...(row.reference?.routeId
+          ? { deliveryRoute: row.reference.routeId, deliveryStop: row.reference?.stopId || '' }
+          : {}),
+        ...(row.target === 'OUTLET_REVIEW' ? { outletReview: row.reference?.outletReviewId } : {}),
+        attentionItem: '',
+      },
+      { tab: target }
+    );
+    setActiveTab(target);
+  };
+  const hasInline = (row) =>
+    ['ISSUE', 'FOLLOW_UP', 'AUTO_FOLLOW_UP', 'EXCEPTION'].includes(row.target) || row.locationAlert;
+  const related =
+    selected?.target === 'ISSUE'
+      ? selected.reference?.routeId
+        ? { ...selected, target: 'ROUTE' }
+        : selected.reference?.packingListId
+          ? { ...selected, target: 'PACKING' }
+          : selected.reference?.orderId
+            ? { ...selected, target: 'APPROVAL' }
+            : null
+      : selected;
+  return (
+    <section className="workspace-page work-center" aria-label="Perlu tindakan">
+      <header className="admin-page-heading">
+        <div>
+          <p className="admin-eyebrow">Pekerjaan operasional</p>
+          <h1>Perlu tindakan</h1>
+          <p>
+            Lihat apa yang perlu dilakukan, siapa yang melanjutkan, lalu buka pekerjaan terkait.
+            Masalah dan keluhan dilaporkan hanya bila ada kendala.
+          </p>
+        </div>
+        <button type="button" className="admin-button" disabled={loading} onClick={reload}>
+          <LuRefreshCw />
+          {loading ? 'Memperbarui…' : 'Perbarui'}
+        </button>
+      </header>
+      <nav className="work-tabs" aria-label="Lingkup pekerjaan">
+        {[
+          ['WORK', 'Untuk saya / tim saya'],
+          ['WAITING', 'Menunggu pihak lain'],
+          ['ALL', 'Semua terbuka'],
+          ['HISTORY', 'Riwayat 30 hari'],
+        ].map(([key, label]) => (
+          <button
+            type="button"
+            key={key}
+            aria-pressed={filter === key}
+            onClick={() => change('attentionFilter', key)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      {filter !== 'HISTORY' && (
+        <div className="work-summary">
+          {[
+            ['WORK', 'Perlu dikerjakan', data?.summary.actionable],
+            ['OVERDUE', 'Lewat tenggat', data?.summary.overdue],
+            ['REVIEW', 'Menunggu pemeriksaan', data?.summary.awaitingReview],
+          ].map(([key, label, value]) => (
+            <button
+              type="button"
+              key={key}
+              aria-pressed={filter === key}
+              onClick={() => change('attentionFilter', key)}
+            >
+              <span>{label}</span>
+              <strong>{data?.scope === scope ? (value ?? 0) : '—'}</strong>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="admin-toolbar">
+        <label className="admin-search">
+          <LuSearch aria-hidden="true" />
+          <input
+            type="search"
+            value={search}
+            aria-label="Cari pekerjaan"
+            placeholder="Cari toko, dokumen, atau pekerjaan…"
+            onChange={(e) => change('attentionSearch', e.target.value)}
+          />
+        </label>
+        <label className="admin-select-label">
+          Jenis pekerjaan
+          <select value={category} onChange={(e) => change('attentionCategory', e.target.value)}>
+            {Object.entries(categories)
+              .filter(
+                ([key]) =>
+                  user.role !== 'SUPERVISOR' ||
+                  [
+                    'ALL',
+                    'ORDER',
+                    'ISSUE',
+                    'VISIT',
+                    'EXCEPTION',
+                    'OUTLET_REVIEW',
+                    'OUTLET_LOCATION',
+                  ].includes(key)
+              )
+              .map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+          </select>
+        </label>
+        {!['WORK', 'WAITING', 'ALL', 'HISTORY'].includes(filter) && (
+          <button className="admin-button" onClick={() => change('attentionFilter', 'WORK')}>
+            Hapus filter lanjutan
+          </button>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="admin-feedback error">
+          {error} Perbarui untuk mendapatkan pekerjaan terkini.
+        </p>
+      )}
+      <p role="status" className="admin-footnote">
+        {pending
+          ? 'Memuat pekerjaan…'
+          : `Diperbarui ${stamp(data?.generatedAt) || '—'} WIB · Otomatis setiap menit`}
+      </p>
+      {!error && (
+        <div className="admin-panel work-list" aria-busy={loading}>
+          {rows.map((row) => (
+            <article className="work-row" key={row.key}>
+              <div className="work-row-main">
+                <span className="work-kind">{categories[row.category]}</span>
+                <h2>{row.actionTitle}</h2>
+                <strong className="work-reference">{row.title}</strong>
+                <p>{row.explanation || row.nextAction}</p>
+                {!row.completed && (
+                  <p className="work-owner">
+                    Ditangani oleh: <strong>{row.handledBy}</strong>
+                  </p>
+                )}
+              </div>
+              <div className="work-row-status">
+                {row.completed ? (
+                  <span className="admin-status admin-status-approved">
+                    Tercatat {stamp(row.since)}
+                  </span>
+                ) : (
+                  <>
+                    <span className={`admin-status ${row.overdue ? 'admin-status-rejected' : ''}`}>
+                      {row.overdue
+                        ? 'Lewat tenggat'
+                        : row.actionableForUser
+                          ? 'Giliran Anda / tim Anda'
+                          : 'Menunggu pihak lain'}
+                    </span>
+                    <span className="admin-footnote">
+                      <LuClock />{' '}
+                      {stamp(row.status === 'SUBMITTED' ? row.reviewDueAt : row.dueAt) ||
+                        (row.status !== 'SUBMITTED' ? row.dueDate : null) ||
+                        'Tanpa tenggat khusus'}
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                className={`admin-button ${row.actionableForUser ? 'primary' : ''}`}
+                type="button"
+                disabled={loading || (!hasInline(row) && !allowed.includes(targets[row.target]))}
+                onClick={() => (hasInline(row) ? setSelectedKey(row.key) : open(row))}
+              >
+                {hasInline(row)
+                  ? row.completed
+                    ? 'Lihat hasil'
+                    : row.actionableForUser
+                      ? 'Tangani'
+                      : 'Lihat rincian'
+                  : row.buttonLabel}
+                <LuArrowRight />
+              </button>
+            </article>
+          ))}
+          {!pending && !error && !rows.length && (
+            <div className="admin-empty">
+              <h2>
+                {filter === 'WORK'
+                  ? 'Tidak ada pekerjaan untuk Anda / tim Anda'
+                  : 'Tidak ada pekerjaan dalam pilihan ini'}
+              </h2>
+              <p>
+                {filter === 'WORK'
+                  ? 'Anda dapat melihat pekerjaan yang sedang ditangani pihak lain.'
+                  : 'Ubah pencarian atau jenis pekerjaan untuk melihat hasil lainnya.'}
+              </p>
+            </div>
+          )}
+          <footer className="admin-pagination">
+            <span>
+              {data?.scope === scope ? data.total : '—'} pekerjaan · Halaman {page}
+            </span>
+            <div>
+              <button disabled={loading || page === 1} onClick={() => setPage(page - 1)}>
+                Sebelumnya
+              </button>
+              <button
+                disabled={loading || !data || page * limit >= data.total}
+                onClick={() => setPage(page + 1)}
+              >
+                Berikutnya
+              </button>
+            </div>
+          </footer>
+        </div>
+      )}
+      {user.role === 'ADMIN' && (
+        <details className="work-advanced">
+          <summary>Pengingat dan pengaturan lanjutan</summary>
+          <AttentionEscalations />
+          {data?.policyNote && <p className="admin-footnote">{data.policyNote}</p>}
+        </details>
+      )}
+      <NativeDialog
+        open={Boolean(selected)}
+        title={selected?.actionTitle || 'Rincian pekerjaan'}
+        onClose={close}
+        className="work-detail-dialog"
+      >
+        {selected && (
+          <>
+            <p className="work-reference">{selected.title}</p>
+            {!selected.completed && (
+              <p>
+                Ditangani oleh: <strong>{selected.handledBy}</strong>
+              </p>
+            )}
+            {selected.target === 'ISSUE' ? (
+              <OperationalIssues
+                issues={[selected.issue]}
+                people={data.people || []}
+                onChanged={reload}
+              />
+            ) : selected.target === 'FOLLOW_UP' ? (
+              <FollowUpActions
+                id={selected.activityId}
+                followUp={selected.followUp}
+                policySnapshot={selected.policySnapshot}
+                onChanged={reload}
+              />
+            ) : selected.target === 'AUTO_FOLLOW_UP' ? (
+              <BlockedFollowUpActions row={selected} onChanged={reload} />
+            ) : selected.target === 'EXCEPTION' ? (
+              user.role === 'SUPERVISOR' &&
+              ![
+                'SHIFT_TIME_RANGE',
+                'MISSING_OUT',
+                'UNCLOSED_SHIFT',
+                'OPEN_SPV_VISIT',
+                'MANUAL_RESULT',
+              ].includes(selected.exception?.kind) ? (
+                <SupervisorExceptionLink row={selected} />
+              ) : (
+                <AttentionExceptionActions row={selected} onChanged={reload} />
+              )
+            ) : null}
+            {selected.locationAlert && (
+              <AttentionLocationActions row={selected} onChanged={reload} />
+            )}
+            <div className="admin-dialog-actions">
+              {related && targets[related.target] && allowed.includes(targets[related.target]) && (
+                <button className="admin-button primary" onClick={() => open(related)}>
+                  Buka dokumen terkait
+                </button>
+              )}
+              <button className="admin-button" onClick={close}>
+                Kembali ke daftar
+              </button>
+            </div>
+          </>
+        )}
+      </NativeDialog>
+    </section>
+  );
 }

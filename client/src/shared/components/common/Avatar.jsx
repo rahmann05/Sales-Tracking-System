@@ -21,12 +21,12 @@ export const Avatar = ({ src, name = '', size = 'md', className = '' }) => {
   // Get initials from name
   const initials = name
     ? name
-      .trim()
-      .split(/\s+/)
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase()
+        .trim()
+        .split(/\s+/)
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
     : '';
 
   if (src && !hasError) {

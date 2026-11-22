@@ -1,21 +1,159 @@
-import {useApp} from '../../../context/AppContext';
-import {unitDescription} from '../../../../../shared/product-units.mjs';
-import React,{useState} from 'react';
-import {deliveryApi} from '../../../services/api';
-import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
-export function ReturnReceiptAction({stop,onReceived,assignment}){
-  const {user}=useApp();
-  const [note,setNote]=useState(''),[received,setReceived]=useState(''),[reusable,setReusable]=useState(''),[items,setItems]=useState({}),[invoices,setInvoices]=useState({}),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  useUnsavedNavigation(!stop.returnInspection&&Boolean(note||received!==''||reusable!==''||Object.keys(items).length||Object.keys(invoices).length),busy);
-  if(!(stop.rejectedCartons>0))return null;
-  if(stop.returnInspection)return <p className="text-sm">Retur diperiksa: {stop.returnInspection.receivedCartons} karton diterima fisik; {stop.reusableCartons} layak kirim ulang. {stop.returnNote}</p>;
-  if(assignment?.ownerId&&assignment.ownerId!==user?.id&&user?.role!=='ADMIN')return <p className="admin-footnote">Pemeriksaan ditugaskan kepada {assignment.ownerName}. Alihkan penugasan bila perlu.</p>;
-  const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{await deliveryApi.receiveReturn(stop.id,{note,receivedCartons:Number(received),reusableCartons:Number(reusable),items:(stop.rejectedItems||[]).map(i=>({lineId:i.lineId,received:Number(items[i.lineId]?.received||0),reusable:Number(items[i.lineId]?.reusable||0)})),reusableInvoices:Object.entries(invoices).filter(([,v])=>Number(v)>0).map(([invoiceId,v])=>({invoiceId,cartons:Number(v)}))});await onReceived();}catch(e){setError(e.message);}finally{setBusy(false);}};
-  return <form onSubmit={submit} className="space-y-3 border rounded-xl p-3"><h4 className="font-bold">Pemeriksaan retur · {stop.rejectedCartons} karton ditolak</h4><p className="text-sm">Isi jumlah yang benar-benar kembali dan layak dikirim ulang. Selisih atau barang tidak layak akan menjadi tindak lanjut.</p><fieldset disabled={busy} className="space-y-3">
-    <label className="block">Karton diterima fisik<input type="number" required min="0" max={stop.rejectedCartons} className="form-input block w-full" value={received} onChange={e=>setReceived(e.target.value)}/></label>
-    <label className="block">Karton layak kirim ulang<input type="number" required min="0" max={received||0} className="form-input block w-full" value={reusable} onChange={e=>setReusable(e.target.value)}/></label>
-    {(stop.rejectedItems||[]).map(i=><fieldset className="border rounded p-3" key={i.lineId}><legend>{stop.packingList?.items?.find(p=>p.lineId===i.lineId)?.name||i.lineId} · Ditolak {i.quantity} {unitDescription(stop.packingList?.items?.find(p=>p.lineId===i.lineId))}</legend>{['received','reusable'].map(k=><label className="block" key={k}>{k==='received'?'Diterima fisik':'Layak kirim ulang'}<input type="number" min="0" max={k==='received'?i.quantity:items[i.lineId]?.received||0} required className="form-input block w-full" value={items[i.lineId]?.[k]??''} onChange={e=>setItems({...items,[i.lineId]:{...items[i.lineId],[k]:e.target.value}})}/></label>)}</fieldset>)}
-    {(stop.rejectedInvoices||[]).map(i=><label key={i.invoiceId} className="block">Karton layak kirim faktur {stop.packingList?.invoices?.find(v=>v.id===i.invoiceId)?.invoiceNumber||i.invoiceId}<input type="number" min="0" max={i.cartons} required value={invoices[i.invoiceId]??''} className="form-input block w-full" onChange={e=>setInvoices({...invoices,[i.invoiceId]:e.target.value})}/></label>)}
-    <label className="block">Catatan pemeriksaan / alasan selisih<textarea required maxLength={2000} className="form-input block w-full" value={note} onChange={e=>setNote(e.target.value)}/></label><button className="min-h-11 px-4 bg-primary text-on-primary rounded-xl">{busy?'Menyimpan…':'Simpan hasil pemeriksaan'}</button></fieldset>{error&&<p role="alert" className="text-red-600">{error}</p>}
-  </form>;
+import { useApp } from '../../../context/AppContext';
+import { unitDescription } from '../../../../../shared/product-units.mjs';
+import React, { useState } from 'react';
+import { deliveryApi } from '../../../services/api';
+import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
+export function ReturnReceiptAction({ stop, onReceived, assignment }) {
+  const { user } = useApp();
+  const [note, setNote] = useState(''),
+    [received, setReceived] = useState(''),
+    [reusable, setReusable] = useState(''),
+    [items, setItems] = useState({}),
+    [invoices, setInvoices] = useState({}),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState('');
+  useUnsavedNavigation(
+    !stop.returnInspection &&
+      Boolean(
+        note ||
+        received !== '' ||
+        reusable !== '' ||
+        Object.keys(items).length ||
+        Object.keys(invoices).length
+      ),
+    busy
+  );
+  if (!(stop.rejectedCartons > 0)) return null;
+  if (stop.returnInspection)
+    return (
+      <p className="text-sm">
+        Retur diperiksa: {stop.returnInspection.receivedCartons} karton diterima fisik;{' '}
+        {stop.reusableCartons} layak kirim ulang. {stop.returnNote}
+      </p>
+    );
+  if (assignment?.ownerId && assignment.ownerId !== user?.id && user?.role !== 'ADMIN')
+    return (
+      <p className="admin-footnote">
+        Pemeriksaan ditugaskan kepada {assignment.ownerName}. Alihkan penugasan bila perlu.
+      </p>
+    );
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await deliveryApi.receiveReturn(stop.id, {
+        note,
+        receivedCartons: Number(received),
+        reusableCartons: Number(reusable),
+        items: (stop.rejectedItems || []).map((i) => ({
+          lineId: i.lineId,
+          received: Number(items[i.lineId]?.received || 0),
+          reusable: Number(items[i.lineId]?.reusable || 0),
+        })),
+        reusableInvoices: Object.entries(invoices)
+          .filter(([, v]) => Number(v) > 0)
+          .map(([invoiceId, v]) => ({ invoiceId, cartons: Number(v) })),
+      });
+      await onReceived();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={submit} className="space-y-3 border rounded-xl p-3">
+      <h4 className="font-bold">Pemeriksaan retur · {stop.rejectedCartons} karton ditolak</h4>
+      <p className="text-sm">
+        Isi jumlah yang benar-benar kembali dan layak dikirim ulang. Selisih atau barang tidak layak
+        akan menjadi tindak lanjut.
+      </p>
+      <fieldset disabled={busy} className="space-y-3">
+        <label className="block">
+          Karton diterima fisik
+          <input
+            type="number"
+            required
+            min="0"
+            max={stop.rejectedCartons}
+            className="form-input block w-full"
+            value={received}
+            onChange={(e) => setReceived(e.target.value)}
+          />
+        </label>
+        <label className="block">
+          Karton layak kirim ulang
+          <input
+            type="number"
+            required
+            min="0"
+            max={received || 0}
+            className="form-input block w-full"
+            value={reusable}
+            onChange={(e) => setReusable(e.target.value)}
+          />
+        </label>
+        {(stop.rejectedItems || []).map((i) => (
+          <fieldset className="border rounded p-3" key={i.lineId}>
+            <legend>
+              {stop.packingList?.items?.find((p) => p.lineId === i.lineId)?.name || i.lineId} ·
+              Ditolak {i.quantity}{' '}
+              {unitDescription(stop.packingList?.items?.find((p) => p.lineId === i.lineId))}
+            </legend>
+            {['received', 'reusable'].map((k) => (
+              <label className="block" key={k}>
+                {k === 'received' ? 'Diterima fisik' : 'Layak kirim ulang'}
+                <input
+                  type="number"
+                  min="0"
+                  max={k === 'received' ? i.quantity : items[i.lineId]?.received || 0}
+                  required
+                  className="form-input block w-full"
+                  value={items[i.lineId]?.[k] ?? ''}
+                  onChange={(e) =>
+                    setItems({ ...items, [i.lineId]: { ...items[i.lineId], [k]: e.target.value } })
+                  }
+                />
+              </label>
+            ))}
+          </fieldset>
+        ))}
+        {(stop.rejectedInvoices || []).map((i) => (
+          <label key={i.invoiceId} className="block">
+            Karton layak kirim faktur{' '}
+            {stop.packingList?.invoices?.find((v) => v.id === i.invoiceId)?.invoiceNumber ||
+              i.invoiceId}
+            <input
+              type="number"
+              min="0"
+              max={i.cartons}
+              required
+              value={invoices[i.invoiceId] ?? ''}
+              className="form-input block w-full"
+              onChange={(e) => setInvoices({ ...invoices, [i.invoiceId]: e.target.value })}
+            />
+          </label>
+        ))}
+        <label className="block">
+          Catatan pemeriksaan / alasan selisih
+          <textarea
+            required
+            maxLength={2000}
+            className="form-input block w-full"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </label>
+        <button className="min-h-11 px-4 bg-primary text-on-primary rounded-xl">
+          {busy ? 'Menyimpan…' : 'Simpan hasil pemeriksaan'}
+        </button>
+      </fieldset>
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
+    </form>
+  );
 }

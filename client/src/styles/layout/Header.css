@@ -1,19 +1,122 @@
 @reference "../global.css";
-.header-container { @apply hidden md:flex items-center justify-between shrink-0; gap:20px; padding:12px 24px; min-height:72px; background:var(--surface); border-bottom:1px solid var(--border-glass); }
-.header-context {display:flex;align-items:center;gap:12px;min-width:0;flex:1; font-size:.875rem;}
-.header-brand-name {color:var(--on-surface-variant);}
-.header-page-name {font-weight:650;overflow-wrap:anywhere;}
-.header-actions {display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.header-user-badge {display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;border:1px solid var(--border-glass);border-radius:12px;background:var(--surface-container-low);cursor:pointer;max-width:280px;text-align:left;}
-.header-user-badge:hover {background:var(--surface-container);}
-.profile-copy {display:flex;flex-direction:column;min-width:0;line-height:1.35;}
-.profile-name {font-size:.875rem;font-weight:650;overflow-wrap:anywhere;}
-.profile-role {font-size:.75rem;color:var(--on-surface-variant);overflow-wrap:anywhere;}
-@media (min-width:768px) and (max-width:1100px) {.header-brand-name {display:none;} .header-actions {gap:8px;} .header-container {padding-inline:16px;}}
-@media (max-width:767px) {.mobile-profile {max-width:180px;border:0;background:transparent;padding:4px;gap:6px;} .mobile-profile .profile-name {font-size:.75rem;} .mobile-profile .profile-role {font-size:.6875rem;} .mobile-brand-title {font-size:.875rem;} .mobile-brand-subtitle {font-size:.625rem;} }
-.admin-breadcrumb {display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px;line-height:1.5;}
-.admin-breadcrumb button {cursor:pointer;background:transparent;border:0;color:var(--on-surface-variant);padding:10px 0;min-height:44px;}
-.admin-breadcrumb button:hover {text-decoration:underline;}
-.admin-breadcrumb svg {flex-shrink:0;}
+.header-container {
+  @apply hidden md:flex items-center justify-between shrink-0;
+  gap: 20px;
+  padding: 12px 24px;
+  min-height: 72px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-glass);
+}
+.header-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+  font-size: 0.875rem;
+}
+.header-brand-name {
+  color: var(--on-surface-variant);
+}
+.header-page-name {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.header-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  background: var(--surface-container-low);
+  cursor: pointer;
+  max-width: 280px;
+  text-align: left;
+}
+.header-user-badge:hover {
+  background: var(--surface-container);
+}
+.profile-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+.profile-name {
+  font-size: 0.875rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.profile-role {
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .header-brand-name {
+    display: none;
+  }
+  .header-actions {
+    gap: 8px;
+  }
+  .header-container {
+    padding-inline: 16px;
+  }
+}
+@media (max-width: 767px) {
+  .mobile-profile {
+    max-width: 180px;
+    border: 0;
+    background: transparent;
+    padding: 4px;
+    gap: 6px;
+  }
+  .mobile-profile .profile-name {
+    font-size: 0.75rem;
+  }
+  .mobile-profile .profile-role {
+    font-size: 0.6875rem;
+  }
+  .mobile-brand-title {
+    font-size: 0.875rem;
+  }
+  .mobile-brand-subtitle {
+    font-size: 0.625rem;
+  }
+}
+.admin-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.admin-breadcrumb button {
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  color: var(--on-surface-variant);
+  padding: 10px 0;
+  min-height: 44px;
+}
+.admin-breadcrumb button:hover {
+  text-decoration: underline;
+}
+.admin-breadcrumb svg {
+  flex-shrink: 0;
+}
 
-.admin-breadcrumb button:focus-visible {outline:2px solid var(--primary);outline-offset:3px;border-radius:4px;}
+.admin-breadcrumb button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}

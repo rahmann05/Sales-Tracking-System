@@ -23,6 +23,7 @@ import productRoutes from '../modules/products/products.routes.js';
 import divisionRoutes from '../modules/divisions/divisions.routes.js';
 import deliveryRoutes from '../modules/delivery/delivery.routes.js';
 import rolesRoutes from '../modules/roles/roles.routes.js';
+import evidenceRoutes from './evidence.routes.js';
 
 const router = Router();
 
@@ -30,14 +31,17 @@ router.use('/health', healthRoutes);
 
 const v1Router = Router();
 v1Router.use((req, res, next) => {
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) res.on('finish', () => { if (res.statusCode < 400) invalidateCache(); });
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method))
+    res.on('finish', () => {
+      if (res.statusCode < 400) invalidateCache();
+    });
   next();
 });
 v1Router.use('/health', healthRoutes);
 v1Router.use('/auth', authRoutes);
 v1Router.use('/users', userRoutes);
 v1Router.use('/teams', teamRoutes);
-v1Router.use('/attention',attentionRoutes);
+v1Router.use('/attention', attentionRoutes);
 v1Router.use('/roles', rolesRoutes);
 v1Router.use('/clusters', clusterRoutes);
 v1Router.use('/outlets', outletRoutes);
@@ -56,6 +60,7 @@ v1Router.use('/orders', orderRoutes);
 v1Router.use('/products', productRoutes);
 v1Router.use('/divisions', divisionRoutes);
 v1Router.use('/delivery', deliveryRoutes);
+v1Router.use('/evidence', evidenceRoutes);
 
 router.use('/v1', v1Router);
 

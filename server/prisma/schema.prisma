@@ -881,6 +881,8 @@ model CustomerRegistration {
   @@index([clusterId])
   @@index([registrationStatus])
   @@index([registrationStatus, deletedAt])
+  @@index([divisionId, registrationStatus, createdAt])
+  @@index([deletedAt, createdAt])
 }
 
 model OutletReview {
@@ -1028,6 +1030,7 @@ model Order {
   @@index([status, createdAt])
   @@index([createdBy])
   @@index([createdBy, createdAt])
+  @@index([createdBy, status, createdAt])
   @@index([outletId])
 }
 
@@ -1216,6 +1219,7 @@ model DeliveryStop {
   updatedAt       DateTime           @updatedAt
 
   @@index([deliveryRouteId])
+  @@index([deliveryRouteId, sequence, status])
   @@index([packingListId])
   @@index([outletId])
   @@index([status])

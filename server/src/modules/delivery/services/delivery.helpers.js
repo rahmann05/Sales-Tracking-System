@@ -8,7 +8,8 @@ import { resolveBusinessCode } from '../../config/services/business-code.service
 /**
  * Generate unique packing list code: PL-YYYYMMDD-NNN
  */
-export const generatePackingListCode = async (manualCode) => resolveBusinessCode('PACKING_LIST',manualCode);
+export const generatePackingListCode = async (manualCode) =>
+  resolveBusinessCode('PACKING_LIST', manualCode);
 
 // ═══════════════════════════════════════════════════════════════
 // DELIVERY ROUTE
@@ -17,4 +18,5 @@ export const generatePackingListCode = async (manualCode) => resolveBusinessCode
 /**
  * Generate unique delivery route code: DR-YYYYMMDD-A01
  */
-export const generateRouteCode = async (date,manualCode) => resolveBusinessCode('DELIVERY_ROUTE',manualCode,{date:new Date(date)});
+export const generateRouteCode = async (date, manualCode) =>
+  resolveBusinessCode('DELIVERY_ROUTE', manualCode, { date: new Date(date) });

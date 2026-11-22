@@ -19,13 +19,17 @@ function resolveDailySummary(reportData = {}, dateInput) {
     dateStr,
     rows,
     salesmanSummaries,
-    totalPlan: Number(s.totalPlanCalls ?? s.totalPlan ?? rows.filter((r) => r.planCall === 'Y').length),
+    totalPlan: Number(
+      s.totalPlanCalls ?? s.totalPlan ?? rows.filter((r) => r.planCall === 'Y').length
+    ),
     totalActual: Number(
       s.totalActualCalls ?? s.completedVisits ?? rows.filter((r) => r.actualCall === 'Y').length
     ),
     complianceRate: safeStr(s.callComplianceRate, '0%'),
     totalEffective: Number(
-      s.totalEffectiveCalls ?? s.totalEffective ?? rows.filter((r) => r.effectiveCall === 'Y').length
+      s.totalEffectiveCalls ??
+        s.totalEffective ??
+        rows.filter((r) => r.effectiveCall === 'Y').length
     ),
     ecRate: safeStr(s.effectiveCallRate, '0%'),
     totalOrderAmount: s.totalOrderAmount === null ? null : Number(s.totalOrderAmount ?? 0),
@@ -138,7 +142,13 @@ function buildDailyCallBlueprint(input = {}, dateArg) {
         value: `${formatNumber(info.totalEffective)} Outlet (${info.ecRate})`,
       },
       { label: 'Total SKU Terjual', value: `${formatNumber(info.totalSkuSold)} SKU` },
-      { label: 'Total Nilai Order Disetujui', value: info.totalOrderAmount === null ? 'Dibatasi aturan' : formatCurrency(info.totalOrderAmount) },
+      {
+        label: 'Total Nilai Order Disetujui',
+        value:
+          info.totalOrderAmount === null
+            ? 'Dibatasi aturan'
+            : formatCurrency(info.totalOrderAmount),
+      },
       { label: 'Indikasi Anomali Presensi', value: `${formatNumber(info.totalAnomalies)} Temuan` },
       { label: 'Total Baris Kunjungan', value: `${formatNumber(info.rows.length)} Kunjungan` },
     ],

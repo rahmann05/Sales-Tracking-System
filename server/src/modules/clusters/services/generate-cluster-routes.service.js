@@ -1,41 +1,53 @@
-import {projectOperationalOutlet} from '../../../../../shared/outlet-location.mjs';
+import { projectOperationalOutlet } from '../../../../../shared/outlet-location.mjs';
 /** generateClusterRoutes - single-responsibility service (extracted from clusters.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { haversineKm } from '../cluster-generator.service.js';
 import { optimize2Opt } from './clusters.helpers.js';
-import {AppError} from '../../../utils/errors.js';
-
+import { AppError } from '../../../utils/errors.js';
 
 export const generateClusterRoutes = async (outletIds) => {
   if (!outletIds || !Array.isArray(outletIds) || outletIds.length === 0) return [];
 
-  const outlets = (await prisma.outlet.findMany({
-    where: {
-      id: { in: outletIds },
-      deletedAt: null,
-    }
-  })).map(o=>projectOperationalOutlet(o));
+  const outlets = (
+    await prisma.outlet.findMany({
+      where: {
+        id: { in: outletIds },
+        deletedAt: null,
+      },
+    })
+  ).map((o) => projectOperationalOutlet(o));
 
   if (outlets.length === 0) return [];
-  if(outlets.some(o=>o.latitude==null||o.longitude==null))throw new AppError('Optimasi rute memerlukan titik setiap outlet. Lengkapi lokasi atau susun urutan kunjungan secara manual; outlet tanpa titik tidak dihapus dari rencana.',422);
+  if (outlets.some((o) => o.latitude == null || o.longitude == null))
+    throw new AppError(
+      'Optimasi rute memerlukan titik setiap outlet. Lengkapi lokasi atau susun urutan kunjungan secara manual; outlet tanpa titik tidak dihapus dari rencana.',
+      422
+    );
 
   // Convert lat/lng to Number and filter out invalid coordinates
-  const sanitizedOutlets = outlets.filter(o=>o.latitude != null && o.longitude != null).map(o => ({
-    ...o,
-    latitude: Number(o.latitude),
-    longitude: Number(o.longitude)
-  })).filter(o => o.latitude != null && o.longitude != null && !isNaN(o.latitude) && !isNaN(o.longitude));
+  const sanitizedOutlets = outlets
+    .filter((o) => o.latitude != null && o.longitude != null)
+    .map((o) => ({
+      ...o,
+      latitude: Number(o.latitude),
+      longitude: Number(o.longitude),
+    }))
+    .filter(
+      (o) => o.latitude != null && o.longitude != null && !isNaN(o.latitude) && !isNaN(o.longitude)
+    );
 
   if (sanitizedOutlets.length === 0) return [];
 
   if (sanitizedOutlets.length === 1) {
-    return [{
-      routeIndex: 0,
-      isActive: true,
-      totalDistanceKm: 0,
-      startOutletId: sanitizedOutlets[0].id,
-      outletOrder: [{ id: sanitizedOutlets[0].id, sequence: 1 }]
-    }];
+    return [
+      {
+        routeIndex: 0,
+        isActive: true,
+        totalDistanceKm: 0,
+        startOutletId: sanitizedOutlets[0].id,
+        outletOrder: [{ id: sanitizedOutlets[0].id, sequence: 1 }],
+      },
+    ];
   }
 
   // Multi-Start Nearest Neighbor + 2-Opt Optimization across all candidate start outlets
@@ -44,7 +56,7 @@ export const generateClusterRoutes = async (outletIds) => {
   for (let s = 0; s < sanitizedOutlets.length; s++) {
     const startOutlet = sanitizedOutlets[s];
     const remaining = [...sanitizedOutlets];
-    const startIdx = remaining.findIndex(o => o.id === startOutlet.id);
+    const startIdx = remaining.findIndex((o) => o.id === startOutlet.id);
     const ordered = [];
     let current = startIdx >= 0 ? remaining.splice(startIdx, 1)[0] : remaining.shift();
     if (current) ordered.push(current);
@@ -53,7 +65,12 @@ export const generateClusterRoutes = async (outletIds) => {
       let bestIdx = 0;
       let bestDist = Infinity;
       for (let i = 0; i < remaining.length; i++) {
-        const d = haversineKm(current.latitude, current.longitude, remaining[i].latitude, remaining[i].longitude);
+        const d = haversineKm(
+          current.latitude,
+          current.longitude,
+          remaining[i].latitude,
+          remaining[i].longitude
+        );
         if (!isNaN(d) && d < bestDist) {
           bestDist = d;
           bestIdx = i;
@@ -81,7 +98,7 @@ export const generateClusterRoutes = async (outletIds) => {
   const distinctRoutes = [];
   for (const cand of allCandidateRoutes) {
     const isDuplicate = distinctRoutes.some(
-      r => r.startOutletId === cand.startOutletId && r.endOutletId === cand.endOutletId
+      (r) => r.startOutletId === cand.startOutletId && r.endOutletId === cand.endOutletId
     );
     if (!isDuplicate) {
       distinctRoutes.push(cand);

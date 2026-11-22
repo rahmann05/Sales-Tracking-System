@@ -22,7 +22,10 @@ export function getConvexHull(points = []) {
   // Lower hull
   const lower = [];
   for (const p of sorted) {
-    while (lower.length >= 2 && crossProduct(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+    while (
+      lower.length >= 2 &&
+      crossProduct(lower[lower.length - 2], lower[lower.length - 1], p) <= 0
+    ) {
       lower.pop();
     }
     lower.push(p);
@@ -32,7 +35,10 @@ export function getConvexHull(points = []) {
   const upper = [];
   for (let i = sorted.length - 1; i >= 0; i--) {
     const p = sorted[i];
-    while (upper.length >= 2 && crossProduct(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+    while (
+      upper.length >= 2 &&
+      crossProduct(upper[upper.length - 2], upper[upper.length - 1], p) <= 0
+    ) {
       upper.pop();
     }
     upper.push(p);
@@ -101,7 +107,7 @@ export function computeClusterPolygons(clusters = [], outlets = []) {
   clusters.forEach((cluster, idx) => {
     // 1. Gather all outlets belonging to this cluster
     const clusterOutlets = (outlets || []).filter(
-      (o) => o.clusterId === cluster.id && o.latitude!=null && o.longitude!=null
+      (o) => o.clusterId === cluster.id && o.latitude != null && o.longitude != null
     );
 
     const color = cluster.colorHex || getClusterColorHex(cluster.name, idx);
@@ -132,8 +138,10 @@ export function computeClusterPolygons(clusters = [], outlets = []) {
       });
     } else if (clusterOutlets.length > 0) {
       // 1 or 2 outlets: circle polygon around center of outlets
-      const avgLat = clusterOutlets.reduce((acc, o) => acc + Number(o.latitude), 0) / clusterOutlets.length;
-      const avgLng = clusterOutlets.reduce((acc, o) => acc + Number(o.longitude), 0) / clusterOutlets.length;
+      const avgLat =
+        clusterOutlets.reduce((acc, o) => acc + Number(o.latitude), 0) / clusterOutlets.length;
+      const avgLng =
+        clusterOutlets.reduce((acc, o) => acc + Number(o.longitude), 0) / clusterOutlets.length;
       const circlePath = generateCirclePolygon(avgLat, avgLng, 700);
 
       result.push({
@@ -147,9 +155,13 @@ export function computeClusterPolygons(clusters = [], outlets = []) {
         outletCount: clusterOutlets.length,
         outlets: clusterOutlets,
       });
-    } else if (cluster.centerLat!=null && cluster.centerLng!=null) {
+    } else if (cluster.centerLat != null && cluster.centerLng != null) {
       // Center coordinates only
-      const circlePath = generateCirclePolygon(Number(cluster.centerLat), Number(cluster.centerLng), 1000);
+      const circlePath = generateCirclePolygon(
+        Number(cluster.centerLat),
+        Number(cluster.centerLng),
+        1000
+      );
 
       result.push({
         id: cluster.id,

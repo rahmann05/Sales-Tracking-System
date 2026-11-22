@@ -30,9 +30,7 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
             <h1 className="text-2xl font-black text-on-surface tracking-tight">
               CV. SINAR ANUGRAH
             </h1>
-            <p className="text-xs text-on-surface-variant max-w-xs">
-              Platform Sales Tracking
-            </p>
+            <p className="text-xs text-on-surface-variant max-w-xs">Platform Sales Tracking</p>
           </div>
 
           {/* Login Card */}

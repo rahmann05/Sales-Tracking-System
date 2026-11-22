@@ -2,21 +2,16 @@ import { AdminUserDirectoryView } from './AdminUserDirectoryView';
 /**
  * AdminUserListPage.jsx
  * Single Responsibility: Orchestrate User Management and Master Role & Template Hub.
- * 
+ *
  * NOTE: Strict compliance - Zero emojis. Pure React Icons.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { usersApi, rolesApi } from '../../services/api';
-import { notifySuccess, notifyError } from '../../services/notificationService';
-export const AdminUserListPage = ({
-  onGoBack
-}) => {
-  const {
-    setActiveTab,
-    clusters
-  } = useApp();
+import { notifySuccess, notifyError, confirmAction } from '../../services/notificationService';
+export const AdminUserListPage = ({ onGoBack }) => {
+  const { setActiveTab, clusters } = useApp();
 
   // Primary page tabs: 'users' | 'roles'
   const [activeSubTab, setActiveSubTab] = useState('users');
@@ -38,9 +33,12 @@ export const AdminUserListPage = ({
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const [usersRes, rolesRes] = await Promise.all([usersApi.getAll(), rolesApi.getAll().catch(() => ({
-        data: []
-      }))]);
+      const [usersRes, rolesRes] = await Promise.all([
+        usersApi.getAll(),
+        rolesApi.getAll().catch(() => ({
+          data: [],
+        })),
+      ]);
       setUsers(usersRes.data || []);
       setRoles(rolesRes.data || []);
     } catch (err) {
@@ -53,16 +51,19 @@ export const AdminUserListPage = ({
   useEffect(() => {
     fetchUsers();
   }, []);
-  const handleEditUser = user => {
+  const handleEditUser = (user) => {
     setSelectedUser(user);
     setIsUserModalOpen(true);
   };
-  const handleEditPermissions = user => {
+  const handleEditPermissions = (user) => {
     setSelectedUser(user);
     setIsPermissionsModalOpen(true);
   };
-  const handleDeleteUser = async user => {
-    const confirmed = window.confirm(`Apakah Anda yakin ingin menonaktifkan pengguna ${user.name}?`);
+  const handleDeleteUser = async (user) => {
+    const confirmed = await confirmAction(
+      `Apakah Anda yakin ingin menonaktifkan pengguna ${user.name}?`,
+      { title: 'Nonaktifkan Pengguna', confirmLabel: 'Nonaktifkan', danger: true }
+    );
     if (!confirmed) return;
     try {
       await usersApi.remove(user.id);
@@ -70,15 +71,15 @@ export const AdminUserListPage = ({
       fetchUsers();
     } catch (err) {
       console.error(err);
-      notifyError(err.response?.data?.message || 'Gagal menghapus pengguna');
+      notifyError(err?.message || err?.response?.data?.message || 'Gagal menghapus pengguna');
     }
   };
 
   // Filtered users calculation
   const filteredUsers = useMemo(() => {
-    return users.filter(u => {
+    return users.filter((u) => {
       // Role filter
-      if (filterRole !== 'ALL' && (u.roleCode||u.role) !== filterRole) {
+      if (filterRole !== 'ALL' && (u.roleCode || u.role) !== filterRole) {
         return false;
       }
       // Cluster filter
@@ -98,5 +99,32 @@ export const AdminUserListPage = ({
       return true;
     });
   }, [users, filterRole, filterCluster, searchQuery]);
-  return <AdminUserDirectoryView activeSubTab={activeSubTab} clusters={clusters} fetchUsers={fetchUsers} filterCluster={filterCluster} filterRole={filterRole} filteredUsers={filteredUsers} handleDeleteUser={handleDeleteUser} handleEditPermissions={handleEditPermissions} handleEditUser={handleEditUser} isPermissionsModalOpen={isPermissionsModalOpen} isUserModalOpen={isUserModalOpen} loading={loading} roles={roles} searchQuery={searchQuery} selectedUser={selectedUser} setActiveSubTab={setActiveSubTab} setActiveTab={setActiveTab} setFilterCluster={setFilterCluster} setFilterRole={setFilterRole} setIsPermissionsModalOpen={setIsPermissionsModalOpen} setIsUserModalOpen={setIsUserModalOpen} setSearchQuery={setSearchQuery} setSelectedUser={setSelectedUser} users={users} />;
+  return (
+    <AdminUserDirectoryView
+      activeSubTab={activeSubTab}
+      clusters={clusters}
+      fetchUsers={fetchUsers}
+      filterCluster={filterCluster}
+      filterRole={filterRole}
+      filteredUsers={filteredUsers}
+      handleDeleteUser={handleDeleteUser}
+      handleEditPermissions={handleEditPermissions}
+      handleEditUser={handleEditUser}
+      isPermissionsModalOpen={isPermissionsModalOpen}
+      isUserModalOpen={isUserModalOpen}
+      loading={loading}
+      roles={roles}
+      searchQuery={searchQuery}
+      selectedUser={selectedUser}
+      setActiveSubTab={setActiveSubTab}
+      setActiveTab={setActiveTab}
+      setFilterCluster={setFilterCluster}
+      setFilterRole={setFilterRole}
+      setIsPermissionsModalOpen={setIsPermissionsModalOpen}
+      setIsUserModalOpen={setIsUserModalOpen}
+      setSearchQuery={setSearchQuery}
+      setSelectedUser={setSelectedUser}
+      users={users}
+    />
+  );
 };

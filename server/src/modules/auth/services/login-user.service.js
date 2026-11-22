@@ -7,9 +7,10 @@ import { config } from '../../../config/index.js';
 import { AppError } from '../../../utils/errors.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
-
 export const loginUser = async (rawEmail, password) => {
-  const email = String(rawEmail || '').trim().toLowerCase();
+  const email = String(rawEmail || '')
+    .trim()
+    .toLowerCase();
   const user = await prisma.user.findFirst({
     where: {
       email: { equals: email, mode: 'insensitive' },
@@ -28,7 +29,7 @@ export const loginUser = async (rawEmail, password) => {
   const identity = await resolveIdentity(user);
   const payload = {
     id: user.id,
-    tokenVersion:user.tokenVersion||0,
+    tokenVersion: user.tokenVersion || 0,
     name: user.name,
     email: user.email,
     role: identity.role,
@@ -39,15 +40,22 @@ export const loginUser = async (rawEmail, password) => {
   };
 
   const jwtExpiresIn = await getDynamicConfig('JWT_EXPIRES_IN', config.jwtExpiresIn);
-  const jwtRefreshExpiresIn = await getDynamicConfig('JWT_REFRESH_EXPIRES_IN', config.jwtRefreshExpiresIn);
+  const jwtRefreshExpiresIn = await getDynamicConfig(
+    'JWT_REFRESH_EXPIRES_IN',
+    config.jwtRefreshExpiresIn
+  );
 
   const accessToken = jwt.sign(payload, config.jwtSecret, {
     expiresIn: jwtExpiresIn,
   });
 
-  const refreshToken = jwt.sign({ id: user.id,tokenVersion:user.tokenVersion||0 }, config.jwtRefreshSecret, {
-    expiresIn: jwtRefreshExpiresIn,
-  });
+  const refreshToken = jwt.sign(
+    { id: user.id, tokenVersion: user.tokenVersion || 0 },
+    config.jwtRefreshSecret,
+    {
+      expiresIn: jwtRefreshExpiresIn,
+    }
+  );
 
   return {
     user: payload,

@@ -1,12 +1,22 @@
-import {outletOperationalPoint} from '../../../../shared/outlet-location.mjs';
+import { outletOperationalPoint } from '../../../../shared/outlet-location.mjs';
 import { mapSalesPjpStops, formatTimeWib, resolveStopStatus } from './mapSalesPjpStops';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import { useEffect, useState } from 'react';
-import { collectPages, getAuthToken, pjpApi, ordersApi, productsApi, absensiApi, outletsApi, usersApi, routeChangesApi } from '../../services/api';
+import {
+  collectPages,
+  getAuthToken,
+  pjpApi,
+  ordersApi,
+  productsApi,
+  absensiApi,
+  outletsApi,
+  usersApi,
+  routeChangesApi,
+} from '../../services/api';
 import { mapServerOrder } from '../../utils/orderMapper';
 import { mapServerRouteChange, mapServerUnlockRequest } from '../../utils/incidentMapper';
 
-const isDateToday = value => value && wibDateKey(value) === wibDateKey();
+const isDateToday = (value) => value && wibDateKey(value) === wibDateKey();
 
 /**
  * useBackendSync - Live backend synchronization effect.
@@ -30,14 +40,26 @@ export const useBackendSync = ({
 }) => {
   const [syncStatus, setSyncStatus] = useState({});
   useEffect(() => {
-    let isMounted = true, busy = false, queued = false;
+    let isMounted = true,
+      busy = false,
+      queued = false;
     setSyncStatus({});
 
     const syncWithBackend = async () => {
-      if (busy) { queued = true; return; }
+      if (busy) {
+        queued = true;
+        return;
+      }
       busy = true;
       const failures = [];
-      const track = async (name, task) => { try { return await task(); } catch { failures.push(name); return null; } };
+      const track = async (name, task) => {
+        try {
+          return await task();
+        } catch {
+          failures.push(name);
+          return null;
+        }
+      };
       try {
         // Hanya sinkron jika ada sesi login valid (token dari auth backend)
         if (!getAuthToken() || !user?.email) return;
@@ -63,13 +85,27 @@ export const useBackendSync = ({
         ] = await Promise.all([
           track('Kluster', () => fetchClusters({ strict: true })),
           track('Divisi', () => fetchDivisions({ strict: true })),
-          isManager ? track('Pengguna', () => collectPages(usersApi.getAll)) : Promise.resolve(null),
+          isManager
+            ? track('Pengguna', () => collectPages(usersApi.getAll))
+            : Promise.resolve(null),
           isSales ? track('Kunjungan hari ini', () => pjpApi.getTodayPjp()) : Promise.resolve(null),
-          isManager ? track('Rute kunjungan', () => collectPages(pjpApi.getAllPjps, { date: wibDateKey() })) : Promise.resolve(null),
-          (isManager || isSales) ? track('Kunjungan di luar PJP', () => collectPages(absensiApi.getOffPjpList, { date: wibDateKey() })) : Promise.resolve(null),
-          (isManager || isSales) ? track('Order', () => collectPages(ordersApi.getAllOrders)) : Promise.resolve(null),
-          (isManager || isSales) ? track('Perubahan rute', () => collectPages(routeChangesApi.getAll)) : Promise.resolve(null),
-          (isManager || isSales) ? track('Pembukaan kunci toko', () => outletsApi.getUnlockRequests()) : Promise.resolve(null),
+          isManager
+            ? track('Rute kunjungan', () => collectPages(pjpApi.getAllPjps, { date: wibDateKey() }))
+            : Promise.resolve(null),
+          isManager || isSales
+            ? track('Kunjungan di luar PJP', () =>
+                collectPages(absensiApi.getOffPjpList, { date: wibDateKey() })
+              )
+            : Promise.resolve(null),
+          isManager || isSales
+            ? track('Order', () => collectPages(ordersApi.getAllOrders))
+            : Promise.resolve(null),
+          isManager || isSales
+            ? track('Perubahan rute', () => collectPages(routeChangesApi.getAll))
+            : Promise.resolve(null),
+          isManager || isSales
+            ? track('Pembukaan kunci toko', () => outletsApi.getUnlockRequests())
+            : Promise.resolve(null),
           isSales ? track('Produk', () => productsApi.getAll()) : Promise.resolve(null),
         ]);
 
@@ -79,7 +115,11 @@ export const useBackendSync = ({
 
         // 1. Process Live Users (Supervisor / Admin)
         if (isManager && usersRes) {
-          const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
+          const userList = Array.isArray(usersRes?.data)
+            ? usersRes.data
+            : Array.isArray(usersRes)
+              ? usersRes
+              : [];
           {
             const salesUsers = userList.filter((u) => u.role === 'SALES');
             const spvUsers = userList.filter((u) => u.role === 'SUPERVISOR');
@@ -91,7 +131,7 @@ export const useBackendSync = ({
               email: s.email,
               phone: s.phone || '—',
               cluster: s.cluster?.name || s.clusterName || 'Belum ditugaskan',
-              supervisorId:s.supervisorId,
+              supervisorId: s.supervisorId,
               spvName: s.supervisor?.name || s.spvName || 'Belum ditugaskan',
               spvTeamName: `Tim ${s.supervisor?.name || s.spvName || 'belum ditugaskan'}`,
               rjpTeamName: `RJP ${s.cluster?.name || 'Klaster'}`,
@@ -105,9 +145,9 @@ export const useBackendSync = ({
               spvName: spv.name,
               spvEmail: spv.email,
               teamName: `Tim SPV ${spv.name}`,
-              teamCount: mappedSales.filter(s=>s.supervisorId===spv.id).length,
-              clusters: clustersList.filter(c=>c.supervisorId===spv.id).map(c=>c.name),
-              members: mappedSales.filter(s=>s.supervisorId===spv.id).map(s=>s.name),
+              teamCount: mappedSales.filter((s) => s.supervisorId === spv.id).length,
+              clusters: clustersList.filter((c) => c.supervisorId === spv.id).map((c) => c.name),
+              members: mappedSales.filter((s) => s.supervisorId === spv.id).map((s) => s.name),
             }));
             if (typeof setSupervisorTeams === 'function') {
               setSupervisorTeams(mappedSpvTeams);
@@ -133,7 +173,6 @@ export const useBackendSync = ({
         if (isSales && todayPjpRes?.data?.stops) {
           const pjpData = todayPjpRes.data;
 
-
           const mappedStops = mapSalesPjpStops(pjpData, user);
           setSalesStops(mappedStops);
         }
@@ -142,7 +181,13 @@ export const useBackendSync = ({
 
         // 3. Process Active Routes (Supervisor / Admin / Sales)
         if (pjpsRes) {
-          const pjps = Array.isArray(pjpsRes?.data) ? pjpsRes.data : (Array.isArray(pjpsRes?.data?.data) ? pjpsRes.data.data : (Array.isArray(pjpsRes) ? pjpsRes : []));
+          const pjps = Array.isArray(pjpsRes?.data)
+            ? pjpsRes.data
+            : Array.isArray(pjpsRes?.data?.data)
+              ? pjpsRes.data.data
+              : Array.isArray(pjpsRes)
+                ? pjpsRes
+                : [];
           {
             const todays = pjps.filter((p) => isDateToday(p.date));
             const listToUse = todays;
@@ -164,8 +209,19 @@ export const useBackendSync = ({
                   owner: s.outlet?.ownerName || s.outlet?.owner || '',
                   phone: s.outlet?.phone || '',
                   address: s.outlet?.address || '',
-                  googleMapsOnly:outletOperationalPoint(s.outlet).googleMapsOnly,latitude: s.outlet?.latitude != null ? Number(s.outlet.latitude) : (s.latitude != null ? Number(s.latitude) : null),
-                  longitude: s.outlet?.longitude != null ? Number(s.outlet.longitude) : (s.longitude != null ? Number(s.longitude) : null),
+                  googleMapsOnly: outletOperationalPoint(s.outlet).googleMapsOnly,
+                  latitude:
+                    s.outlet?.latitude != null
+                      ? Number(s.outlet.latitude)
+                      : s.latitude != null
+                        ? Number(s.latitude)
+                        : null,
+                  longitude:
+                    s.outlet?.longitude != null
+                      ? Number(s.outlet.longitude)
+                      : s.longitude != null
+                        ? Number(s.longitude)
+                        : null,
                   outletId: s.outletId || s.outlet?.id,
                   outlet: s.outlet,
                   radiusMeters: s.outlet?.radiusMeters ?? null,
@@ -186,7 +242,7 @@ export const useBackendSync = ({
                   checkOutPhoto: outAtt?.photoUrl || null,
                   checkInNotes: inAtt?.notes || null,
                   checkOutNotes: outAtt?.notes || null,
-                  visitOutcome:outAtt?.visitOutcome||null,
+                  visitOutcome: outAtt?.visitOutcome || null,
                   durationMinutes: outAtt?.durationMinutes || null,
                   deviationMeters: inAtt?.deviationMeters ?? null,
                 };
@@ -199,8 +255,14 @@ export const useBackendSync = ({
                 name: p.user?.name || '',
                 repName: p.user?.name || '',
                 avatar: null,
-                region: [...new Set(stops.map(s=>s.regionName).filter(Boolean))].join(' · ') || cluster?.region || '',
-                clusterName: [...new Set(stops.map(s=>s.clusterName).filter(Boolean))].join(' · ') || cluster?.name || '',
+                region:
+                  [...new Set(stops.map((s) => s.regionName).filter(Boolean))].join(' · ') ||
+                  cluster?.region ||
+                  '',
+                clusterName:
+                  [...new Set(stops.map((s) => s.clusterName).filter(Boolean))].join(' · ') ||
+                  cluster?.name ||
+                  '',
                 status: done === stops.length && stops.length > 0 ? 'Completed' : 'In Transit',
                 progress: stops.length ? Math.round((done / stops.length) * 100) : 0,
                 stops,
@@ -209,7 +271,7 @@ export const useBackendSync = ({
               };
             });
             setActiveRoutes(routes);
-            if (isManager) setSalesStops(routes.flatMap(route => route.stops));
+            if (isManager) setSalesStops(routes.flatMap((route) => route.stops));
           }
         }
 
@@ -230,9 +292,24 @@ export const useBackendSync = ({
             reason: att.reason,
             photoUrl: att.photoUrl,
             gpsLocation: { lat: att.latitude, lng: att.longitude },
-            time: new Date(att.createdAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) + ' WIB',
-            date: new Date(att.createdAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }),
-            validationStatus: att.status === 'APPROVED' ? 'TERVALIDASI' : att.status === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU',
+            time:
+              new Date(att.createdAt).toLocaleTimeString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                minute: '2-digit',
+              }) + ' WIB',
+            date: new Date(att.createdAt).toLocaleDateString('id-ID', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            }),
+            validationStatus:
+              att.status === 'APPROVED'
+                ? 'TERVALIDASI'
+                : att.status === 'REJECTED'
+                  ? 'DITOLAK'
+                  : 'MENUNGGU',
           }));
           setOffPjpAttendances(mappedOffPjp);
         }
@@ -242,8 +319,8 @@ export const useBackendSync = ({
           const rawOrders = Array.isArray(ordersRes.data)
             ? ordersRes.data
             : Array.isArray(ordersRes.data?.data)
-            ? ordersRes.data.data
-            : ordersRes.data.items || [];
+              ? ordersRes.data.data
+              : ordersRes.data.items || [];
           setOrders(rawOrders.map(mapServerOrder));
         }
 
@@ -266,15 +343,29 @@ export const useBackendSync = ({
           const rawProducts = Array.isArray(productsRes.data)
             ? productsRes.data
             : Array.isArray(productsRes.data?.data)
-            ? productsRes.data.data
-            : productsRes.data.items || [];
+              ? productsRes.data.data
+              : productsRes.data.items || [];
           setProducts(rawProducts);
         }
-        if (isMounted) setSyncStatus(previous => failures.length ? { ...previous, error: `Gagal memperbarui: ${failures.join(', ')}. Data sebelumnya mungkin sudah lama.` } : { lastSuccessAt: new Date().toISOString(), error: '' });
+        if (isMounted)
+          setSyncStatus((previous) =>
+            failures.length
+              ? {
+                  ...previous,
+                  error: `Gagal memperbarui: ${failures.join(', ')}. Data sebelumnya mungkin sudah lama.`,
+                }
+              : { lastSuccessAt: new Date().toISOString(), error: '' }
+          );
       } catch (err) {
-        if (isMounted) setSyncStatus(previous => ({ ...previous, error: err.message }));
+        if (isMounted) setSyncStatus((previous) => ({ ...previous, error: err.message }));
         console.warn('[useBackendSync] Sync with backend notice:', err.message);
-      } finally { busy = false; if (queued && isMounted) { queued = false; syncWithBackend(); } }
+      } finally {
+        busy = false;
+        if (queued && isMounted) {
+          queued = false;
+          syncWithBackend();
+        }
+      }
     };
 
     syncWithBackend();

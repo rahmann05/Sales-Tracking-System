@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
+import { notifyError, confirmAction } from '../../../services/notificationService';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 
 /**
@@ -8,7 +9,8 @@ import { useDebounce } from '../../../shared/hooks/useDebounce';
  */
 export const useOutletApproval = () => {
   const [items, setItems] = useState([]);
-  const [page,setPage]=useState(1),[pagination,setPagination]=useState({total:0,totalPages:1});
+  const [page, setPage] = useState(1),
+    [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
   const [statusCounts, setStatusCounts] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -36,26 +38,34 @@ export const useOutletApproval = () => {
         limit: 50,
         page,
       });
-      if (!Array.isArray(res?.data)) throw new Error('Respons pengajuan outlet belum dapat dibaca.');
+      if (!Array.isArray(res?.data))
+        throw new Error('Respons pengajuan outlet belum dapat dibaca.');
       if (revision === loadRevision.current) {
         setItems(res.data);
         setStatusCounts(res.statusCounts || {});
         setPagination(res.pagination);
       }
     } catch (err) {
-      if (revision === loadRevision.current) setLoadError(err.message || 'Gagal memuat pengajuan outlet.');
+      if (revision === loadRevision.current)
+        setLoadError(err.message || 'Gagal memuat pengajuan outlet.');
     } finally {
       if (revision === loadRevision.current) setIsLoading(false);
     }
-  }, [filterStatus, debouncedSearch,page]);
+  }, [filterStatus, debouncedSearch, page]);
 
   useEffect(() => {
     loadData();
-    return () => { loadRevision.current++; };
+    return () => {
+      loadRevision.current++;
+    };
   }, [loadData]);
 
   const handleApprove = async (item) => {
-    if (!window.confirm(`Setujui pengajuan registrasi outlet "${item.name}"?`)) return;
+    const confirmed = await confirmAction(`Setujui pengajuan registrasi outlet "${item.name}"?`, {
+      title: 'Setujui Pengajuan NOO',
+      confirmLabel: 'Setujui',
+    });
+    if (!confirmed) return;
     setIsProcessing(true);
     try {
       await customerRegistrationsApi.approve(item.id);
@@ -71,7 +81,7 @@ export const useOutletApproval = () => {
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
-      alert('Mohon isi alasan penolakan.');
+      notifyError('Mohon isi alasan penolakan.');
       return;
     }
     setIsProcessing(true);
@@ -95,10 +105,18 @@ export const useOutletApproval = () => {
     isLoading,
     loadError,
     filterStatus,
-    setFilterStatus:value=>{setFilterStatus(value);setPage(1);},
+    setFilterStatus: (value) => {
+      setFilterStatus(value);
+      setPage(1);
+    },
     searchQuery,
-    setSearchQuery:value=>{setSearchQuery(value);setPage(1);},
-    page,setPage,pagination,
+    setSearchQuery: (value) => {
+      setSearchQuery(value);
+      setPage(1);
+    },
+    page,
+    setPage,
+    pagination,
     selectedItem,
     setSelectedItem,
     isProcessing,

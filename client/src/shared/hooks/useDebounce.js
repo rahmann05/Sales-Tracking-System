@@ -41,16 +41,19 @@ export function useDebouncedCallback(func, wait = 300) {
     funcRef.current = func;
   }, [func]);
 
-  const debouncedFunc = useCallback((...args) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-      if (funcRef.current) {
-        funcRef.current(...args);
+  const debouncedFunc = useCallback(
+    (...args) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
-    }, wait);
-  }, [wait]);
+      timeoutRef.current = setTimeout(() => {
+        if (funcRef.current) {
+          funcRef.current(...args);
+        }
+      }, wait);
+    },
+    [wait]
+  );
 
   useEffect(() => {
     return () => {

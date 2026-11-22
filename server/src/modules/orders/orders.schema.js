@@ -4,25 +4,27 @@ const orderItemSchema = z.object({
   productId: z.string().uuid('productId harus berformat UUID'),
   quantity: z.number().int().positive('Kuantitas harus lebih dari 0'),
   unitPrice: z.number().finite().positive().optional(),
-  unit:z.string().max(32).nullable().optional(),
-  baseUnit:z.string().max(32).nullable().optional(),
-  unitsPerUnit:z.number().int().positive().nullable().optional(),
+  unit: z.string().max(32).nullable().optional(),
+  baseUnit: z.string().max(32).nullable().optional(),
+  unitsPerUnit: z.number().int().positive().nullable().optional(),
 });
 
 export const createOrderSchema = z.object({
-  body: z.object({
-    requestId:z.string().uuid().optional(),
-    priceOverrideReason:z.string().trim().max(2000).optional(),
-    expectedTotal:z.number().nonnegative().optional(),
-    expectedTermDays:z.number().int().nonnegative().optional(),
-    code: z.string().trim().max(128).optional(),
-    pjpStopId: z.string().uuid('pjpStopId harus berformat UUID').optional(),
-    outletId:z.string().uuid().optional(),
-    adminPlaceId:z.string().trim().min(3).max(250).optional(),
-    contextReason:z.string().trim().max(2000).optional(),
-    paymentType: z.enum(['CASH', 'TOP', 'TRANSFER']).optional(),
-    items: z
-      .array(orderItemSchema)
-      .min(1, 'Minimal harus ada 1 item dalam order'),
-  }).refine(data=>Boolean(data.pjpStopId)!==Boolean(data.outletId),{message:'Pilih satu konteks: kunjungan PJP atau outlet langsung.'}),
+  body: z
+    .object({
+      requestId: z.string().uuid().optional(),
+      priceOverrideReason: z.string().trim().max(2000).optional(),
+      expectedTotal: z.number().nonnegative().optional(),
+      expectedTermDays: z.number().int().nonnegative().optional(),
+      code: z.string().trim().max(128).optional(),
+      pjpStopId: z.string().uuid('pjpStopId harus berformat UUID').optional(),
+      outletId: z.string().uuid().optional(),
+      adminPlaceId: z.string().trim().min(3).max(250).optional(),
+      contextReason: z.string().trim().max(2000).optional(),
+      paymentType: z.enum(['CASH', 'TOP', 'TRANSFER']).optional(),
+      items: z.array(orderItemSchema).min(1, 'Minimal harus ada 1 item dalam order'),
+    })
+    .refine((data) => Boolean(data.pjpStopId) !== Boolean(data.outletId), {
+      message: 'Pilih satu konteks: kunjungan PJP atau outlet langsung.',
+    }),
 });

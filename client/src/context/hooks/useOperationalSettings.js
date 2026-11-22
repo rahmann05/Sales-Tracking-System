@@ -4,7 +4,7 @@ import { CONFIG_DEFAULTS } from '../../../../shared/config.mjs';
 
 export function useOperationalSettings(user) {
   const [settings, setSettings] = useState(CONFIG_DEFAULTS);
-  const [settingsReady,setReady]=useState(false);
+  const [settingsReady, setReady] = useState(false);
   const refreshSettings = useCallback(async () => {
     if (!user?.id) return;
     const res = await configApi.getRuntime();
@@ -19,14 +19,25 @@ export function useOperationalSettings(user) {
       if (!user?.id) return;
       try {
         const res = await configApi.getRuntime();
-        if (active) {setSettings({ ...CONFIG_DEFAULTS, ...res.data });setReady(true);}
-      } catch (error) { if(active)setReady(false);console.warn('Pengaturan belum diperbarui:', error.message); }
+        if (active) {
+          setSettings({ ...CONFIG_DEFAULTS, ...res.data });
+          setReady(true);
+        }
+      } catch (error) {
+        if (active) setReady(false);
+        console.warn('Pengaturan belum diperbarui:', error.message);
+      }
     };
     refresh();
     const timer = setInterval(refresh, 60000);
     window.addEventListener('focus', refresh);
-    window.addEventListener('policy:changed',refresh);
-    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', refresh);window.removeEventListener('policy:changed',refresh); };
+    window.addEventListener('policy:changed', refresh);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('policy:changed', refresh);
+    };
   }, [user?.id]);
   return { settings, settingsReady, refreshSettings };
 }

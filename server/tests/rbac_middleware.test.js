@@ -35,16 +35,22 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
       assert.equal(caughtError.statusCode, 401);
     });
 
-    it('should load current account rather than stale JWT privileges', async t => {
+    it('should load current account rather than stale JWT privileges', async (t) => {
       const originalConfigs = prisma.systemConfig.findMany;
       prisma.systemConfig.findMany = async () => [];
-      t.after(() => { prisma.systemConfig.findMany = originalConfigs; });
+      t.after(() => {
+        prisma.systemConfig.findMany = originalConfigs;
+      });
       const originalConfig = prisma.systemConfig.findUnique;
       prisma.systemConfig.findUnique = async () => null;
-      t.after(() => {prisma.systemConfig.findUnique=originalConfig;});
+      t.after(() => {
+        prisma.systemConfig.findUnique = originalConfig;
+      });
       const original = prisma.user.findUnique;
-      prisma.user.findUnique = async () => ({id:'usr-123',role:'SALES',deletedAt:null});
-      t.after(() => {prisma.user.findUnique = original;});
+      prisma.user.findUnique = async () => ({ id: 'usr-123', role: 'SALES', deletedAt: null });
+      t.after(() => {
+        prisma.user.findUnique = original;
+      });
       const payload = { id: 'usr-123', role: 'SUPERVISOR', clusterId: 'cluster-cmh' };
       const token = jwt.sign(payload, config.jwtSecret, { expiresIn: '1h' });
 

@@ -14,12 +14,14 @@
  */
 export const DAY_ORDER = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
 
-
 export const DAY_LABELS = {
-  senin: 'Senin', selasa: 'Selasa', rabu: 'Rabu',
-  kamis: 'Kamis', jumat: 'Jumat', sabtu: 'Sabtu',
+  senin: 'Senin',
+  selasa: 'Selasa',
+  rabu: 'Rabu',
+  kamis: 'Kamis',
+  jumat: 'Jumat',
+  sabtu: 'Sabtu',
 };
-
 
 export const FULL_DAYS = 5;
 

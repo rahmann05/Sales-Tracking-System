@@ -6,7 +6,6 @@ import { AppError } from '../../../utils/errors.js';
 import { USER_SELECT, enrichUserResponse } from './users.helpers.js';
 import { resolveBusinessCode } from '../../config/services/business-code.service.js';
 
-
 export const createUser = async (raw) => {
   const data = await userAssignment(raw);
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
@@ -16,7 +15,11 @@ export const createUser = async (raw) => {
 
   const hashedPassword = await bcrypt.hash(data.password, 10);
   const created = await prisma.user.create({
-    data: { ...data, staffCode: await resolveBusinessCode('USER',raw.staffCode), password: hashedPassword },
+    data: {
+      ...data,
+      staffCode: await resolveBusinessCode('USER', raw.staffCode),
+      password: hashedPassword,
+    },
     select: USER_SELECT,
   });
   return enrichUserResponse(created);

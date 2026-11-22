@@ -1,12 +1,24 @@
-import {createRequire} from 'node:module';
-import {fileURLToPath} from 'node:url';
-import {mkdir} from 'node:fs/promises';
-const require=createRequire(new URL('../../client/package.json',import.meta.url));
-const {build}=require('esbuild');
-const client=fileURLToPath(new URL('../../client/',import.meta.url));
-const out=fileURLToPath(new URL('../../.backups/attendance-export/',import.meta.url));
-await mkdir(out,{recursive:true});
-const result=await build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',packages:'external',supported:{'dynamic-import':false},write:false,define:{'import.meta.env':'{}'},stdin:{resolveDir:client,loader:'js',contents:`
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { mkdir } from 'node:fs/promises';
+const require = createRequire(new URL('../../client/package.json', import.meta.url));
+const { build } = require('esbuild');
+const client = fileURLToPath(new URL('../../client/', import.meta.url));
+const out = fileURLToPath(new URL('../../.backups/attendance-export/', import.meta.url));
+await mkdir(out, { recursive: true });
+const result = await build({
+  absWorkingDir: client,
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  packages: 'external',
+  supported: { 'dynamic-import': false },
+  write: false,
+  define: { 'import.meta.env': '{}' },
+  stdin: {
+    resolveDir: client,
+    loader: 'js',
+    contents: `
 import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
 import ExcelJS from 'exceljs';
@@ -31,6 +43,13 @@ module.exports=(async()=>{
  assert.equal(captures.length,4);
  await assert.rejects(()=>staffAttendanceExporters.exportPdf([{...row,photoUrl:'data:image/png;base64,bad'}],{date:row.dateKey}),/Foto/);
  console.log('PASS: attendance DOCX, XLSX, CSV, PDF; 3 embedded photos, correction separation, missing evidence, GPS references and invalid-photo rejection.');
-})();`}});
-const mod={exports:{}};
-await new Function('require','module','exports',result.outputFiles[0].text+'\nreturn module.exports;')(require,mod,mod.exports);
+})();`,
+  },
+});
+const mod = { exports: {} };
+await new Function(
+  'require',
+  'module',
+  'exports',
+  result.outputFiles[0].text + '\nreturn module.exports;'
+)(require, mod, mod.exports);

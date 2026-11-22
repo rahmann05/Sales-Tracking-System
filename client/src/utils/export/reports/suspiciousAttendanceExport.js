@@ -8,10 +8,7 @@ import { formatCurrency, formatDateId, formatNumber, safeStr } from '../core/for
 
 function buildSuspiciousAttendanceBlueprint(input = {}, dateArg) {
   const rows = Array.isArray(input) ? input : Array.isArray(input?.rows) ? input.rows : [];
-  const dateStr = safeStr(
-    input?.date || dateArg,
-    new Date().toISOString().split('T')[0]
-  );
+  const dateStr = safeStr(input?.date || dateArg, new Date().toISOString().split('T')[0]);
 
   const durationCount = rows.filter((r) => Boolean(r.isDurationAnomaly)).length;
   const distanceCount = rows.filter(

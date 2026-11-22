@@ -7,7 +7,9 @@
   "scripts": {
     "build": "prisma generate",
     "start": "node index.js",
+    "start:local": "node index.js --local-db",
     "dev": "node --watch index.js",
+    "dev:local": "node --watch index.js --local-db",
     "prisma:generate": "prisma generate",
     "prisma:db-push": "prisma db push",
     "prisma:seed": "prisma db seed",

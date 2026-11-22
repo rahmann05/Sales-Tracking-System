@@ -1,6 +1,10 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import * as vehicleService from './vehicles.service.js';
-import { createVehicleSchema, updateVehicleSchema, recordMaintenanceSchema } from './vehicles.schema.js';
+import {
+  createVehicleSchema,
+  updateVehicleSchema,
+  recordMaintenanceSchema,
+} from './vehicles.schema.js';
 
 export const getVehicles = asyncHandler(async (req, res) => {
   const vehicles = await vehicleService.getVehicles();
@@ -28,11 +32,11 @@ export const createVehicle = asyncHandler(async (req, res) => {
 });
 
 export const updateVehicle = asyncHandler(async (req, res) => {
-  const validated = updateVehicleSchema.parse({ 
-    body: req.body, 
-    params: { id: req.params.id } 
+  const validated = updateVehicleSchema.parse({
+    body: req.body,
+    params: { id: req.params.id },
   });
-  const vehicle = await vehicleService.updateVehicle(validated.params.id, validated.body,req.user);
+  const vehicle = await vehicleService.updateVehicle(validated.params.id, validated.body, req.user);
   res.json({
     status: 'success',
     data: vehicle,
@@ -50,9 +54,13 @@ export const deleteVehicle = asyncHandler(async (req, res) => {
 export const recordMaintenance = asyncHandler(async (req, res) => {
   const validated = recordMaintenanceSchema.parse({
     body: req.body,
-    params: { id: req.params.id }
+    params: { id: req.params.id },
   });
-  const result = await vehicleService.recordMaintenance(validated.params.id, validated.body,req.user);
+  const result = await vehicleService.recordMaintenance(
+    validated.params.id,
+    validated.body,
+    req.user
+  );
   res.status(201).json({
     status: 'success',
     data: result,

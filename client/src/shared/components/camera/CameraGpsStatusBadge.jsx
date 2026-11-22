@@ -19,7 +19,8 @@ export const CameraGpsStatusBadge = ({
   isBypassUser = false,
   isBlockedByGeofence = false,
 }) => {
-  const isOutside = targetLat != null && targetLng != null && geofenceResult && !geofenceResult.isInside;
+  const isOutside =
+    targetLat != null && targetLng != null && geofenceResult && !geofenceResult.isInside;
 
   return (
     <div
@@ -27,10 +28,10 @@ export const CameraGpsStatusBadge = ({
         isBlockedByGeofence
           ? 'bg-rose-500/10 border-rose-500/30 text-rose-800'
           : isGpsLocked
-          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800'
-          : gpsError
-          ? 'bg-rose-500/10 border-rose-500/30 text-rose-700'
-          : 'bg-amber-500/10 border-amber-500/30 text-amber-800'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800'
+            : gpsError
+              ? 'bg-rose-500/10 border-rose-500/30 text-rose-700'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-800'
       }`}
     >
       {isBlockedByGeofence ? (
@@ -56,7 +57,9 @@ export const CameraGpsStatusBadge = ({
                     <LuZap className="text-[10px]" /> Mode Bypass Radius
                   </span>
                 )}
-                <span className="font-mono text-[11px] text-emerald-600">Akurasi: ±{userLocation.accuracy}m</span>
+                <span className="font-mono text-[11px] text-emerald-600">
+                  Akurasi: ±{userLocation.accuracy}m
+                </span>
               </div>
             </div>
             <p className="font-mono text-[11px] text-emerald-700 mt-0.5">
@@ -68,8 +71,8 @@ export const CameraGpsStatusBadge = ({
                   isBlockedByGeofence
                     ? 'text-rose-700'
                     : geofenceResult?.isInside
-                    ? 'text-emerald-800'
-                    : 'text-purple-700'
+                      ? 'text-emerald-800'
+                      : 'text-purple-700'
                 }`}
               >
                 <LuNavigation className="text-xs shrink-0" />
@@ -79,8 +82,8 @@ export const CameraGpsStatusBadge = ({
                   {geofenceResult?.isInside
                     ? `Dalam Geofence ≤${maxRadiusMeters}m`
                     : isBypassUser
-                    ? `Luar Geofence >${maxRadiusMeters}m (Diizinkan khusus testing)`
-                    : `Luar Geofence >${maxRadiusMeters}m — Presensi Ditutup`}
+                      ? `Luar Geofence >${maxRadiusMeters}m (Diizinkan khusus testing)`
+                      : `Luar Geofence >${maxRadiusMeters}m — Presensi Ditutup`}
                   )
                 </span>
               </p>
@@ -102,7 +105,9 @@ export const CameraGpsStatusBadge = ({
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="font-bold text-amber-800">Sedang Mencari Sinyal GPS...</p>
-              <p className="text-[11px] text-amber-700">Menunggu koordinat satelit/GPS perangkat Anda.</p>
+              <p className="text-[11px] text-amber-700">
+                Menunggu koordinat satelit/GPS perangkat Anda.
+              </p>
             </div>
             <button
               type="button"

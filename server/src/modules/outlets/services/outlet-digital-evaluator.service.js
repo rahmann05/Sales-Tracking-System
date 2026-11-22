@@ -1,62 +1,265 @@
-import {calculateNameSimilarity} from './calculate-name-similarity.service.js';
-import {calculateAddressSimilarity} from './calculate-address-similarity.service.js';
-import {calculateDistanceMeters} from '../../../utils/geolocation.js';
-import {knownPoint,outletIssues,outletNameUnusable,OUTLET_DIGITAL_VERSION as DIGITAL_OUTLET_VERSION} from '../../../../../shared/outlet-validation.mjs';
-import {extractAddressTokens} from './outlet-validation.helpers.js';
-import {nativeOutletPointTrusted} from '../../../../../shared/outlet-location.mjs';
-import {candidateIdentityFacts,assessOutletIdentity} from './outlet-identity-evidence.service.js';
-export {DIGITAL_OUTLET_VERSION};
-const digits=s=>String(s||'').match(/\d+/g)?.join(',')||'';
-const house=s=>String(s||'').match(/\b(?:no\.?|nomor)\s*(\d+[a-z]?)/i)?.[1]?.toLowerCase();
-const locality=s=>String(s||'').toLowerCase().replace(/\b(kota|kabupaten|kab)\b/g,'').replace(/[^a-z0-9]/g,'');
-const cityType=s=>/\bkota\b/i.test(s)?'KOTA':/\bkab(?:upaten|\.)?\b/i.test(s)?'KAB':null;
-const normalizedPhone=s=>{const value=String(s||'').replace(/\D/g,'').replace(/^0/,'62');return value.length>=8?value:null;};
-export function evaluateDigitalOutlet(outlet,candidates,steps,values={},chosenId){
- const ranked=[...new Map(candidates.filter(c=>c?.placeId).map(c=>[c.placeId,c])).values()].map(c=>{
-  const name=outletNameUnusable(outlet.name)?0:calculateNameSimilarity(outlet.name,c.name),address=calculateAddressSimilarity(outlet.address,c.address);
-  const phone=normalizedPhone(outlet.phone)&&normalizedPhone(c.phone)?normalizedPhone(outlet.phone)===normalizedPhone(c.phone):null;
-  const distanceMeters=knownPoint(outlet)&&knownPoint(c)?calculateDistanceMeters(outlet.latitude,outlet.longitude,c.latitude,c.longitude):null;
-  const closed=String(c.businessStatus).startsWith('CLOSED'),conflicts=[],hardConflicts=[];
-  if(phone===false)conflicts.push('Nomor telepon usaha berbeda');
-  if(closed)hardConflicts.push('Profil usaha ditandai tutup');
-  if(c.movedPlaceId)hardConflicts.push('Profil usaha berpindah; lokasi pengganti perlu diperiksa');
-  if(!knownPoint(c))hardConflicts.push('Titik kandidat Google belum tersedia atau tidak sah');
-  if(Array.isArray(c.types)&&!c.types.some(t=>['establishment','point_of_interest','store'].includes(t)))hardConflicts.push('Kandidat hanya menunjukkan alamat/wilayah atau jenis profil usaha belum tersedia');
-  if(digits(outlet.name)&&digits(c.name)&&digits(outlet.name)!==digits(c.name))conflicts.push('Nomor/cabang pada nama berbeda');
-  if(house(outlet.address)&&house(c.address)&&house(outlet.address)!==house(c.address))conflicts.push('Nomor alamat berbeda');
-  const city=outlet.address?.match(/\b(?:kota|kabupaten|kab\.?)\s+[a-z]+(?:\s+(?:barat|timur|utara|selatan|tengah|kepulauan))?/i)?.[0];
-  if(city&&c.city&&(locality(city)!==locality(c.city)||cityType(city)&&cityType(c.city)&&cityType(city)!==cityType(c.city)))conflicts.push('Kota/kabupaten pada alamat berbeda');
-  if(nativeOutletPointTrusted(outlet)&&distanceMeters>Number(values.VALIDATION_DISTANCE_SUSPECT??500))conflicts.push('Kandidat jauh dari titik GPS lapangan terpercaya');
-  const score=Math.round((name*.55+address*.4+(phone===true?.05:0))*100);
-  return {...c,detailsConfirmed:c.detailsConfirmed===true,nameScore:Math.round(name*100),addressScore:Math.round(address*100),phoneMatch:phone,distanceMeters:distanceMeters==null?null:Math.round(distanceMeters),score,conflicts,hardConflicts};
- }).sort((a,b)=>Number(!!a.hardConflicts.length)-Number(!!b.hardConflicts.length)||Number(!!a.conflicts.length)-Number(!!b.conflicts.length)||b.score-a.score||Number(b.detailsConfirmed)-Number(a.detailsConfirmed)||a.placeId.localeCompare(b.placeId));
- for(const c of ranked)c.identityFacts=candidateIdentityFacts(outlet,c,values);
- const recommended=ranked.find(c=>!c.hardConflicts.length),candidate=chosenId?ranked.find(c=>c.placeId===chosenId):recommended||ranked[0];
- const identityReview=assessOutletIdentity(outlet,candidate,ranked,values);
- if(identityReview.required&&steps.some(s=>['POINT_BUSINESSES','BUSINESS_AT_ADDRESS'].includes(s.strategy)&&['ERROR','SKIPPED'].includes(s.state))){identityReview.comparisonIncomplete=true;identityReview.reasons.push('Pencarian konteks lokasi/alamat belum selesai karena batas panggilan atau kendala layanan. Periksa lagi dengan batas yang memadai sebelum keputusan digital.');}
- const other=ranked.filter(c=>c.placeId!==candidate?.placeId&&!c.hardConflicts.length&&!c.conflicts.length).sort((a,b)=>b.score-a.score)[0];
- const reasons=[],issues=outletIssues({...outlet,validationDetails:{...outlet.validationDetails,qualityConfirmed:null}}),failures=steps.filter(s=>s.state==='ERROR');
- let code='NOT_FOUND',identity='UNCONFIRMED',location='UNKNOWN',candidateGap=null;
- if(candidate){
-  candidateGap=other?candidate.score-other.score:null;
-  const unique=!other||candidateGap>=Number(values.OUTLET_REVIEW_CANDIDATE_GAP??15);
-  const specific=[...extractAddressTokens(outlet.address||'')].filter(t=>/[a-z]/i.test(t)&&t.length>=3).length>=2;
-  const strong=!identityReview.comparisonIncomplete&&candidate.detailsConfirmed&&specific&&!issues.includes('INCOMPLETE_ADDRESS')&&(!issues.includes('UNCLEAR_NAME')||candidate.phoneMatch===true)&&candidate.nameScore>=Number(values.OUTLET_REVIEW_STRONG_NAME_PERCENT??90)&&candidate.addressScore>=Number(values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT??80)&&!candidate.hardConflicts.length&&!candidate.conflicts.length;
-  identity=strong&&identityReview.resolved?'STRONG':'REVIEW';location=knownPoint(candidate)?'CANDIDATE':'UNKNOWN';code=!identityReview.resolved&&identityReview.competingPlaceIds.length||!unique?'AMBIGUOUS':strong&&identityReview.resolved?'STRONG':'REVIEW';
-  reasons.push(...identityReview.reasons);
-  reasons.push(`Kemiripan nama ${candidate.nameScore}%; alamat ${candidate.addressScore}%.`);
-  if(!unique)reasons.push(`Selisih skor terhadap kandidat alternatif ${candidateGap} poin; syarat standar ${Number(values.OUTLET_REVIEW_CANDIDATE_GAP??15)} poin.`);
-  if(!candidate.detailsConfirmed)reasons.push('Detail profil kandidat belum berhasil dikonfirmasi melalui Place Details.');
-  if(issues.includes('INCOMPLETE_ADDRESS')||!specific)reasons.push('Alamat master belum cukup spesifik untuk mengonfirmasi outlet.');
-  if(issues.includes('UNCLEAR_NAME')&&candidate.phoneMatch!==true)reasons.push('Nama master belum jelas dan tidak ada kecocokan telepon usaha yang mendukung.');
-  if(!nativeOutletPointTrusted(outlet)&&candidate.distanceMeters>Number(values.VALIDATION_DISTANCE_SUSPECT??500))reasons.push('Kandidat jauh dari titik lama yang belum dikonfirmasi; jarak ini menjadi bahan perbandingan.');
-  reasons.push(...candidate.conflicts,...candidate.hardConflicts);
-  if(strong&&!knownPoint(outlet))reasons.push('Identitas/lokasi Google ditemukan tanpa koordinat master.');
- }else if(steps.some(s=>s.kind==='GEOCODE'&&s.state==='SUCCESS')){code='ADDRESS_ONLY';location='ADDRESS';reasons.push('Alamat ditemukan; identitas toko belum terkonfirmasi.');}
- else if(failures.length)code='ERROR';else if(steps.every(s=>s.state==='SKIPPED'))code='INCOMPLETE';
- if(failures.length&&!steps.some(s=>['SUCCESS','EMPTY'].includes(s.state))){code='ERROR';identity='UNCONFIRMED';reasons.push('Tidak ada langkah layanan terbaru yang berhasil. Kandidat lama hanya ditampilkan sebagai referensi, bukan pemeriksaan baru.');}
- const aligned=code==='STRONG'&&candidate.distanceMeters!=null&&candidate.distanceMeters<=Number(values.VALIDATION_DISTANCE_WARNING??200)&&nativeOutletPointTrusted(outlet);
- const checkedAt=new Date().toISOString(),days=Number(values.OUTLET_REVIEW_EVIDENCE_DAYS??7);
- return {method:'GOOGLE_ADAPTIVE_V3',version:DIGITAL_OUTLET_VERSION,code,identity,identityReview,location,aligned,selectedPlaceId:candidate?.placeId||null,recommendedPlaceId:recommended?.placeId||null,candidateGap,reasons,issues,technical:failures.length?'PARTIAL':'READY',steps,checkedAt,expiresAt:days>0?new Date(Date.now()+days*86400000).toISOString():null,providerExpiresAt:new Date(Date.now()+Math.min(days||30,30)*86400000).toISOString(),calls:steps.filter(s=>s.called).length,candidates:ranked,comparisonPolicy:{strongName:values.OUTLET_REVIEW_STRONG_NAME_PERCENT??90,strongAddress:values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT??80,candidateGap:values.OUTLET_REVIEW_CANDIDATE_GAP??15}};
+import { calculateNameSimilarity } from './calculate-name-similarity.service.js';
+import { calculateAddressSimilarity } from './calculate-address-similarity.service.js';
+import { calculateDistanceMeters } from '../../../utils/geolocation.js';
+import {
+  knownPoint,
+  outletIssues,
+  outletNameUnusable,
+  OUTLET_DIGITAL_VERSION as DIGITAL_OUTLET_VERSION,
+} from '../../../../../shared/outlet-validation.mjs';
+import { extractAddressTokens } from './outlet-validation.helpers.js';
+import { nativeOutletPointTrusted } from '../../../../../shared/outlet-location.mjs';
+import {
+  candidateIdentityFacts,
+  assessOutletIdentity,
+} from './outlet-identity-evidence.service.js';
+export { DIGITAL_OUTLET_VERSION };
+const digits = (s) =>
+  String(s || '')
+    .match(/\d+/g)
+    ?.join(',') || '';
+const house = (s) =>
+  String(s || '')
+    .match(/\b(?:no\.?|nomor)\s*(\d+[a-z]?)/i)?.[1]
+    ?.toLowerCase();
+const locality = (s) =>
+  String(s || '')
+    .toLowerCase()
+    .replace(/\b(kota|kabupaten|kab)\b/g, '')
+    .replace(/[^a-z0-9]/g, '');
+const cityType = (s) =>
+  /\bkota\b/i.test(s) ? 'KOTA' : /\bkab(?:upaten|\.)?\b/i.test(s) ? 'KAB' : null;
+const normalizedPhone = (s) => {
+  const value = String(s || '')
+    .replace(/\D/g, '')
+    .replace(/^0/, '62');
+  return value.length >= 8 ? value : null;
+};
+export function evaluateDigitalOutlet(outlet, candidates, steps, values = {}, chosenId) {
+  const ranked = [
+    ...new Map(candidates.filter((c) => c?.placeId).map((c) => [c.placeId, c])).values(),
+  ]
+    .map((c) => {
+      const name = outletNameUnusable(outlet.name)
+          ? 0
+          : calculateNameSimilarity(outlet.name, c.name),
+        address = calculateAddressSimilarity(outlet.address, c.address);
+      const phone =
+        normalizedPhone(outlet.phone) && normalizedPhone(c.phone)
+          ? normalizedPhone(outlet.phone) === normalizedPhone(c.phone)
+          : null;
+      const distanceMeters =
+        knownPoint(outlet) && knownPoint(c)
+          ? calculateDistanceMeters(outlet.latitude, outlet.longitude, c.latitude, c.longitude)
+          : null;
+      const closed = String(c.businessStatus).startsWith('CLOSED'),
+        conflicts = [],
+        hardConflicts = [];
+      if (phone === false) conflicts.push('Nomor telepon usaha berbeda');
+      if (closed) hardConflicts.push('Profil usaha ditandai tutup');
+      if (c.movedPlaceId)
+        hardConflicts.push('Profil usaha berpindah; lokasi pengganti perlu diperiksa');
+      if (!knownPoint(c)) hardConflicts.push('Titik kandidat Google belum tersedia atau tidak sah');
+      if (
+        Array.isArray(c.types) &&
+        !c.types.some((t) => ['establishment', 'point_of_interest', 'store'].includes(t))
+      )
+        hardConflicts.push(
+          'Kandidat hanya menunjukkan alamat/wilayah atau jenis profil usaha belum tersedia'
+        );
+      if (digits(outlet.name) && digits(c.name) && digits(outlet.name) !== digits(c.name))
+        conflicts.push('Nomor/cabang pada nama berbeda');
+      if (house(outlet.address) && house(c.address) && house(outlet.address) !== house(c.address))
+        conflicts.push('Nomor alamat berbeda');
+      const city = outlet.address?.match(
+        /\b(?:kota|kabupaten|kab\.?)\s+[a-z]+(?:\s+(?:barat|timur|utara|selatan|tengah|kepulauan))?/i
+      )?.[0];
+      if (
+        city &&
+        c.city &&
+        (locality(city) !== locality(c.city) ||
+          (cityType(city) && cityType(c.city) && cityType(city) !== cityType(c.city)))
+      )
+        conflicts.push('Kota/kabupaten pada alamat berbeda');
+      if (
+        nativeOutletPointTrusted(outlet) &&
+        distanceMeters > Number(values.VALIDATION_DISTANCE_SUSPECT ?? 500)
+      )
+        conflicts.push('Kandidat jauh dari titik GPS lapangan terpercaya');
+      const score = Math.round((name * 0.55 + address * 0.4 + (phone === true ? 0.05 : 0)) * 100);
+      return {
+        ...c,
+        detailsConfirmed: c.detailsConfirmed === true,
+        nameScore: Math.round(name * 100),
+        addressScore: Math.round(address * 100),
+        phoneMatch: phone,
+        distanceMeters: distanceMeters == null ? null : Math.round(distanceMeters),
+        score,
+        conflicts,
+        hardConflicts,
+      };
+    })
+    .sort(
+      (a, b) =>
+        Number(!!a.hardConflicts.length) - Number(!!b.hardConflicts.length) ||
+        Number(!!a.conflicts.length) - Number(!!b.conflicts.length) ||
+        b.score - a.score ||
+        Number(b.detailsConfirmed) - Number(a.detailsConfirmed) ||
+        a.placeId.localeCompare(b.placeId)
+    );
+  for (const c of ranked) c.identityFacts = candidateIdentityFacts(outlet, c, values);
+  const recommended = ranked.find((c) => !c.hardConflicts.length),
+    candidate = chosenId ? ranked.find((c) => c.placeId === chosenId) : recommended || ranked[0];
+  const identityReview = assessOutletIdentity(outlet, candidate, ranked, values);
+  if (
+    identityReview.required &&
+    steps.some(
+      (s) =>
+        ['POINT_BUSINESSES', 'BUSINESS_AT_ADDRESS'].includes(s.strategy) &&
+        ['ERROR', 'SKIPPED'].includes(s.state)
+    )
+  ) {
+    identityReview.comparisonIncomplete = true;
+    identityReview.reasons.push(
+      'Pencarian konteks lokasi/alamat belum selesai karena batas panggilan atau kendala layanan. Periksa lagi dengan batas yang memadai sebelum keputusan digital.'
+    );
+  }
+  const other = ranked
+    .filter(
+      (c) => c.placeId !== candidate?.placeId && !c.hardConflicts.length && !c.conflicts.length
+    )
+    .sort((a, b) => b.score - a.score)[0];
+  const reasons = [],
+    issues = outletIssues({
+      ...outlet,
+      validationDetails: { ...outlet.validationDetails, qualityConfirmed: null },
+    }),
+    failures = steps.filter((s) => s.state === 'ERROR');
+  let code = 'NOT_FOUND',
+    identity = 'UNCONFIRMED',
+    location = 'UNKNOWN',
+    candidateGap = null;
+  if (candidate) {
+    candidateGap = other ? candidate.score - other.score : null;
+    const unique = !other || candidateGap >= Number(values.OUTLET_REVIEW_CANDIDATE_GAP ?? 15);
+    const specific =
+      [...extractAddressTokens(outlet.address || '')].filter(
+        (t) => /[a-z]/i.test(t) && t.length >= 3
+      ).length >= 2;
+    const strong =
+      !identityReview.comparisonIncomplete &&
+      candidate.detailsConfirmed &&
+      specific &&
+      !issues.includes('INCOMPLETE_ADDRESS') &&
+      (!issues.includes('UNCLEAR_NAME') || candidate.phoneMatch === true) &&
+      candidate.nameScore >= Number(values.OUTLET_REVIEW_STRONG_NAME_PERCENT ?? 90) &&
+      candidate.addressScore >= Number(values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT ?? 80) &&
+      !candidate.hardConflicts.length &&
+      !candidate.conflicts.length;
+    identity = strong && identityReview.resolved ? 'STRONG' : 'REVIEW';
+    location = knownPoint(candidate) ? 'CANDIDATE' : 'UNKNOWN';
+    code =
+      (!identityReview.resolved && identityReview.competingPlaceIds.length) || !unique
+        ? 'AMBIGUOUS'
+        : strong && identityReview.resolved
+          ? 'STRONG'
+          : 'REVIEW';
+    reasons.push(...identityReview.reasons);
+    reasons.push(`Kemiripan nama ${candidate.nameScore}%; alamat ${candidate.addressScore}%.`);
+    if (!unique)
+      reasons.push(
+        `Selisih skor terhadap kandidat alternatif ${candidateGap} poin; syarat standar ${Number(values.OUTLET_REVIEW_CANDIDATE_GAP ?? 15)} poin.`
+      );
+    if (!candidate.detailsConfirmed)
+      reasons.push('Detail profil kandidat belum berhasil dikonfirmasi melalui Place Details.');
+    if (issues.includes('INCOMPLETE_ADDRESS') || !specific)
+      reasons.push('Alamat master belum cukup spesifik untuk mengonfirmasi outlet.');
+    if (issues.includes('UNCLEAR_NAME') && candidate.phoneMatch !== true)
+      reasons.push('Nama master belum jelas dan tidak ada kecocokan telepon usaha yang mendukung.');
+    if (
+      !nativeOutletPointTrusted(outlet) &&
+      candidate.distanceMeters > Number(values.VALIDATION_DISTANCE_SUSPECT ?? 500)
+    )
+      reasons.push(
+        'Kandidat jauh dari titik lama yang belum dikonfirmasi; jarak ini menjadi bahan perbandingan.'
+      );
+    reasons.push(...candidate.conflicts, ...candidate.hardConflicts);
+    if (strong && !knownPoint(outlet))
+      reasons.push('Identitas/lokasi Google ditemukan tanpa koordinat master.');
+  } else if (steps.some((s) => s.kind === 'GEOCODE' && s.state === 'SUCCESS')) {
+    code = 'ADDRESS_ONLY';
+    location = 'ADDRESS';
+    reasons.push('Alamat ditemukan; identitas toko belum terkonfirmasi.');
+  } else if (failures.length) code = 'ERROR';
+  else if (steps.every((s) => s.state === 'SKIPPED')) code = 'INCOMPLETE';
+  if (failures.length && !steps.some((s) => ['SUCCESS', 'EMPTY'].includes(s.state))) {
+    code = 'ERROR';
+    identity = 'UNCONFIRMED';
+    reasons.push(
+      'Tidak ada langkah layanan terbaru yang berhasil. Kandidat lama hanya ditampilkan sebagai referensi, bukan pemeriksaan baru.'
+    );
+  }
+  const aligned =
+    code === 'STRONG' &&
+    candidate.distanceMeters != null &&
+    candidate.distanceMeters <= Number(values.VALIDATION_DISTANCE_WARNING ?? 200) &&
+    nativeOutletPointTrusted(outlet);
+  const checkedAt = new Date().toISOString(),
+    days = Number(values.OUTLET_REVIEW_EVIDENCE_DAYS ?? 7);
+  return {
+    method: 'GOOGLE_ADAPTIVE_V3',
+    version: DIGITAL_OUTLET_VERSION,
+    code,
+    identity,
+    identityReview,
+    location,
+    aligned,
+    selectedPlaceId: candidate?.placeId || null,
+    recommendedPlaceId: recommended?.placeId || null,
+    candidateGap,
+    reasons,
+    issues,
+    technical: failures.length ? 'PARTIAL' : 'READY',
+    steps,
+    checkedAt,
+    expiresAt: days > 0 ? new Date(Date.now() + days * 86400000).toISOString() : null,
+    providerExpiresAt: new Date(Date.now() + Math.min(days || 30, 30) * 86400000).toISOString(),
+    calls: steps.filter((s) => s.called).length,
+    candidates: ranked,
+    comparisonPolicy: {
+      strongName: values.OUTLET_REVIEW_STRONG_NAME_PERCENT ?? 90,
+      strongAddress: values.OUTLET_REVIEW_STRONG_ADDRESS_PERCENT ?? 80,
+      candidateGap: values.OUTLET_REVIEW_CANDIDATE_GAP ?? 15,
+    },
+  };
 }
-export function durableDigitalResult(result){const {candidates,...rest}=result;return {...rest,candidateIds:candidates.map(c=>c.placeId),assessments:candidates.map(({placeId,nameScore,addressScore,phoneMatch,score,conflicts,hardConflicts,detailsConfirmed,identityFacts})=>({placeId,nameScore,addressScore,phoneMatch,score,conflicts,hardConflicts,detailsConfirmed,identityFacts}))};}
+export function durableDigitalResult(result) {
+  const { candidates, ...rest } = result;
+  return {
+    ...rest,
+    candidateIds: candidates.map((c) => c.placeId),
+    assessments: candidates.map(
+      ({
+        placeId,
+        nameScore,
+        addressScore,
+        phoneMatch,
+        score,
+        conflicts,
+        hardConflicts,
+        detailsConfirmed,
+        identityFacts,
+      }) => ({
+        placeId,
+        nameScore,
+        addressScore,
+        phoneMatch,
+        score,
+        conflicts,
+        hardConflicts,
+        detailsConfirmed,
+        identityFacts,
+      })
+    ),
+  };
+}

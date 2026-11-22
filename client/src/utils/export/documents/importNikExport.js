@@ -14,9 +14,7 @@ function buildImportNikBlueprint(items = [], customFilename) {
     const address = `${safeStr(d.taxAddress || d.address, '').toUpperCase()}~`;
     const isPkp = d.taxType === 'PKP' ? 'Y' : 'N';
     const npwp =
-      d.taxType === 'PKP' && d.taxNumber && String(d.taxNumber).includes('.')
-        ? d.taxNumber
-        : '';
+      d.taxType === 'PKP' && d.taxNumber && String(d.taxNumber).includes('.') ? d.taxNumber : '';
     return [custCode, custName, nik, ownerName, address, isPkp, npwp];
   });
 

@@ -1,14 +1,16 @@
-import {reportMoney} from '../../../../../shared/report-visibility.mjs';
-import {printOperationalDocument} from '../../../services/operationalExportService';
+import { reportMoney } from '../../../../../shared/report-visibility.mjs';
+import { printOperationalDocument } from '../../../services/operationalExportService';
 import React from 'react';
-import {useApp} from '../../../context/AppContext';
-import {reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
+import { useApp } from '../../../context/AppContext';
+import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { calendarDayLabel } from '../../../../../shared/report-calendar.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
+import { ReportPrintSignatures } from './ReportPrintSignatures';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import {
   exportWeeklyDocx,
   exportWeeklyExcel,
@@ -22,7 +24,8 @@ import {
  * Renders an official printable sheet for the Weekly Performance & Attendance Report (ND6).
  */
 export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClose }) => {
-  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
+  const { user, settings } = useApp(),
+    canExport = reportExportAllowed(user, settings);
   if (!reportData) return null;
 
   const { period = {}, summary = {}, daysSummary = [], salesmen = [] } = reportData;
@@ -32,16 +35,29 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
   };
 
   const startFormatted = period.startDate
-    ? new Date(period.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+    ? new Date(period.startDate).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
     : '';
   const endFormatted = period.endDate
-    ? new Date(period.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+    ? new Date(period.endDate).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
     : '';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <NativeDialog
+      open
+      title="Pratinjau Cetak Laporan Mingguan"
+      onClose={onClose}
+      className="print-sheet-dialog"
+    >
       {/* Action Bar */}
-      <div className="fixed top-4 right-6 z-60 flex flex-wrap items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+      <div className="flex flex-wrap items-center justify-end gap-2 no-print bg-surface p-2 mb-3 rounded-2xl border border-border-glass">
         <ExportFormatMenu
           disabled={!canExport}
           onExportDocx={() => exportWeeklyDocx(reportData, startDate, salesmanName)}
@@ -70,21 +86,19 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
       {/* Printable Sheet */}
       <div
         id="weekly-report-printable"
-        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full shadow-2xl rounded-sm my-auto text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
+        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full mx-auto shadow-2xl rounded-sm text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
         style={{ fontFamily: "'Arial', sans-serif" }}
       >
         {/* Header */}
         <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
           <div>
             <h1 className="text-base font-black tracking-tight text-gray-900 m-0 uppercase">
-              {reportData.meta?.company||'Perusahaan'}
+              {reportData.meta?.company || 'Perusahaan'}
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
               FMCG DISTRIBUTOR
             </p>
-            <p className="text-[9px] text-gray-500 m-0 mt-0.5">
-              Distribution Management System
-            </p>
+            <p className="text-[9px] text-gray-500 m-0 mt-0.5">Distribution Management System</p>
           </div>
 
           <div className="text-right">
@@ -105,12 +119,15 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
         <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
           <div>
             <span className="text-gray-500 font-semibold block">Salesman / Filter:</span>
-            <strong className="text-gray-900 text-[11px]">{salesmanName || 'Semua Salesman (Tim)'}</strong>
+            <strong className="text-gray-900 text-[11px]">
+              {salesmanName || 'Semua Salesman (Tim)'}
+            </strong>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block">Total Call (Plan / Actual):</span>
             <strong className="text-gray-900 text-[11px]">
-              {summary.totalActualCalls} / {summary.totalPlanCalls} Call ({summary.callComplianceRate})
+              {summary.totalActualCalls} / {summary.totalPlanCalls} Call (
+              {summary.callComplianceRate})
             </strong>
           </div>
           <div>
@@ -120,7 +137,9 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
             </strong>
           </div>
           <div>
-            <span className="text-gray-500 font-semibold block">Total Nilai order disetujui Mingguan:</span>
+            <span className="text-gray-500 font-semibold block">
+              Total Nilai order disetujui Mingguan:
+            </span>
             <strong className="text-gray-900 text-[11px]">
               {reportMoney(summary.totalOrderAmount)} ({summary.totalSkuSold} SKU)
             </strong>
@@ -132,9 +151,16 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
           <table className="w-full text-left border-collapse text-[9px]">
             <thead>
               <tr className="bg-gray-200 border-b border-black font-black uppercase text-gray-800">
-                <th className="p-1.5 border-r border-black" rowSpan="2">Salesman</th>
-                <th className="p-1.5 border-r border-black" rowSpan="2">Klaster</th>
-                <th className="p-1 border-r border-black text-center" colSpan={Math.max(1, daysSummary.length)}>
+                <th className="p-1.5 border-r border-black" rowSpan="2">
+                  Salesman
+                </th>
+                <th className="p-1.5 border-r border-black" rowSpan="2">
+                  Klaster
+                </th>
+                <th
+                  className="p-1 border-r border-black text-center"
+                  colSpan={Math.max(1, daysSummary.length)}
+                >
                   Realisasi Kunjungan Harian (Actual / Plan Call)
                 </th>
                 <th className="p-1 border-r border-black text-center" colSpan="4">
@@ -142,7 +168,15 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
                 </th>
               </tr>
               <tr className="bg-gray-100 border-b border-black font-bold text-center text-[8.5px]">
-                {daysSummary.map(day => <th key={day.dateStr} className="p-1 border-r border-black">{day.dayName}<br />{day.formattedDate || day.dateStr}<br />{calendarDayLabel(day.isWorkingDay)}</th>)}
+                {daysSummary.map((day) => (
+                  <th key={day.dateStr} className="p-1 border-r border-black">
+                    {day.dayName}
+                    <br />
+                    {day.formattedDate || day.dateStr}
+                    <br />
+                    {calendarDayLabel(day.isWorkingDay)}
+                  </th>
+                ))}
                 <th className="p-1 border-r border-black">Act / Plan</th>
                 <th className="p-1 border-r border-black">Call %</th>
                 <th className="p-1 border-r border-black">EC %</th>
@@ -159,14 +193,17 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
                 >
                   <td className="p-1.5 border-r border-gray-300 font-bold whitespace-nowrap">
                     {s.salesmanName}
-                    <p className="font-normal text-[9px]">Target: {formatTarget(s.weeklyTotal?.target,s.target?.status)} · {s.weeklyTotal?.targetAchievement}</p>
+                    <p className="font-normal text-[9px]">
+                      Target: {formatTarget(s.weeklyTotal?.target, s.target?.status)} ·{' '}
+                      {s.weeklyTotal?.targetAchievement}
+                    </p>
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-gray-600 whitespace-nowrap">
                     {s.clusterName}
                   </td>
 
                   {/* Days */}
-                  {daysSummary.map(day => {
+                  {daysSummary.map((day) => {
                     const d = s.days?.[day.dayName.toLowerCase()] || { plan: 0, actual: 0, ec: 0 };
                     return (
                       <td
@@ -231,33 +268,8 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
         </div>
 
         {/* Signatures Section */}
-        <div className="grid grid-cols-3 gap-4 pt-2 text-center text-[10px] break-inside-avoid">
-          <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Dibuat Oleh (Salesman),</span>
-            <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( {salesmanName || 'Sales Field Terkait'} )
-            </div>
-            <span className="text-[8.5px] text-gray-500">Sales Representative</span>
-          </div>
-
-          <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Diperiksa Oleh (Supervisor),</span>
-            <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( ____________________ )
-            </div>
-            <span className="text-[8.5px] text-gray-500">Supervisor Distribusi</span>
-          </div>
-
-          <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Disetujui Oleh (Admin Penjualan),</span>
-            <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( ____________________ )
-            </div>
-            <span className="text-[8.5px] text-gray-500">Admin Penjualan</span>
-          </div>
-        </div>
+        <ReportPrintSignatures salesmanName={salesmanName} />
       </div>
-    </div>
+    </NativeDialog>
   );
 };
-

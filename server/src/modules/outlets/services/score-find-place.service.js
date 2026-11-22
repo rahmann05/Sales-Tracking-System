@@ -13,8 +13,18 @@ export const scoreFindPlace = (result, outlet) => {
   let distanceMeters = null;
   let isFarMismatch = false;
 
-  if (outlet.latitude != null && outlet.longitude != null && result.lat != null && result.lng != null) {
-    distanceMeters = calculateDistanceMeters(outlet.latitude, outlet.longitude, result.lat, result.lng);
+  if (
+    outlet.latitude != null &&
+    outlet.longitude != null &&
+    result.lat != null &&
+    result.lng != null
+  ) {
+    distanceMeters = calculateDistanceMeters(
+      outlet.latitude,
+      outlet.longitude,
+      result.lat,
+      result.lng
+    );
 
     if (distanceMeters <= 50) distanceScore = 100;
     else if (distanceMeters <= 100) distanceScore = 90;
@@ -29,9 +39,7 @@ export const scoreFindPlace = (result, outlet) => {
     }
   }
 
-  let score = isFarMismatch
-    ? 0
-    : Math.round(nameSimilarity * 100 * 0.6 + distanceScore * 0.4);
+  let score = isFarMismatch ? 0 : Math.round(nameSimilarity * 100 * 0.6 + distanceScore * 0.4);
 
   if (nameSimilarity < 0.4) {
     score = Math.min(score, 20);

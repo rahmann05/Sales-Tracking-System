@@ -1,5 +1,5 @@
-import { request } from "../httpClient";
-import { queryString } from "./helpers";
+import { request } from '../httpClient';
+import { queryString } from './helpers';
 export const usersApi = {
   getAll: async (params = {}) => {
     const query = queryString(params);
@@ -8,49 +8,49 @@ export const usersApi = {
   getUsers: async (params = {}) => {
     return await usersApi.getAll(params);
   },
-  getById: async id => {
+  getById: async (id) => {
     return await request(`/users/${id}`);
   },
-  create: async userData => {
+  create: async (userData) => {
     return await request('/users', {
       method: 'POST',
-      body: JSON.stringify(userData)
+      body: JSON.stringify(userData),
     });
   },
   update: async (id, userData) => {
     return await request(`/users/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(userData)
+      body: JSON.stringify(userData),
     });
   },
-  remove: async id => {
+  remove: async (id) => {
     return await request(`/users/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
   },
   updatePassword: async (id, password) => {
     return await request(`/users/${id}/password`, {
       method: 'PUT',
       body: JSON.stringify({
-        password
-      })
+        password,
+      }),
     });
   },
   updatePermissions: async (id, permissions) => {
     return await request(`/users/${id}/permissions`, {
       method: 'PUT',
       body: JSON.stringify({
-        permissions
-      })
+        permissions,
+      }),
     });
   },
-  updateLocation: async coords => {
+  updateLocation: async (coords) => {
     return await request('/users/location', {
       method: 'POST',
-      body: JSON.stringify(coords)
+      body: JSON.stringify(coords),
     });
   },
   getLiveLocations: async () => {
     return await request('/users/live-locations');
-  }
+  },
 };

@@ -2,16 +2,8 @@ import React from 'react';
 
 import L from 'leaflet';
 
-
-
-
-
-
-
-
 // Helper custom Leaflet live sales GPS icon generator
-export
-// Helper custom Leaflet live sales GPS icon generator
+export // Helper custom Leaflet live sales GPS icon generator
 const createSalesLivePinIcon = () => {
   const svg = `
     <div style="position:relative; width:42px; height:42px; display:flex; align-items:center; justify-content:center;">
@@ -26,7 +18,7 @@ const createSalesLivePinIcon = () => {
     html: svg,
     iconSize: [42, 42],
     iconAnchor: [21, 21],
-    popupAnchor: [0, -22]
+    popupAnchor: [0, -22],
   });
 };
 
@@ -43,7 +35,7 @@ export const createCustomPinIcon = (color = '#2563eb', isSelected = false) => {
     html: svg,
     iconSize: [size, size],
     iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size]
+    popupAnchor: [0, -size],
   });
 };
 

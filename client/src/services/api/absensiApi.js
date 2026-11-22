@@ -1,30 +1,31 @@
-import { request } from "../httpClient";
-import { queryString } from "./helpers";
+import { request } from '../httpClient';
+import { queryString } from './helpers';
 export const absensiApi = {
-  getManualSales: params => request(`/absensi/manual-sales?${queryString(params)}`),
-  reviewManualSales: (kind, id, decision, note) => request(`/absensi/manual-sales/${kind}/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      decision,
-      note
-    })
-  }),
+  getManualSales: (params) => request(`/absensi/manual-sales?${queryString(params)}`),
+  reviewManualSales: (kind, id, decision, note) =>
+    request(`/absensi/manual-sales/${kind}/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        decision,
+        note,
+      }),
+    }),
   checkIn: async (pjpStopId, payload = {}) => {
     return await request(`/absensi/${pjpStopId}/in`, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   },
   checkOut: async (pjpStopId, payload = {}) => {
     return await request(`/absensi/${pjpStopId}/out`, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   },
-  submitOffPjp: async payload => {
+  submitOffPjp: async (payload) => {
     return await request('/absensi/off-pjp', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   },
   getOffPjpList: async (params = {}) => {
@@ -36,8 +37,8 @@ export const absensiApi = {
       method: 'PATCH',
       body: JSON.stringify({
         approved,
-        rejectionNote
-      })
+        rejectionNote,
+      }),
     });
-  }
+  },
 };

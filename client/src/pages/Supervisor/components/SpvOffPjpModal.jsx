@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { SPV_MODE_OPTIONS } from '../../../constants/supervisor';
 import { LuCheck, LuCamera, LuMapPin, LuRotateCw, LuInfo } from 'react-icons/lu';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
-import {useAddressLookup} from '../../../shared/hooks/useAddressLookup';
+import { useAddressLookup } from '../../../shared/hooks/useAddressLookup';
 import { SpvModalShell } from './SpvModalShell';
-import {useApp} from '../../../context/AppContext';
+import { useApp } from '../../../context/AppContext';
 
 /**
  * SpvOffPjpModal Component
@@ -22,16 +22,32 @@ export const SpvOffPjpModal = ({
   saving,
 }) => {
   const [capture, setCapture] = useState(null);
-  const {settings}=useApp();
-  const optional=settings.SPV_ATTENDANCE_MODE==='OPTIONAL',photoRequired=!optional&&settings.SPV_REQUIRE_PHOTO,gpsRequired=!optional&&settings.SPV_REQUIRE_GPS;
-  const [localError,setLocalError]=useState('');
-  const {lookupEnabled,lookupError,isGeocodingLoading,fetchAddressFromCoords,handleAddressChange,refresh}=useAddressLookup({address:form?.address,onChange:address=>onChangeForm({...form,address})});
-  const handleCapture=(photoUrl,gps)=>{setCapture({photoUrl,gps});setLocalError('');if(gps)fetchAddressFromCoords(gps.lat,gps.lng);};
-  const handleRetake=()=>setCapture(null);
-  const handleRefreshAddress=()=>refresh(capture?.gps);
+  const { settings } = useApp();
+  const optional = settings.SPV_ATTENDANCE_MODE === 'OPTIONAL',
+    photoRequired = !optional && settings.SPV_REQUIRE_PHOTO,
+    gpsRequired = !optional && settings.SPV_REQUIRE_GPS;
+  const [localError, setLocalError] = useState('');
+  const {
+    lookupEnabled,
+    lookupError,
+    isGeocodingLoading,
+    fetchAddressFromCoords,
+    handleAddressChange,
+    refresh,
+  } = useAddressLookup({
+    address: form?.address,
+    onChange: (address) => onChangeForm({ ...form, address }),
+  });
+  const handleCapture = (photoUrl, gps) => {
+    setCapture({ photoUrl, gps });
+    setLocalError('');
+    if (gps) fetchAddressFromCoords(gps.lat, gps.lng);
+  };
+  const handleRetake = () => setCapture(null);
+  const handleRefreshAddress = () => refresh(capture?.gps);
 
   const handleSubmit = () => {
-    if (photoRequired&&!capture?.photoUrl || gpsRequired&&!capture?.gps) {
+    if ((photoRequired && !capture?.photoUrl) || (gpsRequired && !capture?.gps)) {
       setLocalError('Wajib menjepret foto presensi di lokasi toko dengan GPS aktif.');
       return;
     }
@@ -52,21 +68,28 @@ export const SpvOffPjpModal = ({
     onConfirm({
       ...form,
       photoUrl: capture?.photoUrl,
-      accuracy:capture?.gps?.accuracy,observedAt:capture?.gps?.observedAt,latitude: capture?.gps?.lat,
+      accuracy: capture?.gps?.accuracy,
+      observedAt: capture?.gps?.observedAt,
+      latitude: capture?.gps?.lat,
       longitude: capture?.gps?.lng,
       visitMode: spvMode,
     });
   };
 
   const displayError = error || localError;
-  const isSubmitDisabled = saving || photoRequired&&!capture?.photoUrl || gpsRequired&&!capture?.gps;
+  const isSubmitDisabled =
+    saving || (photoRequired && !capture?.photoUrl) || (gpsRequired && !capture?.gps);
 
   return (
     <SpvModalShell
       error={displayError}
       saving={saving}
       title="Kunjungan Supervisi Luar RJP"
-      subtitle={optional?'Catat kegiatan supervisi tanpa presensi wajib':'Catat kegiatan dan bukti sesuai aturan aktif'}
+      subtitle={
+        optional
+          ? 'Catat kegiatan supervisi tanpa presensi wajib'
+          : 'Catat kegiatan dan bukti sesuai aturan aktif'
+      }
       maxWidth="max-w-xl md:max-w-2xl"
       onClose={onClose}
       footer={
@@ -100,7 +123,9 @@ export const SpvOffPjpModal = ({
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300 font-medium">
           <LuInfo className="text-base shrink-0 mt-0.5 text-amber-600" />
           <span>
-            Kegiatan supervisi dicatat terpisah dari kunjungan Sales. Foto {photoRequired?'wajib':'opsional'} · GPS {gpsRequired?'wajib':'opsional'} sesuai aturan aktif.
+            Kegiatan supervisi dicatat terpisah dari kunjungan Sales. Foto{' '}
+            {photoRequired ? 'wajib' : 'opsional'} · GPS {gpsRequired ? 'wajib' : 'opsional'} sesuai
+            aturan aktif.
           </span>
         </div>
 
@@ -109,7 +134,10 @@ export const SpvOffPjpModal = ({
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
               <LuCamera className="text-sm text-primary" />
-              <span>Foto {photoRequired?'wajib':'opsional'} · GPS {gpsRequired?'wajib':'opsional'}</span>
+              <span>
+                Foto {photoRequired ? 'wajib' : 'opsional'} · GPS{' '}
+                {gpsRequired ? 'wajib' : 'opsional'}
+              </span>
             </label>
             {capture?.gps && (
               <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -119,13 +147,16 @@ export const SpvOffPjpModal = ({
             )}
           </div>
 
-          <DeviceCameraCapture policyValues={settings}
+          <DeviceCameraCapture
+            policyValues={settings}
             photoRequired={photoRequired}
             capturedPhoto={capture?.photoUrl}
             onCapture={handleCapture}
             onRetake={handleRetake}
             requireGps={gpsRequired}
-            onLocationChange={photoRequired?undefined:gps=>setCapture(c=>({...c,gps}))}
+            onLocationChange={
+              photoRequired ? undefined : (gps) => setCapture((c) => ({ ...c, gps }))
+            }
             targetLat={null}
             targetLng={null}
             outletName={form?.outletName || 'Toko Supervisi Luar RJP'}
@@ -136,7 +167,9 @@ export const SpvOffPjpModal = ({
 
         {/* 2. Jenis Kunjungan */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-on-surface block">Jenis Kunjungan Supervisi:</label>
+          <label className="text-xs font-bold text-on-surface block">
+            Jenis Kunjungan Supervisi:
+          </label>
           <select
             value={spvMode}
             onChange={(e) => onChangeSpvMode(e.target.value)}
@@ -184,12 +217,14 @@ export const SpvOffPjpModal = ({
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-on-surface flex items-center gap-1">
               <LuMapPin className="text-xs text-primary" />
-              <span>Alamat / Lokasi Toko: <span className="text-rose-500">*</span></span>
+              <span>
+                Alamat / Lokasi Toko: <span className="text-rose-500">*</span>
+              </span>
             </label>
             <button
               type="button"
               onClick={handleRefreshAddress}
-              disabled={isGeocodingLoading||!lookupEnabled}
+              disabled={isGeocodingLoading || !lookupEnabled}
               className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
             >
               <LuRotateCw className={`text-xs ${isGeocodingLoading ? 'animate-spin' : ''}`} />
@@ -199,14 +234,20 @@ export const SpvOffPjpModal = ({
           <input
             type="text"
             value={form?.address || ''}
-            onChange={e=>handleAddressChange(e.target.value)}
+            onChange={(e) => handleAddressChange(e.target.value)}
             placeholder="Misal: Jl. Raya Cimahi No. 100, Bandung Barat"
             className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
 
-        {lookupError&&<p role="status" className="text-sm">{lookupError}</p>}
-        {!lookupEnabled&&<p className="text-sm">Pencarian alamat tidak tersedia. Isi alamat secara manual.</p>}
+        {lookupError && (
+          <p role="status" className="text-sm">
+            {lookupError}
+          </p>
+        )}
+        {!lookupEnabled && (
+          <p className="text-sm">Pencarian alamat tidak tersedia. Isi alamat secara manual.</p>
+        )}
         {/* 5. Alasan Kunjungan */}
         <div className="space-y-1">
           <label className="text-xs font-bold text-on-surface block">

@@ -91,12 +91,7 @@ export const OutletRegistrationReportPage = () => {
       )}
 
       {/* 6. Official Printable Form PDF View */}
-      {pdfTarget && (
-        <OfficialFormPdfView
-          data={pdfTarget}
-          onClose={() => setPdfTarget(null)}
-        />
-      )}
+      {pdfTarget && <OfficialFormPdfView data={pdfTarget} onClose={() => setPdfTarget(null)} />}
 
       {/* 7. NIK Management & Verification Modal */}
       <NikManagementModal

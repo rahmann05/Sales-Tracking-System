@@ -1,6 +1,6 @@
-import {policyNotification} from '../../notifications/services/notification-policy.service.js';
-import {assertApprovalRole} from '../../config/services/approval-policy.service.js';
-import {assertSalesAccess} from '../../../utils/team-scope.js';
+import { policyNotification } from '../../notifications/services/notification-policy.service.js';
+import { assertApprovalRole } from '../../config/services/approval-policy.service.js';
+import { assertSalesAccess } from '../../../utils/team-scope.js';
 /** approveRegistration - single-responsibility service (extracted from customer-registrations.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
@@ -14,8 +14,13 @@ export const approveRegistration = async (id, note, currentUser) => {
   const registration = await prisma.customerRegistration.findUnique({ where: { id } });
   if (!registration) throw new AppError('Data registrasi tidak ditemukan', 404);
 
-  const approvalMode=await assertApprovalRole(registration,'REGISTRATION_APPROVAL_MODE',currentUser.role);
-  if(approvalMode==='SEQUENTIAL'&&currentUser.role!=='SUPERVISOR')throw new AppError('Tahap pemeriksaan pertama dilakukan oleh Supervisor',403);
+  const approvalMode = await assertApprovalRole(
+    registration,
+    'REGISTRATION_APPROVAL_MODE',
+    currentUser.role
+  );
+  if (approvalMode === 'SEQUENTIAL' && currentUser.role !== 'SUPERVISOR')
+    throw new AppError('Tahap pemeriksaan pertama dilakukan oleh Supervisor', 403);
   const isSupervisor = currentUser.role === ROLES.SUPERVISOR;
   const isAdmin = currentUser.role === ROLES.ADMIN;
 
@@ -30,7 +35,7 @@ export const approveRegistration = async (id, note, currentUser) => {
   if (registration.registrationStatus === 'REGISTERED_ACTIVE') {
     throw new AppError('Pengajuan outlet sudah aktif di sistem master', 400);
   }
-  if (!['SUBMITTED','PENDING'].includes(registration.registrationStatus)) {
+  if (!['SUBMITTED', 'PENDING'].includes(registration.registrationStatus)) {
     throw new AppError('Pengajuan outlet sudah ditolak dan tidak dapat disetujui', 400);
   }
 
@@ -41,14 +46,21 @@ export const approveRegistration = async (id, note, currentUser) => {
     registrationStatus: 'SPV_APPROVED',
   };
 
-  await assertSalesAccess(currentUser,registration.salesmanId);
-  const changed = await prisma.customerRegistration.updateMany({where:{id,registrationStatus:registration.registrationStatus,updatedAt:registration.updatedAt},data:updateData});
-  if (!changed.count) throw new AppError('Status pengajuan berubah, muat ulang',409);
-  const updated = await prisma.customerRegistration.findUnique({where:{id}});
+  await assertSalesAccess(currentUser, registration.salesmanId);
+  const changed = await prisma.customerRegistration.updateMany({
+    where: {
+      id,
+      registrationStatus: registration.registrationStatus,
+      updatedAt: registration.updatedAt,
+    },
+    data: updateData,
+  });
+  if (!changed.count) throw new AppError('Status pengajuan berubah, muat ulang', 409);
+  const updated = await prisma.customerRegistration.findUnique({ where: { id } });
 
   // Notifikasi ke Salesman dan Admin
   if (registration.salesmanId) {
-    await policyNotification(prisma,{
+    await policyNotification(prisma, {
       data: {
         userId: registration.salesmanId,
         type: 'OUTLET_REGISTRATION_APPROVED',

@@ -51,9 +51,10 @@ export const calculateAddressSimilarity = (addr1, addr2) => {
   const jaccard = totalMatches / new Set([...tokens1, ...tokens2]).size;
 
   // Distinctive alpha token match (e.g. matching kampung/street name) carries major weight
-  const score = alphaTokens1.length > 0
-    ? alphaCoverage * 0.65 + totalCoverage * 0.20 + jaccard * 0.15
-    : totalCoverage * 0.70 + jaccard * 0.30;
+  const score =
+    alphaTokens1.length > 0
+      ? alphaCoverage * 0.65 + totalCoverage * 0.2 + jaccard * 0.15
+      : totalCoverage * 0.7 + jaccard * 0.3;
 
   return Math.min(1.0, score);
 };

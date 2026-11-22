@@ -1,40 +1,153 @@
-import {Router} from 'express';
-import {authorize} from '../../middlewares/auth.middleware.js';
-import {getPolicyProfile,savePolicyDraft,previewPolicy,publishPolicy,restorePolicy,cancelScheduledPolicy} from './services/policy-profiles.service.js';
-import {policyOptions,simulatePolicy} from './services/policy-simulation.service.js';
-import {notificationDeliveryStatus,retryNotificationDelivery} from '../notifications/services/notification-delivery.service.js';
-import {listPolicyLibrary,savePolicyLibrary,copyPolicyLibrary} from './services/policy-library.service.js';
-import {listSystemAudit} from '../notifications/services/history-retention.service.js';
-import {listMigrationCandidates,previewProcessMigration,migrateProcesses} from './services/process-migration.service.js';
-import {assignmentScheduleOptions,assignmentSchedulePreview,listAssignmentSchedules,createAssignmentSchedule,cancelAssignmentSchedule,retryAssignmentSchedule} from './services/assignment-schedules.service.js';
-import {autoDelegationCenter,saveAutoDelegation,retryAutoDelegation} from './services/auto-delegation.service.js';
-const router=Router();
+import { Router } from 'express';
+import { authorize } from '../../middlewares/auth.middleware.js';
+import {
+  getPolicyProfile,
+  savePolicyDraft,
+  previewPolicy,
+  publishPolicy,
+  restorePolicy,
+  cancelScheduledPolicy,
+} from './services/policy-profiles.service.js';
+import { policyOptions, simulatePolicy } from './services/policy-simulation.service.js';
+import {
+  notificationDeliveryStatus,
+  retryNotificationDelivery,
+} from '../notifications/services/notification-delivery.service.js';
+import {
+  listPolicyLibrary,
+  savePolicyLibrary,
+  copyPolicyLibrary,
+} from './services/policy-library.service.js';
+import { listSystemAudit } from '../notifications/services/history-retention.service.js';
+import {
+  listMigrationCandidates,
+  previewProcessMigration,
+  migrateProcesses,
+} from './services/process-migration.service.js';
+import {
+  assignmentScheduleOptions,
+  assignmentSchedulePreview,
+  listAssignmentSchedules,
+  createAssignmentSchedule,
+  cancelAssignmentSchedule,
+  retryAssignmentSchedule,
+} from './services/assignment-schedules.service.js';
+import {
+  autoDelegationCenter,
+  saveAutoDelegation,
+  retryAutoDelegation,
+} from './services/auto-delegation.service.js';
+const router = Router();
 router.use(authorize('ADMIN'));
-const run=fn=>async(req,res,next)=>{try{res.set('Cache-Control','no-store').json({data:await fn(req)});}catch(error){next(error);}};
-router.get('/auto-delegation',run(req=>autoDelegationCenter(req.user,req.query)));
-router.put('/auto-delegation',run(req=>saveAutoDelegation(req.body,req.user)));
-router.post('/auto-delegation/retry',run(req=>retryAutoDelegation(req.body.key,req.body.reason,req.user)));
-router.get('/assignments',run(req=>listAssignmentSchedules(req.user)));
-router.get('/assignments/options',run(req=>assignmentScheduleOptions(req.query.kind,req.user)));
-router.get('/assignments/preview',run(req=>assignmentSchedulePreview(req.query.kind,req.query.entityId,req.user)));
-router.post('/assignments',run(req=>createAssignmentSchedule(req.body,req.user)));
-router.post('/assignments/:id/cancel',run(req=>cancelAssignmentSchedule(req.params.id,req.body.reason,req.user)));
-router.post('/assignments/:id/retry',run(req=>retryAssignmentSchedule(req.params.id,req.body.reason,req.user)));
-router.get('/',run(req=>getPolicyProfile(req.query.scope||'GLOBAL')));
-router.get('/library',run(()=>listPolicyLibrary()));
-router.get('/audit',run(req=>listSystemAudit(req.query)));
-router.get('/migration',run(req=>listMigrationCandidates(req.query.kind)));
-router.post('/migration/preview',run(req=>previewProcessMigration(req.body)));
-router.post('/migration',run(req=>migrateProcesses(req.body,req.user)));
-router.put('/library',run(req=>savePolicyLibrary(req.body,req.user)));
-router.post('/library/copy',run(req=>copyPolicyLibrary(req.body,req.user)));
-router.get('/options',run(()=>policyOptions()));
-router.get('/notification-delivery',run(()=>notificationDeliveryStatus()));
-router.post('/notification-delivery/retry',run(req=>retryNotificationDelivery(req.body,req.user)));
-router.post('/simulate',run(req=>simulatePolicy(req.body.scope||'GLOBAL',req.body)));
-router.put('/draft',run(req=>savePolicyDraft(req.body.scope||'GLOBAL',req.body,req.user)));
-router.post('/preview',run(req=>previewPolicy(req.body.scope||'GLOBAL',req.body.revision)));
-router.post('/publish',run(req=>publishPolicy(req.body.scope||'GLOBAL',req.body,req.user)));
-router.post('/restore',run(req=>restorePolicy(req.body.scope||'GLOBAL',req.body,req.user)));
-router.post('/cancel-schedule',run(req=>cancelScheduledPolicy(req.body.scope||'GLOBAL',req.body,req.user)));
+const run = (fn) => async (req, res, next) => {
+  try {
+    res.set('Cache-Control', 'no-store').json({ data: await fn(req) });
+  } catch (error) {
+    next(error);
+  }
+};
+router.get(
+  '/auto-delegation',
+  run((req) => autoDelegationCenter(req.user, req.query))
+);
+router.put(
+  '/auto-delegation',
+  run((req) => saveAutoDelegation(req.body, req.user))
+);
+router.post(
+  '/auto-delegation/retry',
+  run((req) => retryAutoDelegation(req.body.key, req.body.reason, req.user))
+);
+router.get(
+  '/assignments',
+  run((req) => listAssignmentSchedules(req.user))
+);
+router.get(
+  '/assignments/options',
+  run((req) => assignmentScheduleOptions(req.query.kind, req.user))
+);
+router.get(
+  '/assignments/preview',
+  run((req) => assignmentSchedulePreview(req.query.kind, req.query.entityId, req.user))
+);
+router.post(
+  '/assignments',
+  run((req) => createAssignmentSchedule(req.body, req.user))
+);
+router.post(
+  '/assignments/:id/cancel',
+  run((req) => cancelAssignmentSchedule(req.params.id, req.body.reason, req.user))
+);
+router.post(
+  '/assignments/:id/retry',
+  run((req) => retryAssignmentSchedule(req.params.id, req.body.reason, req.user))
+);
+router.get(
+  '/',
+  run((req) => getPolicyProfile(req.query.scope || 'GLOBAL'))
+);
+router.get(
+  '/library',
+  run(() => listPolicyLibrary())
+);
+router.get(
+  '/audit',
+  run((req) => listSystemAudit(req.query))
+);
+router.get(
+  '/migration',
+  run((req) => listMigrationCandidates(req.query.kind))
+);
+router.post(
+  '/migration/preview',
+  run((req) => previewProcessMigration(req.body))
+);
+router.post(
+  '/migration',
+  run((req) => migrateProcesses(req.body, req.user))
+);
+router.put(
+  '/library',
+  run((req) => savePolicyLibrary(req.body, req.user))
+);
+router.post(
+  '/library/copy',
+  run((req) => copyPolicyLibrary(req.body, req.user))
+);
+router.get(
+  '/options',
+  run(() => policyOptions())
+);
+router.get(
+  '/notification-delivery',
+  run(() => notificationDeliveryStatus())
+);
+router.post(
+  '/notification-delivery/retry',
+  run((req) => retryNotificationDelivery(req.body, req.user))
+);
+router.post(
+  '/simulate',
+  run((req) => simulatePolicy(req.body.scope || 'GLOBAL', req.body))
+);
+router.put(
+  '/draft',
+  run((req) => savePolicyDraft(req.body.scope || 'GLOBAL', req.body, req.user))
+);
+router.post(
+  '/preview',
+  run((req) => previewPolicy(req.body.scope || 'GLOBAL', req.body.revision))
+);
+router.post(
+  '/publish',
+  run((req) => publishPolicy(req.body.scope || 'GLOBAL', req.body, req.user))
+);
+router.post(
+  '/restore',
+  run((req) => restorePolicy(req.body.scope || 'GLOBAL', req.body, req.user))
+);
+router.post(
+  '/cancel-schedule',
+  run((req) => cancelScheduledPolicy(req.body.scope || 'GLOBAL', req.body, req.user))
+);
 export default router;

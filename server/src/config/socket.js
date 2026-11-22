@@ -2,8 +2,8 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { prisma } from './prisma.js';
 import { config } from './index.js';
-import {invalidateConfigCache} from '../modules/config/services/dynamic-config.service.js';
-import {invalidatePolicyCache} from '../modules/config/services/policy-resolver.service.js';
+import { invalidateConfigCache } from '../modules/config/services/dynamic-config.service.js';
+import { invalidatePolicyCache } from '../modules/config/services/policy-resolver.service.js';
 
 let io = null;
 
@@ -23,13 +23,22 @@ export const createSocketServer = (httpServer) => {
   server.use(async (socket, next) => {
     try {
       const decoded = jwt.verify(socket.handshake.auth?.token, config.jwtSecret);
-      const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, deletedAt: true,tokenVersion:true } });
-      if (!user || user.deletedAt || (decoded.tokenVersion||0)!==(user.tokenVersion||0)) throw new Error('Akun tidak aktif');
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, deletedAt: true, tokenVersion: true },
+      });
+      if (!user || user.deletedAt || (decoded.tokenVersion || 0) !== (user.tokenVersion || 0))
+        throw new Error('Akun tidak aktif');
       socket.data.userId = user.id;
       next();
-    } catch { next(new Error('Autentikasi socket diperlukan')); }
+    } catch {
+      next(new Error('Autentikasi socket diperlukan'));
+    }
   });
-  server.on('policy:invalidate',()=>{invalidateConfigCache();invalidatePolicyCache();});
+  server.on('policy:invalidate', () => {
+    invalidateConfigCache();
+    invalidatePolicyCache();
+  });
   server.on('connection', (socket) => {
     const userId = socket.data.userId;
     socket.join(`user:${userId}`);
@@ -47,7 +56,10 @@ export const createSocketServer = (httpServer) => {
   console.log('[Socket.IO]: Server initialized.');
   return server;
 };
-export const initSocket=httpServer=>{io=createSocketServer(httpServer);return io;};
+export const initSocket = (httpServer) => {
+  io = createSocketServer(httpServer);
+  return io;
+};
 
 /**
  * Emit a Socket.IO event to a specific user by userId.
@@ -69,6 +81,6 @@ export const getIo = () => io;
  */
 export const broadcastCacheInvalidation = (dataType) => {
   if (!io) return;
-  if(['policies','config','configs'].includes(dataType))io.serverSideEmit('policy:invalidate');
+  if (['policies', 'config', 'configs'].includes(dataType)) io.serverSideEmit('policy:invalidate');
   io.emit('cache:invalidate', { dataType, timestamp: Date.now() });
 };

@@ -1,26 +1,271 @@
-import {useCallback,useEffect,useRef,useState} from 'react';
-import {clustersApi,outletsApi,collectPages} from '../../../services/api';
-import {useFormDraft} from '../../../shared/hooks/useFormDraft';
-import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
-export function useClusterBuilder({user,onSaved}){
- const stored=useFormDraft('cluster-builder',()=>({step:1,draft:{name:'',region:'',tradeType:'GENERAL_TRADE',colorHex:'#3b82f6',supervisorId:user.role==='SUPERVISOR'?user.id:'',assignedSalesId:''},selectedOutlets:[],centerPoint:null}));
- const {step,draft,selectedOutlets,centerPoint}=stored.value;
- const [team,setTeam]=useState({sales:[],supervisors:[]}),[teamLoading,setTeamLoading]=useState(true),[teamError,setTeamError]=useState(''),[outletCount,setOutletCount]=useState(10),[routes,setRoutes]=useState([]),[activeRouteIndex,setActiveRouteIndex]=useState(0),[busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState(''),[review,setReview]=useState(null),[suggestions,setSuggestions]=useState([]),[done,setDone]=useState(false);
- const operation=useRef(0),alive=useRef(true),flight=useRef(false);
- const [availableOutlets,setAvailableOutlets]=useState(null);
- useUnsavedNavigation(!done&&stored.dirty&&!saving,saving&&!done);
- useEffect(()=>()=>{alive.current=false;operation.current++;},[]);
- const loadTeam=useCallback(async()=>{setTeamLoading(true);setTeamError('');try{const [r,o]=await Promise.all([clustersApi.teamOptions(),collectPages(outletsApi.getAll,{planningPool:true})]);if(alive.current){setTeam(r.data);setAvailableOutlets(o.data);}}catch(e){if(alive.current)setTeamError(e.message);}finally{if(alive.current)setTeamLoading(false);}},[]);
- useEffect(()=>{alive.current=true;loadTeam();},[loadTeam]);
- const field=(key,value)=>{if((key==='tradeType'||key==='supervisorId')&&selectedOutlets.length){setError('Lepaskan pilihan outlet sebelum mengganti tim atau jenis perdagangan.');return;}setReview(null);stored.setValue(v=>({...v,draft:{...v.draft,[key]:value,...(key==='supervisorId'?{assignedSalesId:''}:{})}}));};
- const replaceSelection=useCallback(outlets=>{operation.current++;stored.setValue(v=>({...v,selectedOutlets:outlets}));setRoutes([]);setReview(null);setActiveRouteIndex(0);setError('');},[stored.setValue]);
- const toggleOutlet=useCallback(outlet=>{if(!outlet||outlet.type!==draft.tradeType)return;if(!selectedOutlets.some(o=>o.id===outlet.id)&&selectedOutlets.length>=100){setError('Maksimal 100 outlet.');return;}replaceSelection(selectedOutlets.some(o=>o.id===outlet.id)?selectedOutlets.filter(o=>o.id!==outlet.id):[...selectedOutlets,outlet]);},[draft.tradeType,selectedOutlets,replaceSelection]);
- const selectCenter=useCallback(coords=>{stored.setValue(v=>({...v,centerPoint:coords}));setSuggestions([]);},[stored.setValue]);
- const suggest=async()=>{if(flight.current||!centerPoint)return;if(!Number.isInteger(outletCount)||outletCount<1||outletCount>100){setError('Jumlah saran harus 1–100.');return;}flight.current=true;setBusy(true);setError('');try{const r=await clustersApi.getNearestOutlets(centerPoint.lat,centerPoint.lng,outletCount,draft.tradeType,draft.supervisorId);setSuggestions(r.data.filter(o=>o.cluster?.supervisorId===draft.supervisorId||o.cluster?.name==='Belum Ditugaskan'));}catch(e){setError(e.message);}finally{flight.current=false;setBusy(false);}};
- const applySuggestions=()=>{const merged=[...new Map([...selectedOutlets,...suggestions].map(o=>[o.id,o])).values()];if(merged.length>100){setError('Gabungan pilihan melebihi 100 outlet. Kurangi jumlah saran.');return;}replaceSelection(merged);setSuggestions([]);};
- const generate=async()=>{if(flight.current||!selectedOutlets.length)return;flight.current=true;setBusy(true);setError('');try{const r=await clustersApi.generateRoutes(selectedOutlets.map(o=>o.id));setRoutes(r.data||[]);setActiveRouteIndex(0);}catch(e){setError(e.message);}finally{flight.current=false;setBusy(false);}};
- const next=async()=>{if(busy||saving)return;setError('');if(step===1&&(!draft.supervisorId||draft.region.trim().length<2||draft.name.trim().length<2)){setError('Pilih tim, isi nama cluster dan region minimal dua karakter.');return;}if(step===2&&!selectedOutlets.length){setError('Pilih minimal satu outlet.');return;}if(step>=3){setBusy(true);try{setReview((await clustersApi.impact({outletIds:selectedOutlets.map(o=>o.id),supervisorId:draft.supervisorId,assignedSalesId:draft.assignedSalesId||null})).data);}catch(e){setError(e.message);return;}finally{setBusy(false);}}stored.setValue(v=>({...v,step:Math.min(4,v.step+1)}));};
- const save=async()=>{if(flight.current||!review)return;flight.current=true;setSaving(true);setError('');try{const {tradeType,...payload}=draft;if(selectedOutlets.some(o=>o.type!==tradeType))throw new Error('Jenis outlet harus sama.');await clustersApi.createFull({...payload,impactToken:review.token,centerLat:centerPoint?.lat??null,centerLng:centerPoint?.lng??null,outletIds:selectedOutlets.map(o=>o.id),routes:routes.map((r,i)=>({...r,routeIndex:i,isActive:i===activeRouteIndex}))});stored.clear();setDone(true);}catch(e){setReview(null);setError(e.message);}finally{flight.current=false;setSaving(false);}};
- useEffect(()=>{if(done)onSaved();},[done,onSaved]);
- return {step,setStep:fn=>stored.setValue(v=>({...v,step:typeof fn==='function'?fn(v.step):fn})),draft,field,team,teamLoading,teamError,loadTeam,availableOutlets,outletCount,setOutletCount,selectedOutlets,centerPoint,routes,activeRouteIndex,setActiveRouteIndex,busy,saving,error,review,suggestions,suggest,applySuggestions,toggleOutlet,selectCenter,generate,next,save,restored:stored.restored,policyChanged:stored.policyChanged,restoreMessage:stored.restoreMessage,storageError:stored.storageError};
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { clustersApi, outletsApi, collectPages } from '../../../services/api';
+import { useFormDraft } from '../../../shared/hooks/useFormDraft';
+import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
+export function useClusterBuilder({ user, onSaved }) {
+  const stored = useFormDraft('cluster-builder', () => ({
+    step: 1,
+    draft: {
+      name: '',
+      region: '',
+      tradeType: 'GENERAL_TRADE',
+      colorHex: '#3b82f6',
+      supervisorId: user.role === 'SUPERVISOR' ? user.id : '',
+      assignedSalesId: '',
+    },
+    selectedOutlets: [],
+    centerPoint: null,
+  }));
+  const { step, draft, selectedOutlets, centerPoint } = stored.value;
+  const [team, setTeam] = useState({ sales: [], supervisors: [] }),
+    [teamLoading, setTeamLoading] = useState(true),
+    [teamError, setTeamError] = useState(''),
+    [outletCount, setOutletCount] = useState(10),
+    [routes, setRoutes] = useState([]),
+    [activeRouteIndex, setActiveRouteIndex] = useState(0),
+    [busy, setBusy] = useState(false),
+    [saving, setSaving] = useState(false),
+    [error, setError] = useState(''),
+    [review, setReview] = useState(null),
+    [suggestions, setSuggestions] = useState([]),
+    [done, setDone] = useState(false);
+  const operation = useRef(0),
+    alive = useRef(true),
+    flight = useRef(false);
+  const [availableOutlets, setAvailableOutlets] = useState(null);
+  useUnsavedNavigation(!done && stored.dirty && !saving, saving && !done);
+  useEffect(
+    () => () => {
+      alive.current = false;
+      operation.current++;
+    },
+    []
+  );
+  const loadTeam = useCallback(async () => {
+    setTeamLoading(true);
+    setTeamError('');
+    try {
+      const [r, o] = await Promise.all([
+        clustersApi.teamOptions(),
+        collectPages(outletsApi.getAll, { planningPool: true }),
+      ]);
+      if (alive.current) {
+        setTeam(r.data);
+        setAvailableOutlets(o.data);
+      }
+    } catch (e) {
+      if (alive.current) setTeamError(e.message);
+    } finally {
+      if (alive.current) setTeamLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    alive.current = true;
+    loadTeam();
+  }, [loadTeam]);
+  const field = (key, value) => {
+    if ((key === 'tradeType' || key === 'supervisorId') && selectedOutlets.length) {
+      setError('Lepaskan pilihan outlet sebelum mengganti tim atau jenis perdagangan.');
+      return;
+    }
+    setReview(null);
+    stored.setValue((v) => ({
+      ...v,
+      draft: {
+        ...v.draft,
+        [key]: value,
+        ...(key === 'supervisorId' ? { assignedSalesId: '' } : {}),
+      },
+    }));
+  };
+  const replaceSelection = useCallback(
+    (outlets) => {
+      operation.current++;
+      stored.setValue((v) => ({ ...v, selectedOutlets: outlets }));
+      setRoutes([]);
+      setReview(null);
+      setActiveRouteIndex(0);
+      setError('');
+    },
+    [stored.setValue]
+  );
+  const toggleOutlet = useCallback(
+    (outlet) => {
+      if (!outlet || outlet.type !== draft.tradeType) return;
+      if (!selectedOutlets.some((o) => o.id === outlet.id) && selectedOutlets.length >= 100) {
+        setError('Maksimal 100 outlet.');
+        return;
+      }
+      replaceSelection(
+        selectedOutlets.some((o) => o.id === outlet.id)
+          ? selectedOutlets.filter((o) => o.id !== outlet.id)
+          : [...selectedOutlets, outlet]
+      );
+    },
+    [draft.tradeType, selectedOutlets, replaceSelection]
+  );
+  const selectCenter = useCallback(
+    (coords) => {
+      stored.setValue((v) => ({ ...v, centerPoint: coords }));
+      setSuggestions([]);
+    },
+    [stored.setValue]
+  );
+  const suggest = async () => {
+    if (flight.current || !centerPoint) return;
+    if (!Number.isInteger(outletCount) || outletCount < 1 || outletCount > 100) {
+      setError('Jumlah saran harus 1–100.');
+      return;
+    }
+    flight.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const r = await clustersApi.getNearestOutlets(
+        centerPoint.lat,
+        centerPoint.lng,
+        outletCount,
+        draft.tradeType,
+        draft.supervisorId
+      );
+      setSuggestions(
+        r.data.filter(
+          (o) =>
+            o.cluster?.supervisorId === draft.supervisorId || o.cluster?.name === 'Belum Ditugaskan'
+        )
+      );
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      flight.current = false;
+      setBusy(false);
+    }
+  };
+  const applySuggestions = () => {
+    const merged = [
+      ...new Map([...selectedOutlets, ...suggestions].map((o) => [o.id, o])).values(),
+    ];
+    if (merged.length > 100) {
+      setError('Gabungan pilihan melebihi 100 outlet. Kurangi jumlah saran.');
+      return;
+    }
+    replaceSelection(merged);
+    setSuggestions([]);
+  };
+  const generate = async () => {
+    if (flight.current || !selectedOutlets.length) return;
+    flight.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const r = await clustersApi.generateRoutes(selectedOutlets.map((o) => o.id));
+      setRoutes(r.data || []);
+      setActiveRouteIndex(0);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      flight.current = false;
+      setBusy(false);
+    }
+  };
+  const next = async () => {
+    if (busy || saving) return;
+    setError('');
+    if (
+      step === 1 &&
+      (!draft.supervisorId || draft.region.trim().length < 2 || draft.name.trim().length < 2)
+    ) {
+      setError('Pilih tim, isi nama cluster dan region minimal dua karakter.');
+      return;
+    }
+    if (step === 2 && !selectedOutlets.length) {
+      setError('Pilih minimal satu outlet.');
+      return;
+    }
+    if (step >= 3) {
+      setBusy(true);
+      try {
+        setReview(
+          (
+            await clustersApi.impact({
+              outletIds: selectedOutlets.map((o) => o.id),
+              supervisorId: draft.supervisorId,
+              assignedSalesId: draft.assignedSalesId || null,
+            })
+          ).data
+        );
+      } catch (e) {
+        setError(e.message);
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
+    stored.setValue((v) => ({ ...v, step: Math.min(4, v.step + 1) }));
+  };
+  const save = async () => {
+    if (flight.current || !review) return;
+    flight.current = true;
+    setSaving(true);
+    setError('');
+    try {
+      const { tradeType, ...payload } = draft;
+      if (selectedOutlets.some((o) => o.type !== tradeType))
+        throw new Error('Jenis outlet harus sama.');
+      await clustersApi.createFull({
+        ...payload,
+        impactToken: review.token,
+        centerLat: centerPoint?.lat ?? null,
+        centerLng: centerPoint?.lng ?? null,
+        outletIds: selectedOutlets.map((o) => o.id),
+        routes: routes.map((r, i) => ({ ...r, routeIndex: i, isActive: i === activeRouteIndex })),
+      });
+      stored.clear();
+      setDone(true);
+    } catch (e) {
+      setReview(null);
+      setError(e.message);
+    } finally {
+      flight.current = false;
+      setSaving(false);
+    }
+  };
+  useEffect(() => {
+    if (done) onSaved();
+  }, [done, onSaved]);
+  return {
+    step,
+    setStep: (fn) =>
+      stored.setValue((v) => ({ ...v, step: typeof fn === 'function' ? fn(v.step) : fn })),
+    draft,
+    field,
+    team,
+    teamLoading,
+    teamError,
+    loadTeam,
+    availableOutlets,
+    outletCount,
+    setOutletCount,
+    selectedOutlets,
+    centerPoint,
+    routes,
+    activeRouteIndex,
+    setActiveRouteIndex,
+    busy,
+    saving,
+    error,
+    review,
+    suggestions,
+    suggest,
+    applySuggestions,
+    toggleOutlet,
+    selectCenter,
+    generate,
+    next,
+    save,
+    restored: stored.restored,
+    policyChanged: stored.policyChanged,
+    restoreMessage: stored.restoreMessage,
+    storageError: stored.storageError,
+  };
 }

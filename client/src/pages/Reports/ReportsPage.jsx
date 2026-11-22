@@ -1,6 +1,6 @@
-import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
-import React,{useEffect} from 'react';
-import {useApp} from '../../context/AppContext';
+import { useWorkspaceState } from '../../shared/hooks/useWorkspaceState';
+import React, { useEffect } from 'react';
+import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import { ReportTabBar } from './components/ReportTabBar';
 import { DailyCallMonitorPage } from '../DailyCallMonitor/DailyCallMonitorPage';
@@ -14,9 +14,19 @@ import { LuFileSpreadsheet } from 'react-icons/lu';
  * (1. Daily Call Real-Time, 2. Weekly Performance WTD, 3. Month-to-Date MTD vs Target).
  */
 export const ReportsPage = () => {
-  const {settings}=useApp();
-  const [activeTab, setActiveTab] = useWorkspaceState('reportView',settings.REPORT_DEFAULT_VIEW||'DAILY');
-  useEffect(()=>{if(activeTab==='WEEKLY'&&!settings.REPORT_WEEKLY_ENABLED||activeTab==='MTD'&&!settings.REPORT_MTD_ENABLED)setActiveTab('DAILY');},[activeTab,settings.REPORT_WEEKLY_ENABLED,settings.REPORT_MTD_ENABLED,setActiveTab]);
+  const { settings } = useApp();
+  const [activeTab, setActiveTab] = useWorkspaceState(
+    'reportView',
+    settings.REPORT_DEFAULT_VIEW || 'DAILY'
+  );
+  useEffect(() => {
+    if (
+      (activeTab === 'WEEKLY' && !settings.REPORT_WEEKLY_ENABLED) ||
+      (activeTab === 'MTD' && !settings.REPORT_MTD_ENABLED)
+    ) {
+      setActiveTab('DAILY', { replace: true });
+    }
+  }, [activeTab, settings.REPORT_WEEKLY_ENABLED, settings.REPORT_MTD_ENABLED, setActiveTab]);
 
   return (
     <div className="workspace-page reports-workspace space-y-6">
@@ -29,7 +39,6 @@ export const ReportsPage = () => {
         }
         title="Laporan operasional"
         subtitle="Pantau kunjungan harian, hasil mingguan, dan pencapaian bulanan tim sales."
-
       />
 
       {/* 2. ND6 Report Mode Navigation Tabs */}

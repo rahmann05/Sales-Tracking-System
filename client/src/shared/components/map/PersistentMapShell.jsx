@@ -1,4 +1,4 @@
-import {useFeaturePolicy} from '../../hooks/useFeaturePolicy';
+import { useFeaturePolicy } from '../../hooks/useFeaturePolicy';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useMap } from '../../../context/MapContext';
 import { useApp } from '../../../context/AppContext';
@@ -7,7 +7,7 @@ import '../../../styles/components/PersistentMapShell.css';
 
 const DEFAULT_CENTER = { lat: -6.88498411526505, lng: 107.48995363176957 };
 
-import {loadGoogleMapsScript} from '../../../services/googleMapsLoader';
+import { loadGoogleMapsScript } from '../../../services/googleMapsLoader';
 
 /**
  * PersistentMapShell
@@ -16,8 +16,8 @@ import {loadGoogleMapsScript} from '../../../services/googleMapsLoader';
  * without any UI interruptions or white screens.
  */
 export const PersistentMapShell = () => {
- const mapPolicy=useFeaturePolicy('MAPS');
-  const {settings} = useApp();
+  const mapPolicy = useFeaturePolicy('MAPS');
+  const { settings } = useApp();
   const containerRef = useRef(null);
   const initRef = useRef(false);
 
@@ -38,7 +38,9 @@ export const PersistentMapShell = () => {
   // Global gm_authFailure handler: Google Maps Platform callback when API auth fails
   useEffect(() => {
     window.gm_authFailure = () => {
-      console.warn('[PersistentMapShell] Google Maps authentication failed (gm_authFailure). Automatically switching to Leaflet fallback.');
+      console.warn(
+        '[PersistentMapShell] Google Maps authentication failed (gm_authFailure). Automatically switching to Leaflet fallback.'
+      );
       setLoadFailed(true);
       setFallback(true);
     };
@@ -50,22 +52,35 @@ export const PersistentMapShell = () => {
   useEffect(() => {
     if (!apiKey) setFallback(true);
     else if (!initRef.current && !loadFailed) setFallback(false);
-  },[apiKey,loadFailed,setFallback]);
+  }, [apiKey, loadFailed, setFallback]);
 
-  useEffect(()=>{if(!mapPolicy.canStart){initRef.current=false;setMapInstance(null);}},[mapPolicy.canStart,setMapInstance]);
+  useEffect(() => {
+    if (!mapPolicy.canStart) {
+      initRef.current = false;
+      setMapInstance(null);
+    }
+  }, [mapPolicy.canStart, setMapInstance]);
 
   // Initialize map once
   useEffect(() => {
-    if (!mapPolicy.canStart || mapMode==='hidden' || !apiKey || initRef.current || !containerRef.current) return;
+    if (
+      !mapPolicy.canStart ||
+      mapMode === 'hidden' ||
+      !apiKey ||
+      initRef.current ||
+      !containerRef.current
+    )
+      return;
     initRef.current = true;
-    let cancelled=false;
+    let cancelled = false;
 
     const initMapAsync = async () => {
       try {
         await loadGoogleMapsScript(apiKey);
-        if(cancelled)return;
-        if(!window.google.maps.marker?.AdvancedMarkerElement)await window.google.maps.importLibrary('marker');
-        if (cancelled||!containerRef.current) return;
+        if (cancelled) return;
+        if (!window.google.maps.marker?.AdvancedMarkerElement)
+          await window.google.maps.importLibrary('marker');
+        if (cancelled || !containerRef.current) return;
         const map = new window.google.maps.Map(containerRef.current, {
           mapId: settings.MAPS_MAP_ID || 'DEMO_MAP_ID',
           center: mapState?.center || DEFAULT_CENTER,
@@ -76,16 +91,22 @@ export const PersistentMapShell = () => {
         });
         setMapInstance(map);
       } catch (err) {
-        if(cancelled)return;
-        console.warn('[PersistentMapShell] Google Maps not accessible, activating Leaflet fallback:', err.message || err);
+        if (cancelled) return;
+        console.warn(
+          '[PersistentMapShell] Google Maps not accessible, activating Leaflet fallback:',
+          err.message || err
+        );
         setLoadFailed(true);
         setFallback(true);
       }
     };
     initMapAsync();
-    return()=>{cancelled=true;if(!mapInstanceRef.current)initRef.current=false;};
+    return () => {
+      cancelled = true;
+      if (!mapInstanceRef.current) initRef.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey,mapMode,mapPolicy.canStart]);
+  }, [apiKey, mapMode, mapPolicy.canStart]);
 
   // Handle container resizing
   useEffect(() => {
@@ -99,13 +120,21 @@ export const PersistentMapShell = () => {
     return () => resizeObserver.disconnect();
   }, [isMapReady, mapInstanceRef]);
 
-  const handleFallbackClick = useCallback((coords) => {
-    setMapState((prev) => ({ ...prev, lastClick: coords }));
-  }, [setMapState]);
+  const handleFallbackClick = useCallback(
+    (coords) => {
+      setMapState((prev) => ({ ...prev, lastClick: coords }));
+    },
+    [setMapState]
+  );
 
   const isVisible = mapMode !== 'hidden';
 
-  if(!mapPolicy.canStart)return isVisible?<div className="app-notice" role="status">{mapPolicy.reason}</div>:null;
+  if (!mapPolicy.canStart)
+    return isVisible ? (
+      <div className="app-notice" role="status">
+        {mapPolicy.reason}
+      </div>
+    ) : null;
   return (
     <div
       className={`persistent-map-shell map-mode-${mapMode}`}
@@ -133,7 +162,7 @@ export const PersistentMapShell = () => {
         </div>
       )}
 
-      {!apiKey && !loadFailed && (
+      {!useFallback && !loadFailed && !isMapReady && (
         <div className="map-loading-fallback">
           <span>Memuat Peta…</span>
         </div>

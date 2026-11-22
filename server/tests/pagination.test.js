@@ -1,10 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { 
-  parsePagination, 
-  buildPaginatedResponse, 
-  buildDateRange, 
-  buildDayRange 
+import {
+  parsePagination,
+  buildPaginatedResponse,
+  buildDateRange,
+  buildDayRange,
 } from '../src/utils/pagination.js';
 
 describe('Pagination & Date Filter Utilities Unit Tests', () => {

@@ -1,16 +1,20 @@
 import express from 'express';
-import { authenticate, authorize,authorizeWithPermission } from "../../middlewares/auth.middleware.js";
+import {
+  authenticate,
+  authorize,
+  authorizeWithPermission,
+} from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import * as controller from './customer-registrations.controller.js';
 import * as schema from './customer-registrations.schema.js';
 import { ROLES } from '../../utils/constants.js';
-import {updateRegistrationLegal} from './services/update-registration-legal.service.js';
-import {reviseRegistration} from './services/revise-registration.service.js';
+import { updateRegistrationLegal } from './services/update-registration-legal.service.js';
+import { reviseRegistration } from './services/revise-registration.service.js';
 
 const router = express.Router();
 
 router.use(authenticate);
-router.use(authorize(ROLES.SALES,ROLES.SUPERVISOR,ROLES.ADMIN));
+router.use(authorize(ROLES.SALES, ROLES.SUPERVISOR, ROLES.ADMIN));
 
 // 1. Submit new registration (Sales, SPV, Admin)
 router.post(
@@ -21,22 +25,53 @@ router.post(
 );
 
 // Search places via Google Places
-router.get('/search-places', authorizeWithPermission([ROLES.SALES,ROLES.SUPERVISOR,ROLES.ADMIN],'can_register_outlet'), controller.searchPlaces);
+router.get(
+  '/search-places',
+  authorizeWithPermission([ROLES.SALES, ROLES.SUPERVISOR, ROLES.ADMIN], 'can_register_outlet'),
+  controller.searchPlaces
+);
 
 // Reverse geocode lat/lng to subArea/kelurahan/area
-router.get('/reverse-geocode', authorizeWithPermission([ROLES.SALES,ROLES.SUPERVISOR,ROLES.ADMIN],'can_register_outlet'), controller.reverseGeocode);
+router.get(
+  '/reverse-geocode',
+  authorizeWithPermission([ROLES.SALES, ROLES.SUPERVISOR, ROLES.ADMIN], 'can_register_outlet'),
+  controller.reverseGeocode
+);
 
 // 2. Get paginated registrations with filters
-router.get(
-  '/',
-  validate(schema.filterRegistrationSchema, 'query'),
-  controller.getRegistrations
-);
+router.get('/', validate(schema.filterRegistrationSchema, 'query'), controller.getRegistrations);
 
 // 3. Get single registration by ID
 router.get('/:id', controller.getRegistrationById);
-router.post('/:id/revise',authorizeWithPermission([ROLES.SALES,ROLES.ADMIN,ROLES.SUPERVISOR],'can_register_outlet'),validate(schema.reviseRegistrationSchema),async(req,res,next)=>{try{res.json({status:'success',data:await reviseRegistration(req.params.id,req.body,req.user)});}catch(error){next(error);}});
-router.patch('/:id',authorizeWithPermission([ROLES.ADMIN,ROLES.SUPERVISOR],'can_manage_outlets'),async(req,res,next)=>{try{res.json({status:'success',data:await updateRegistrationLegal(req.params.id,req.body,req.user)});}catch(error){next(error);}});
+router.post(
+  '/:id/revise',
+  authorizeWithPermission([ROLES.SALES, ROLES.ADMIN, ROLES.SUPERVISOR], 'can_register_outlet'),
+  validate(schema.reviseRegistrationSchema),
+  async (req, res, next) => {
+    try {
+      res.json({
+        status: 'success',
+        data: await reviseRegistration(req.params.id, req.body, req.user),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+router.patch(
+  '/:id',
+  authorizeWithPermission([ROLES.ADMIN, ROLES.SUPERVISOR], 'can_manage_outlets'),
+  async (req, res, next) => {
+    try {
+      res.json({
+        status: 'success',
+        data: await updateRegistrationLegal(req.params.id, req.body, req.user),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // 4. Approve (Supervisor, Admin)
 router.patch(

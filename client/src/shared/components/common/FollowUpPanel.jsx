@@ -1,27 +1,213 @@
-import React,{useState,useEffect,useCallback,useRef} from 'react';
-import {wibDateKey} from '../../../../../shared/visit-metrics.mjs';
-import {staffAttendanceApi} from '../../../services/api';
-import {useWorkspaceState} from '../../hooks/useWorkspaceState';
-import {useSelectedDetail} from '../../hooks/useSelectedDetail';
-import {FollowUpActions} from './FollowUpActions';
-import {useApp} from '../../../context/AppContext';
-import {followUpAllowed} from '../../../../../shared/follow-up-policy.mjs';
-const labels={OPEN:'Perlu dikerjakan',SUBMITTED:'Menunggu pemeriksaan',DONE:'Selesai diperiksa'};
-export const FollowUpPanel=()=>{
- const {user,teamMembers=[]}=useApp(),allowed=followUpAllowed(user,'view');
- const [loading,setLoading]=useState(true),[data,setData]=useState(null),[error,setError]=useState('');
- const [status,setStatus]=useWorkspaceState('followUpStatus','OPEN'),[page,setPage]=useWorkspaceState('followUpPage','1'),[selectedId,setSelectedId]=useWorkspaceState('followUp','');const flight=useRef(0);
- const guarded=action=>{if(window.dispatchEvent(new CustomEvent('app:before-navigate',{cancelable:true})))action();};
- const current=Math.max(1,Number(page)||1);
- const reload=useCallback(async()=>{const seq=++flight.current;setLoading(true);try{const res=await staffAttendanceApi.getFollowUps({status,page:current});if(seq===flight.current){setData({rows:res.data,scope:`${status}:${current}`});setError('');}}catch(e){if(seq===flight.current){setData(null);setError(e.message);}}finally{if(seq===flight.current)setLoading(false);}},[status,current]);
- useEffect(()=>{if(!allowed)return;reload();const tick=setInterval(reload,60000);window.addEventListener('focus',reload);return()=>{flight.current++;clearInterval(tick);window.removeEventListener('focus',reload);};},[reload,allowed]);
- const rows=data?.scope===`${status}:${current}`?data.rows:[],selected=rows.find(r=>r.id===selectedId),ref=useSelectedDetail(selected?.id);
- if(!allowed)return <p role="status">Akses tindak lanjut dinonaktifkan untuk akun Anda. Hubungi Admin jika tugas masih perlu ditangani.</p>;
- return <section className="followup-panel sales-workspace">
-  <p className="sales-note">Baca arahan, lakukan tindakan yang diminta, lalu catat hasil. Jika hasil dikirim untuk diperiksa, supervisor yang melanjutkan.</p>
-  <div className="sales-toolbar"><label>Status tugas<select value={status} onChange={e=>{const next=e.target.value;guarded(()=>{setStatus(next);setPage('1',{replace:true});});}}>{Object.entries(labels).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><button className="app-button" disabled={loading} onClick={reload}>Perbarui tugas</button><span className="sales-note">Maksimal 50 tugas per halaman</span></div>
-  {error&&<p role="alert" className="app-error">{error}</p>}{loading&&<p role="status">Memuat tindak lanjut…</p>}
-  {!error&&<div className={`sales-split ${selected?'has-selection':''}`}><section className="sales-panel"><div className="sales-table-wrap"><table className="sales-table sales-mobile-cards"><thead><tr><th scope="col">Outlet / tugas</th><th scope="col">Tenggat WIB</th><th scope="col">Status</th><th scope="col">Tindakan</th></tr></thead><tbody>{rows.map(r=><tr key={r.id} aria-selected={r.id===selectedId}><td data-label="Outlet / tugas"><strong>{r.outletName||'Arahan kunjungan'}</strong><small>{r.followUp.note}</small></td><td data-label="Tenggat WIB">{r.followUp.dueDate||'Belum ditetapkan'}{r.followUp.status==='OPEN'&&r.followUp.dueDate&&r.followUp.dueDate<wibDateKey()&&<small>Lewat tenggat</small>}</td><td data-label="Status">{r.followUp.status==='DONE'&&!r.followUp.review?(r.followUp.completionSource==='POLICY_NO_REVIEW'?'Selesai sesuai aturan':'Selesai (riwayat lama)'):labels[r.followUp.status]||r.followUp.status}</td><td data-label="Tindakan"><button className="app-button" aria-pressed={r.id===selectedId} onClick={()=>{if(r.id!==selectedId)guarded(()=>setSelectedId(r.id));}}>Buka tugas</button></td></tr>)}</tbody></table></div>{!loading&&!rows.length&&<div className="sales-empty"><h2>Tidak ada tugas sesuai status</h2><p>Pilih status lain untuk melihat tugas yang sudah dikirim atau diperiksa.</p></div>}<nav aria-label="Halaman tindak lanjut" className="sales-pagination"><button disabled={current===1||loading} onClick={()=>guarded(()=>setPage(String(current-1)))} className="app-button">Sebelumnya</button><span>Halaman {current}</span><button disabled={rows.length<50||loading} onClick={()=>guarded(()=>setPage(String(current+1)))} className="app-button">Berikutnya</button></nav></section>
-  {selected&&<aside className="sales-panel sales-detail"><div className="sales-detail-heading"><h2 ref={ref} tabIndex={-1}>Pekerjaan dari supervisor</h2><button className="app-button" onClick={()=>guarded(()=>setSelectedId(''))}>Kembali ke daftar</button></div><div className="sales-followup-detail"><strong>{selected.outletName}</strong><p>Ditangani oleh: {selected.followUp.ownerName||(selected.followUp.ownerId===user.id?user.name:teamMembers.find(person=>person.id===selected.followUp.ownerId)?.name)||'Sales penerima belum tersedia'}</p><FollowUpActions key={selected.id} id={selected.id} followUp={selected.followUp} policySnapshot={selected.policySnapshot} onChanged={reload}/></div></aside>}</div>}
- </section>;
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import { staffAttendanceApi } from '../../../services/api';
+import { useWorkspaceState } from '../../hooks/useWorkspaceState';
+import { useSelectedDetail } from '../../hooks/useSelectedDetail';
+import { FollowUpActions } from './FollowUpActions';
+import { useApp } from '../../../context/AppContext';
+import { followUpAllowed } from '../../../../../shared/follow-up-policy.mjs';
+const labels = {
+  OPEN: 'Perlu dikerjakan',
+  SUBMITTED: 'Menunggu pemeriksaan',
+  DONE: 'Selesai diperiksa',
+};
+export const FollowUpPanel = () => {
+  const { user, teamMembers = [] } = useApp(),
+    allowed = followUpAllowed(user, 'view');
+  const [loading, setLoading] = useState(true),
+    [data, setData] = useState(null),
+    [error, setError] = useState('');
+  const [status, setStatus] = useWorkspaceState('followUpStatus', 'OPEN'),
+    [page, setPage] = useWorkspaceState('followUpPage', '1'),
+    [selectedId, setSelectedId] = useWorkspaceState('followUp', '');
+  const flight = useRef(0);
+  const guarded = (action) => {
+    if (window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true })))
+      action();
+  };
+  const current = Math.max(1, Number(page) || 1);
+  const reload = useCallback(async () => {
+    const seq = ++flight.current;
+    setLoading(true);
+    try {
+      const res = await staffAttendanceApi.getFollowUps({ status, page: current });
+      if (seq === flight.current) {
+        setData({ rows: res.data, scope: `${status}:${current}` });
+        setError('');
+      }
+    } catch (e) {
+      if (seq === flight.current) {
+        setData(null);
+        setError(e.message);
+      }
+    } finally {
+      if (seq === flight.current) setLoading(false);
+    }
+  }, [status, current]);
+  useEffect(() => {
+    if (!allowed) return;
+    reload();
+    const tick = setInterval(reload, 60000);
+    window.addEventListener('focus', reload);
+    return () => {
+      flight.current++;
+      clearInterval(tick);
+      window.removeEventListener('focus', reload);
+    };
+  }, [reload, allowed]);
+  const rows = data?.scope === `${status}:${current}` ? data.rows : [],
+    selected = rows.find((r) => r.id === selectedId),
+    ref = useSelectedDetail(selected?.id);
+  if (!allowed)
+    return (
+      <p role="status">
+        Akses tindak lanjut dinonaktifkan untuk akun Anda. Hubungi Admin jika tugas masih perlu
+        ditangani.
+      </p>
+    );
+  return (
+    <section className="followup-panel sales-workspace">
+      <p className="sales-note">
+        Baca arahan, lakukan tindakan yang diminta, lalu catat hasil. Jika hasil dikirim untuk
+        diperiksa, supervisor yang melanjutkan.
+      </p>
+      <div className="sales-toolbar">
+        <label>
+          Status tugas
+          <select
+            value={status}
+            onChange={(e) => {
+              const next = e.target.value;
+              guarded(() => {
+                setStatus(next);
+                setPage('1', { replace: true });
+              });
+            }}
+          >
+            {Object.entries(labels).map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="app-button" disabled={loading} onClick={reload}>
+          Perbarui tugas
+        </button>
+        <span className="sales-note">Maksimal 50 tugas per halaman</span>
+      </div>
+      {error && (
+        <p role="alert" className="app-error">
+          {error}
+        </p>
+      )}
+      {loading && <p role="status">Memuat tindak lanjut…</p>}
+      {!error && (
+        <div className={`sales-split ${selected ? 'has-selection' : ''}`}>
+          <section className="sales-panel">
+            <div className="sales-table-wrap">
+              <table className="sales-table sales-mobile-cards">
+                <thead>
+                  <tr>
+                    <th scope="col">Outlet / tugas</th>
+                    <th scope="col">Tenggat WIB</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Tindakan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} aria-selected={r.id === selectedId}>
+                      <td data-label="Outlet / tugas">
+                        <strong>{r.outletName || 'Arahan kunjungan'}</strong>
+                        <small>{r.followUp.note}</small>
+                      </td>
+                      <td data-label="Tenggat WIB">
+                        {r.followUp.dueDate || 'Belum ditetapkan'}
+                        {r.followUp.status === 'OPEN' &&
+                          r.followUp.dueDate &&
+                          r.followUp.dueDate < wibDateKey() && <small>Lewat tenggat</small>}
+                      </td>
+                      <td data-label="Status">
+                        {r.followUp.status === 'DONE' && !r.followUp.review
+                          ? r.followUp.completionSource === 'POLICY_NO_REVIEW'
+                            ? 'Selesai sesuai aturan'
+                            : 'Selesai (riwayat lama)'
+                          : labels[r.followUp.status] || r.followUp.status}
+                      </td>
+                      <td data-label="Tindakan">
+                        <button
+                          className="app-button"
+                          aria-pressed={r.id === selectedId}
+                          onClick={() => {
+                            if (r.id !== selectedId) guarded(() => setSelectedId(r.id));
+                          }}
+                        >
+                          Buka tugas
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!loading && !rows.length && (
+              <div className="sales-empty">
+                <h2>Tidak ada tugas sesuai status</h2>
+                <p>Pilih status lain untuk melihat tugas yang sudah dikirim atau diperiksa.</p>
+              </div>
+            )}
+            <nav aria-label="Halaman tindak lanjut" className="sales-pagination">
+              <button
+                disabled={current === 1 || loading}
+                onClick={() => guarded(() => setPage(String(current - 1)))}
+                className="app-button"
+              >
+                Sebelumnya
+              </button>
+              <span>Halaman {current}</span>
+              <button
+                disabled={rows.length < 50 || loading}
+                onClick={() => guarded(() => setPage(String(current + 1)))}
+                className="app-button"
+              >
+                Berikutnya
+              </button>
+            </nav>
+          </section>
+          {selected && (
+            <aside className="sales-panel sales-detail">
+              <div className="sales-detail-heading">
+                <h2 ref={ref} tabIndex={-1}>
+                  Pekerjaan dari supervisor
+                </h2>
+                <button className="app-button" onClick={() => guarded(() => setSelectedId(''))}>
+                  Kembali ke daftar
+                </button>
+              </div>
+              <div className="sales-followup-detail">
+                <strong>{selected.outletName}</strong>
+                <p>
+                  Ditangani oleh:{' '}
+                  {selected.followUp.ownerName ||
+                    (selected.followUp.ownerId === user.id
+                      ? user.name
+                      : teamMembers.find((person) => person.id === selected.followUp.ownerId)
+                          ?.name) ||
+                    'Sales penerima belum tersedia'}
+                </p>
+                <FollowUpActions
+                  key={selected.id}
+                  id={selected.id}
+                  followUp={selected.followUp}
+                  policySnapshot={selected.policySnapshot}
+                  onChanged={reload}
+                />
+              </div>
+            </aside>
+          )}
+        </div>
+      )}
+    </section>
+  );
 };

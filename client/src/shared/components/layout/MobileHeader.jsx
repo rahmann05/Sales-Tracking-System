@@ -1,4 +1,9 @@
-import {managedRoles,roleNavigationGroups,roleHomeLabel,roleParentTab} from '../../../constants/roleNavigation';
+import {
+  managedRoles,
+  roleNavigationGroups,
+  roleHomeLabel,
+  roleParentTab,
+} from '../../../constants/roleNavigation';
 import React from 'react';
 import { LuLayers, LuLogOut, LuArrowLeft } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
@@ -14,11 +19,17 @@ import '../../../styles/layout/MobileHeader.css';
 export const MobileHeader = ({ onLogout }) => {
   const { user, activeTab, setActiveTab } = useApp();
   const isAdmin = managedRoles.includes(user?.role);
-  const currentAdmin=roleNavigationGroups(user).flatMap(group=>group.items).find(item=>item.id===roleParentTab(user,activeTab)) || getNavigationTabs(user?.role).find(tab=>tab.id===activeTab);
+  const currentAdmin =
+    roleNavigationGroups(user)
+      .flatMap((group) => group.items)
+      .find((item) => item.id === roleParentTab(user, activeTab)) ||
+    getNavigationTabs(user?.role).find((tab) => tab.id === activeTab);
   const isLanding = activeTab === TAB_IDS.ROLE_WORKSPACE;
 
   return (
-    <header className={`mobile-header-container pointer-events-auto z-30 ${isAdmin?'mobile-header-admin':''}`}>
+    <header
+      className={`mobile-header-container pointer-events-auto z-30 ${isAdmin ? 'mobile-header-admin' : ''}`}
+    >
       {/* Brand Title & Logo or Admin Back Button */}
       <div className="mobile-header-brand flex items-center gap-2.5">
         {isAdmin && !isLanding ? (
@@ -37,7 +48,14 @@ export const MobileHeader = ({ onLogout }) => {
           </div>
         )}
         <div>
-          <p className="mobile-brand-title">{isAdmin?(isLanding?roleHomeLabel(user?.role):currentAdmin?.label || (activeTab===TAB_IDS.CREATE_CLUSTER?'Buat kluster':'Halaman operasional')):'Sinar Anugrah'}</p>
+          <p className="mobile-brand-title">
+            {isAdmin
+              ? isLanding
+                ? roleHomeLabel(user?.role)
+                : currentAdmin?.label ||
+                  (activeTab === TAB_IDS.CREATE_CLUSTER ? 'Buat kluster' : 'Halaman operasional')
+              : 'Sinar Anugrah'}
+          </p>
           <span className="mobile-brand-subtitle font-bold text-primary">
             Operasional distribusi
           </span>
@@ -56,7 +74,10 @@ export const MobileHeader = ({ onLogout }) => {
           title="Klik untuk Keluar (Logout)"
         >
           <Avatar src={user?.avatar} name={user?.name} size="xs" />
-          <span className="profile-copy"><span className="profile-name">{user?.name}</span><span className="profile-role">{user?.roleLabel || user?.role}</span></span>
+          <span className="profile-copy">
+            <span className="profile-name">{user?.name}</span>
+            <span className="profile-role">{user?.roleLabel || user?.role}</span>
+          </span>
           <LuLogOut className="text-on-surface-variant text-xs shrink-0" />
         </button>
       </div>

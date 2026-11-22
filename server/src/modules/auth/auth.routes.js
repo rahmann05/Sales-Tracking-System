@@ -8,7 +8,10 @@ const router = Router();
 
 router.post('/login', validate(loginSchema), login);
 router.post('/refresh', validate(refreshTokenSchema), refresh);
-router.get('/me',authenticate,(req,res)=>{const {deletedAt,...user}=req.user;res.set('Cache-Control','no-store').json({data:user});});
+router.get('/me', authenticate, (req, res) => {
+  const { deletedAt, ...user } = req.user;
+  res.set('Cache-Control', 'no-store').json({ data: user });
+});
 router.post('/logout', authenticate, logout);
 
 export default router;

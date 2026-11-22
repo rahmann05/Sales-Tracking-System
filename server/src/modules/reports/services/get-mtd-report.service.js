@@ -1,15 +1,29 @@
-import {reportChannel,ratioPercent,orderChannelAmounts,reportBasis,channelBasisNote} from '../../../../../shared/report-semantics.mjs';
+import {
+  reportChannel,
+  ratioPercent,
+  orderChannelAmounts,
+  reportBasis,
+  channelBasisNote,
+} from '../../../../../shared/report-semantics.mjs';
 import { loadReportRecords } from './report-records.service.js';
 import { mergeReportSales, assignmentReportBasis } from './report-assignment.service.js';
 import { loadSalesTargets } from './sales-target.service.js';
-import { targetResult, targetCoverage, targetBasisNote } from '../../../../../shared/sales-targets.mjs';
-import { offPjpSalesResult, visitSalesResult, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
+import {
+  targetResult,
+  targetCoverage,
+  targetBasisNote,
+} from '../../../../../shared/sales-targets.mjs';
+import {
+  offPjpSalesResult,
+  visitSalesResult,
+  wibDateKey,
+} from '../../../../../shared/visit-metrics.mjs';
 /** getMtdReport - single-responsibility service (extracted from reports.service.js). */
 import { calendarMonthMetrics, calendarBasis } from '../../../../../shared/report-calendar.mjs';
 import { loadReportCalendars } from './report-calendar.service.js';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
-import {reportProvenance} from './report-provenance.service.js';
+import { reportProvenance } from './report-provenance.service.js';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -32,10 +46,14 @@ export const getMtdReport = async (query = {}) => {
   const lmaStart = new Date(Date.UTC(targetYear, targetMonth - 2, 1, -7));
   const lmaEnd = new Date(mtdStart.getTime() - 1);
 
-  const calendarMonth=`${targetYear}-${String(targetMonth).padStart(2,'0')}`;
-  const calendars=await loadReportCalendars([calendarMonth]);
-  const calendarMetrics=calendarMonthMetrics(calendarMonth,calendars.get(calendarMonth),wibDateKey());
-  const {total:totalWorkingDays,elapsed:workingDaysElapsed}=calendarMetrics;
+  const calendarMonth = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+  const calendars = await loadReportCalendars([calendarMonth]);
+  const calendarMetrics = calendarMonthMetrics(
+    calendarMonth,
+    calendars.get(calendarMonth),
+    wibDateKey()
+  );
+  const { total: totalWorkingDays, elapsed: workingDaysElapsed } = calendarMetrics;
 
   // Fetch Salesmen
   const salesWhere = { role: 'SALES', deletedAt: null };
@@ -68,20 +86,39 @@ export const getMtdReport = async (query = {}) => {
   const channelMap = {
     OFF_PJP: { name: 'Kunjungan luar PJP', mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
     RETAIL: { name: 'Retail / General Trade', count: 0, mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
-    MODERN_TRADE: { name: 'Modern Trade (Supermarket/Minimarket)', count: 0, mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
-    UNCLASSIFIED: {name:'Belum diklasifikasi',mtdVisits:0,mtdEc:0,mtdOmzet:0},
-    SEMI_WHOLESALE: { name: 'Semi Wholesale / Grosir', count: 0, mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
+    MODERN_TRADE: {
+      name: 'Modern Trade (Supermarket/Minimarket)',
+      count: 0,
+      mtdVisits: 0,
+      mtdEc: 0,
+      mtdOmzet: 0,
+    },
+    UNCLASSIFIED: { name: 'Belum diklasifikasi', mtdVisits: 0, mtdEc: 0, mtdOmzet: 0 },
+    SEMI_WHOLESALE: {
+      name: 'Semi Wholesale / Grosir',
+      count: 0,
+      mtdVisits: 0,
+      mtdEc: 0,
+      mtdOmzet: 0,
+    },
   };
 
-  const scope={userId,clusterId,supervisorId};
-  const [mtdRecords,lmaRecords]=await Promise.all([loadReportRecords(mtdStart,mtdEnd,{includeOutlets:true,scope}),loadReportRecords(lmaStart,lmaEnd,{scope})]);
-  const salesmen=mergeReportSales(currentSales,lmaRecords,mtdRecords);
-  const targets=await loadSalesTargets(salesmen.map(s=>s.id),'MONTH',`${targetYear}-${String(targetMonth).padStart(2,'0')}`);
+  const scope = { userId, clusterId, supervisorId };
+  const [mtdRecords, lmaRecords] = await Promise.all([
+    loadReportRecords(mtdStart, mtdEnd, { includeOutlets: true, scope }),
+    loadReportRecords(lmaStart, lmaEnd, { scope }),
+  ]);
+  const salesmen = mergeReportSales(currentSales, lmaRecords, mtdRecords);
+  const targets = await loadSalesTargets(
+    salesmen.map((s) => s.id),
+    'MONTH',
+    `${targetYear}-${String(targetMonth).padStart(2, '0')}`
+  );
 
   const salesmanRows = await Promise.all(
     salesmen.map(async (sales) => {
-      const mtdPjps=mtdRecords.pjps.get(sales.id) || [];
-      const lmaPjps=lmaRecords.pjps.get(sales.id) || [];
+      const mtdPjps = mtdRecords.pjps.get(sales.id) || [];
+      const lmaPjps = lmaRecords.pjps.get(sales.id) || [];
 
       let sMtdPlan = 0;
       let sMtdActual = 0;
@@ -129,8 +166,8 @@ export const getMtdReport = async (query = {}) => {
         });
       });
 
-      const offMtd=mtdRecords.offVisits.get(sales.id) || [];
-      const offLma=lmaRecords.offVisits.get(sales.id) || [];
+      const offMtd = mtdRecords.offVisits.get(sales.id) || [];
+      const offLma = lmaRecords.offVisits.get(sales.id) || [];
       sMtdActual += offMtd.length;
       totalOffPjp += offMtd.length;
       channelMap.OFF_PJP.mtdVisits += offMtd.length;
@@ -139,13 +176,25 @@ export const getMtdReport = async (query = {}) => {
         sMtdOmzet += offResult.orderAmount;
         sMtdSku += offResult.skuSold;
         channelMap.OFF_PJP.mtdOmzet += offResult.orderAmount;
-        if (offResult.effective) { sMtdEc += 1; channelMap.OFF_PJP.mtdEc += 1; }
+        if (offResult.effective) {
+          sMtdEc += 1;
+          channelMap.OFF_PJP.mtdEc += 1;
+        }
       }
-      sLmaOmzet += offLma.reduce((sum, off) => sum + offPjpSalesResult(off, { manualSalesMode }).orderAmount, 0);
+      sLmaOmzet += offLma.reduce(
+        (sum, off) => sum + offPjpSalesResult(off, { manualSalesMode }).orderAmount,
+        0
+      );
 
-
-      const eligible=currentSales.some(s=>s.id===sales.id)||mtdPjps.length>0||(mtdRecords.offVisits.get(sales.id)||[]).length>0;
-      const target=targetResult(targets.get(sales.id),sMtdOmzet,{supervisorId,clusterId,eligible});
+      const eligible =
+        currentSales.some((s) => s.id === sales.id) ||
+        mtdPjps.length > 0 ||
+        (mtdRecords.offVisits.get(sales.id) || []).length > 0;
+      const target = targetResult(targets.get(sales.id), sMtdOmzet, {
+        supervisorId,
+        clusterId,
+        eligible,
+      });
       const sMonthlyTarget = target.amount;
       const mtdToLmaRate = sLmaOmzet > 0 ? Math.round((sMtdOmzet / sLmaOmzet) * 100) : 0;
 
@@ -169,12 +218,13 @@ export const getMtdReport = async (query = {}) => {
         achievementRate: target.achievement,
         achievementRateNum: target.achievementNum,
         lastMonthActual: sLmaOmzet,
-        mtdToLmaRate: ratioPercent(sMtdOmzet,sLmaOmzet),
+        mtdToLmaRate: ratioPercent(sMtdOmzet, sLmaOmzet),
         mtdToLmaRateNum: mtdToLmaRate,
         mtdPlanCalls: sMtdPlan,
         mtdActualCalls: sMtdActual,
         offPjpCalls: offMtd.length,
-        callComplianceRate: sMtdPlan > 0 ? `${Math.round(((sMtdActual - offMtd.length) / sMtdPlan) * 100)}%` : '0%',
+        callComplianceRate:
+          sMtdPlan > 0 ? `${Math.round(((sMtdActual - offMtd.length) / sMtdPlan) * 100)}%` : '0%',
         mtdEffectiveCalls: sMtdEc,
         effectiveCallRate: sMtdActual > 0 ? `${Math.round((sMtdEc / sMtdActual) * 100)}%` : '0%',
         totalSkuSold: sMtdSku,
@@ -182,8 +232,10 @@ export const getMtdReport = async (query = {}) => {
       };
     })
   );
-  const coverage=targetCoverage(salesmanRows.map(s=>s.target));
-  const targetActual=salesmanRows.filter(s=>s.target.status==='SET').reduce((sum,s)=>sum+s.mtdActualAmount,0);
+  const coverage = targetCoverage(salesmanRows.map((s) => s.target));
+  const targetActual = salesmanRows
+    .filter((s) => s.target.status === 'SET')
+    .reduce((sum, s) => sum + s.mtdActualAmount, 0);
 
   // Calculate channel contributions
   const channelBreakdown = Object.entries(channelMap).map(([key, c]) => ({
@@ -192,17 +244,38 @@ export const getMtdReport = async (query = {}) => {
     mtdVisits: c.mtdVisits,
     mtdEc: c.mtdEc,
     mtdOmzet: c.mtdOmzet,
-    contributionRate: totalMtdOmzet > 0 ? `${Math.round((c.mtdOmzet / totalMtdOmzet) * 100)}%` : '0%',
+    contributionRate:
+      totalMtdOmzet > 0 ? `${Math.round((c.mtdOmzet / totalMtdOmzet) * 100)}%` : '0%',
   }));
 
   const monthNames = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
   ];
 
   return {
-    basis: { ...reportBasis(), ...assignmentReportBasis(mtdRecords,lmaRecords),...calendarBasis([calendarMonth],calendars),...reportProvenance({manualSalesMode},mtdRecords,lmaRecords), target:'EXPLICIT_SALES_PERIOD',targetNote:targetBasisNote,targetCoverage:coverage, channelNote: channelBasisNote, unverifiedChannelAmount },
-    meta:{company:await getDynamicConfig('COMPANY_NAME','PT. SINAR ANUGRAH')},
+    basis: {
+      ...reportBasis(),
+      ...assignmentReportBasis(mtdRecords, lmaRecords),
+      ...calendarBasis([calendarMonth], calendars),
+      ...reportProvenance({ manualSalesMode }, mtdRecords, lmaRecords),
+      target: 'EXPLICIT_SALES_PERIOD',
+      targetNote: targetBasisNote,
+      targetCoverage: coverage,
+      channelNote: channelBasisNote,
+      unverifiedChannelAmount,
+    },
+    meta: { company: await getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH') },
     period: {
       month: targetMonth,
       monthName: monthNames[targetMonth - 1] || `Bulan ${targetMonth}`,
@@ -218,18 +291,31 @@ export const getMtdReport = async (query = {}) => {
       targetCoverage: coverage,
       mtdActualAmount: totalMtdOmzet,
       targetActualAmount: targetActual,
-      overallAchievementRate: !coverage.missing && coverage.eligible && totalMonthlyTarget > 0 ? `${Math.round((targetActual / totalMonthlyTarget) * 100)}%` : '—',
-      overallAchievementRateNum: !coverage.missing && coverage.eligible && totalMonthlyTarget > 0 ? Math.round((targetActual / totalMonthlyTarget) * 100) : null,
+      overallAchievementRate:
+        !coverage.missing && coverage.eligible && totalMonthlyTarget > 0
+          ? `${Math.round((targetActual / totalMonthlyTarget) * 100)}%`
+          : '—',
+      overallAchievementRateNum:
+        !coverage.missing && coverage.eligible && totalMonthlyTarget > 0
+          ? Math.round((targetActual / totalMonthlyTarget) * 100)
+          : null,
       lastMonthActual: totalLmaOmzet,
-      mtdToLmaRate: ratioPercent(totalMtdOmzet,totalLmaOmzet),
+      mtdToLmaRate: ratioPercent(totalMtdOmzet, totalLmaOmzet),
       totalMtdPlanCalls: totalMtdPlan,
       totalMtdActualCalls: totalMtdActual,
       totalOffPjpCalls: totalOffPjp,
-      mtdCallComplianceRate: totalMtdPlan > 0 ? `${Math.round(((totalMtdActual - totalOffPjp) / totalMtdPlan) * 100)}%` : '0%',
+      mtdCallComplianceRate:
+        totalMtdPlan > 0
+          ? `${Math.round(((totalMtdActual - totalOffPjp) / totalMtdPlan) * 100)}%`
+          : '0%',
       totalMtdEffectiveCalls: totalMtdEc,
-      mtdEffectiveCallRate: totalMtdActual > 0 ? `${Math.round((totalMtdEc / totalMtdActual) * 100)}%` : '0%',
+      mtdEffectiveCallRate:
+        totalMtdActual > 0 ? `${Math.round((totalMtdEc / totalMtdActual) * 100)}%` : '0%',
       totalMtdSkuSold: totalMtdSku,
-      avgDailyRevenue: calendarMetrics.known&&workingDaysElapsed>0 ? Math.round(totalMtdOmzet / workingDaysElapsed) : null,
+      avgDailyRevenue:
+        calendarMetrics.known && workingDaysElapsed > 0
+          ? Math.round(totalMtdOmzet / workingDaysElapsed)
+          : null,
     },
     channelBreakdown,
     salesmen: salesmanRows,

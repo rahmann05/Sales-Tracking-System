@@ -14,7 +14,7 @@ import {
   VerticalAlign,
   WidthType,
 } from 'docx';
-import {documentImages, fitImage} from './documentImages';
+import { documentImages, fitImage } from './documentImages';
 import { formatDateTimeId, safeStr } from './formatters';
 
 const COLORS = {
@@ -42,7 +42,13 @@ const NO_BORDERS = {
 };
 
 const run = (text, opts = {}) =>
-  new TextRun({ text: safeStr(text, ''), font: 'Calibri', size: 17, color: COLORS.secondary, ...opts });
+  new TextRun({
+    text: safeStr(text, ''),
+    font: 'Calibri',
+    size: 17,
+    color: COLORS.secondary,
+    ...opts,
+  });
 
 function buildLetterhead(blueprint) {
   const companyName = blueprint.companyName || 'CV. SINAR ANUGRAH';
@@ -67,7 +73,12 @@ function buildLetterhead(blueprint) {
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 140, after: 60 },
-      children: [run(safeStr(blueprint.title, 'DOKUMEN OPERASIONAL').toUpperCase(), { bold: true, size: 24 })],
+      children: [
+        run(safeStr(blueprint.title, 'DOKUMEN OPERASIONAL').toUpperCase(), {
+          bold: true,
+          size: 24,
+        }),
+      ],
     }),
     ...(blueprint.subtitle
       ? [
@@ -151,14 +162,20 @@ function buildSectionTable(section) {
             verticalAlign: VerticalAlign.CENTER,
             margins: { top: 60, bottom: 60, left: 80, right: 80 },
             children: [
-              new Paragraph({ alignment: align, children: [run(safeStr(row[cIdx], '-'), { size: 16 })] }),
+              new Paragraph({
+                alignment: align,
+                children: [run(safeStr(row[cIdx], '-'), { size: 16 })],
+              }),
             ],
           });
         }),
       })
   );
 
-  return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...bodyRows] });
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow, ...bodyRows],
+  });
 }
 
 function buildSignatureTable(signatories = []) {
@@ -214,7 +231,9 @@ export async function buildDocumentDocx(blueprint) {
       children.push(
         new Paragraph({
           spacing: { before: 180, after: 80 },
-          children: [run(section.title.toUpperCase(), { bold: true, size: 19, color: COLORS.primary })],
+          children: [
+            run(section.title.toUpperCase(), { bold: true, size: 19, color: COLORS.primary }),
+          ],
         })
       );
     }
@@ -223,8 +242,18 @@ export async function buildDocumentDocx(blueprint) {
 
   for (const image of await documentImages(blueprint)) {
     const size = fitImage(image, 500, 300);
-    children.push(new Paragraph({spacing: {before: 160, after: 100}, keepNext: true, children: [run(image.caption || 'Foto outlet', {bold: true})]}));
-    children.push(new Paragraph({children: [new ImageRun({type: image.type, data: image.bytes, transformation: size})]}));
+    children.push(
+      new Paragraph({
+        spacing: { before: 160, after: 100 },
+        keepNext: true,
+        children: [run(image.caption || 'Foto outlet', { bold: true })],
+      })
+    );
+    children.push(
+      new Paragraph({
+        children: [new ImageRun({ type: image.type, data: image.bytes, transformation: size })],
+      })
+    );
   }
 
   if (blueprint.notes?.length) {

@@ -2,7 +2,6 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 
-
 export const getOutletById = async (id) => {
   const outlet = await prisma.outlet.findUnique({
     where: { id },

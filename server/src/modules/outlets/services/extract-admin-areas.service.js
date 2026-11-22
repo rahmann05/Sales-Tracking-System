@@ -30,13 +30,17 @@ export const extractAdminAreas = (addressComponents = [], formattedAddress = '')
     }
   }
 
-  const rawText = `${formattedAddress} ${areas.cityOrRegency} ${areas.subdistrict} ${areas.province}`.toLowerCase();
+  const rawText =
+    `${formattedAddress} ${areas.cityOrRegency} ${areas.subdistrict} ${areas.province}`.toLowerCase();
   const cleaned = rawText
     .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
-  cleaned.split(' ').filter((t) => t.length >= 3 && !ADDRESS_NOISE_WORDS.has(t)).forEach((t) => areas.tokens.add(t));
+  cleaned
+    .split(' ')
+    .filter((t) => t.length >= 3 && !ADDRESS_NOISE_WORDS.has(t))
+    .forEach((t) => areas.tokens.add(t));
 
   return areas;
 };

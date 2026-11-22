@@ -9,7 +9,7 @@ export const CameraNativeFileTrigger = ({
   requireGps,
   isGpsLocked,
   onNativeFileInput,
-  allowUpload=false,
+  allowUpload = false,
 }) => {
   return (
     <div className="flex justify-center">
@@ -23,12 +23,16 @@ export const CameraNativeFileTrigger = ({
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          capture={allowUpload?undefined:facingMode === 'user' ? 'user' : 'environment'}
+          capture={allowUpload ? undefined : facingMode === 'user' ? 'user' : 'environment'}
           disabled={requireGps && !isGpsLocked}
           onChange={onNativeFileInput}
           className="hidden"
         />
-        <span>{allowUpload?'Pilih gambar atau gunakan kamera perangkat':'Gunakan aplikasi kamera bawaan HP'}</span>
+        <span>
+          {allowUpload
+            ? 'Pilih gambar atau gunakan kamera perangkat'
+            : 'Gunakan aplikasi kamera bawaan HP'}
+        </span>
       </label>
     </div>
   );

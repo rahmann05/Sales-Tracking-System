@@ -78,7 +78,9 @@ export function buildDocumentTxt(blueprint) {
   if (blueprint.signatories?.length) {
     lines.push(borderSingle, 'LEMBAR PENGESAHAN & OTORISASI:', '');
     const sigWidth = 28;
-    lines.push(blueprint.signatories.map((s) => safeStr(s.role, '').padEnd(sigWidth, ' ')).join('   '));
+    lines.push(
+      blueprint.signatories.map((s) => safeStr(s.role, '').padEnd(sigWidth, ' ')).join('   ')
+    );
     lines.push('');
     lines.push('');
     lines.push(
@@ -86,7 +88,9 @@ export function buildDocumentTxt(blueprint) {
         .map((s) => `(${safeStr(s.name, '....................')})`.padEnd(sigWidth, ' '))
         .join('   ')
     );
-    lines.push(blueprint.signatories.map((s) => safeStr(s.title, '').padEnd(sigWidth, ' ')).join('   '));
+    lines.push(
+      blueprint.signatories.map((s) => safeStr(s.title, '').padEnd(sigWidth, ' ')).join('   ')
+    );
     lines.push('');
   }
 

@@ -8,7 +8,8 @@ import { getDynamicConfig } from '../../config/config.service.js';
 export const refreshAccessToken = async (refreshToken) => {
   try {
     const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret);
-    if(typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())throw new AppError('Refresh token tidak valid',401);
+    if (typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())
+      throw new AppError('Refresh token tidak valid', 401);
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
     });
@@ -17,9 +18,10 @@ export const refreshAccessToken = async (refreshToken) => {
       throw new AppError('User tidak ditemukan', 401);
     }
 
-    if((decoded.tokenVersion||0)!==(user.tokenVersion||0))throw new AppError('Sesi telah dicabut. Masuk kembali.',401);
+    if ((decoded.tokenVersion || 0) !== (user.tokenVersion || 0))
+      throw new AppError('Sesi telah dicabut. Masuk kembali.', 401);
     const payload = {
-      tokenVersion:user.tokenVersion||0,
+      tokenVersion: user.tokenVersion || 0,
       id: user.id,
       name: user.name,
       email: user.email,
@@ -35,7 +37,8 @@ export const refreshAccessToken = async (refreshToken) => {
 
     return { accessToken: newAccessToken };
   } catch (err) {
-    if(['JsonWebTokenError','TokenExpiredError','NotBeforeError'].includes(err.name))throw new AppError('Refresh token tidak valid atau telah kadaluwarsa', 401);
+    if (['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(err.name))
+      throw new AppError('Refresh token tidak valid atau telah kadaluwarsa', 401);
     throw err;
   }
 };

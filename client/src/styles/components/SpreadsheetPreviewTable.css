@@ -7,4 +7,7 @@
 }
 
 /* Table cells use the shared DataTable surface. */
-.spreadsheet-preview-th {position:sticky;top:0;}
+.spreadsheet-preview-th {
+  position: sticky;
+  top: 0;
+}

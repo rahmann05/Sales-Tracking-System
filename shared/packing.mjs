@@ -1,29 +1,116 @@
 export function packingBalance(packing) {
   const stops = packing.deliveryStops || [];
-  const allocatedCartons = stops.reduce((sum, stop) => sum + stop.allocatedCartons - (stop.returnReceivedAt ? stop.reusableCartons || 0 : 0), 0);
-  const items = (packing.items || []).map(item => ({ ...item, remaining: item.quantity - stops.reduce((sum, stop) => sum + (stop.allocatedItems || []).filter(a => a.lineId === item.lineId).reduce((n, a) => n + a.quantity, 0) - (stop.returnReceivedAt ? (stop.reusableItems || []).filter(a => a.lineId === item.lineId).reduce((n,a) => n+a.quantity,0) : 0), 0) }));
-  const remainingInvoices = (packing.invoices || []).map(invoice => ({ ...invoice, remaining: invoice.totalCartons - stops.reduce((n, s) => n + (s.allocatedInvoices || []).filter(i => i.invoiceId === invoice.id).reduce((a, i) => a + i.cartons, 0) - (s.returnReceivedAt ? (s.reusableInvoices || []).filter(i => i.invoiceId === invoice.id).reduce((a, i) => a + i.cartons, 0) : 0), 0) }));
-  return { ...packing, allocatedCartons, remainingCartons: packing.totalCartons - allocatedCartons, remainingItems: items, remainingInvoices };
+  const allocatedCartons = stops.reduce(
+    (sum, stop) =>
+      sum + stop.allocatedCartons - (stop.returnReceivedAt ? stop.reusableCartons || 0 : 0),
+    0
+  );
+  const items = (packing.items || []).map((item) => ({
+    ...item,
+    remaining:
+      item.quantity -
+      stops.reduce(
+        (sum, stop) =>
+          sum +
+          (stop.allocatedItems || [])
+            .filter((a) => a.lineId === item.lineId)
+            .reduce((n, a) => n + a.quantity, 0) -
+          (stop.returnReceivedAt
+            ? (stop.reusableItems || [])
+                .filter((a) => a.lineId === item.lineId)
+                .reduce((n, a) => n + a.quantity, 0)
+            : 0),
+        0
+      ),
+  }));
+  const remainingInvoices = (packing.invoices || []).map((invoice) => ({
+    ...invoice,
+    remaining:
+      invoice.totalCartons -
+      stops.reduce(
+        (n, s) =>
+          n +
+          (s.allocatedInvoices || [])
+            .filter((i) => i.invoiceId === invoice.id)
+            .reduce((a, i) => a + i.cartons, 0) -
+          (s.returnReceivedAt
+            ? (s.reusableInvoices || [])
+                .filter((i) => i.invoiceId === invoice.id)
+                .reduce((a, i) => a + i.cartons, 0)
+            : 0),
+        0
+      ),
+  }));
+  return {
+    ...packing,
+    allocatedCartons,
+    remainingCartons: packing.totalCartons - allocatedCartons,
+    remainingItems: items,
+    remainingInvoices,
+  };
 }
 
 export function validateAllocation(packing, allocation, allowSplit) {
   const balance = packingBalance(packing);
   const cartons = allocation.allocatedCartons ?? balance.remainingCartons;
   if (packing.status !== 'RELEASED') throw new Error('Packing list belum dikirim admin ke gudang');
-  if (!Number.isInteger(cartons) || cartons <= 0 || cartons > balance.remainingCartons) throw new Error('Jumlah karton melebihi sisa atau tidak valid');
-  const lines = allocation.allocatedItems ?? balance.remainingItems.filter(i => i.remaining > 0).map(i => ({ lineId: i.lineId, quantity: i.remaining }));
-  if (new Set(lines.map(i => i.lineId)).size !== lines.length) throw new Error('Baris barang duplikat');
+  if (!Number.isInteger(cartons) || cartons <= 0 || cartons > balance.remainingCartons)
+    throw new Error('Jumlah karton melebihi sisa atau tidak valid');
+  const lines =
+    allocation.allocatedItems ??
+    balance.remainingItems
+      .filter((i) => i.remaining > 0)
+      .map((i) => ({ lineId: i.lineId, quantity: i.remaining }));
+  if (new Set(lines.map((i) => i.lineId)).size !== lines.length)
+    throw new Error('Baris barang duplikat');
   for (const line of lines) {
-    const source = balance.remainingItems.find(i => i.lineId === line.lineId);
-    if (!source || !Number.isInteger(line.quantity) || line.quantity <= 0 || line.quantity > source.remaining) throw new Error('Alokasi barang melebihi sisa atau tidak valid');
+    const source = balance.remainingItems.find((i) => i.lineId === line.lineId);
+    if (
+      !source ||
+      !Number.isInteger(line.quantity) ||
+      line.quantity <= 0 ||
+      line.quantity > source.remaining
+    )
+      throw new Error('Alokasi barang melebihi sisa atau tidak valid');
   }
-  const allItems = balance.remainingItems.every(i => (lines.find(a => a.lineId === i.lineId)?.quantity || 0) === i.remaining);
-  if (balance.remainingItems.length && (!lines.length || ((cartons === balance.remainingCartons) !== allItems))) throw new Error('Alokasi karton dan barang harus sama-sama menyisakan muatan atau sama-sama selesai');
-  if (!allowSplit && (cartons !== balance.remainingCartons || !allItems)) throw new Error('Pembagian packing list dinonaktifkan admin');
-  const invoices = allocation.allocatedInvoices ?? (cartons === balance.remainingCartons ? balance.remainingInvoices.filter(i => i.remaining > 0).map(i => ({ invoiceId: i.id, cartons: i.remaining })) : []);
+  const allItems = balance.remainingItems.every(
+    (i) => (lines.find((a) => a.lineId === i.lineId)?.quantity || 0) === i.remaining
+  );
+  if (
+    balance.remainingItems.length &&
+    (!lines.length || (cartons === balance.remainingCartons) !== allItems)
+  )
+    throw new Error(
+      'Alokasi karton dan barang harus sama-sama menyisakan muatan atau sama-sama selesai'
+    );
+  if (!allowSplit && (cartons !== balance.remainingCartons || !allItems))
+    throw new Error('Pembagian packing list dinonaktifkan admin');
+  const invoices =
+    allocation.allocatedInvoices ??
+    (cartons === balance.remainingCartons
+      ? balance.remainingInvoices
+          .filter((i) => i.remaining > 0)
+          .map((i) => ({ invoiceId: i.id, cartons: i.remaining }))
+      : []);
   if (balance.remainingInvoices.length) {
-    if (new Set(invoices.map(i => i.invoiceId)).size !== invoices.length || invoices.reduce((n, i) => n + i.cartons, 0) !== cartons) throw new Error('Alokasi karton per faktur harus sama dengan muatan');
-    for (const i of invoices) if (!Number.isInteger(i.cartons) || i.cartons <= 0 || i.cartons > (balance.remainingInvoices.find(x => x.id === i.invoiceId)?.remaining || 0)) throw new Error('Alokasi faktur melebihi sisa');
+    if (
+      new Set(invoices.map((i) => i.invoiceId)).size !== invoices.length ||
+      invoices.reduce((n, i) => n + i.cartons, 0) !== cartons
+    )
+      throw new Error('Alokasi karton per faktur harus sama dengan muatan');
+    for (const i of invoices)
+      if (
+        !Number.isInteger(i.cartons) ||
+        i.cartons <= 0 ||
+        i.cartons > (balance.remainingInvoices.find((x) => x.id === i.invoiceId)?.remaining || 0)
+      )
+        throw new Error('Alokasi faktur melebihi sisa');
   }
-  return { allocatedCartons: cartons, allocatedItems: lines, allocatedInvoices: invoices, allocatedWeight: packing.totalCartons > 0 ? (packing.totalWeight || 0) * cartons / packing.totalCartons : 0 };
+  return {
+    allocatedCartons: cartons,
+    allocatedItems: lines,
+    allocatedInvoices: invoices,
+    allocatedWeight:
+      packing.totalCartons > 0 ? ((packing.totalWeight || 0) * cartons) / packing.totalCartons : 0,
+  };
 }

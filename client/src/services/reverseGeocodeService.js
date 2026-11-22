@@ -1,4 +1,4 @@
-import {request} from './httpClient';
+import { request } from './httpClient';
 /**
  * Reverse Geocode Service (Google Maps & OpenStreetMap High-Precision Geocoder)
  * Single Responsibility: Convert GPS coordinates (lat, lng) into Indonesian addresses
@@ -37,7 +37,10 @@ export const formatDetailedIndonesianAddress = ({
 
   // 3. Kelurahan / Desa
   if (kelurahan) {
-    const kelPart = kelurahan.startsWith('Kel.') || kelurahan.startsWith('Desa') ? kelurahan : `Kel. ${kelurahan}`;
+    const kelPart =
+      kelurahan.startsWith('Kel.') || kelurahan.startsWith('Desa')
+        ? kelurahan
+        : `Kel. ${kelurahan}`;
     parts.push(kelPart);
   }
 
@@ -62,7 +65,10 @@ export const formatDetailedIndonesianAddress = ({
  * Main detailed reverse geocoding function
  */
 export const getDetailedAddressFromGps = async (lat, lng) => {
-  if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
-  const response=await request('/routing/reverse-geocode',{method:'POST',body:JSON.stringify({lat,lng})});
-  return response.data?.address||null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const response = await request('/routing/reverse-geocode', {
+    method: 'POST',
+    body: JSON.stringify({ lat, lng }),
+  });
+  return response.data?.address || null;
 };

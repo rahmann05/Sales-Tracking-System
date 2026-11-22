@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { 
-  LuBell, 
-  LuCheckCheck, 
-  LuTrash2, 
-  LuX, 
-  LuStore, 
-  LuKey, 
-  LuShoppingBag, 
-  LuShuffle, 
-  LuClock 
+import { resolveNotificationTab } from '../../../utils/notificationTab';
+import {
+  LuBell,
+  LuCheckCheck,
+  LuTrash2,
+  LuX,
+  LuStore,
+  LuKey,
+  LuShoppingBag,
+  LuShuffle,
+  LuClock,
 } from 'react-icons/lu';
 
 /**
@@ -19,15 +20,31 @@ import {
  * Fully responsive on both Mobile and Desktop viewports.
  */
 export const NotificationCenterDropdown = () => {
-  const { 
-    user, 
-    notifications = [], 
-    markNotificationAsRead, 
-    clearNotifications, markAllNotificationsAsRead, notificationStatus, notificationUnreadCount, refreshNotifications, notificationHasMore, loadMoreNotifications
+  const {
+    user,
+    setActiveTab,
+    notifications = [],
+    markNotificationAsRead,
+    clearNotifications,
+    markAllNotificationsAsRead,
+    notificationStatus,
+    notificationUnreadCount,
+    refreshNotifications,
+    notificationHasMore,
+    loadMoreNotifications,
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'UNREAD' | 'CLOSED' | 'UNLOCK'
+
+  const handleSelectNotification = (notif) => {
+    markNotificationAsRead?.(notif.id);
+    const target = resolveNotificationTab(notif, user?.role);
+    if (target && setActiveTab) {
+      setActiveTab(target);
+      setIsOpen(false);
+    }
+  };
 
   // Filter notifications relevant to current user role
   const userNotifications = notifications.filter(
@@ -38,17 +55,23 @@ export const NotificationCenterDropdown = () => {
 
   const filteredList = userNotifications.filter((n) => {
     if (activeFilter === 'UNREAD') return !n.read;
-    if (activeFilter === 'CLOSED') return n.title?.toLowerCase().includes('tutup') || n.title?.toLowerCase().includes('skip');
-    if (activeFilter === 'UNLOCK') return n.title?.toLowerCase().includes('kunci') || n.title?.toLowerCase().includes('unlock');
+    if (activeFilter === 'CLOSED')
+      return n.title?.toLowerCase().includes('tutup') || n.title?.toLowerCase().includes('skip');
+    if (activeFilter === 'UNLOCK')
+      return n.title?.toLowerCase().includes('kunci') || n.title?.toLowerCase().includes('unlock');
     return true;
   });
 
   const getNotifIcon = (title = '') => {
     const t = title.toLowerCase();
-    if (t.includes('tutup') || t.includes('skip')) return <LuStore className="text-rose-500 text-sm flex-shrink-0" />;
-    if (t.includes('kunci') || t.includes('unlock')) return <LuKey className="text-amber-500 text-sm flex-shrink-0" />;
-    if (t.includes('order')) return <LuShoppingBag className="text-purple-500 text-sm flex-shrink-0" />;
-    if (t.includes('reroute') || t.includes('rute')) return <LuShuffle className="text-blue-500 text-sm flex-shrink-0" />;
+    if (t.includes('tutup') || t.includes('skip'))
+      return <LuStore className="text-rose-500 text-sm flex-shrink-0" />;
+    if (t.includes('kunci') || t.includes('unlock'))
+      return <LuKey className="text-amber-500 text-sm flex-shrink-0" />;
+    if (t.includes('order'))
+      return <LuShoppingBag className="text-purple-500 text-sm flex-shrink-0" />;
+    if (t.includes('reroute') || t.includes('rute'))
+      return <LuShuffle className="text-blue-500 text-sm flex-shrink-0" />;
     return <LuClock className="text-primary text-sm flex-shrink-0" />;
   };
 
@@ -75,7 +98,7 @@ export const NotificationCenterDropdown = () => {
       {isOpen && (
         <>
           {/* Backdrop for Mobile */}
-          <div 
+          <div
             className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40 sm:hidden pointer-events-auto"
             onClick={() => setIsOpen(false)}
           />
@@ -177,23 +200,52 @@ export const NotificationCenterDropdown = () => {
             </div>
 
             {/* List Feed (Scrollable) */}
-            <p className="text-xs">Notifikasi server terbaru. Jumlah belum dibaca mencakup seluruh riwayat. Membaca pesan tidak menyelesaikan tugas.</p>
-            {notificationStatus?.error && <p role="alert" className="text-xs text-red-600">{notificationStatus.error} Pesan yang tampil mungkin sudah lama.</p>}
-            <button type="button" className="text-xs underline min-h-11" onClick={refreshNotifications}>Perbarui notifikasi</button>
-            {notificationHasMore && <button type="button" className="text-xs underline min-h-11" onClick={loadMoreNotifications}>Muat notifikasi lebih lama</button>}
+            <p className="text-xs">
+              Notifikasi server terbaru. Jumlah belum dibaca mencakup seluruh riwayat. Membaca pesan
+              tidak menyelesaikan tugas.
+            </p>
+            {notificationStatus?.error && (
+              <p role="alert" className="text-xs text-red-600">
+                {notificationStatus.error} Pesan yang tampil mungkin sudah lama.
+              </p>
+            )}
+            <button
+              type="button"
+              className="text-xs underline min-h-11"
+              onClick={refreshNotifications}
+            >
+              Perbarui notifikasi
+            </button>
+            {notificationHasMore && (
+              <button
+                type="button"
+                className="text-xs underline min-h-11"
+                onClick={loadMoreNotifications}
+              >
+                Muat notifikasi lebih lama
+              </button>
+            )}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0 max-h-72">
               {filteredList.length === 0 ? (
                 <div className="text-center py-8 space-y-1">
                   <LuBell className="text-2xl text-on-surface-variant/40 mx-auto" />
-                  <p className="text-xs text-on-surface-variant font-medium">Tidak ada notifikasi dalam filter ini.</p>
+                  <p className="text-xs text-on-surface-variant font-medium">
+                    Tidak ada notifikasi dalam filter ini.
+                  </p>
                 </div>
               ) : (
                 filteredList.map((notif) => (
                   <div
                     key={notif.id}
-                    role="button" tabIndex={0}
-                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); markNotificationAsRead?.(notif.id); } }}
-                    onClick={() => markNotificationAsRead && markNotificationAsRead(notif.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleSelectNotification(notif);
+                      }
+                    }}
+                    onClick={() => handleSelectNotification(notif)}
                     className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1 text-xs ${
                       notif.read
                         ? 'bg-surface-variant/15 border-border-glass opacity-75'

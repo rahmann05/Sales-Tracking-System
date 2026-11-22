@@ -13,7 +13,7 @@ import { successResponse } from '../../utils/response.js';
  */
 export const validateSingle = async (req, res, next) => {
   try {
-    const result = await validationService.validateOutlet(req.params.id,req.body,req.user);
+    const result = await validationService.validateOutlet(req.params.id, req.body, req.user);
     return successResponse(res, 200, result, 'Validasi outlet selesai');
   } catch (error) {
     next(error);
@@ -39,8 +39,13 @@ export const validateNearby = async (req, res, next) => {
  */
 export const batchValidate = async (req, res, next) => {
   try {
-    const result = await validationService.batchValidateOutlets(req.body || {},req.user);
-    return successResponse(res, 200, result, `Validasi batch selesai: ${result.success} sukses, ${result.failed} gagal`);
+    const result = await validationService.batchValidateOutlets(req.body || {}, req.user);
+    return successResponse(
+      res,
+      200,
+      result,
+      `Validasi batch selesai: ${result.success} sukses, ${result.failed} gagal`
+    );
   } catch (error) {
     next(error);
   }
@@ -58,4 +63,3 @@ export const getValidationSummary = async (req, res, next) => {
     next(error);
   }
 };
-

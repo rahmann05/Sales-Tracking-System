@@ -1,4 +1,4 @@
-import {documentImages, fitImage} from './documentImages';
+import { documentImages, fitImage } from './documentImages';
 import { jsPDF } from 'jspdf';
 import autoTablePkg from 'jspdf-autotable';
 import { formatDateTimeId, safeStr } from './formatters';
@@ -54,8 +54,11 @@ export async function buildDocumentPdf(blueprint) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 23, 42);
-  const titleLines = doc.splitTextToSize(safeStr(blueprint.title, 'DOKUMEN OPERASIONAL').toUpperCase(), pageWidth - margin * 2);
-  doc.text(titleLines, pageWidth / 2, cursorY, {align: 'center'});
+  const titleLines = doc.splitTextToSize(
+    safeStr(blueprint.title, 'DOKUMEN OPERASIONAL').toUpperCase(),
+    pageWidth - margin * 2
+  );
+  doc.text(titleLines, pageWidth / 2, cursorY, { align: 'center' });
   cursorY += titleLines.length * 4.5;
 
   if (blueprint.subtitle) {
@@ -63,7 +66,7 @@ export async function buildDocumentPdf(blueprint) {
     doc.setFontSize(8.5);
     doc.setTextColor(71, 85, 105);
     const subtitleLines = doc.splitTextToSize(blueprint.subtitle, pageWidth - margin * 2);
-    doc.text(subtitleLines, pageWidth / 2, cursorY, {align: 'center'});
+    doc.text(subtitleLines, pageWidth / 2, cursorY, { align: 'center' });
     cursorY += subtitleLines.length * 4;
   }
 
@@ -130,7 +133,12 @@ export async function buildDocumentPdf(blueprint) {
     const weights = section.columnWidths;
     if (weights?.length === headers.length) {
       const total = weights.reduce((sum, n) => sum + n, 0);
-      weights.forEach((weight, i) => {columnStyles[i] = {...columnStyles[i], cellWidth: (pageWidth - margin * 2) * weight / total};});
+      weights.forEach((weight, i) => {
+        columnStyles[i] = {
+          ...columnStyles[i],
+          cellWidth: ((pageWidth - margin * 2) * weight) / total,
+        };
+      });
     }
     for (const cIdx of section.rightAlignCols || []) {
       columnStyles[cIdx] = { ...(columnStyles[cIdx] || {}), halign: 'right' };
@@ -170,11 +178,23 @@ export async function buildDocumentPdf(blueprint) {
 
   for (const image of await documentImages(blueprint)) {
     const size = fitImage(image, pageWidth - margin * 2, 85);
-    if (cursorY + size.height + 12 > pageHeight - 16) {doc.addPage(); cursorY = 14;}
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(0);
+    if (cursorY + size.height + 12 > pageHeight - 16) {
+      doc.addPage();
+      cursorY = 14;
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(0);
     doc.text(image.caption || 'Foto outlet', margin, cursorY);
     cursorY += 5;
-    doc.addImage(image.dataUrl, image.type === 'jpg' ? 'JPEG' : 'PNG', margin, cursorY, size.width, size.height);
+    doc.addImage(
+      image.dataUrl,
+      image.type === 'jpg' ? 'JPEG' : 'PNG',
+      margin,
+      cursorY,
+      size.width,
+      size.height
+    );
     cursorY += size.height + 5;
   }
 
@@ -194,8 +214,12 @@ export async function buildDocumentPdf(blueprint) {
     for (const note of blueprint.notes) {
       const wrapped = doc.splitTextToSize(`• ${note}`, pageWidth - margin * 2);
       for (const line of wrapped) {
-        if (cursorY + 4 > pageHeight - 16) {doc.addPage(); cursorY = 14;}
-        doc.text(line, margin, cursorY); cursorY += 3.2;
+        if (cursorY + 4 > pageHeight - 16) {
+          doc.addPage();
+          cursorY = 14;
+        }
+        doc.text(line, margin, cursorY);
+        cursorY += 3.2;
       }
     }
     cursorY += 2;
@@ -214,9 +238,14 @@ export async function buildDocumentPdf(blueprint) {
       doc.setFontSize(8);
       doc.setTextColor(15, 23, 42);
       doc.text(safeStr(sig.role, ''), centerX, cursorY + 4, { align: 'center' });
-      doc.text(doc.splitTextToSize(`( ${safeStr(sig.name, '........................')} )`, blockWidth - 4), centerX, cursorY + 18, {
-        align: 'center',
-      });
+      doc.text(
+        doc.splitTextToSize(`( ${safeStr(sig.name, '........................')} )`, blockWidth - 4),
+        centerX,
+        cursorY + 18,
+        {
+          align: 'center',
+        }
+      );
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(100, 116, 139);

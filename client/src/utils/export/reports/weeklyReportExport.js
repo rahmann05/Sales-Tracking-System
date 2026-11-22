@@ -15,7 +15,7 @@ function resolveWeeklySalesmanRow(s, idx) {
   const callRate = safeStr(wt.callRate ?? s.complianceRate ?? s.callComplianceRate, '0%');
   const ec = Number(wt.ec ?? s.effectiveCalls ?? s.totalEffectiveCalls ?? 0);
   const ecRate = safeStr(wt.ecRate ?? s.ecRate ?? s.effectiveCallRate, '0%');
-  const omzetRaw = wt.omzet !== undefined ? wt.omzet : s.orderAmount ?? s.totalOrderAmount ?? 0;
+  const omzetRaw = wt.omzet !== undefined ? wt.omzet : (s.orderAmount ?? s.totalOrderAmount ?? 0);
   const omzetStr = omzetRaw === null ? 'Dibatasi aturan' : formatCurrency(omzetRaw);
   const targetStr =
     wt.target != null
@@ -79,7 +79,10 @@ function buildWeeklyReportBlueprint(input = {}, startDateArg, salesmanNameArg) {
         safeStr(d.formattedDate || d.dateStr),
         formatNumber(d.planCalls ?? 0),
         formatNumber(d.actualCalls ?? 0),
-        safeStr(d.complianceRate, d.planCalls ? `${Math.round((d.actualCalls / d.planCalls) * 100)}%` : '—'),
+        safeStr(
+          d.complianceRate,
+          d.planCalls ? `${Math.round((d.actualCalls / d.planCalls) * 100)}%` : '—'
+        ),
         formatNumber(d.effectiveCalls ?? 0),
         d.orderAmount === null ? 'Dibatasi aturan' : formatCurrency(d.orderAmount ?? 0),
       ]),
@@ -134,7 +137,8 @@ function buildWeeklyReportBlueprint(input = {}, startDateArg, salesmanNameArg) {
       { label: 'Total Effective Calls', value: `${formatNumber(totalEc)} EC (${ecRate})` },
       {
         label: 'Total Nilai Order Disetujui',
-        value: totalOrderAmount === null ? 'Dibatasi aturan' : formatCurrency(totalOrderAmount || 0),
+        value:
+          totalOrderAmount === null ? 'Dibatasi aturan' : formatCurrency(totalOrderAmount || 0),
       },
       { label: 'Total SKU Terjual', value: `${formatNumber(totalSkuSold)} SKU` },
       { label: 'Jumlah Personel Sales', value: `${formatNumber(salesmen.length)} Salesman` },

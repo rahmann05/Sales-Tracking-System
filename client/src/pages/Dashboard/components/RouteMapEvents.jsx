@@ -1,33 +1,22 @@
 import React from 'react';
 import { useMapEvents } from 'react-leaflet';
 
-
-
-
-
-
-
-
-
 // Helper custom Leaflet live sales GPS icon generator
 
 // Sub-component to handle map click events
-export
-// Helper custom Leaflet live sales GPS icon generator
+export // Helper custom Leaflet live sales GPS icon generator
 
 // Sub-component to handle map click events
-const MapEventsHandler = ({
-  onMapClick
-}) => {
+const MapEventsHandler = ({ onMapClick }) => {
   useMapEvents({
     click(e) {
       if (onMapClick) {
         onMapClick({
           lat: e.latlng.lat,
-          lng: e.latlng.lng
+          lng: e.latlng.lng,
         });
       }
-    }
+    },
   });
   return null;
 };

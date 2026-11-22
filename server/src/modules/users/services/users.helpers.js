@@ -9,7 +9,7 @@ export const USER_SELECT = {
   roleCode: true,
   permissions: true,
   supervisorId: true,
-  supervisor: { select: { id:true, name:true, email:true } },
+  supervisor: { select: { id: true, name: true, email: true } },
   updatedAt: true,
   clusterId: true,
   cluster: {
@@ -19,14 +19,11 @@ export const USER_SELECT = {
       region: true,
       centerLat: true,
       centerLng: true,
-      supervisor: { select: { id: true, name: true, email: true } }
-    }
+      supervisor: { select: { id: true, name: true, email: true } },
+    },
   },
   createdAt: true,
 };
-
-
-
 
 export const ROLE_LABELS = {
   SALES: 'Sales Field Rep',
@@ -35,7 +32,6 @@ export const ROLE_LABELS = {
   KEPALA_GUDANG: 'Kepala Gudang',
   SUPIR: 'Supir / Driver',
 };
-
 
 export const enrichUserResponse = (user) => ({
   ...user,

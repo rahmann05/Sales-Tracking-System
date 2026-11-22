@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuUser, LuX, LuNavigation } from "react-icons/lu";
+import { LuUser, LuX, LuNavigation } from 'react-icons/lu';
 
 /**
  * SelectedSalesMapHeader Component
@@ -31,7 +31,9 @@ export const SelectedSalesMapHeader = ({ selectedSales, onClearSelection }) => {
           </div>
           <p className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
             <LuNavigation className="text-primary text-xs shrink-0" />
-            <span>Menampilkan garis rute dari posisi terakhir Sales ke outlet tujuan berikutnya.</span>
+            <span>
+              Menampilkan garis rute dari posisi terakhir Sales ke outlet tujuan berikutnya.
+            </span>
           </p>
         </div>
       </div>

@@ -22,12 +22,16 @@ export const Input = ({
   const inputId = id || generatedId;
   return (
     <div className={`input-group ${containerClassName}`}>
-      {label && <label htmlFor={inputId} className="input-label">{label}</label>}
+      {label && (
+        <label htmlFor={inputId} className="input-label">
+          {label}
+        </label>
+      )}
       <div className={`input-container ${className}`}>
         {IconComponent && <IconComponent className="input-icon" />}
         <input
           id={inputId}
-          aria-label={!label ? (rest['aria-label'] || placeholder) : undefined}
+          aria-label={!label ? rest['aria-label'] || placeholder : undefined}
           type={type}
           value={value}
           onChange={onChange}

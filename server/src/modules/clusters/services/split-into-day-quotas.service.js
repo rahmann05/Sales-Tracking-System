@@ -12,7 +12,14 @@ export const splitIntoDayQuotas = (total) => {
   }
   const base = Math.ceil(total / (FULL_DAYS + SATURDAY_FACTOR)); // ceil(total/5.5)
   const satQuota = Math.ceil(base / 2);
-  const quotas = { senin: base, selasa: base, rabu: base, kamis: base, jumat: base, sabtu: satQuota };
+  const quotas = {
+    senin: base,
+    selasa: base,
+    rabu: base,
+    kamis: base,
+    jumat: base,
+    sabtu: satQuota,
+  };
 
   let assigned = FULL_DAYS * base + satQuota;
   let overflow = assigned - total;

@@ -22,7 +22,12 @@ export const markAsRead = async (req, res, next) => {
 export const markAllAsRead = async (req, res, next) => {
   try {
     const result = await notificationService.markAllNotificationsAsRead(req.user.id);
-    return successResponse(res, 200, { updated: result.count }, 'Semua notifikasi ditandai sudah dibaca');
+    return successResponse(
+      res,
+      200,
+      { updated: result.count },
+      'Semua notifikasi ditandai sudah dibaca'
+    );
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,14 @@
-import {TRIP_PERMISSION_LABELS,tripPermission,tripPermissionDefaults} from '../../../../shared/trip-permissions.mjs';
-import {ORDER_OPERATION_PERMISSIONS} from '../../../../shared/order-operation-permissions.mjs';
-import {VISIT_REVIEW_PERMISSIONS} from '../../../../shared/visit-review-permissions.mjs';
-import {DOMAIN_PERMISSIONS,domainPermissionDefaults} from '../../../../shared/domain-permissions.mjs';
+import {
+  TRIP_PERMISSION_LABELS,
+  tripPermission,
+  tripPermissionDefaults,
+} from '../../../../shared/trip-permissions.mjs';
+import { ORDER_OPERATION_PERMISSIONS } from '../../../../shared/order-operation-permissions.mjs';
+import { VISIT_REVIEW_PERMISSIONS } from '../../../../shared/visit-review-permissions.mjs';
+import {
+  DOMAIN_PERMISSIONS,
+  domainPermissionDefaults,
+} from '../../../../shared/domain-permissions.mjs';
 /**
  * roles.constants.js
  * Single Responsibility: Master registry of all system permissions, categories,
@@ -9,15 +16,77 @@ import {DOMAIN_PERMISSIONS,domainPermissionDefaults} from '../../../../shared/do
  */
 
 export const ALL_PERMISSIONS = [
-  ...Object.values(DOMAIN_PERMISSIONS).map(p=>({key:p.key,label:p.label,desc:p.desc,category:({team:'Tim & Master Wilayah',rjp:'RJP & Jadwal Sales',warehouse:'Gudang & Logistik',transaction:'Transaksi & Approval',reports:'Laporan & Analitik'})[p.categoryId]})),
-  ...Object.values(VISIT_REVIEW_PERMISSIONS).map(p=>({...p,category:'Transaksi & Approval'})),
-  ...Object.values(ORDER_OPERATION_PERMISSIONS).map(p=>({...p,category:'Transaksi & Approval'})),
-  {key:'can_review_route_change',label:'Putuskan toko tutup / reroute',desc:'Mengikuti tahap, penugasan kasus dan larangan memeriksa usulan sendiri.',category:'RJP & Jadwal Sales'},
-  {key:'can_assign_route_review',label:'Tugaskan pemeriksa rute',desc:'Khusus Admin; delegasi per kasus tanpa menambah hak akses umum.',category:'RJP & Jadwal Sales'},
-  ...Object.entries(TRIP_PERMISSION_LABELS).map(([action,label])=>({key:tripPermission(action),label,desc:'Mengikuti izin akses pengiriman, tahap, penugasan dan kepemilikan trip.',category:'Gudang & Logistik'})),
-  ...[['run','Jalankan pemeriksaan Google'],['propose','Usulkan koreksi outlet'],['apply','Terapkan koreksi outlet'],['assign','Tugaskan pemeriksaan outlet'],['submit','Kirim bukti lapangan outlet'],['review','Periksa bukti lapangan outlet']].map(([action,label])=>({key:`can_${action}_outlet_${['submit','review'].includes(action)?'field':'review'}`,label,desc:'Mengikuti wilayah, kepemilikan dan revisi data.',category:'Tim & Master Wilayah'})),
-  ...[['propose','Usulkan koreksi waktu shift'],['review','Putuskan koreksi waktu shift']].map(([action,label])=>({key:`can_${action}_shift_correction`,label,desc:'Khusus Admin; waktu asli tetap dan setiap keputusan diaudit.',category:'Tim & Master Wilayah'})),
-  ...[['view','Lihat tindak lanjut'],['assign','Tugaskan / alihkan tindak lanjut'],['complete','Kirim hasil tindak lanjut'],['review','Periksa hasil tindak lanjut']].map(([action,label])=>({key:`can_${action}_follow_up`,label,desc:'Tetap mengikuti lingkup tim, kepemilikan dan tahap tugas.',category:'Tim & Master Wilayah'})),
+  ...Object.values(DOMAIN_PERMISSIONS).map((p) => ({
+    key: p.key,
+    label: p.label,
+    desc: p.desc,
+    category: {
+      team: 'Tim & Master Wilayah',
+      rjp: 'RJP & Jadwal Sales',
+      warehouse: 'Gudang & Logistik',
+      transaction: 'Transaksi & Approval',
+      reports: 'Laporan & Analitik',
+    }[p.categoryId],
+  })),
+  ...Object.values(VISIT_REVIEW_PERMISSIONS).map((p) => ({
+    ...p,
+    category: 'Transaksi & Approval',
+  })),
+  ...Object.values(ORDER_OPERATION_PERMISSIONS).map((p) => ({
+    ...p,
+    category: 'Transaksi & Approval',
+  })),
+  {
+    key: 'can_review_route_change',
+    label: 'Putuskan toko tutup / reroute',
+    desc: 'Mengikuti tahap, penugasan kasus dan larangan memeriksa usulan sendiri.',
+    category: 'RJP & Jadwal Sales',
+  },
+  {
+    key: 'can_assign_route_review',
+    label: 'Tugaskan pemeriksa rute',
+    desc: 'Khusus Admin; delegasi per kasus tanpa menambah hak akses umum.',
+    category: 'RJP & Jadwal Sales',
+  },
+  ...Object.entries(TRIP_PERMISSION_LABELS).map(([action, label]) => ({
+    key: tripPermission(action),
+    label,
+    desc: 'Mengikuti izin akses pengiriman, tahap, penugasan dan kepemilikan trip.',
+    category: 'Gudang & Logistik',
+  })),
+  ...[
+    ['run', 'Jalankan pemeriksaan Google'],
+    ['propose', 'Usulkan koreksi outlet'],
+    ['apply', 'Terapkan koreksi outlet'],
+    ['assign', 'Tugaskan pemeriksaan outlet'],
+    ['submit', 'Kirim bukti lapangan outlet'],
+    ['review', 'Periksa bukti lapangan outlet'],
+  ].map(([action, label]) => ({
+    key: `can_${action}_outlet_${['submit', 'review'].includes(action) ? 'field' : 'review'}`,
+    label,
+    desc: 'Mengikuti wilayah, kepemilikan dan revisi data.',
+    category: 'Tim & Master Wilayah',
+  })),
+  ...[
+    ['propose', 'Usulkan koreksi waktu shift'],
+    ['review', 'Putuskan koreksi waktu shift'],
+  ].map(([action, label]) => ({
+    key: `can_${action}_shift_correction`,
+    label,
+    desc: 'Khusus Admin; waktu asli tetap dan setiap keputusan diaudit.',
+    category: 'Tim & Master Wilayah',
+  })),
+  ...[
+    ['view', 'Lihat tindak lanjut'],
+    ['assign', 'Tugaskan / alihkan tindak lanjut'],
+    ['complete', 'Kirim hasil tindak lanjut'],
+    ['review', 'Periksa hasil tindak lanjut'],
+  ].map(([action, label]) => ({
+    key: `can_${action}_follow_up`,
+    label,
+    desc: 'Tetap mengikuti lingkup tim, kepemilikan dan tahap tugas.',
+    category: 'Tim & Master Wilayah',
+  })),
   // 1. Dashboard & Monitoring
   {
     key: 'can_view_dashboard',
@@ -208,7 +277,8 @@ export const BUILT_IN_ROLES = [
   {
     code: 'ADMIN',
     name: 'Admin',
-    description: 'Administrator dengan wewenang penuh mengurus seluruh fitur, operasional, logistik, dan pengaturan sistem.',
+    description:
+      'Administrator dengan wewenang penuh mengurus seluruh fitur, operasional, logistik, dan pengaturan sistem.',
     badgeColor: 'blue',
     isSystem: true,
     workspaceTab: 'role-workspace',
@@ -220,13 +290,19 @@ export const BUILT_IN_ROLES = [
   {
     code: 'SUPERVISOR',
     name: 'Supervisor',
-    description: 'Supervisi tim sales, monitoring live GPS, persetujuan toko baru, validasi koordinat, dan laporan.',
+    description:
+      'Supervisi tim sales, monitoring live GPS, persetujuan toko baru, validasi koordinat, dan laporan.',
     badgeColor: 'purple',
     isSystem: true,
     workspaceTab: 'role-workspace',
     defaultPermissions: {
       ...getEmptyPermissions(),
-      can_view_follow_up:true,can_assign_follow_up:true,can_review_follow_up:true,can_review_route_change:true,can_review_off_pjp:true,can_review_manual_sales:true,
+      can_view_follow_up: true,
+      can_assign_follow_up: true,
+      can_review_follow_up: true,
+      can_review_route_change: true,
+      can_review_off_pjp: true,
+      can_review_manual_sales: true,
       can_view_dashboard: true,
       can_view_live_tracking: true,
       can_view_daily_call: true,
@@ -236,7 +312,11 @@ export const BUILT_IN_ROLES = [
       can_approve_outlet: true,
       can_manage_outlets: true,
       can_validate_outlet: true,
-      can_run_outlet_review:true,can_propose_outlet_review:true,can_apply_outlet_review:true,can_assign_outlet_review:true,can_review_outlet_field:true,
+      can_run_outlet_review: true,
+      can_propose_outlet_review: true,
+      can_apply_outlet_review: true,
+      can_assign_outlet_review: true,
+      can_review_outlet_field: true,
       can_view_outlet_report: true,
       can_create_order: true,
       can_approve_order: true,
@@ -250,13 +330,16 @@ export const BUILT_IN_ROLES = [
   {
     code: 'SALES',
     name: 'Sales Field',
-    description: 'Sales lapangan untuk eksekusi rute PJP, absensi toko, input pesanan PO, dan registrasi NOO.',
+    description:
+      'Sales lapangan untuk eksekusi rute PJP, absensi toko, input pesanan PO, dan registrasi NOO.',
     badgeColor: 'emerald',
     isSystem: true,
     workspaceTab: 'role-workspace',
     defaultPermissions: {
       ...getEmptyPermissions(),
-      can_view_follow_up:true,can_complete_follow_up:true,can_submit_outlet_field:true,
+      can_view_follow_up: true,
+      can_complete_follow_up: true,
+      can_submit_outlet_field: true,
       can_view_dashboard: true,
       can_access_rjp: true,
       can_request_reroute: true,
@@ -267,7 +350,8 @@ export const BUILT_IN_ROLES = [
   {
     code: 'KEPALA_GUDANG',
     name: 'Kepala Gudang',
-    description: 'Manajemen logistik gudang, menerima packing list dari admin, alokasi rute supir, dan monitor pengiriman.',
+    description:
+      'Manajemen logistik gudang, menerima packing list dari admin, alokasi rute supir, dan monitor pengiriman.',
     badgeColor: 'amber',
     isSystem: true,
     workspaceTab: 'role-workspace',
@@ -283,7 +367,8 @@ export const BUILT_IN_ROLES = [
   {
     code: 'SUPIR',
     name: 'Supir Pengiriman',
-    description: 'Armada pengiriman lapangan, navigasi rute pengantaran toko, dan input bukti serah terima barang.',
+    description:
+      'Armada pengiriman lapangan, navigasi rute pengantaran toko, dan input bukti serah terima barang.',
     badgeColor: 'orange',
     isSystem: true,
     workspaceTab: 'role-workspace',
@@ -294,4 +379,9 @@ export const BUILT_IN_ROLES = [
   },
 ];
 
-for(const role of BUILT_IN_ROLES)Object.assign(role.defaultPermissions,tripPermissionDefaults(role.code),domainPermissionDefaults(role.code));
+for (const role of BUILT_IN_ROLES)
+  Object.assign(
+    role.defaultPermissions,
+    tripPermissionDefaults(role.code),
+    domainPermissionDefaults(role.code)
+  );

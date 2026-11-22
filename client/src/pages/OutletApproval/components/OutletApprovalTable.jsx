@@ -47,11 +47,7 @@ export const OutletApprovalTable = ({ items = [], isLoading = false, onReview })
             </thead>
             <tbody className="divide-y divide-border-glass">
               {items.map((item) => (
-                <OutletApprovalTableRow
-                  key={item.id}
-                  item={item}
-                  onReview={onReview}
-                />
+                <OutletApprovalTableRow key={item.id} item={item} onReview={onReview} />
               ))}
             </tbody>
           </DataTable>

@@ -1,146 +1,235 @@
-import {logisticsPages} from './LogisticsPages';
-import { lazyNamed } from "./AppRouter.shared";
-import { PageLoading } from "./AppRouterPageLoading";
-import { RoleWorkspace } from "./AppRouterRoleWorkspace";
-import { Interactive } from "./AppRouterInteractive";
-import { MapOverlay } from "./AppRouterMapOverlay";
+import { logisticsPages } from './LogisticsPages';
+import { lazyNamed } from './AppRouter.shared';
+import { PageLoading } from './AppRouterPageLoading';
+import { RoleWorkspace } from './AppRouterRoleWorkspace';
+import { Interactive } from './AppRouterInteractive';
+import { MapOverlay } from './AppRouterMapOverlay';
 import React, { Suspense } from 'react';
 import { useApp } from '../context/AppContext';
 import { AccessDenied } from '../shared/components/common/AccessDenied';
 import { TAB_IDS, isTabPermissionAllowed } from '../constants/navigation';
-import { ROUTE_PLANNING_ROLES, TEAM_TRACKING_ROLES, REPORTS_ROLES, OUTLET_VALIDATION_ROLES, ROLES, OUTLET_REGISTRATION_ROLES, OUTLET_APPROVAL_ROLES, OUTLET_REGISTRATION_REPORT_ROLES, DAILY_CALL_ROLES, DELIVERY_MANAGEMENT_ROLES, DELIVERY_FIELD_ROLES } from '../constants/roles';
+import {
+  ROUTE_PLANNING_ROLES,
+  TEAM_TRACKING_ROLES,
+  REPORTS_ROLES,
+  OUTLET_VALIDATION_ROLES,
+  ROLES,
+  OUTLET_REGISTRATION_ROLES,
+  OUTLET_APPROVAL_ROLES,
+  OUTLET_REGISTRATION_REPORT_ROLES,
+  DAILY_CALL_ROLES,
+  DELIVERY_MANAGEMENT_ROLES,
+  DELIVERY_FIELD_ROLES,
+} from '../constants/roles';
 
 // Helper for route-level code splitting (Google Web Vitals Best Practice)
 
-const SupervisorMonitorPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorMonitorPage'),'SupervisorMonitorPage');
-const SupervisorApprovalPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorApprovalPage'),'SupervisorApprovalPage');
-const SupervisorFieldPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorFieldPage'),'SupervisorFieldPage');
-const SupervisorAttentionPage=lazyNamed(()=>import('../pages/Supervisor/SupervisorAttentionPage'),'SupervisorAttentionPage');
-const SalesFieldView=lazyNamed(()=>import('../pages/Sales/SalesFieldView'),'SalesFieldView');
-const SalesOrdersPage=lazyNamed(()=>import('../pages/Sales/SalesOrdersPage'),'SalesOrdersPage');
-const SalesFollowUpPage=lazyNamed(()=>import('../pages/Sales/SalesFollowUpPage'),'SalesFollowUpPage');
-const SalesSchedulePage=lazyNamed(()=>import('../pages/Sales/SalesSchedulePage'),'SalesSchedulePage');
-const SalesMapPage=lazyNamed(()=>import('../pages/Sales/SalesMapPage'),'SalesMapPage');
+const SupervisorMonitorPage = lazyNamed(
+  () => import('../pages/Supervisor/SupervisorMonitorPage'),
+  'SupervisorMonitorPage'
+);
+const SupervisorApprovalPage = lazyNamed(
+  () => import('../pages/Supervisor/SupervisorApprovalPage'),
+  'SupervisorApprovalPage'
+);
+const SupervisorFieldPage = lazyNamed(
+  () => import('../pages/Supervisor/SupervisorFieldPage'),
+  'SupervisorFieldPage'
+);
+const SupervisorAttentionPage = lazyNamed(
+  () => import('../pages/Supervisor/SupervisorAttentionPage'),
+  'SupervisorAttentionPage'
+);
+const SalesFieldView = lazyNamed(() => import('../pages/Sales/SalesFieldView'), 'SalesFieldView');
+const SalesOrdersPage = lazyNamed(
+  () => import('../pages/Sales/SalesOrdersPage'),
+  'SalesOrdersPage'
+);
+const SalesFollowUpPage = lazyNamed(
+  () => import('../pages/Sales/SalesFollowUpPage'),
+  'SalesFollowUpPage'
+);
+const SalesSchedulePage = lazyNamed(
+  () => import('../pages/Sales/SalesSchedulePage'),
+  'SalesSchedulePage'
+);
+const SalesMapPage = lazyNamed(() => import('../pages/Sales/SalesMapPage'), 'SalesMapPage');
 const DashboardPage = lazyNamed(() => import('../pages/Dashboard/DashboardPage'), 'DashboardPage');
-const RoutePlanningPage = lazyNamed(() => import('../pages/RoutePlanning/RoutePlanningPage'), 'RoutePlanningPage');
-const CreateClusterPage = lazyNamed(() => import('../pages/RoutePlanning/CreateClusterPage'), 'CreateClusterPage');
-const TeamTrackingPage = lazyNamed(() => import('../pages/TeamTracking/TeamTrackingPage'), 'TeamTrackingPage');
+const RoutePlanningPage = lazyNamed(
+  () => import('../pages/RoutePlanning/RoutePlanningPage'),
+  'RoutePlanningPage'
+);
+const CreateClusterPage = lazyNamed(
+  () => import('../pages/RoutePlanning/CreateClusterPage'),
+  'CreateClusterPage'
+);
+const TeamTrackingPage = lazyNamed(
+  () => import('../pages/TeamTracking/TeamTrackingPage'),
+  'TeamTrackingPage'
+);
 const ReportsPage = lazyNamed(() => import('../pages/Reports/ReportsPage'), 'ReportsPage');
-const AdminAttentionPage = lazyNamed(() => import('../pages/Admin/AdminAttentionPage'), 'AdminAttentionPage');
+const AdminAttentionPage = lazyNamed(
+  () => import('../pages/Admin/AdminAttentionPage'),
+  'AdminAttentionPage'
+);
 const AdminToolPage = lazyNamed(() => import('../pages/Admin/AdminToolPage'), 'AdminToolPage');
-const AdminApprovalPage = lazyNamed(() => import('../pages/Admin/AdminApprovalPage'), 'AdminApprovalPage');
-const AdminConfigPage = lazyNamed(() => import('../pages/Admin/AdminConfigPage'), 'AdminConfigPage');
-const AdminUserListPage = lazyNamed(() => import('../pages/Admin/AdminUserListPage'), 'AdminUserListPage');
-const OutletValidationPage = lazyNamed(() => import('../pages/OutletValidation/OutletValidationPage'), 'OutletValidationPage');
-const OutletManagementPage = lazyNamed(() => import('../pages/OutletManagement/OutletManagementPage'), 'OutletManagementPage');
-const OutletRegistrationPage = lazyNamed(() => import('../pages/OutletRegistration/OutletRegistrationPage'), 'OutletRegistrationPage');
-const OutletApprovalPage = lazyNamed(() => import('../pages/OutletApproval/OutletApprovalPage'), 'OutletApprovalPage');
-const OutletRegistrationReportPage = lazyNamed(() => import('../pages/OutletRegistrationReport/OutletRegistrationReportPage'), 'OutletRegistrationReportPage');
-const DailyCallMonitorPage = lazyNamed(() => import('../pages/DailyCallMonitor/DailyCallMonitorPage'), 'DailyCallMonitorPage');
+const AdminApprovalPage = lazyNamed(
+  () => import('../pages/Admin/AdminApprovalPage'),
+  'AdminApprovalPage'
+);
+const AdminConfigPage = lazyNamed(
+  () => import('../pages/Admin/AdminConfigPage'),
+  'AdminConfigPage'
+);
+const AdminUserListPage = lazyNamed(
+  () => import('../pages/Admin/AdminUserListPage'),
+  'AdminUserListPage'
+);
+const OutletValidationPage = lazyNamed(
+  () => import('../pages/OutletValidation/OutletValidationPage'),
+  'OutletValidationPage'
+);
+const OutletManagementPage = lazyNamed(
+  () => import('../pages/OutletManagement/OutletManagementPage'),
+  'OutletManagementPage'
+);
+const OutletRegistrationPage = lazyNamed(
+  () => import('../pages/OutletRegistration/OutletRegistrationPage'),
+  'OutletRegistrationPage'
+);
+const OutletApprovalPage = lazyNamed(
+  () => import('../pages/OutletApproval/OutletApprovalPage'),
+  'OutletApprovalPage'
+);
+const OutletRegistrationReportPage = lazyNamed(
+  () => import('../pages/OutletRegistrationReport/OutletRegistrationReportPage'),
+  'OutletRegistrationReportPage'
+);
+const DailyCallMonitorPage = lazyNamed(
+  () => import('../pages/DailyCallMonitor/DailyCallMonitorPage'),
+  'DailyCallMonitorPage'
+);
 
 // Delivery Management Pages
 
-const PackingListManager = lazyNamed(() => import('../pages/Warehouse/components/PackingListManager'), 'PackingListManager');
-const DeliveryRouteBuilder = lazyNamed(() => import('../pages/Warehouse/components/DeliveryRouteBuilder'), 'DeliveryRouteBuilder');
-const DeliveryMonitor = lazyNamed(() => import('../pages/Warehouse/components/DeliveryMonitor'), 'DeliveryMonitor');
-const DriverRouteMap = lazyNamed(() => import('../pages/Driver/components/DriverRouteMap'), 'DriverRouteMap');
+const PackingListManager = lazyNamed(
+  () => import('../pages/Warehouse/components/PackingListManager'),
+  'PackingListManager'
+);
+const DeliveryRouteBuilder = lazyNamed(
+  () => import('../pages/Warehouse/components/DeliveryRouteBuilder'),
+  'DeliveryRouteBuilder'
+);
+const DeliveryMonitor = lazyNamed(
+  () => import('../pages/Warehouse/components/DeliveryMonitor'),
+  'DeliveryMonitor'
+);
+const DriverRouteMap = lazyNamed(
+  () => import('../pages/Driver/components/DriverRouteMap'),
+  'DriverRouteMap'
+);
 /**
  * AccessControlMap
  * Single Responsibility: Define which tab requires which roles + denial message.
  */
 const ACCESS_CONTROL = {
-  [TAB_IDS.ADMIN_ATTENTION]: {roles:[ROLES.ADMIN],title:'Akses dibatasi',description:'Halaman tindak lanjut admin hanya tersedia untuk Admin.'},
+  [TAB_IDS.ADMIN_ATTENTION]: {
+    roles: [ROLES.ADMIN],
+    title: 'Akses dibatasi',
+    description: 'Halaman tindak lanjut admin hanya tersedia untuk Admin.',
+  },
   [TAB_IDS.ROUTE_PLANNING]: {
     roles: ROUTE_PLANNING_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Jadwal Master RJP hanya dapat diakses oleh Sales Field, Supervisor, dan Admin.'
+    description:
+      'Halaman Jadwal Master RJP hanya dapat diakses oleh Sales Field, Supervisor, dan Admin.',
   },
   [TAB_IDS.OUTLET_REGISTRATION]: {
     roles: OUTLET_REGISTRATION_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Registrasi Outlet hanya dapat diakses oleh Salesman dan manajemen.'
+    description: 'Halaman Registrasi Outlet hanya dapat diakses oleh Salesman dan manajemen.',
   },
   [TAB_IDS.OUTLET_APPROVAL]: {
     roles: OUTLET_APPROVAL_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Persetujuan Outlet hanya dapat diakses oleh Supervisor dan Admin.'
+    description: 'Halaman Persetujuan Outlet hanya dapat diakses oleh Supervisor dan Admin.',
   },
   [TAB_IDS.OUTLET_REGISTRATION_REPORT]: {
     roles: OUTLET_REGISTRATION_REPORT_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Laporan Registrasi Outlet hanya dapat diakses oleh Supervisor dan Admin.'
+    description: 'Halaman Laporan Registrasi Outlet hanya dapat diakses oleh Supervisor dan Admin.',
   },
   [TAB_IDS.DAILY_CALL_MONITOR]: {
     roles: DAILY_CALL_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Daily Call Monitor hanya dapat diakses oleh Admin dan Supervisor.'
+    description: 'Halaman Daily Call Monitor hanya dapat diakses oleh Admin dan Supervisor.',
   },
   [TAB_IDS.TEAM_TRACKING]: {
     roles: TEAM_TRACKING_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Tim dan RJP hanya dapat diakses oleh pengguna terdaftar.'
+    description: 'Halaman Tim dan RJP hanya dapat diakses oleh pengguna terdaftar.',
   },
   [TAB_IDS.OUTLET_MANAGEMENT]: {
     roles: ['ADMIN', 'SUPERVISOR'],
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Kelola Master Outlet hanya dapat diakses oleh Supervisor atau Admin.'
+    description: 'Halaman Kelola Master Outlet hanya dapat diakses oleh Supervisor atau Admin.',
   },
   [TAB_IDS.REPORTS]: {
     roles: REPORTS_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Laporan dan Analitik hanya dapat diakses oleh Admin dan Supervisor.'
+    description: 'Halaman Laporan dan Analitik hanya dapat diakses oleh Admin dan Supervisor.',
   },
   [TAB_IDS.OUTLET_VALIDATION]: {
     roles: OUTLET_VALIDATION_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Fitur Validasi Outlet dapat diakses oleh Supervisor dan Admin.'
+    description: 'Fitur Validasi Outlet dapat diakses oleh Supervisor dan Admin.',
   },
   [TAB_IDS.MASTER_CLUSTERS]: {
     roles: ['ADMIN', 'SUPERVISOR'],
     title: 'Akses dibatasi',
-    description: 'Pengelolaan kluster memerlukan izin pengelolaan wilayah.'
+    description: 'Pengelolaan kluster memerlukan izin pengelolaan wilayah.',
   },
   [TAB_IDS.CREATE_CLUSTER]: {
     roles: ['ADMIN', 'SUPERVISOR'],
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Hanya Admin atau Supervisor yang dapat membuat cluster baru.'
+    description: 'Hanya Admin atau Supervisor yang dapat membuat cluster baru.',
   },
   // Delivery Management Access Control
   [TAB_IDS.DELIVERY_PACKING_LIST]: {
     roles: [...DELIVERY_MANAGEMENT_ROLES],
     title: 'Akses Dibatasi',
-    description: 'Halaman Packing List hanya dapat diakses oleh Kepala Gudang.'
+    description: 'Halaman Packing List hanya dapat diakses oleh Kepala Gudang.',
   },
   [TAB_IDS.DELIVERY_ROUTES]: {
     roles: [...DELIVERY_MANAGEMENT_ROLES],
     title: 'Akses Dibatasi',
-    description: 'Halaman Rute Pengiriman hanya dapat diakses oleh Kepala Gudang.'
+    description: 'Halaman Rute Pengiriman hanya dapat diakses oleh Kepala Gudang.',
   },
   [TAB_IDS.DELIVERY_MONITOR]: {
     roles: [...DELIVERY_MANAGEMENT_ROLES],
     title: 'Akses Dibatasi',
-    description: 'Halaman Monitor Pengiriman hanya dapat diakses oleh Kepala Gudang.'
+    description: 'Halaman Monitor Pengiriman hanya dapat diakses oleh Kepala Gudang.',
   },
   [TAB_IDS.DELIVERY_DRIVER_MAP]: {
     roles: [...DELIVERY_FIELD_ROLES],
     title: 'Akses Dibatasi',
-    description: 'Halaman Peta Pengiriman hanya dapat diakses oleh Supir.'
+    description: 'Halaman Peta Pengiriman hanya dapat diakses oleh Supir.',
   },
   [TAB_IDS.ADMIN_APPROVAL]: {
     roles: [ROLES.ADMIN],
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Persetujuan Order dan Buka Kunci hanya dapat diakses oleh Admin.'
+    description: 'Halaman Persetujuan Order dan Buka Kunci hanya dapat diakses oleh Admin.',
   },
   [TAB_IDS.SYSTEM_CONFIG]: {
     roles: [ROLES.ADMIN],
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Pengaturan Sistem hanya dapat diakses oleh Admin.'
+    description: 'Halaman Pengaturan Sistem hanya dapat diakses oleh Admin.',
   },
   [TAB_IDS.USER_MANAGEMENT]: {
     roles: [ROLES.ADMIN],
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Manajemen Pengguna hanya dapat diakses oleh Admin.'
-  }
+    description: 'Halaman Manajemen Pengguna hanya dapat diakses oleh Admin.',
+  },
 };
 
 /** Wrapper: full interactive layer (blocks map clicks) */
@@ -150,36 +239,80 @@ const ACCESS_CONTROL = {
  * Single Responsibility: Route the activeTab to the correct page component
  * with built-in Role-Based Access Control (RBAC).
  */
-export const AppRouter = ({
-  activeTab,
-  onGoBack,
-  mapState,
-  setMapState,
-  setMapHandlers
-}) => {
-  const {
-    user
-  } = useApp();
+export const AppRouter = ({ activeTab, onGoBack, mapState, setMapState, setMapHandlers }) => {
+  const { user } = useApp();
   const role = user?.role;
   const permissions = user?.permissions || {};
 
   // Role workspace (home)
   if (activeTab === TAB_IDS.ROLE_WORKSPACE) {
-    return <Interactive><RoleWorkspace role={role} onGoBack={onGoBack} /></Interactive>;
+    return (
+      <Interactive>
+        <RoleWorkspace role={role} onGoBack={onGoBack} />
+      </Interactive>
+    );
   }
 
-  const salesPages={[TAB_IDS.SALES_VISITS]:SalesFieldView,[TAB_IDS.SALES_ORDERS]:SalesOrdersPage,[TAB_IDS.SALES_FOLLOW_UP]:SalesFollowUpPage};
-  if(salesPages[activeTab]){
-    const Page=salesPages[activeTab];
-    return role===ROLES.SALES?<Suspense fallback={<PageLoading/>}><Interactive><Page/></Interactive></Suspense>:<AccessDenied title="Akses dibatasi" description="Halaman ini hanya tersedia untuk Sales." onGoBack={onGoBack}/>;
+  const salesPages = {
+    [TAB_IDS.SALES_VISITS]: SalesFieldView,
+    [TAB_IDS.SALES_ORDERS]: SalesOrdersPage,
+    [TAB_IDS.SALES_FOLLOW_UP]: SalesFollowUpPage,
+  };
+  if (salesPages[activeTab]) {
+    const Page = salesPages[activeTab];
+    return role === ROLES.SALES ? (
+      <Suspense fallback={<PageLoading />}>
+        <Interactive>
+          <Page />
+        </Interactive>
+      </Suspense>
+    ) : (
+      <AccessDenied
+        title="Akses dibatasi"
+        description="Halaman ini hanya tersedia untuk Sales."
+        onGoBack={onGoBack}
+      />
+    );
   }
-  const supervisorPages={[TAB_IDS.SPV_MONITOR]:SupervisorMonitorPage,[TAB_IDS.SPV_APPROVAL]:SupervisorApprovalPage,[TAB_IDS.SPV_FIELD]:SupervisorFieldPage,[TAB_IDS.SPV_ATTENTION]:SupervisorAttentionPage};
-  if(supervisorPages[activeTab]){
-    const Page=supervisorPages[activeTab];
-    return isTabPermissionAllowed(activeTab,user)?<Suspense fallback={<PageLoading/>}><Interactive><Page/></Interactive></Suspense>:<AccessDenied title="Akses dibatasi" description="Halaman ini memerlukan akses Supervisor yang sesuai." onGoBack={onGoBack}/>;
+  const supervisorPages = {
+    [TAB_IDS.SPV_MONITOR]: SupervisorMonitorPage,
+    [TAB_IDS.SPV_APPROVAL]: SupervisorApprovalPage,
+    [TAB_IDS.SPV_FIELD]: SupervisorFieldPage,
+    [TAB_IDS.SPV_ATTENTION]: SupervisorAttentionPage,
+  };
+  if (supervisorPages[activeTab]) {
+    const Page = supervisorPages[activeTab];
+    return isTabPermissionAllowed(activeTab, user) ? (
+      <Suspense fallback={<PageLoading />}>
+        <Interactive>
+          <Page />
+        </Interactive>
+      </Suspense>
+    ) : (
+      <AccessDenied
+        title="Akses dibatasi"
+        description="Halaman ini memerlukan akses Supervisor yang sesuai."
+        onGoBack={onGoBack}
+      />
+    );
   }
 
-  if(logisticsPages[activeTab]){const Page=logisticsPages[activeTab];return isTabPermissionAllowed(activeTab,user)?<Suspense fallback={<PageLoading/>}><Interactive><Page/></Interactive></Suspense>:<AccessDenied title="Akses dibatasi" description="Fitur ini memerlukan peran dan izin yang sesuai." onGoBack={onGoBack}/>;}
+  if (logisticsPages[activeTab]) {
+    const Page = logisticsPages[activeTab];
+    return isTabPermissionAllowed(activeTab, user) ? (
+      <Suspense fallback={<PageLoading />}>
+        <Interactive>
+          <Page />
+        </Interactive>
+      </Suspense>
+    ) : (
+      <AccessDenied
+        title="Akses dibatasi"
+        description="Fitur ini memerlukan peran dan izin yang sesuai."
+        onGoBack={onGoBack}
+      />
+    );
+  }
   // Check RBAC for restricted tabs
   const accessRule = ACCESS_CONTROL[activeTab];
   let hasAccess = false;
@@ -188,31 +321,81 @@ export const AppRouter = ({
       hasAccess = true;
     } else {
       // Check granular permissions bypass
-      if (activeTab === TAB_IDS.ADMIN_APPROVAL && (permissions.can_approve_order || permissions.can_unlock_absensi)) hasAccess = true;
-      if (activeTab === TAB_IDS.DAILY_CALL_MONITOR && permissions.can_view_daily_call) hasAccess = true;
-      if (activeTab === TAB_IDS.ROUTE_PLANNING && (permissions.can_access_rjp || permissions.can_manage_rjp)) hasAccess = true;
-      if (activeTab === TAB_IDS.OUTLET_REGISTRATION && permissions.can_register_outlet) hasAccess = true;
-      if (activeTab === TAB_IDS.OUTLET_MANAGEMENT && permissions.can_manage_outlets) hasAccess = true;
+      if (
+        activeTab === TAB_IDS.ADMIN_APPROVAL &&
+        (permissions.can_approve_order || permissions.can_unlock_absensi)
+      )
+        hasAccess = true;
+      if (activeTab === TAB_IDS.DAILY_CALL_MONITOR && permissions.can_view_daily_call)
+        hasAccess = true;
+      if (
+        activeTab === TAB_IDS.ROUTE_PLANNING &&
+        (permissions.can_access_rjp || permissions.can_manage_rjp)
+      )
+        hasAccess = true;
+      if (activeTab === TAB_IDS.OUTLET_REGISTRATION && permissions.can_register_outlet)
+        hasAccess = true;
+      if (activeTab === TAB_IDS.OUTLET_MANAGEMENT && permissions.can_manage_outlets)
+        hasAccess = true;
       if (activeTab === TAB_IDS.OUTLET_APPROVAL && permissions.can_approve_outlet) hasAccess = true;
-      if (activeTab === TAB_IDS.OUTLET_REGISTRATION_REPORT && permissions.can_view_outlet_report) hasAccess = true;
-      if (activeTab === TAB_IDS.TEAM_TRACKING && (permissions.can_view_team || permissions.can_view_live_tracking)) hasAccess = true;
+      if (activeTab === TAB_IDS.OUTLET_REGISTRATION_REPORT && permissions.can_view_outlet_report)
+        hasAccess = true;
+      if (
+        activeTab === TAB_IDS.TEAM_TRACKING &&
+        (permissions.can_view_team || permissions.can_view_live_tracking)
+      )
+        hasAccess = true;
       if (activeTab === TAB_IDS.REPORTS && permissions.can_view_reports) hasAccess = true;
-      if (activeTab === TAB_IDS.OUTLET_VALIDATION && permissions.can_validate_outlet) hasAccess = true;
-      if ([TAB_IDS.CREATE_CLUSTER, TAB_IDS.MASTER_CLUSTERS].includes(activeTab) && permissions.can_manage_clusters) hasAccess = true;
-      if (activeTab === TAB_IDS.DELIVERY_PACKING_LIST && (permissions.can_manage_delivery || permissions.can_manage_packing_list)) hasAccess = true;
-      if (activeTab === TAB_IDS.DELIVERY_ROUTES && (permissions.can_manage_delivery || permissions.can_manage_delivery_routes)) hasAccess = true;
-      if (activeTab === TAB_IDS.DELIVERY_MONITOR && (permissions.can_manage_delivery || permissions.can_monitor_delivery)) hasAccess = true;
-      if (activeTab === TAB_IDS.DELIVERY_DRIVER_MAP && permissions.can_access_driver_map) hasAccess = true;
-      if (activeTab === TAB_IDS.SYSTEM_CONFIG && permissions.can_manage_system_config) hasAccess = true;
-      if (activeTab === TAB_IDS.USER_MANAGEMENT && (permissions.can_manage_users || permissions.can_manage_roles)) hasAccess = true;
+      if (activeTab === TAB_IDS.OUTLET_VALIDATION && permissions.can_validate_outlet)
+        hasAccess = true;
+      if (
+        [TAB_IDS.CREATE_CLUSTER, TAB_IDS.MASTER_CLUSTERS].includes(activeTab) &&
+        permissions.can_manage_clusters
+      )
+        hasAccess = true;
+      if (
+        activeTab === TAB_IDS.DELIVERY_PACKING_LIST &&
+        (permissions.can_manage_delivery || permissions.can_manage_packing_list)
+      )
+        hasAccess = true;
+      if (
+        activeTab === TAB_IDS.DELIVERY_ROUTES &&
+        (permissions.can_manage_delivery || permissions.can_manage_delivery_routes)
+      )
+        hasAccess = true;
+      if (
+        activeTab === TAB_IDS.DELIVERY_MONITOR &&
+        (permissions.can_manage_delivery || permissions.can_monitor_delivery)
+      )
+        hasAccess = true;
+      if (activeTab === TAB_IDS.DELIVERY_DRIVER_MAP && permissions.can_access_driver_map)
+        hasAccess = true;
+      if (activeTab === TAB_IDS.SYSTEM_CONFIG && permissions.can_manage_system_config)
+        hasAccess = true;
+      if (
+        activeTab === TAB_IDS.USER_MANAGEMENT &&
+        (permissions.can_manage_users || permissions.can_manage_roles)
+      )
+        hasAccess = true;
     }
   } else {
     hasAccess = true; // No rule = public
   }
   hasAccess = hasAccess && isTabPermissionAllowed(activeTab, user);
   if (!hasAccess) {
-    const permissionDenied=accessRule?.roles?.includes(role)&&!isTabPermissionAllowed(activeTab,user);
-    return <AccessDenied title={accessRule?.title||'Akses dibatasi'} description={permissionDenied?'Peran Anda dapat membuka halaman ini, tetapi izin fitur pada akun Anda sedang dinonaktifkan. Hubungi Admin untuk memeriksa hak akses.':accessRule?.description||'Fitur ini memerlukan peran dan izin yang sesuai.'} onGoBack={onGoBack} />;
+    const permissionDenied =
+      accessRule?.roles?.includes(role) && !isTabPermissionAllowed(activeTab, user);
+    return (
+      <AccessDenied
+        title={accessRule?.title || 'Akses dibatasi'}
+        description={
+          permissionDenied
+            ? 'Peran Anda dapat membuka halaman ini, tetapi izin fitur pada akun Anda sedang dinonaktifkan. Hubungi Admin untuk memeriksa hak akses.'
+            : accessRule?.description || 'Fitur ini memerlukan peran dan izin yang sesuai.'
+        }
+        onGoBack={onGoBack}
+      />
+    );
   }
 
   // Public tab routing with Suspense code splitting
@@ -223,75 +406,165 @@ export const AppRouter = ({
     case TAB_IDS.ADMIN_MASTERS:
     case TAB_IDS.ADMIN_VEHICLES:
     case TAB_IDS.ADMIN_ATTENDANCE:
-      tabContent = <Interactive><AdminToolPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <AdminToolPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.ADMIN_ATTENTION:
-      tabContent = <Interactive><AdminAttentionPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <AdminAttentionPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.ADMIN_APPROVAL:
-      tabContent = <Interactive>{role===ROLES.SUPERVISOR?<SupervisorApprovalPage/>:<AdminApprovalPage onGoBack={onGoBack} />}</Interactive>;
+      tabContent = (
+        <Interactive>
+          {role === ROLES.SUPERVISOR ? (
+            <SupervisorApprovalPage />
+          ) : (
+            <AdminApprovalPage onGoBack={onGoBack} />
+          )}
+        </Interactive>
+      );
       break;
     case TAB_IDS.DASHBOARD:
-      tabContent = <MapOverlay>{user?.role==='SALES'?<SalesMapPage/>:<DashboardPage/>}</MapOverlay>;
+      tabContent = (
+        <MapOverlay>{user?.role === 'SALES' ? <SalesMapPage /> : <DashboardPage />}</MapOverlay>
+      );
       break;
     case TAB_IDS.DAILY_CALL_MONITOR:
-      tabContent = <Interactive>{role===ROLES.SUPERVISOR?<SupervisorMonitorPage/>:<DailyCallMonitorPage />}</Interactive>;
+      tabContent = (
+        <Interactive>
+          {role === ROLES.SUPERVISOR ? <SupervisorMonitorPage /> : <DailyCallMonitorPage />}
+        </Interactive>
+      );
       break;
     case TAB_IDS.OUTLET_REGISTRATION:
-      tabContent = <Interactive><OutletRegistrationPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <OutletRegistrationPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.OUTLET_APPROVAL:
-      tabContent = <Interactive><OutletApprovalPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <OutletApprovalPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.OUTLET_REGISTRATION_REPORT:
-      tabContent = <Interactive><OutletRegistrationReportPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <OutletRegistrationReportPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.ROUTE_PLANNING:
-      tabContent = <Interactive>{role===ROLES.SALES?<SalesSchedulePage/>:<RoutePlanningPage />}</Interactive>;
+      tabContent = (
+        <Interactive>
+          {role === ROLES.SALES ? <SalesSchedulePage /> : <RoutePlanningPage />}
+        </Interactive>
+      );
       break;
     case TAB_IDS.MASTER_CLUSTERS:
-      tabContent = <Interactive><RoutePlanningPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <RoutePlanningPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.CREATE_CLUSTER:
       // Map spacer (left) is transparent, but control panel (right) must be clickable
-      tabContent = <MapOverlay><CreateClusterPage /></MapOverlay>;
+      tabContent = (
+        <MapOverlay>
+          <CreateClusterPage />
+        </MapOverlay>
+      );
       break;
     case TAB_IDS.TEAM_TRACKING:
-      tabContent = <Interactive><TeamTrackingPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <TeamTrackingPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.OUTLET_MANAGEMENT:
-      tabContent = <Interactive><OutletManagementPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <OutletManagementPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.REPORTS:
-      tabContent = <Interactive><ReportsPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <ReportsPage />
+        </Interactive>
+      );
       break;
     case TAB_IDS.OUTLET_VALIDATION:
-      tabContent = <Interactive><OutletValidationPage /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <OutletValidationPage />
+        </Interactive>
+      );
       break;
 
     // Delivery Management Tabs
     case TAB_IDS.DELIVERY_PACKING_LIST:
-      tabContent = <Interactive><PackingListManager /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <PackingListManager />
+        </Interactive>
+      );
       break;
     case TAB_IDS.DELIVERY_ROUTES:
-      tabContent = <Interactive><DeliveryRouteBuilder /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <DeliveryRouteBuilder />
+        </Interactive>
+      );
       break;
     case TAB_IDS.DELIVERY_MONITOR:
-      tabContent = <Interactive><DeliveryMonitor /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <DeliveryMonitor />
+        </Interactive>
+      );
       break;
     case TAB_IDS.DELIVERY_DRIVER_MAP:
-      tabContent = <Interactive><DriverRouteMap /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <DriverRouteMap />
+        </Interactive>
+      );
       break;
 
     // Admin System Configuration
     case TAB_IDS.SYSTEM_CONFIG:
-      tabContent = <Interactive><AdminConfigPage onGoBack={onGoBack} /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <AdminConfigPage onGoBack={onGoBack} />
+        </Interactive>
+      );
       break;
     case TAB_IDS.USER_MANAGEMENT:
-      tabContent = <Interactive><AdminUserListPage onGoBack={onGoBack} /></Interactive>;
+      tabContent = (
+        <Interactive>
+          <AdminUserListPage onGoBack={onGoBack} />
+        </Interactive>
+      );
       break;
     default:
-      tabContent = <MapOverlay><DashboardPage /></MapOverlay>;
+      tabContent = (
+        <MapOverlay>
+          <DashboardPage />
+        </MapOverlay>
+      );
       break;
   }
   return <Suspense fallback={<PageLoading />}>{tabContent}</Suspense>;

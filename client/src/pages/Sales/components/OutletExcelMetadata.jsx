@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuCalendar, LuRoute, LuHash } from "react-icons/lu";
+import { LuCalendar, LuRoute, LuHash } from 'react-icons/lu';
 
 /**
  * OutletExcelMetadata Component
@@ -55,7 +55,10 @@ export const OutletExcelMetadata = ({ stop }) => {
           <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-0.5">
             Customer Name
           </span>
-          <span className="font-medium text-on-surface min-w-0 whitespace-normal break-words block" title={customerName}>
+          <span
+            className="font-medium text-on-surface min-w-0 whitespace-normal break-words block"
+            title={customerName}
+          >
             {customerName}
           </span>
         </div>
@@ -77,18 +80,14 @@ export const OutletExcelMetadata = ({ stop }) => {
           <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-0.5">
             Latitude
           </span>
-          <span className="font-mono text-on-surface text-[11px]">
-            {stop.latitude}
-          </span>
+          <span className="font-mono text-on-surface text-[11px]">{stop.latitude}</span>
         </div>
 
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-0.5">
             Longitude
           </span>
-          <span className="font-mono text-on-surface text-[11px]">
-            {stop.longitude}
-          </span>
+          <span className="font-mono text-on-surface text-[11px]">{stop.longitude}</span>
         </div>
       </div>
     </div>

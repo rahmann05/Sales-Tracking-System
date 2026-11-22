@@ -1,8 +1,18 @@
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {createRequire} from 'node:module';
-const client=fileURLToPath(new URL('../../client/',import.meta.url)), require=createRequire(path.join(client,'package.json'));
-const result=await require('esbuild').build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,stdin:{resolveDir:client,loader:'jsx',contents:`
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const client = fileURLToPath(new URL('../../client/', import.meta.url)),
+  require = createRequire(path.join(client, 'package.json'));
+const result = await require('esbuild').build({
+  absWorkingDir: client,
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  write: false,
+  stdin: {
+    resolveDir: client,
+    loader: 'jsx',
+    contents: `
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import assert from 'node:assert/strict';
@@ -32,5 +42,9 @@ html=render({...row,decision:{value:'REQUIRES_CORRECTION',at:'new-request'},deta
 assert.match(html,/Isi formulir di bawah/);
 assert.doesNotMatch(html,/Penjelasan sudah dikirim/);
 console.log('Sales exception UI: 16 assertions passed; pending, time limit, shift, requested, submitted and repeated clarification. SSR only.');
-`}});
-require('node:vm').runInThisContext(`(function(require){${result.outputFiles[0].text}\n})`)(require);
+`,
+  },
+});
+require('node:vm').runInThisContext(`(function(require){${result.outputFiles[0].text}\n})`)(
+  require
+);

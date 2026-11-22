@@ -9,69 +9,89 @@ import { SpvOffPjpModal } from './SpvOffPjpModal';
  * Single Responsibility: Render modal aktif untuk SPV field view sesuai `activeModal`.
  */
 export const SpvFieldModals = ({
-    activeModal, error, saving, spvMode, setSpvMode,
+  activeModal,
+  error,
+  saving,
+  spvMode,
+  setSpvMode,
 
-    selectedStop,
-    inputNotes,
-    onChangeNotes,
-    checklist,
-    onChangeChecklist,
-    followUp, onChangeFollowUp, salesOptions,
-    offPjpForm,
-    onChangeOffPjpForm,
-    onClose,
-    onConfirmAbsenIn,
-    onSaveAudit,
-    onConfirmAbsenOut,
-    onConfirmOffPjp,
+  selectedStop,
+  inputNotes,
+  onChangeNotes,
+  checklist,
+  onChangeChecklist,
+  followUp,
+  onChangeFollowUp,
+  salesOptions,
+  offPjpForm,
+  onChangeOffPjpForm,
+  onClose,
+  onConfirmAbsenIn,
+  onSaveAudit,
+  onConfirmAbsenOut,
+  onConfirmOffPjp,
 }) => {
-    if (activeModal === 'ABSEN_IN' && selectedStop) {
-        return (
-            <SpvAbsenInModal error={error} saving={saving}
-                stop={selectedStop}
-                spvMode={spvMode}
-                onChangeSpvMode={setSpvMode}
-                inputNotes={inputNotes}
-                onChangeNotes={onChangeNotes}
-                onClose={onClose}
-                onConfirm={onConfirmAbsenIn}
-            />
-        );
-    }
+  if (activeModal === 'ABSEN_IN' && selectedStop) {
+    return (
+      <SpvAbsenInModal
+        error={error}
+        saving={saving}
+        stop={selectedStop}
+        spvMode={spvMode}
+        onChangeSpvMode={setSpvMode}
+        inputNotes={inputNotes}
+        onChangeNotes={onChangeNotes}
+        onClose={onClose}
+        onConfirm={onConfirmAbsenIn}
+      />
+    );
+  }
 
-    if (activeModal === 'AUDIT' && selectedStop) {
-        return (
-            <SpvAuditModal error={error} saving={saving}
-                stop={selectedStop}
-                checklist={checklist}
-                onChangeChecklist={onChangeChecklist}
-                followUp={followUp}
-                onChangeFollowUp={onChangeFollowUp}
-                salesOptions={salesOptions}
-                inputNotes={inputNotes}
-                onChangeNotes={onChangeNotes}
-                onClose={onClose}
-                onSave={onSaveAudit}
-            />
-        );
-    }
+  if (activeModal === 'AUDIT' && selectedStop) {
+    return (
+      <SpvAuditModal
+        error={error}
+        saving={saving}
+        stop={selectedStop}
+        checklist={checklist}
+        onChangeChecklist={onChangeChecklist}
+        followUp={followUp}
+        onChangeFollowUp={onChangeFollowUp}
+        salesOptions={salesOptions}
+        inputNotes={inputNotes}
+        onChangeNotes={onChangeNotes}
+        onClose={onClose}
+        onSave={onSaveAudit}
+      />
+    );
+  }
 
-    if (activeModal === 'ABSEN_OUT' && selectedStop) {
-        return <SpvAbsenOutModal error={error} saving={saving} stop={selectedStop} onClose={onClose} onConfirm={onConfirmAbsenOut} />;
-    }
+  if (activeModal === 'ABSEN_OUT' && selectedStop) {
+    return (
+      <SpvAbsenOutModal
+        error={error}
+        saving={saving}
+        stop={selectedStop}
+        onClose={onClose}
+        onConfirm={onConfirmAbsenOut}
+      />
+    );
+  }
 
-    if (activeModal === 'OFF_PJP') {
-        return (
-            <SpvOffPjpModal error={error} saving={saving}
-                spvMode={spvMode}
-                onChangeSpvMode={setSpvMode}
-                form={offPjpForm}
-                onChangeForm={onChangeOffPjpForm}
-                onClose={onClose}
-                onConfirm={onConfirmOffPjp}
-            />
-        );
-    }
+  if (activeModal === 'OFF_PJP') {
+    return (
+      <SpvOffPjpModal
+        error={error}
+        saving={saving}
+        spvMode={spvMode}
+        onChangeSpvMode={setSpvMode}
+        form={offPjpForm}
+        onChangeForm={onChangeOffPjpForm}
+        onClose={onClose}
+        onConfirm={onConfirmOffPjp}
+      />
+    );
+  }
 
-    return null;
+  return null;
 };

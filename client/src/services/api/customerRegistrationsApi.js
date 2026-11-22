@@ -1,7 +1,9 @@
-import { request } from "../httpClient";
+import { request } from '../httpClient';
 export const customerRegistrationsApi = {
-  revise:(id,body)=>request(`/customer-registrations/${id}/revise`,{method:'POST',body:JSON.stringify(body)}),
-  update:(id,body)=>request(`/customer-registrations/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+  revise: (id, body) =>
+    request(`/customer-registrations/${id}/revise`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body) =>
+    request(`/customer-registrations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   getAll: async (params = {}) => {
     const cleanParams = {};
     Object.entries(params).forEach(([k, v]) => {
@@ -14,7 +16,7 @@ export const customerRegistrationsApi = {
   },
   searchPlaces: async (q, lat, lng) => {
     const params = new URLSearchParams({
-      q
+      q,
     });
     if (Number.isFinite(lat)) params.append('lat', lat);
     if (Number.isFinite(lng)) params.append('lng', lng);
@@ -23,35 +25,35 @@ export const customerRegistrationsApi = {
   reverseGeocode: async (lat, lng) => {
     return await request(`/customer-registrations/reverse-geocode?lat=${lat}&lng=${lng}`);
   },
-  getById: async id => {
+  getById: async (id) => {
     return await request(`/customer-registrations/${id}`);
   },
-  create: async data => {
+  create: async (data) => {
     return await request('/customer-registrations', {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
   approve: async (id, note = '') => {
     return await request(`/customer-registrations/${id}/approve`, {
       method: 'PATCH',
       body: JSON.stringify({
-        note
-      })
+        note,
+      }),
     });
   },
   reject: async (id, reason) => {
     return await request(`/customer-registrations/${id}/reject`, {
       method: 'PATCH',
       body: JSON.stringify({
-        reason
-      })
+        reason,
+      }),
     });
   },
   finalize: async (id, data) => {
     return await request(`/customer-registrations/${id}/finalize`, {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
-  }
+  },
 };

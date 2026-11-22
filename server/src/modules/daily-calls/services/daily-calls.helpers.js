@@ -6,9 +6,12 @@ export function formatTimeOnly(date) {
   if (!date) return '-';
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
-  return d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
-
 
 export function formatDurationHhMm(mins) {
   if (mins === null || mins === undefined || isNaN(mins)) return '00:00';

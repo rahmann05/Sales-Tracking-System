@@ -1,4 +1,4 @@
-import { request } from "../httpClient";
+import { request } from '../httpClient';
 export const dailyCallsApi = {
   getReport: async (params = {}) => {
     const cleanParams = {};
@@ -9,5 +9,5 @@ export const dailyCallsApi = {
     });
     const query = new URLSearchParams(cleanParams).toString();
     return await request(`/daily-calls${query ? `?${query}` : ''}`);
-  }
+  },
 };

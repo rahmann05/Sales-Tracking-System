@@ -1,6 +1,19 @@
-import { LuSearch, LuCalendar, LuUser, LuDownload, LuRefreshCw, LuPrinter, LuPlus, LuHourglass, LuTriangleAlert, LuClock, LuShieldAlert, LuCheck } from "react-icons/lu";
-import {useApp} from '../../../context/AppContext';
-import {reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
+import {
+  LuSearch,
+  LuCalendar,
+  LuUser,
+  LuDownload,
+  LuRefreshCw,
+  LuPrinter,
+  LuPlus,
+  LuHourglass,
+  LuTriangleAlert,
+  LuClock,
+  LuShieldAlert,
+  LuCheck,
+} from 'react-icons/lu';
+import { useApp } from '../../../context/AppContext';
+import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
 
 /**
  * DailyCallFilterBar Component
@@ -24,7 +37,8 @@ export const DailyCallFilterBar = ({
   hideActions = false,
   showStatusPills = true,
 }) => {
-  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
+  const { user, settings } = useApp(),
+    canExport = reportExportAllowed(user, settings);
   const filterOptions = [
     { key: 'ALL', label: 'Semua Kunjungan', icon: null },
     { key: 'EFFECTIVE_CALL', label: 'Effective Call (EC)', icon: LuCheck },
@@ -45,7 +59,9 @@ export const DailyCallFilterBar = ({
       }
     >
       {/* Top Filter Controls: Date, Salesman, Search, Actions */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${hideActions ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-3`}>
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 ${hideActions ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-3`}
+      >
         {/* 1. Date Picker */}
         <div className="relative">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
@@ -77,7 +93,8 @@ export const DailyCallFilterBar = ({
               <option value="">Semua Salesman (Tim)</option>
               {salesTeam.map((sales) => (
                 <option key={sales.id} value={sales.id}>
-                  {sales.name} ({sales.cluster?.name || 'Belum ditugaskan'}){sales.historicalOnly ? ' · Riwayat periode' : ''}
+                  {sales.name} ({sales.cluster?.name || 'Belum ditugaskan'})
+                  {sales.historicalOnly ? ' · Riwayat periode' : ''}
                 </option>
               ))}
             </select>
@@ -117,7 +134,7 @@ export const DailyCallFilterBar = ({
             <button
               type="button"
               onClick={onExport}
-              disabled={!canExport||isLoading}
+              disabled={!canExport || isLoading}
               className="flex-1 h-10 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Ekspor Laporan Format Excel ND6"
             >
@@ -127,7 +144,7 @@ export const DailyCallFilterBar = ({
             <button
               type="button"
               onClick={onOpenPdf}
-              disabled={!canExport||isLoading}
+              disabled={!canExport || isLoading}
               className="flex-1 h-10 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / PDF Resmi"
             >
@@ -163,4 +180,3 @@ export const DailyCallFilterBar = ({
     </div>
   );
 };
-

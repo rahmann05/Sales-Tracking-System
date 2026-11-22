@@ -1,9 +1,16 @@
-import {VisitOutcomeAttachments} from '../../../shared/components/common/VisitOutcomeAttachments';
+import { VisitOutcomeAttachments } from '../../../shared/components/common/VisitOutcomeAttachments';
 import React from 'react';
-import { LuX, LuMapPin, LuCamera, LuShoppingBag, LuExternalLink, LuCircleCheck } from "react-icons/lu";
+import {
+  LuX,
+  LuMapPin,
+  LuCamera,
+  LuShoppingBag,
+  LuExternalLink,
+  LuCircleCheck,
+} from 'react-icons/lu';
 import { FiAlertTriangle } from 'react-icons/fi';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
-import {reportVisitAttendance} from '../../../../../shared/report-presentation.mjs';
+import { reportVisitAttendance } from '../../../../../shared/report-presentation.mjs';
 
 /**
  * DailyCallDetailModal Component
@@ -11,12 +18,19 @@ import {reportVisitAttendance} from '../../../../../shared/report-presentation.m
  */
 export const DailyCallDetailModal = ({ row, onClose }) => {
   if (!row) return null;
-  const attendance=reportVisitAttendance(row);
+  const attendance = reportVisitAttendance(row);
 
-  const googleMapsUrl = [row.customerLat,row.customerLng].every(Number.isFinite)?`https://www.google.com/maps/search/?api=1&query=${row.customerLat},${row.customerLng}`:null;
+  const googleMapsUrl = [row.customerLat, row.customerLng].every(Number.isFinite)
+    ? `https://www.google.com/maps/search/?api=1&query=${row.customerLat},${row.customerLng}`
+    : null;
 
   return (
-    <NativeDialog open title={`Detail kunjungan · ${row.customerName}`} onClose={onClose} className="spv-form-dialog">
+    <NativeDialog
+      open
+      title={`Detail kunjungan · ${row.customerName}`}
+      onClose={onClose}
+      className="spv-form-dialog"
+    >
       <div className="space-y-4">
         {/* Modal Header */}
         <div className="flex items-start justify-between pb-3 border-b border-border-glass">
@@ -35,7 +49,6 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
               <span>{row.customerAddress}</span>
             </p>
           </div>
-
         </div>
 
         {/* Warning Banner if Anomaly */}
@@ -48,13 +61,20 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
             <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
               {row.isDurationAnomaly && (
                 <li>
-                  <strong>Durasi terlalu singkat:</strong> {row.durationMinutes} menit (batas kunjungan: {row.minimumDuration??'belum tersedia'} menit).
-                  {row.earlyReason && <span> Alasan: <em>"{row.earlyReason}"</em></span>}
+                  <strong>Durasi terlalu singkat:</strong> {row.durationMinutes} menit (batas
+                  kunjungan: {row.minimumDuration ?? 'belum tersedia'} menit).
+                  {row.earlyReason && (
+                    <span>
+                      {' '}
+                      Alasan: <em>"{row.earlyReason}"</em>
+                    </span>
+                  )}
                 </li>
               )}
               {row.isDistanceAnomaly && (
                 <li>
-                  <strong>Deviasi GPS melebihi toleransi:</strong> {row.deviationMeters} meter dari titik toko (radius aturan: {row.radiusMeters??'belum tersedia'} meter).
+                  <strong>Deviasi GPS melebihi toleransi:</strong> {row.deviationMeters} meter dari
+                  titik toko (radius aturan: {row.radiusMeters ?? 'belum tersedia'} meter).
                 </li>
               )}
             </ul>
@@ -64,22 +84,40 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
         {/* Quick Grid Information */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3.5 bg-surface-container rounded-2xl text-xs">
           <div>
-            <span className="text-[10px] text-on-surface-variant font-semibold block">Salesman</span>
+            <span className="text-[10px] text-on-surface-variant font-semibold block">
+              Salesman
+            </span>
             <strong className="text-on-surface">{row.salesmanName}</strong>
           </div>
           <div>
-            <span className="text-[10px] text-on-surface-variant font-semibold block">Jam Kunjungan</span>
+            <span className="text-[10px] text-on-surface-variant font-semibold block">
+              Jam Kunjungan
+            </span>
             <strong className="text-on-surface">{attendance.entry}</strong>
-            {attendance.exit&&<span className="text-[11px] text-on-surface-variant block">{attendance.exit}</span>}
+            {attendance.exit && (
+              <span className="text-[11px] text-on-surface-variant block">{attendance.exit}</span>
+            )}
           </div>
           <div>
-            <span className="text-[10px] text-on-surface-variant font-semibold block">Durasi Kunjungan</span>
-            <strong className="text-on-surface font-mono">{attendance.duration||'Tidak tersedia'}</strong>
-            {row.durationMinutes!=null&&<span className="text-[10px] text-on-surface-variant block">({row.durationMinutes} menit)</span>}
+            <span className="text-[10px] text-on-surface-variant font-semibold block">
+              Durasi Kunjungan
+            </span>
+            <strong className="text-on-surface font-mono">
+              {attendance.duration || 'Tidak tersedia'}
+            </strong>
+            {row.durationMinutes != null && (
+              <span className="text-[10px] text-on-surface-variant block">
+                ({row.durationMinutes} menit)
+              </span>
+            )}
           </div>
           <div>
-            <span className="text-[10px] text-on-surface-variant font-semibold block">Effective Call (EC)</span>
-            <strong className={`inline-flex items-center gap-1 ${row.effectiveCall === 'Y' ? 'text-purple-600' : 'text-amber-600'}`}>
+            <span className="text-[10px] text-on-surface-variant font-semibold block">
+              Effective Call (EC)
+            </span>
+            <strong
+              className={`inline-flex items-center gap-1 ${row.effectiveCall === 'Y' ? 'text-purple-600' : 'text-amber-600'}`}
+            >
               {row.effectiveCall === 'Y' ? (
                 <>
                   <LuCircleCheck className="text-xs text-purple-600" />
@@ -92,7 +130,10 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
                 </>
               )}
             </strong>
-            <span className="text-[10px] text-on-surface-variant block">Mengikuti penjualan yang diakui laporan. Order menunggu persetujuan dan catatan pembayaran tidak otomatis menjadi EC.</span>
+            <span className="text-[10px] text-on-surface-variant block">
+              Mengikuti penjualan yang diakui laporan. Order menunggu persetujuan dan catatan
+              pembayaran tidak otomatis menjadi EC.
+            </span>
           </div>
         </div>
 
@@ -103,19 +144,28 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
               <LuShoppingBag className="text-primary" /> Nilai order kunjungan:
             </span>
             <strong className="text-sm font-black text-emerald-600">
-              {row.orderAmount===null?'Dibatasi aturan laporan':`Rp ${(row.orderAmount||0).toLocaleString('id-ID')}`}
+              {row.orderAmount === null
+                ? 'Dibatasi aturan laporan'
+                : `Rp ${(row.orderAmount || 0).toLocaleString('id-ID')}`}
             </strong>
           </div>
           <div className="flex items-center justify-between text-[11px] text-on-surface-variant border-t border-border-glass pt-2">
-            <span>Jumlah SKU Terjual: <strong>{row.skuSold} SKU</strong></span>
-            <span>Status Call: <strong>Plan {row.planCall} • Actual {row.actualCall}</strong></span>
+            <span>
+              Jumlah SKU Terjual: <strong>{row.skuSold} SKU</strong>
+            </span>
+            <span>
+              Status Call:{' '}
+              <strong>
+                Plan {row.planCall} • Actual {row.actualCall}
+              </strong>
+            </span>
           </div>
           {row.reason && (
             <div className="text-[11px] text-rose-700 bg-rose-500/10 p-2 rounded-xl border border-rose-500/20">
               <strong>Keterangan Non-EC:</strong> {row.reason}
             </div>
           )}
-          <VisitOutcomeAttachments value={row.visitOutcome}/>
+          <VisitOutcomeAttachments value={row.visitOutcome} />
           {row.remark && (
             <div className="text-[11px] text-on-surface-variant">
               <strong>Catatan Sales:</strong> {row.remark}
@@ -131,7 +181,9 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Foto IN */}
             <div className="space-y-1">
-              <span className="text-[11px] text-on-surface-variant font-semibold">Foto Absen IN (Check-In):</span>
+              <span className="text-[11px] text-on-surface-variant font-semibold">
+                Foto Absen IN (Check-In):
+              </span>
               <div className="relative h-44 rounded-xl overflow-hidden border border-border-glass bg-slate-900 flex items-center justify-center">
                 {row.photoIn ? (
                   <img
@@ -141,7 +193,8 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
-                      e.currentTarget.src = 'https://placehold.co/400x300/1e293b/94a3b8?text=Foto+IN+Tidak+Tersedia';
+                      e.currentTarget.src =
+                        'https://placehold.co/400x300/1e293b/94a3b8?text=Foto+IN+Tidak+Tersedia';
                     }}
                   />
                 ) : (
@@ -152,7 +205,9 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
 
             {/* Foto OUT */}
             <div className="space-y-1">
-              <span className="text-[11px] text-on-surface-variant font-semibold">Foto Absen OUT (Check-Out):</span>
+              <span className="text-[11px] text-on-surface-variant font-semibold">
+                Foto Absen OUT (Check-Out):
+              </span>
               <div className="relative h-44 rounded-xl overflow-hidden border border-border-glass bg-slate-900 flex items-center justify-center">
                 {row.photoOut ? (
                   <img
@@ -162,7 +217,8 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
-                      e.currentTarget.src = 'https://placehold.co/400x300/1e293b/94a3b8?text=Foto+OUT+Tidak+Tersedia';
+                      e.currentTarget.src =
+                        'https://placehold.co/400x300/1e293b/94a3b8?text=Foto+OUT+Tidak+Tersedia';
                     }}
                   />
                 ) : (
@@ -175,17 +231,20 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
 
         {/* Footer Link to Google Maps */}
         <div className="pt-2">
-          {googleMapsUrl?<a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-2.5 px-4 bg-primary text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm hover:opacity-95"
-          >
-            <LuExternalLink /> Buka Lokasi Toko di Google Maps
-          </a>:<p className="text-xs">Titik lokasi tidak tersedia atau dibatasi aturan laporan.</p>}
+          {googleMapsUrl ? (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 bg-primary text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm hover:opacity-95"
+            >
+              <LuExternalLink /> Buka Lokasi Toko di Google Maps
+            </a>
+          ) : (
+            <p className="text-xs">Titik lokasi tidak tersedia atau dibatasi aturan laporan.</p>
+          )}
         </div>
       </div>
     </NativeDialog>
   );
 };
-

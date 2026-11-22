@@ -20,7 +20,8 @@ export const googleDirectionsService = {
 
     if (waypoints.length > 0) {
       const waypointsStr = waypoints
-        .filter(w=>(w.lat??w.latitude)!=null&&(w.lng??w.longitude)!=null).map((w) => `${w.lat ?? w.latitude},${w.lng ?? w.longitude}`)
+        .filter((w) => (w.lat ?? w.latitude) != null && (w.lng ?? w.longitude) != null)
+        .map((w) => `${w.lat ?? w.latitude},${w.lng ?? w.longitude}`)
         .join('|');
       url += `&waypoints=${encodeURIComponent(waypointsStr)}`;
     }
@@ -33,8 +34,20 @@ export const googleDirectionsService = {
    * or backend routing API (/api/v1/routing/road-route) with graceful fallback.
    */
   fetchDirectionsRoute: async (origin, waypoints = []) => {
-    if((origin?.lat??origin?.latitude)==null||(origin?.lng??origin?.longitude)==null||waypoints.some(w=>(w?.lat??w?.latitude)==null||(w?.lng??w?.longitude)==null))throw new Error('Koordinat sebagian tujuan belum tersedia. Periksa data lokasi sebelum menghitung rute.');
-    const rawOrigin = { googleMapsOnly:origin.googleMapsOnly,outletId:origin.outletId,lat: Number(origin?.lat ?? origin?.latitude), lng: Number(origin?.lng ?? origin?.longitude) };
+    if (
+      (origin?.lat ?? origin?.latitude) == null ||
+      (origin?.lng ?? origin?.longitude) == null ||
+      waypoints.some((w) => (w?.lat ?? w?.latitude) == null || (w?.lng ?? w?.longitude) == null)
+    )
+      throw new Error(
+        'Koordinat sebagian tujuan belum tersedia. Periksa data lokasi sebelum menghitung rute.'
+      );
+    const rawOrigin = {
+      googleMapsOnly: origin.googleMapsOnly,
+      outletId: origin.outletId,
+      lat: Number(origin?.lat ?? origin?.latitude),
+      lng: Number(origin?.lng ?? origin?.longitude),
+    };
     const directPath = [rawOrigin];
 
     const validWaypoints = [];
@@ -42,7 +55,7 @@ export const googleDirectionsService = {
       const lat = Number(wp?.lat ?? wp?.latitude);
       const lng = Number(wp?.lng ?? wp?.longitude);
       if (!isNaN(lat) && !isNaN(lng)) {
-        directPath.push({ lat, lng,googleMapsOnly:wp.googleMapsOnly,outletId:wp.outletId });
+        directPath.push({ lat, lng, googleMapsOnly: wp.googleMapsOnly, outletId: wp.outletId });
         validWaypoints.push({ lat, lng });
       }
     });
@@ -54,43 +67,60 @@ export const googleDirectionsService = {
       try {
         const directionsService = new window.google.maps.DirectionsService();
         const dest = directPath[directPath.length - 1];
-        const midPoints = directPath.slice(1, -1).slice(0, 23).map((pt) => ({
-          location: { lat: pt.lat, lng: pt.lng },
-          stopover: true,
-        }));
+        const midPoints = directPath
+          .slice(1, -1)
+          .slice(0, 23)
+          .map((pt) => ({
+            location: { lat: pt.lat, lng: pt.lng },
+            stopover: true,
+          }));
 
         let timeout;
-        const result = await Promise.race([new Promise((resolve, reject) => {
-          directionsService.route(
-            {
-              origin: {lat:rawOrigin.lat,lng:rawOrigin.lng},
-              destination: {lat:dest.lat,lng:dest.lng},
-              waypoints: midPoints,
-              travelMode: window.google.maps.TravelMode.DRIVING,
-            },
-            (response, status) => {
-              if (status === window.google.maps.DirectionsStatus.OK && response?.routes?.[0]?.overview_path) {
-                const path = response.routes[0].overview_path.map((p) => ({
-                  lat: p.lat(),
-                  lng: p.lng(),
-                }));
-                resolve(path);
-              } else {
-                reject(new Error(`DirectionsService status: ${status}`));
+        const result = await Promise.race([
+          new Promise((resolve, reject) => {
+            directionsService.route(
+              {
+                origin: { lat: rawOrigin.lat, lng: rawOrigin.lng },
+                destination: { lat: dest.lat, lng: dest.lng },
+                waypoints: midPoints,
+                travelMode: window.google.maps.TravelMode.DRIVING,
+              },
+              (response, status) => {
+                if (
+                  status === window.google.maps.DirectionsStatus.OK &&
+                  response?.routes?.[0]?.overview_path
+                ) {
+                  const path = response.routes[0].overview_path.map((p) => ({
+                    lat: p.lat(),
+                    lng: p.lng(),
+                  }));
+                  resolve(path);
+                } else {
+                  reject(new Error(`DirectionsService status: ${status}`));
+                }
               }
-            }
-          );
-        }),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('DirectionsService timeout')),8000);})]).finally(()=>clearTimeout(timeout));
+            );
+          }),
+          new Promise((_, reject) => {
+            timeout = setTimeout(() => reject(new Error('DirectionsService timeout')), 8000);
+          }),
+        ]).finally(() => clearTimeout(timeout));
 
         if (result && result.length > 0) return result;
       } catch (sdkErr) {
-        console.warn('[googleDirectionsService] SDK route failed, falling back to backend:', sdkErr.message);
+        console.warn(
+          '[googleDirectionsService] SDK route failed, falling back to backend:',
+          sdkErr.message
+        );
       }
     }
 
     // Strategy 2: Backend routing service (/api/v1/routing/road-route)
     try {
-      const data=await request('/routing/road-route',{method:'POST',body:JSON.stringify({waypoints:directPath})});
+      const data = await request('/routing/road-route', {
+        method: 'POST',
+        body: JSON.stringify({ waypoints: directPath }),
+      });
       if (data.success && data.data?.legs?.length > 0) {
         const fullPath = data.data.legs.flatMap((l) => l.path || []);
         if (fullPath.length > 0) return fullPath;

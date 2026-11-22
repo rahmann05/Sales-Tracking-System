@@ -1,42 +1,512 @@
-import React,{useState,useEffect,useCallback} from 'react';
-import {useApp} from '../../../context/AppContext';
-import {useOperationRequest} from '../../../shared/hooks/useOperationRequest';
-import {useUnsavedNavigation} from '../../../shared/hooks/useUnsavedNavigation';
-import {deliveryApi} from '../../../services/api';
-import {canDomainAction} from '../../../../../shared/domain-permissions.mjs';
-import {canHandleIssue,issueIndependent,issueResponsibleRole,issueForOwner} from '../../../../../shared/operational-issues.mjs';
-import {responsibleLabels} from '../../../../../shared/operational-attention.mjs';
-const stamp=value=>value?new Date(value).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})+' WIB':'Tanpa tenggat khusus';
-const mapUrl=point=>point?.latitude!=null&&point?.longitude!=null?`https://www.google.com/maps/search/?api=1&query=${Number(point.latitude)},${Number(point.longitude)}`:null;
-const locationOutcomes=[['','Pilih hasil pemeriksaan'],['MASTER_POINT_WRONG','Titik toko perlu dikoreksi'],['DRIVER_ATTENDANCE_INVALID','Absensi supir tidak sesuai'],['GPS_INACCURATE','Akurasi GPS tidak memadai'],['LEGITIMATE_DIFFERENCE','Perbedaan wajar dan terverifikasi']];
-const actions={CLAIM:'Ambil penanganan',NOTE:'Catat perkembangan',RESOLVE:'Selesaikan masalah',REASSIGN:'Alihkan penanganan',REOPEN:'Buka kembali'};
-export function OperationalIssues({issues:initialIssues,people:initialPeople=[],reference,onChanged=()=>{}}){
- const {user}=useApp(),request=useOperationRequest(`issue:${JSON.stringify(reference||{})}`);
- const [loaded,setLoaded]=useState(null),[adding,setAdding]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[title,setTitle]=useState(''),[reason,setReason]=useState(''),[kind,setKind]=useState('CONTEXT'),[owner,setOwner]=useState(''),[due,setDue]=useState(''),[editing,setEditing]=useState(null),[note,setNote]=useState(''),[outcome,setOutcome]=useState('');
- const referenceKey=JSON.stringify(reference||{});
- const reload=useCallback(async()=>{if(!reference&&initialIssues!==undefined)return;try{const response=await deliveryApi.getIssues({...reference,status:'ALL'});setLoaded(response.data);setError('');}catch(e){setError(e.message);}},[referenceKey,initialIssues!==undefined]);
- useEffect(()=>{setLoaded(null);reload();},[reload]);
- const issues=loaded?.issues||initialIssues||[],people=loaded?.people||initialPeople;
- const canReport=reference&&canDomainAction(user,'REPORT_OPERATIONAL_ISSUE');
- const recipientRole=issueResponsibleRole(reference||{},kind);
- const canAssign=['ADMIN','KEPALA_GUDANG','SUPERVISOR'].includes(user?.role);
- useUnsavedNavigation(Boolean(adding&&(title||reason||owner||due)||editing&&(note||owner||outcome)),busy);
- const run=async fn=>{if(busy)return;setBusy(true);setError('');try{await fn();setAdding(false);setEditing(null);setTitle('');setReason('');setKind('CONTEXT');setOwner('');setDue('');setNote('');setOutcome('');await reload();await onChanged();window.dispatchEvent(new Event('operational-data-changed'));}catch(e){setError(e.message);}finally{setBusy(false);}};
- const start=(issue,action)=>{if((note||owner||outcome)&&!window.confirm('Isian belum disimpan. Ganti tindakan?'))return;setEditing({id:issue.id,action});setNote('');setOwner('');setOutcome('');};
- return <section className="space-y-3 work-issues" aria-label="Masalah dan keluhan"><div className="flex justify-between gap-3 items-center"><h3 className="font-semibold">Masalah / keluhan {issues.length>0&&`(${issues.length})`}</h3>{canReport&&<button className="admin-button" disabled={busy} type="button" onClick={()=>setAdding(value=>!value)}>{adding?'Batal melapor':'Laporkan masalah'}</button>}</div>
- {reference&&!issues.length&&!adding&&<p className="admin-footnote">Tidak ada masalah tercatat. Buka bagian ini hanya bila ada kendala; transaksi biasa dapat langsung dilanjutkan.</p>}
- {error&&<p role="alert" className="admin-feedback error">{error}</p>}
- {adding&&<form className="work-target-card space-y-3" onSubmit={e=>{e.preventDefault();run(async()=>{await deliveryApi.createIssue(await request.identify({...reference,title,reason,kind,...(owner?{ownerId:owner}:{}),...(due?{dueAt:new Date(`${due}:00+07:00`).toISOString()}: {})}));request.clear();});}}><fieldset disabled={busy} className="space-y-3"><p className="work-step-intro">Penerima otomatis: {responsibleLabels[recipientRole]}. Jelaskan masalah dan bantuan yang dibutuhkan. Anda dapat memantau hasilnya di sini.</p>{(reference.orderId||reference.salesVisitId)&&<label className="block">Bantuan yang dibutuhkan<select className="form-input block w-full" value={kind} onChange={e=>{setKind(e.target.value);setOwner('');}}><option value="CONTEXT">{reference.orderId?'Isi order / dokumen — Admin':'Arahan kunjungan — Supervisor'}</option><option value="GOODS">Barang / pengiriman — Tim gudang</option></select></label>}<label className="block">Masalah<input required maxLength={200} className="form-input block w-full" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Contoh: dua karton rusak saat diterima"/></label><label className="block">Apa yang terjadi dan bantuan yang dibutuhkan<textarea required maxLength={2000} className="form-input block w-full" value={reason} onChange={e=>setReason(e.target.value)}/></label>{canAssign&&<details><summary className="min-h-11 cursor-pointer">Penerima khusus / tenggat (opsional)</summary>{user.role!=='SUPERVISOR'&&<label className="block">Penerima<select className="form-input block w-full" value={owner} onChange={e=>setOwner(e.target.value)}><option value="">Antrean tim sesuai transaksi</option>{people.filter(p=>p.role!=='SUPIR'&&canHandleIssue(p,issueForOwner({responsibleRole:recipientRole},p))).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}<label className="block">Tenggat WIB<input type="datetime-local" className="form-input block w-full" value={due} onChange={e=>setDue(e.target.value)}/></label></details>}<button className="admin-button primary" type="submit">{busy?'Menyimpan…':'Kirim laporan'}</button></fieldset></form>}
- {issues.map(issue=>{const evidence=(issue.history||[]).find(item=>['LOCATION_DISCREPANCY','TRIP_ENDPOINT_DISCREPANCY'].includes(item.action)),independent=issueIndependent(issue),eligible=canHandleIssue(user,issue),canAct=eligible&&(!issue.ownerId||issue.ownerId===user.id||user.role==='ADMIN'),active=editing?.id===issue.id;
- const handler=issue.ownerName||people.find(p=>p.id===issue.ownerId)?.name||(issue.ownerId?'Petugas yang ditugaskan':responsibleLabels[issue.responsibleRole]||'Tim gudang');
- return <article key={issue.id} className="work-target-card space-y-3"><div><span className="admin-status">{issue.status==='DONE'?'Selesai':issue.ownerId?'Sedang ditangani':'Menunggu penanganan tim'}</span><h4 className="font-semibold mt-2">{issue.title}</h4><p className="whitespace-pre-wrap">{issue.reason}</p><p className="admin-footnote">Ditangani oleh {handler} · {stamp(issue.dueAt)}</p></div>
- {issue.status==='DONE'&&<p className="work-step-intro"><strong>Hasil penyelesaian</strong>{issue.resolution}</p>}
- {evidence&&<details><summary className="min-h-11 cursor-pointer">Bukti perbedaan lokasi · {Math.round(evidence.distanceMeters)} m</summary><p>Jarak ini hanya untuk pemeriksaan kesesuaian titik. Periksa foto dan akurasi GPS sebelum memutuskan penyebab.</p><div className="flex flex-wrap gap-3">{mapUrl(evidence.target||evidence.planned)&&<a className="admin-table-link" href={mapUrl(evidence.target||evidence.planned)} target="_blank" rel="noopener noreferrer">Titik yang direncanakan</a>}{mapUrl(evidence.attendance||evidence.actual)&&<a className="admin-table-link" href={mapUrl(evidence.attendance||evidence.actual)} target="_blank" rel="noopener noreferrer">GPS absen aktual</a>}</div>{(evidence.photoUrl||evidence.actual?.photoUrl)&&<img className="max-h-72 rounded-xl mt-2" src={evidence.photoUrl||evidence.actual.photoUrl} alt="Foto bukti absensi supir"/>}</details>}
- {canAct&&!active&&<div className="work-issue-actions">{issue.status==='OPEN'?<>{!issue.ownerId&&<button className="admin-button primary" disabled={busy} onClick={()=>run(()=>deliveryApi.changeIssue(issue.id,{action:'CLAIM'}))}>Ambil penanganan</button>}<button className={`admin-button ${issue.ownerId?'primary':''}`} disabled={busy} onClick={()=>start(issue,'RESOLVE')}>Catat hasil penyelesaian</button><details><summary className="min-h-11 cursor-pointer">Tindakan lain</summary><button className="admin-button" onClick={()=>start(issue,'NOTE')}>Catat perkembangan</button>{canAssign&&<button className="admin-button" onClick={()=>start(issue,'REASSIGN')}>Alihkan penanganan</button>}</details></>:canAssign&&<button className="admin-button" onClick={()=>start(issue,'REOPEN')}>Buka kembali bila belum tuntas</button>}</div>}
- {!canAct&&issue.status==='OPEN'&&issue.createdById===user.id&&canDomainAction(user,'REPORT_OPERATIONAL_ISSUE')&&!active&&<button type="button" className="admin-button" disabled={busy} onClick={()=>start(issue,'NOTE')}>Tambahkan informasi untuk penerima</button>}
- {!canAct&&issue.status==='OPEN'&&<p className="admin-footnote">Pantau perkembangan di sini. Penerima yang berwenang akan mencatat tindakan dan hasilnya.</p>}
- {active&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();run(()=>editing.action==='RESOLVE'?deliveryApi.resolveIssue(issue.id,independent?`${outcome}: ${note}`:note):deliveryApi.changeIssue(issue.id,{action:editing.action,note,...(editing.action==='REASSIGN'?{ownerId:owner||null}:{})}));}}><fieldset disabled={busy} className="space-y-3"><strong>{actions[editing.action]}</strong>{editing.action==='REASSIGN'&&<label className="block">Penerima<select className="form-input block w-full" value={owner} onChange={e=>setOwner(e.target.value)}><option value="">Kembalikan ke antrean tim</option>{people.filter(person=>person.role!=='SUPIR'&&canHandleIssue(person,issueForOwner(issue,person))).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}{independent&&editing.action==='RESOLVE'&&<label className="block">Kesimpulan pemeriksaan<select required className="form-input block w-full" value={outcome} onChange={e=>setOutcome(e.target.value)}>{locationOutcomes.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}<label className="block">{editing.action==='RESOLVE'?'Apa yang sudah dilakukan dan hasilnya':'Tindakan / alasan'}<textarea required minLength={independent&&editing.action==='RESOLVE'?10:1} maxLength={1900} className="form-input block w-full" value={note} onChange={e=>setNote(e.target.value)}/></label><div className="flex gap-2"><button className="admin-button primary" type="submit">{busy?'Menyimpan…':actions[editing.action]}</button><button className="admin-button" type="button" onClick={()=>{if(!note||window.confirm('Buang catatan yang belum disimpan?')){setEditing(null);setNote('');setOwner('');setOutcome('');}}}>Batal</button></div></fieldset></form>}
- <details><summary className="min-h-11 cursor-pointer">Riwayat penanganan</summary>{(issue.history||[]).map((event,index)=><p key={index} className="text-sm py-2">{stamp(event.at)} · {event.actorName||'Petugas'} · {actions[event.action]||({CREATE:'Laporan dibuat',LOCATION_DISCREPANCY:'Selisih titik terdeteksi',TRIP_ENDPOINT_DISCREPANCY:'Selisih titik berangkat/kembali',QUEUE_RECOVERY:'Dialihkan ke antrean Admin karena petugas lama tidak berwenang'}[event.action]||event.action)}{event.note||event.resolution?` · ${event.note||event.resolution}`:''}</p>)}</details>
- </article>;})}
- </section>;
+import React, { useState, useEffect, useCallback } from 'react';
+import { useApp } from '../../../context/AppContext';
+import { useOperationRequest } from '../../../shared/hooks/useOperationRequest';
+import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
+import { deliveryApi } from '../../../services/api';
+import { canDomainAction } from '../../../../../shared/domain-permissions.mjs';
+import {
+  canHandleIssue,
+  issueIndependent,
+  issueResponsibleRole,
+  issueForOwner,
+} from '../../../../../shared/operational-issues.mjs';
+import { responsibleLabels } from '../../../../../shared/operational-attention.mjs';
+const stamp = (value) =>
+  value
+    ? new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB'
+    : 'Tanpa tenggat khusus';
+const mapUrl = (point) =>
+  point?.latitude != null && point?.longitude != null
+    ? `https://www.google.com/maps/search/?api=1&query=${Number(point.latitude)},${Number(point.longitude)}`
+    : null;
+const locationOutcomes = [
+  ['', 'Pilih hasil pemeriksaan'],
+  ['MASTER_POINT_WRONG', 'Titik toko perlu dikoreksi'],
+  ['DRIVER_ATTENDANCE_INVALID', 'Absensi supir tidak sesuai'],
+  ['GPS_INACCURATE', 'Akurasi GPS tidak memadai'],
+  ['LEGITIMATE_DIFFERENCE', 'Perbedaan wajar dan terverifikasi'],
+];
+const actions = {
+  CLAIM: 'Ambil penanganan',
+  NOTE: 'Catat perkembangan',
+  RESOLVE: 'Selesaikan masalah',
+  REASSIGN: 'Alihkan penanganan',
+  REOPEN: 'Buka kembali',
+};
+export function OperationalIssues({
+  issues: initialIssues,
+  people: initialPeople = [],
+  reference,
+  onChanged = () => {},
+}) {
+  const { user } = useApp(),
+    request = useOperationRequest(`issue:${JSON.stringify(reference || {})}`);
+  const [loaded, setLoaded] = useState(null),
+    [adding, setAdding] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [title, setTitle] = useState(''),
+    [reason, setReason] = useState(''),
+    [kind, setKind] = useState('CONTEXT'),
+    [owner, setOwner] = useState(''),
+    [due, setDue] = useState(''),
+    [editing, setEditing] = useState(null),
+    [note, setNote] = useState(''),
+    [outcome, setOutcome] = useState('');
+  const referenceKey = JSON.stringify(reference || {});
+  const reload = useCallback(async () => {
+    if (!reference && initialIssues !== undefined) return;
+    try {
+      const response = await deliveryApi.getIssues({ ...reference, status: 'ALL' });
+      setLoaded(response.data);
+      setError('');
+    } catch (e) {
+      setError(e.message);
+    }
+  }, [referenceKey, initialIssues !== undefined]);
+  useEffect(() => {
+    setLoaded(null);
+    reload();
+  }, [reload]);
+  const issues = loaded?.issues || initialIssues || [],
+    people = loaded?.people || initialPeople;
+  const canReport = reference && canDomainAction(user, 'REPORT_OPERATIONAL_ISSUE');
+  const recipientRole = issueResponsibleRole(reference || {}, kind);
+  const canAssign = ['ADMIN', 'KEPALA_GUDANG', 'SUPERVISOR'].includes(user?.role);
+  useUnsavedNavigation(
+    Boolean(
+      (adding && (title || reason || owner || due)) || (editing && (note || owner || outcome))
+    ),
+    busy
+  );
+  const run = async (fn) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await fn();
+      setAdding(false);
+      setEditing(null);
+      setTitle('');
+      setReason('');
+      setKind('CONTEXT');
+      setOwner('');
+      setDue('');
+      setNote('');
+      setOutcome('');
+      await reload();
+      await onChanged();
+      window.dispatchEvent(new Event('operational-data-changed'));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const start = (issue, action) => {
+    if ((note || owner || outcome) && !window.confirm('Isian belum disimpan. Ganti tindakan?'))
+      return;
+    setEditing({ id: issue.id, action });
+    setNote('');
+    setOwner('');
+    setOutcome('');
+  };
+  return (
+    <section className="space-y-3 work-issues" aria-label="Masalah dan keluhan">
+      <div className="flex justify-between gap-3 items-center">
+        <h3 className="font-semibold">
+          Masalah / keluhan {issues.length > 0 && `(${issues.length})`}
+        </h3>
+        {canReport && (
+          <button
+            className="admin-button"
+            disabled={busy}
+            type="button"
+            onClick={() => setAdding((value) => !value)}
+          >
+            {adding ? 'Batal melapor' : 'Laporkan masalah'}
+          </button>
+        )}
+      </div>
+      {reference && !issues.length && !adding && (
+        <p className="admin-footnote">
+          Tidak ada masalah tercatat. Buka bagian ini hanya bila ada kendala; transaksi biasa dapat
+          langsung dilanjutkan.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="admin-feedback error">
+          {error}
+        </p>
+      )}
+      {adding && (
+        <form
+          className="work-target-card space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(async () => {
+              await deliveryApi.createIssue(
+                await request.identify({
+                  ...reference,
+                  title,
+                  reason,
+                  kind,
+                  ...(owner ? { ownerId: owner } : {}),
+                  ...(due ? { dueAt: new Date(`${due}:00+07:00`).toISOString() } : {}),
+                })
+              );
+              request.clear();
+            });
+          }}
+        >
+          <fieldset disabled={busy} className="space-y-3">
+            <p className="work-step-intro">
+              Penerima otomatis: {responsibleLabels[recipientRole]}. Jelaskan masalah dan bantuan
+              yang dibutuhkan. Anda dapat memantau hasilnya di sini.
+            </p>
+            {(reference.orderId || reference.salesVisitId) && (
+              <label className="block">
+                Bantuan yang dibutuhkan
+                <select
+                  className="form-input block w-full"
+                  value={kind}
+                  onChange={(e) => {
+                    setKind(e.target.value);
+                    setOwner('');
+                  }}
+                >
+                  <option value="CONTEXT">
+                    {reference.orderId
+                      ? 'Isi order / dokumen — Admin'
+                      : 'Arahan kunjungan — Supervisor'}
+                  </option>
+                  <option value="GOODS">Barang / pengiriman — Tim gudang</option>
+                </select>
+              </label>
+            )}
+            <label className="block">
+              Masalah
+              <input
+                required
+                maxLength={200}
+                className="form-input block w-full"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Contoh: dua karton rusak saat diterima"
+              />
+            </label>
+            <label className="block">
+              Apa yang terjadi dan bantuan yang dibutuhkan
+              <textarea
+                required
+                maxLength={2000}
+                className="form-input block w-full"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </label>
+            {canAssign && (
+              <details>
+                <summary className="min-h-11 cursor-pointer">
+                  Penerima khusus / tenggat (opsional)
+                </summary>
+                {user.role !== 'SUPERVISOR' && (
+                  <label className="block">
+                    Penerima
+                    <select
+                      className="form-input block w-full"
+                      value={owner}
+                      onChange={(e) => setOwner(e.target.value)}
+                    >
+                      <option value="">Antrean tim sesuai transaksi</option>
+                      {people
+                        .filter(
+                          (p) =>
+                            p.role !== 'SUPIR' &&
+                            canHandleIssue(p, issueForOwner({ responsibleRole: recipientRole }, p))
+                        )
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                )}
+                <label className="block">
+                  Tenggat WIB
+                  <input
+                    type="datetime-local"
+                    className="form-input block w-full"
+                    value={due}
+                    onChange={(e) => setDue(e.target.value)}
+                  />
+                </label>
+              </details>
+            )}
+            <button className="admin-button primary" type="submit">
+              {busy ? 'Menyimpan…' : 'Kirim laporan'}
+            </button>
+          </fieldset>
+        </form>
+      )}
+      {issues.map((issue) => {
+        const evidence = (issue.history || []).find((item) =>
+            ['LOCATION_DISCREPANCY', 'TRIP_ENDPOINT_DISCREPANCY'].includes(item.action)
+          ),
+          independent = issueIndependent(issue),
+          eligible = canHandleIssue(user, issue),
+          canAct =
+            eligible && (!issue.ownerId || issue.ownerId === user.id || user.role === 'ADMIN'),
+          active = editing?.id === issue.id;
+        const handler =
+          issue.ownerName ||
+          people.find((p) => p.id === issue.ownerId)?.name ||
+          (issue.ownerId
+            ? 'Petugas yang ditugaskan'
+            : responsibleLabels[issue.responsibleRole] || 'Tim gudang');
+        return (
+          <article key={issue.id} className="work-target-card space-y-3">
+            <div>
+              <span className="admin-status">
+                {issue.status === 'DONE'
+                  ? 'Selesai'
+                  : issue.ownerId
+                    ? 'Sedang ditangani'
+                    : 'Menunggu penanganan tim'}
+              </span>
+              <h4 className="font-semibold mt-2">{issue.title}</h4>
+              <p className="whitespace-pre-wrap">{issue.reason}</p>
+              <p className="admin-footnote">
+                Ditangani oleh {handler} · {stamp(issue.dueAt)}
+              </p>
+            </div>
+            {issue.status === 'DONE' && (
+              <p className="work-step-intro">
+                <strong>Hasil penyelesaian</strong>
+                {issue.resolution}
+              </p>
+            )}
+            {evidence && (
+              <details>
+                <summary className="min-h-11 cursor-pointer">
+                  Bukti perbedaan lokasi · {Math.round(evidence.distanceMeters)} m
+                </summary>
+                <p>
+                  Jarak ini hanya untuk pemeriksaan kesesuaian titik. Periksa foto dan akurasi GPS
+                  sebelum memutuskan penyebab.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {mapUrl(evidence.target || evidence.planned) && (
+                    <a
+                      className="admin-table-link"
+                      href={mapUrl(evidence.target || evidence.planned)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Titik yang direncanakan
+                    </a>
+                  )}
+                  {mapUrl(evidence.attendance || evidence.actual) && (
+                    <a
+                      className="admin-table-link"
+                      href={mapUrl(evidence.attendance || evidence.actual)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      GPS absen aktual
+                    </a>
+                  )}
+                </div>
+                {(evidence.photoUrl || evidence.actual?.photoUrl) && (
+                  <img
+                    className="max-h-72 rounded-xl mt-2"
+                    src={evidence.photoUrl || evidence.actual.photoUrl}
+                    alt="Foto bukti absensi supir"
+                  />
+                )}
+              </details>
+            )}
+            {canAct && !active && (
+              <div className="work-issue-actions">
+                {issue.status === 'OPEN' ? (
+                  <>
+                    {!issue.ownerId && (
+                      <button
+                        className="admin-button primary"
+                        disabled={busy}
+                        onClick={() =>
+                          run(() => deliveryApi.changeIssue(issue.id, { action: 'CLAIM' }))
+                        }
+                      >
+                        Ambil penanganan
+                      </button>
+                    )}
+                    <button
+                      className={`admin-button ${issue.ownerId ? 'primary' : ''}`}
+                      disabled={busy}
+                      onClick={() => start(issue, 'RESOLVE')}
+                    >
+                      Catat hasil penyelesaian
+                    </button>
+                    <details>
+                      <summary className="min-h-11 cursor-pointer">Tindakan lain</summary>
+                      <button className="admin-button" onClick={() => start(issue, 'NOTE')}>
+                        Catat perkembangan
+                      </button>
+                      {canAssign && (
+                        <button className="admin-button" onClick={() => start(issue, 'REASSIGN')}>
+                          Alihkan penanganan
+                        </button>
+                      )}
+                    </details>
+                  </>
+                ) : (
+                  canAssign && (
+                    <button className="admin-button" onClick={() => start(issue, 'REOPEN')}>
+                      Buka kembali bila belum tuntas
+                    </button>
+                  )
+                )}
+              </div>
+            )}
+            {!canAct &&
+              issue.status === 'OPEN' &&
+              issue.createdById === user.id &&
+              canDomainAction(user, 'REPORT_OPERATIONAL_ISSUE') &&
+              !active && (
+                <button
+                  type="button"
+                  className="admin-button"
+                  disabled={busy}
+                  onClick={() => start(issue, 'NOTE')}
+                >
+                  Tambahkan informasi untuk penerima
+                </button>
+              )}
+            {!canAct && issue.status === 'OPEN' && (
+              <p className="admin-footnote">
+                Pantau perkembangan di sini. Penerima yang berwenang akan mencatat tindakan dan
+                hasilnya.
+              </p>
+            )}
+            {active && (
+              <form
+                className="space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  run(() =>
+                    editing.action === 'RESOLVE'
+                      ? deliveryApi.resolveIssue(
+                          issue.id,
+                          independent ? `${outcome}: ${note}` : note
+                        )
+                      : deliveryApi.changeIssue(issue.id, {
+                          action: editing.action,
+                          note,
+                          ...(editing.action === 'REASSIGN' ? { ownerId: owner || null } : {}),
+                        })
+                  );
+                }}
+              >
+                <fieldset disabled={busy} className="space-y-3">
+                  <strong>{actions[editing.action]}</strong>
+                  {editing.action === 'REASSIGN' && (
+                    <label className="block">
+                      Penerima
+                      <select
+                        className="form-input block w-full"
+                        value={owner}
+                        onChange={(e) => setOwner(e.target.value)}
+                      >
+                        <option value="">Kembalikan ke antrean tim</option>
+                        {people
+                          .filter(
+                            (person) =>
+                              person.role !== 'SUPIR' &&
+                              canHandleIssue(person, issueForOwner(issue, person))
+                          )
+                          .map((person) => (
+                            <option key={person.id} value={person.id}>
+                              {person.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  )}
+                  {independent && editing.action === 'RESOLVE' && (
+                    <label className="block">
+                      Kesimpulan pemeriksaan
+                      <select
+                        required
+                        className="form-input block w-full"
+                        value={outcome}
+                        onChange={(e) => setOutcome(e.target.value)}
+                      >
+                        {locationOutcomes.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label className="block">
+                    {editing.action === 'RESOLVE'
+                      ? 'Apa yang sudah dilakukan dan hasilnya'
+                      : 'Tindakan / alasan'}
+                    <textarea
+                      required
+                      minLength={independent && editing.action === 'RESOLVE' ? 10 : 1}
+                      maxLength={1900}
+                      className="form-input block w-full"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                  </label>
+                  <div className="flex gap-2">
+                    <button className="admin-button primary" type="submit">
+                      {busy ? 'Menyimpan…' : actions[editing.action]}
+                    </button>
+                    <button
+                      className="admin-button"
+                      type="button"
+                      onClick={() => {
+                        if (!note || window.confirm('Buang catatan yang belum disimpan?')) {
+                          setEditing(null);
+                          setNote('');
+                          setOwner('');
+                          setOutcome('');
+                        }
+                      }}
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </fieldset>
+              </form>
+            )}
+            <details>
+              <summary className="min-h-11 cursor-pointer">Riwayat penanganan</summary>
+              {(issue.history || []).map((event, index) => (
+                <p key={index} className="text-sm py-2">
+                  {stamp(event.at)} · {event.actorName || 'Petugas'} ·{' '}
+                  {actions[event.action] ||
+                    {
+                      CREATE: 'Laporan dibuat',
+                      LOCATION_DISCREPANCY: 'Selisih titik terdeteksi',
+                      TRIP_ENDPOINT_DISCREPANCY: 'Selisih titik berangkat/kembali',
+                      QUEUE_RECOVERY:
+                        'Dialihkan ke antrean Admin karena petugas lama tidak berwenang',
+                    }[event.action] ||
+                    event.action}
+                  {event.note || event.resolution ? ` · ${event.note || event.resolution}` : ''}
+                </p>
+              ))}
+            </details>
+          </article>
+        );
+      })}
+    </section>
+  );
 }

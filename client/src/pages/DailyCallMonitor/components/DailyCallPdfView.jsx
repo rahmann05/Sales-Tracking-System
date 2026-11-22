@@ -1,9 +1,9 @@
-import {reportMoney} from '../../../../../shared/report-visibility.mjs';
-import {printOperationalDocument} from '../../../services/operationalExportService';
+import { reportMoney } from '../../../../../shared/report-visibility.mjs';
+import { printOperationalDocument } from '../../../services/operationalExportService';
 import React from 'react';
-import {useApp} from '../../../context/AppContext';
-import {reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
-import {distanceStatus} from '../../../../../shared/report-semantics.mjs';
+import { useApp } from '../../../context/AppContext';
+import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
+import { distanceStatus } from '../../../../../shared/report-semantics.mjs';
 import { ReportBasisNote } from '../../Reports/components/ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
@@ -13,6 +13,7 @@ import { LuPrinter, LuX } from 'react-icons/lu';
  * with company header, KPI summary, full ND6 visit table, and signature sections.
  */
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import {
   exportDailyCallDocx,
   exportDailyCallExcel,
@@ -22,7 +23,8 @@ import {
 } from '../../../utils/export/reports/dailyCallReportExport';
 
 export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) => {
-  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
+  const { user, settings } = useApp(),
+    canExport = reportExportAllowed(user, settings);
   if (!reportData) return null;
 
   const { summary = {}, rows = [] } = reportData;
@@ -39,9 +41,14 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      {/* Top Floating Action Bar (Hidden when printing) */}
-      <div className="fixed top-4 right-6 z-60 flex flex-wrap items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+    <NativeDialog
+      open
+      title="Pratinjau Cetak Daily Call Report"
+      onClose={onClose}
+      className="print-sheet-dialog"
+    >
+      {/* Top Action Bar (Hidden when printing) */}
+      <div className="flex flex-wrap items-center justify-end gap-2 no-print bg-surface p-2 mb-3 rounded-2xl border border-border-glass">
         <ExportFormatMenu
           disabled={!canExport}
           onExportDocx={() => exportDailyCallDocx(reportData, date)}
@@ -70,21 +77,19 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
       {/* Printable Sheet (Standard A4 Landscape / Document Box) */}
       <div
         id="daily-call-printable"
-        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full shadow-2xl rounded-sm my-auto text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
+        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full mx-auto shadow-2xl rounded-sm text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
         style={{ fontFamily: "'Arial', sans-serif" }}
       >
         {/* 1. Official Header */}
         <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
           <div>
             <h1 className="text-base font-black tracking-tight text-gray-900 m-0 uppercase">
-              {reportData.meta?.company||'Perusahaan'}
+              {reportData.meta?.company || 'Perusahaan'}
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
               FMCG DISTRIBUTOR
             </p>
-            <p className="text-[9px] text-gray-500 m-0 mt-0.5">
-              Distribution Management System
-            </p>
+            <p className="text-[9px] text-gray-500 m-0 mt-0.5">Distribution Management System</p>
           </div>
 
           <div className="text-right">
@@ -94,9 +99,7 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
             <p className="text-[10px] font-semibold text-gray-700 m-0 mt-0.5">
               Laporan Kunjungan & Pencapaian Harian Sales
             </p>
-            <p className="text-[9px] font-mono text-gray-500 m-0">
-              Tanggal: {formattedDate}
-            </p>
+            <p className="text-[9px] font-mono text-gray-500 m-0">Tanggal: {formattedDate}</p>
           </div>
         </div>
 
@@ -105,12 +108,16 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
         <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
           <div>
             <span className="text-gray-500 font-semibold block">Salesman / Tim:</span>
-            <strong className="text-gray-900 text-[11px]">{salesmanName || 'Semua Salesman'}</strong>
+            <strong className="text-gray-900 text-[11px]">
+              {salesmanName || 'Semua Salesman'}
+            </strong>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block">Realisasi PJP / Rencana:</span>
             <strong className="text-gray-900 text-[11px]">
-              {summary.totalPlannedActualCalls} / {summary.totalPlanCalls} (kepatuhan PJP: {summary.callComplianceRate || '0%'}) · {summary.totalActualCalls} aktual termasuk luar PJP
+              {summary.totalPlannedActualCalls} / {summary.totalPlanCalls} (kepatuhan PJP:{' '}
+              {summary.callComplianceRate || '0%'}) · {summary.totalActualCalls} aktual termasuk
+              luar PJP
             </strong>
           </div>
           <div>
@@ -168,7 +175,9 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
                   <td className="p-1.5 border-r border-gray-300">
                     <span className="font-mono font-bold text-gray-700">[{r.customerId}]</span>{' '}
                     <strong className="text-gray-900">{r.customerName}</strong>
-                    <div className="text-[8.5px] text-gray-500 min-w-0 whitespace-normal break-words max-w-[180px]">{r.customerAddress}</div>
+                    <div className="text-[8.5px] text-gray-500 min-w-0 whitespace-normal break-words max-w-[180px]">
+                      {r.customerAddress}
+                    </div>
                   </td>
                   <td className="p-1.5 border-r border-gray-300 whitespace-nowrap">
                     {r.subChannel}
@@ -183,11 +192,17 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
                     {r.skuSold || '-'}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-[8.5px]">
-                    {r.reason ? <span className="text-red-700 font-bold">{r.reason}</span> : r.remark || '-'}
+                    {r.reason ? (
+                      <span className="text-red-700 font-bold">{r.reason}</span>
+                    ) : (
+                      r.remark || '-'
+                    )}
                     {r.earlyReason && <div className="text-amber-800">[Dini: {r.earlyReason}]</div>}
                   </td>
                   <td className="p-1.5 text-center font-mono text-[8.5px] whitespace-nowrap">
-                    {r.deviationMeters==null?'Tidak tersedia':`${r.deviationMeters} m (${distanceStatus(r)})`}
+                    {r.deviationMeters == null
+                      ? 'Tidak tersedia'
+                      : `${r.deviationMeters} m (${distanceStatus(r)})`}
                   </td>
                 </tr>
               ))}
@@ -213,7 +228,9 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           </div>
 
           <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Diperiksa Oleh (Supervisor),</span>
+            <span className="text-gray-500 font-bold block mb-12">
+              Diperiksa Oleh (Supervisor),
+            </span>
             <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
               ( ____________________ )
             </div>
@@ -221,7 +238,9 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           </div>
 
           <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Disetujui Oleh (Admin Penjualan),</span>
+            <span className="text-gray-500 font-bold block mb-12">
+              Disetujui Oleh (Admin Penjualan),
+            </span>
             <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
               ( ____________________ )
             </div>
@@ -229,6 +248,6 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
           </div>
         </div>
       </div>
-    </div>
+    </NativeDialog>
   );
 };

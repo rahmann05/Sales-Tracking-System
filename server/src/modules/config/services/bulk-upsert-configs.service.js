@@ -1,1 +1,1 @@
-export {saveConfigs as bulkUpsertConfigs} from './save-configs.service.js';
+export { saveConfigs as bulkUpsertConfigs } from './save-configs.service.js';

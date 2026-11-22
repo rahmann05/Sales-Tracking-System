@@ -2,16 +2,19 @@ import React, { Suspense } from 'react';
 import { ROLES } from '../constants/roles';
 
 // Helper for route-level code splitting (Google Web Vitals Best Practice)
-import { SalesPage, SupervisorPage, AdminLandingPage, WarehousePage, DriverPage } from "./AppRouter.shared";
-import { PageLoading } from "./AppRouterPageLoading";
-export
-/**
+import {
+  SalesPage,
+  SupervisorPage,
+  AdminLandingPage,
+  WarehousePage,
+  DriverPage,
+} from './AppRouter.shared';
+import { PageLoading } from './AppRouterPageLoading';
+export /**
  * RoleWorkspace Component
  * Single Responsibility: Render the role-specific home workspace page.
  */
-const RoleWorkspace = ({
-  role
-}) => {
+const RoleWorkspace = ({ role }) => {
   let content;
   switch (role) {
     case ROLES.SALES:

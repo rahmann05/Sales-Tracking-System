@@ -23,31 +23,17 @@ export const PageHeader = ({
   headingAs: Heading = 'h1',
 }) => {
   return (
-    <header
-      className={`editorial-page-header ${className}`}
-    >
+    <header className={`editorial-page-header ${className}`}>
       <div className="editorial-page-heading">
         {badge && (
           <div className="editorial-page-eyebrow">
-            {typeof badge === 'string' ? (
-              <span>
-                {badge}
-              </span>
-            ) : (
-              badge
-            )}
+            {typeof badge === 'string' ? <span>{badge}</span> : badge}
           </div>
         )}
 
-        <Heading>
-          {title}
-        </Heading>
+        <Heading>{title}</Heading>
 
-        {subtitle && (
-          <p className="editorial-page-subtitle">
-            {subtitle}
-          </p>
-        )}
+        {subtitle && <p className="editorial-page-subtitle">{subtitle}</p>}
 
         {stats && stats.length > 0 && (
           <div className="editorial-page-stats">
@@ -58,10 +44,10 @@ export const PageHeader = ({
                   st.color === 'emerald'
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200/60'
                     : st.color === 'amber'
-                    ? 'bg-amber-50 text-amber-800 border-amber-200/60'
-                    : st.color === 'rose'
-                    ? 'bg-rose-50 text-rose-800 border-rose-200/60'
-                    : 'bg-surface-container/70 text-on-surface border-border-glass'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200/60'
+                      : st.color === 'rose'
+                        ? 'bg-rose-50 text-rose-800 border-rose-200/60'
+                        : 'bg-surface-container/70 text-on-surface border-border-glass'
                 }`}
               >
                 <span className="text-[11px] text-on-surface-variant font-medium">{st.label}:</span>
@@ -72,11 +58,7 @@ export const PageHeader = ({
         )}
       </div>
 
-      {actions && (
-        <div className="editorial-page-actions">
-          {actions}
-        </div>
-      )}
+      {actions && <div className="editorial-page-actions">{actions}</div>}
     </header>
   );
 };

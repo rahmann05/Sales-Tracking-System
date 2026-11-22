@@ -2,7 +2,6 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 
-
 export const getPjpAttendanceRecap = async (pjpId) => {
   const pjp = await prisma.pjp.findUnique({
     where: { id: pjpId },

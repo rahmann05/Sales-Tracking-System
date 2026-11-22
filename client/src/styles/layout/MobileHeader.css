@@ -3,7 +3,7 @@
 /* Mobile Top Header / Hero Title Bar Styles (Non-Sticky Normal Flow) */
 
 .mobile-header-container {
-  @apply flex md:hidden items-center justify-between px-4 py-2 h-13 bg-white/90 backdrop-blur-xl border-b border-border-glass relative shrink-0 shadow-sm select-none w-full pointer-events-auto z-30;
+  @apply flex md:hidden items-center justify-between px-4 py-2 h-13 bg-white border-b border-border-glass relative shrink-0 shadow-sm select-none w-full pointer-events-auto z-30;
 }
 
 .mobile-brand-icon {
@@ -18,7 +18,21 @@
   @apply text-[10px] text-on-surface-variant font-semibold tracking-wider block;
 }
 
-.mobile-header-admin>div:first-child {min-width:0;max-width:none;flex:1;}
-.mobile-header-admin .mobile-brand-title {overflow-wrap:anywhere;line-height:1.4;}
-.mobile-header-admin .mobile-brand-subtitle {display:none;}
-.mobile-header-admin>div:first-child>button {min-width:44px;min-height:44px;flex-shrink:0;padding-inline:8px;}
+.mobile-header-admin > div:first-child {
+  min-width: 0;
+  max-width: none;
+  flex: 1;
+}
+.mobile-header-admin .mobile-brand-title {
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.mobile-header-admin .mobile-brand-subtitle {
+  display: none;
+}
+.mobile-header-admin > div:first-child > button {
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  padding-inline: 8px;
+}

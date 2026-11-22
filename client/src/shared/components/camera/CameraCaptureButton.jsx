@@ -35,7 +35,9 @@ export const CameraCaptureButton = ({
         className="w-full py-3 bg-rose-950/40 text-rose-300 border border-rose-500/40 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-not-allowed transition-all shadow-sm"
       >
         <LuLock className="text-base text-rose-400" />
-        <span>Di Luar Radius Toko ({distanceMeters}m &gt; {maxRadiusMeters}m) — Presensi Terkunci</span>
+        <span>
+          Di Luar Radius Toko ({distanceMeters}m &gt; {maxRadiusMeters}m) — Presensi Terkunci
+        </span>
       </button>
     );
   }

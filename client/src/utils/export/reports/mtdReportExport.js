@@ -1,11 +1,6 @@
 import { mtdCsv } from '../../../../../shared/report-semantics.mjs';
 import { createDocumentExporters } from '../core/createDocumentExporters';
-import {
-  formatCurrency,
-  formatNumber,
-  formatReportBasisNotes,
-  safeStr,
-} from '../core/formatters';
+import { formatCurrency, formatNumber, formatReportBasisNotes, safeStr } from '../core/formatters';
 
 function buildMtdReportBlueprint(input = {}, monthArg, yearArg) {
   const reportData = input?.reportData ? input.reportData : input;

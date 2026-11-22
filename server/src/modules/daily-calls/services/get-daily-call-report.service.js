@@ -1,12 +1,21 @@
-import { reportScopeWhere, reportIdentity, assignmentReportBasis } from '../../reports/services/report-assignment.service.js';
-import { reportBasis,measuredVisitMinutes } from '../../../../../shared/report-semantics.mjs';
-import {reportProvenance} from '../../reports/services/report-provenance.service.js';
-import {visitOutcomeText,includesCollection} from '../../../../../shared/visit-outcome.mjs';
-import { offPjpSalesResult, visitSalesResult, wibDateKey,countsAsPlannedVisit } from '../../../../../shared/visit-metrics.mjs';
+import {
+  reportScopeWhere,
+  reportIdentity,
+  assignmentReportBasis,
+} from '../../reports/services/report-assignment.service.js';
+import { reportBasis, measuredVisitMinutes } from '../../../../../shared/report-semantics.mjs';
+import { reportProvenance } from '../../reports/services/report-provenance.service.js';
+import { visitOutcomeText, includesCollection } from '../../../../../shared/visit-outcome.mjs';
+import {
+  offPjpSalesResult,
+  visitSalesResult,
+  wibDateKey,
+  countsAsPlannedVisit,
+} from '../../../../../shared/visit-metrics.mjs';
 /** getDailyCallReport - single-responsibility service (extracted from daily-calls.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { calculateDistanceMeters } from '../../../utils/geolocation.js';
-import { ATTENDANCE_TYPE } from "../../../utils/constants.js";
+import { ATTENDANCE_TYPE } from '../../../utils/constants.js';
 import { buildDayRange, formatTimeOnly, formatDurationHhMm } from './daily-calls.helpers.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
@@ -93,40 +102,59 @@ export const getDailyCallReport = async (query = {}) => {
     }
 
     for (const stop of pjp.stops) {
-      if(!countsAsPlannedVisit(stop))continue;
+      if (!countsAsPlannedVisit(stop)) continue;
       const attendances = stop.attendances || [];
       const checkIn = attendances.find((a) => a.type === ATTENDANCE_TYPE.IN);
       const checkOut = attendances.find((a) => a.type === ATTENDANCE_TYPE.OUT);
-      const policy=stop.policySnapshot?.values||{},attendanceMode=stop.validationOnly?'VALIDATION':policy.SALES_ATTENDANCE_MODE||'IN_OUT';
-      const businessResult=checkOut||stop.visitSession?.result;
+      const policy = stop.policySnapshot?.values || {},
+        attendanceMode = stop.validationOnly
+          ? 'VALIDATION'
+          : policy.SALES_ATTENDANCE_MODE || 'IN_OUT';
+      const businessResult = checkOut || stop.visitSession?.result;
 
       const outlet = stop.outlet || {};
       const outletLat = outlet.latitude ?? null;
       const outletLng = outlet.longitude ?? null;
 
       let devMeters = null;
-      if(checkIn?.deviationMeters!=null)devMeters=Math.round(checkIn.deviationMeters);
-      else if ([checkIn?.latitude,checkIn?.longitude,outletLat,outletLng].every(Number.isFinite)) {
+      if (checkIn?.deviationMeters != null) devMeters = Math.round(checkIn.deviationMeters);
+      else if (
+        [checkIn?.latitude, checkIn?.longitude, outletLat, outletLng].every(Number.isFinite)
+      ) {
         devMeters = Math.round(
           calculateDistanceMeters(checkIn.latitude, checkIn.longitude, outletLat, outletLng)
         );
       }
 
-      const maxAllowedRadius = policy.ATTENDANCE_USE_OUTLET_RADIUS===false?(policy.ATTENDANCE_RADIUS_METERS??GLOBAL_RADIUS):(outlet.radiusMeters||policy.ATTENDANCE_RADIUS_METERS||GLOBAL_RADIUS);
-      const distWarning = devMeters==null?'UNAVAILABLE':devMeters > maxAllowedRadius ? 'WARNING' : 'OK';
+      const maxAllowedRadius =
+        policy.ATTENDANCE_USE_OUTLET_RADIUS === false
+          ? (policy.ATTENDANCE_RADIUS_METERS ?? GLOBAL_RADIUS)
+          : outlet.radiusMeters || policy.ATTENDANCE_RADIUS_METERS || GLOBAL_RADIUS;
+      const distWarning =
+        devMeters == null ? 'UNAVAILABLE' : devMeters > maxAllowedRadius ? 'WARNING' : 'OK';
 
-      const durationMins=measuredVisitMinutes(stop);
+      const durationMins = measuredVisitMinutes(stop);
 
       const result = visitSalesResult(stop, { manualSalesMode });
       const { actual: isActual, orderAmount, skuSold, effective: isEc } = result;
 
-      const minimumDuration=policy.MINIMUM_VISIT_DURATION_MINUTES??MIN_VISIT_DURATION;
-      const isDurationAnomaly = Boolean(policy.ATTENDANCE_ENFORCE_MIN_DURATION!==false&&isActual&&durationMins!==null&&durationMins<minimumDuration);
+      const minimumDuration = policy.MINIMUM_VISIT_DURATION_MINUTES ?? MIN_VISIT_DURATION;
+      const isDurationAnomaly = Boolean(
+        policy.ATTENDANCE_ENFORCE_MIN_DURATION !== false &&
+        isActual &&
+        durationMins !== null &&
+        durationMins < minimumDuration
+      );
       const isDistanceAnomaly = isActual && distWarning === 'WARNING';
-      const isSkipped = ['SKIPPED','CLOSED','CLOSED_REPORTED'].includes(stop.status) && !isActual;
+      const isSkipped = ['SKIPPED', 'CLOSED', 'CLOSED_REPORTED'].includes(stop.status) && !isActual;
 
       const row = {
-        id: stop.id,validationOnly:stop.validationOnly,validationResult:stop.validationResult,validationIncomplete:Boolean(stop.validationTaskId&&['PENDING','RETURNED'].includes(stop.validationResult?.state)),
+        id: stop.id,
+        validationOnly: stop.validationOnly,
+        validationResult: stop.validationResult,
+        validationIncomplete: Boolean(
+          stop.validationTaskId && ['PENDING', 'RETURNED'].includes(stop.validationResult?.state)
+        ),
         sequence: stop.sequence,
         salesmanId: identity.id,
         salesmanName: identity.name || 'Salesman',
@@ -138,8 +166,14 @@ export const getDailyCallReport = async (query = {}) => {
         rawTimeIn: checkIn?.timestamp ? new Date(checkIn.timestamp).toISOString() : null,
         rawTimeOut: checkOut?.timestamp ? new Date(checkOut.timestamp).toISOString() : null,
         durationMinutes: durationMins,
-        durationFormatted: durationMins==null?'Tidak tersedia':formatDurationHhMm(durationMins),
-        attendanceMode,minimumDuration,durationCheckEnabled:attendanceMode==='IN_OUT'&&policy.ATTENDANCE_ENFORCE_MIN_DURATION!==false,visitSession:stop.visitSession,policyVersions:stop.policySnapshot?.versions||[],
+        durationFormatted:
+          durationMins == null ? 'Tidak tersedia' : formatDurationHhMm(durationMins),
+        attendanceMode,
+        minimumDuration,
+        durationCheckEnabled:
+          attendanceMode === 'IN_OUT' && policy.ATTENDANCE_ENFORCE_MIN_DURATION !== false,
+        visitSession: stop.visitSession,
+        policyVersions: stop.policySnapshot?.versions || [],
         customerId: outlet.outletCode || 'Belum memiliki kode',
         customerName: outlet.name || 'Outlet',
         customerAddress: outlet.address || '-',
@@ -152,10 +186,28 @@ export const getDailyCallReport = async (query = {}) => {
         extraCall: 'N',
         skuSold,
         orderAmount,
-        reason: stop.validationOnly?`Validasi outlet · ${stop.validationResult?.state||'PENDING'}`:businessResult?.reason || checkOut?.earlyReason || (!isEc && isActual ? 'Tidak Ada Order' : isSkipped ? 'Belum Dikunjungi / Terlewat' : ''),
+        reason: stop.validationOnly
+          ? `Validasi outlet · ${stop.validationResult?.state || 'PENDING'}`
+          : businessResult?.reason ||
+            checkOut?.earlyReason ||
+            (!isEc && isActual
+              ? 'Tidak Ada Order'
+              : isSkipped
+                ? 'Belum Dikunjungi / Terlewat'
+                : ''),
         earlyReason: checkOut?.earlyReason || null,
-        visitOutcome:businessResult?.visitOutcome||null,
-        remark: [businessResult?.notes || checkIn?.notes,visitOutcomeText(businessResult?.visitOutcome),stop.visitSession?.state==='INCOMPLETE'?'OUT terlewat · pengecualian SPV':attendanceMode!=='IN_OUT'?'Hasil kegiatan tanpa kewajiban OUT':''].filter(Boolean).join(' · '),
+        visitOutcome: businessResult?.visitOutcome || null,
+        remark: [
+          businessResult?.notes || checkIn?.notes,
+          visitOutcomeText(businessResult?.visitOutcome),
+          stop.visitSession?.state === 'INCOMPLETE'
+            ? 'OUT terlewat · pengecualian SPV'
+            : attendanceMode !== 'IN_OUT'
+              ? 'Hasil kegiatan tanpa kewajiban OUT'
+              : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
         deviationMeters: devMeters,
         targetAmount: 0,
         photoIn: checkIn?.photoUrl || null,
@@ -201,7 +253,7 @@ export const getDailyCallReport = async (query = {}) => {
       timeOut: '-',
       rawTimeIn: new Date(off.createdAt).toISOString(),
       rawTimeOut: null,
-      attendanceMode:'SINGLE_POINT',
+      attendanceMode: 'SINGLE_POINT',
       durationMinutes: null,
       durationFormatted: '-',
       customerId: off.outlet?.outletCode || 'EXTRA-CALL',
@@ -218,8 +270,10 @@ export const getDailyCallReport = async (query = {}) => {
       orderAmount: offResult.orderAmount,
       reason: off.reason || 'Extra Call / Off-PJP',
       earlyReason: null,
-      visitOutcome:off.visitOutcome||null,
-      remark: [`Off-PJP: ${off.reason}`,visitOutcomeText(off.visitOutcome)].filter(Boolean).join(' · '),
+      visitOutcome: off.visitOutcome || null,
+      remark: [`Off-PJP: ${off.reason}`, visitOutcomeText(off.visitOutcome)]
+        .filter(Boolean)
+        .join(' · '),
       deviationMeters: null,
       targetAmount: 0,
       photoIn: off.photoUrl || null,
@@ -291,9 +345,14 @@ export const getDailyCallReport = async (query = {}) => {
         // A gap requires departure evidence; IN alone also includes time spent at the outlet.
         const prevTime = prevStop.rawTimeOut ? new Date(prevStop.rawTimeOut).getTime() : NaN;
         const currTime = new Date(stop.rawTimeIn).getTime();
-        if(Number.isFinite(prevTime)&&Number.isFinite(currTime)&&currTime>=prevTime)travelMins = Math.round((currTime - prevTime) / 60000);
+        if (Number.isFinite(prevTime) && Number.isFinite(currTime) && currTime >= prevTime)
+          travelMins = Math.round((currTime - prevTime) / 60000);
 
-        if ([prevStop.customerLat,prevStop.customerLng,stop.customerLat,stop.customerLng].every(Number.isFinite)) {
+        if (
+          [prevStop.customerLat, prevStop.customerLng, stop.customerLat, stop.customerLng].every(
+            Number.isFinite
+          )
+        ) {
           const meters = calculateDistanceMeters(
             prevStop.customerLat,
             prevStop.customerLng,
@@ -306,11 +365,21 @@ export const getDailyCallReport = async (query = {}) => {
         // TRAVEL GAP ANOMALY DETECTION (Dynamic Configs):
         // Case 1: Short distance (<= GAP_SHORT_KM) but took >= GAP_SHORT_MINS
         // Case 2: Medium distance (<= GAP_MED_KM) but took >= GAP_MED_MINS
-        if (travelDistKm!==null&&travelMins!==null&&travelDistKm <= GAP_SHORT_KM && travelMins >= GAP_SHORT_MINS) {
+        if (
+          travelDistKm !== null &&
+          travelMins !== null &&
+          travelDistKm <= GAP_SHORT_KM &&
+          travelMins >= GAP_SHORT_MINS
+        ) {
           isTravelAnomaly = true;
           const hours = (travelMins / 60).toFixed(1);
           travelAnomalyReason = `Jarak antartitik outlet ${travelDistKm} km dari "${prevStopName}", dengan jeda OUT–IN ${travelMins} menit (~${hours} jam). Perlu peninjauan, bukan bukti rute GPS.`;
-        } else if (travelDistKm!==null&&travelMins!==null&&travelDistKm <= GAP_MED_KM && travelMins >= GAP_MED_MINS) {
+        } else if (
+          travelDistKm !== null &&
+          travelMins !== null &&
+          travelDistKm <= GAP_MED_KM &&
+          travelMins >= GAP_MED_MINS
+        ) {
           isTravelAnomaly = true;
           const hours = (travelMins / 60).toFixed(1);
           travelAnomalyReason = `Jarak antartitik outlet ${travelDistKm} km dengan jeda OUT–IN ${travelMins} menit (~${hours} jam). Perlu peninjauan, bukan bukti rute GPS.`;
@@ -330,7 +399,7 @@ export const getDailyCallReport = async (query = {}) => {
       stop.prevStopName = prevStopName;
       stop.travelDistanceKm = travelDistKm;
       stop.travelDurationMinutes = travelMins;
-      stop.travelDurationFormatted = travelMins==null ? 'Tidak tersedia' : `${travelMins} m`;
+      stop.travelDurationFormatted = travelMins == null ? 'Tidak tersedia' : `${travelMins} m`;
       stop.isTravelAnomaly = isTravelAnomaly;
       stop.travelAnomalyReason = travelAnomalyReason;
       stop.isOnTimeAndCompliant = isCompliant;
@@ -349,7 +418,10 @@ export const getDailyCallReport = async (query = {}) => {
     salesmanDailySummaries.push({
       salesmanId: sales.salesmanId,
       salesmanName: sales.salesmanName,
-      clusterName: new Set(sales.stops.map(stop => stop.clusterName)).size > 1 ? 'Beberapa penugasan pada periode' : sales.clusterName,
+      clusterName:
+        new Set(sales.stops.map((stop) => stop.clusterName)).size > 1
+          ? 'Beberapa penugasan pada periode'
+          : sales.clusterName,
       planCalls: sPlan,
       actualCalls: sActual,
       complianceRate,
@@ -414,7 +486,9 @@ export const getDailyCallReport = async (query = {}) => {
   const totalDistAnom = allEnrichedRows.filter((r) => r.isDistanceAnomaly).length;
   const totalTravelAnom = allEnrichedRows.filter((r) => r.isTravelAnomaly).length;
   const totalOnTime = allEnrichedRows.filter((r) => r.isOnTimeAndCompliant).length;
-  const totalAnomalies = allEnrichedRows.filter(r=>r.isDurationAnomaly||r.isDistanceAnomaly||r.isTravelAnomaly).length;
+  const totalAnomalies = allEnrichedRows.filter(
+    (r) => r.isDurationAnomaly || r.isDistanceAnomaly || r.isTravelAnomaly
+  ).length;
 
   const totalOmzet = allEnrichedRows.reduce((sum, r) => sum + (r.orderAmount || 0), 0);
   const totalSku = allEnrichedRows.reduce((sum, r) => sum + (r.skuSold || 0), 0);
@@ -422,15 +496,38 @@ export const getDailyCallReport = async (query = {}) => {
   const durationSum = allEnrichedRows
     .filter((r) => r.rawTimeOut && Number.isFinite(r.durationMinutes) && r.durationMinutes >= 0)
     .reduce((sum, r) => sum + r.durationMinutes, 0);
-  const durationCount = allEnrichedRows.filter((r) => r.rawTimeOut && Number.isFinite(r.durationMinutes) && r.durationMinutes >= 0).length;
-  const avgDuration = durationCount > 0 ? Math.round((durationSum / durationCount) * 10) / 10 : null;
+  const durationCount = allEnrichedRows.filter(
+    (r) => r.rawTimeOut && Number.isFinite(r.durationMinutes) && r.durationMinutes >= 0
+  ).length;
+  const avgDuration =
+    durationCount > 0 ? Math.round((durationSum / durationCount) * 10) / 10 : null;
 
-  const totalPlannedActual = allEnrichedRows.filter(r => r.planCall === 'Y' && r.actualCall === 'Y').length;
-  const complianceRate = totalPlan > 0 ? `${Math.round((totalPlannedActual / totalPlan) * 100)}%` : '0%';
+  const totalPlannedActual = allEnrichedRows.filter(
+    (r) => r.planCall === 'Y' && r.actualCall === 'Y'
+  ).length;
+  const complianceRate =
+    totalPlan > 0 ? `${Math.round((totalPlannedActual / totalPlan) * 100)}%` : '0%';
   const ecRate = totalActual > 0 ? `${Math.round((totalEc / totalActual) * 100)}%` : '0%';
 
   return {
-    basis: { ...reportBasis(), ...assignmentReportBasis({rawRecords:[...pjps,...offPjpList]}),...reportProvenance({manualSalesMode,minVisitDuration:MIN_VISIT_DURATION,radius:GLOBAL_RADIUS,travelGap:{shortKm:GAP_SHORT_KM,shortMinutes:GAP_SHORT_MINS,mediumKm:GAP_MED_KM,mediumMinutes:GAP_MED_MINS}},{rawRecords:[...pjps,...offPjpList]}) },
+    basis: {
+      ...reportBasis(),
+      ...assignmentReportBasis({ rawRecords: [...pjps, ...offPjpList] }),
+      ...reportProvenance(
+        {
+          manualSalesMode,
+          minVisitDuration: MIN_VISIT_DURATION,
+          radius: GLOBAL_RADIUS,
+          travelGap: {
+            shortKm: GAP_SHORT_KM,
+            shortMinutes: GAP_SHORT_MINS,
+            mediumKm: GAP_MED_KM,
+            mediumMinutes: GAP_MED_MINS,
+          },
+        },
+        { rawRecords: [...pjps, ...offPjpList] }
+      ),
+    },
     meta: {
       date: dateStr,
       reportTitle: 'DAILY CALL & ATTENDANCE AUDIT REPORT',
@@ -441,8 +538,12 @@ export const getDailyCallReport = async (query = {}) => {
       totalPlanCalls: totalPlan,
       totalActualCalls: totalActual,
       totalPlannedActualCalls: totalPlannedActual,
-      totalCollectionCalls:allEnrichedRows.filter(r=>r.actualCall==='Y'&&includesCollection(r.visitOutcome?.purpose)).length,
-      totalPaymentPromises:allEnrichedRows.filter(r=>r.actualCall==='Y'&&r.visitOutcome?.result==='PROMISED').length,
+      totalCollectionCalls: allEnrichedRows.filter(
+        (r) => r.actualCall === 'Y' && includesCollection(r.visitOutcome?.purpose)
+      ).length,
+      totalPaymentPromises: allEnrichedRows.filter(
+        (r) => r.actualCall === 'Y' && r.visitOutcome?.result === 'PROMISED'
+      ).length,
       callComplianceRate: complianceRate,
       totalEffectiveCalls: totalEc,
       effectiveCallRate: ecRate,

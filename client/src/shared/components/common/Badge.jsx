@@ -23,9 +23,5 @@ export const Badge = ({ children, variant = 'lime', className = '' }) => {
     }
   };
 
-  return (
-    <span className={`badge-base ${getVariantClass()} ${className}`}>
-      {children}
-    </span>
-  );
+  return <span className={`badge-base ${getVariantClass()} ${className}`}>{children}</span>;
 };

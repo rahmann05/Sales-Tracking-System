@@ -32,32 +32,32 @@
   transform: scale(0.97);
 }
 
-/* Primary — near black */
+/* Primary — Royal Blue */
 .btn-primary {
-  background: #1D1D1F;
-  color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  background: var(--primary, #0869cf);
+  color: var(--on-primary, #ffffff);
+  box-shadow: 0 2px 8px rgba(8, 105, 207, 0.18);
 }
 
 .btn-primary:hover {
-  background: #333336;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  background: var(--primary-hover, #0656ab);
+  box-shadow: 0 4px 12px rgba(8, 105, 207, 0.25);
 }
 
 /* Secondary — gray */
 .btn-secondary {
-  background: #86868B;
-  color: #FFFFFF;
+  background: #86868b;
+  color: #ffffff;
 }
 
 .btn-secondary:hover {
-  background: #6E6E73;
+  background: #6e6e73;
 }
 
 /* Tertiary — emerald/green */
 .btn-tertiary {
-  background: #10B981;
-  color: #FFFFFF;
+  background: #10b981;
+  color: #ffffff;
 }
 
 .btn-tertiary:hover {
@@ -66,22 +66,22 @@
 
 /* Danger — alert */
 .btn-danger {
-  background: #FF3B30;
-  color: #FFFFFF;
+  background: #ff3b30;
+  color: #ffffff;
 }
 
 .btn-danger:hover {
-  background: #E5352B;
+  background: #e5352b;
 }
 
 /* Warning */
 .btn-warning {
-  background: #FF9500;
-  color: #FFFFFF;
+  background: #ff9500;
+  color: #ffffff;
 }
 
 .btn-warning:hover {
-  background: #E68600;
+  background: #e68600;
 }
 
 /* Ghost */
@@ -168,6 +168,6 @@
 }
 
 .btn-pill.active {
-  background: #1D1D1F;
-  color: #FFFFFF;
+  background: var(--primary, #0869cf);
+  color: var(--on-primary, #ffffff);
 }

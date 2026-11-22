@@ -1,4 +1,4 @@
-import {UNLOCK_KIND_LABELS} from '../../../../../shared/unlock-policy.mjs';
+import { UNLOCK_KIND_LABELS } from '../../../../../shared/unlock-policy.mjs';
 import React from 'react';
 import { LuKey, LuCheck, LuX, LuUser, LuMapPin, LuClock } from 'react-icons/lu';
 
@@ -24,7 +24,9 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
               </div>
               <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
                 <LuUser className="text-xs text-primary" />
-                <span>Diajukan oleh: <strong>{request.userName}</strong></span>
+                <span>
+                  Diajukan oleh: <strong>{request.userName}</strong>
+                </span>
               </p>
             </div>
           </div>
@@ -41,9 +43,15 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
             {request.address || 'Alamat outlet'}
           </p>
           <p className="text-on-surface ">
-            <strong>{UNLOCK_KIND_LABELS[request.kind]||'Pengecualian kunjungan'}:</strong> {request.reason}
+            <strong>{UNLOCK_KIND_LABELS[request.kind] || 'Pengecualian kunjungan'}:</strong>{' '}
+            {request.reason}
           </p>
-          <p>{request.maxVisits>0?`Batas ${request.maxVisits} kunjungan · terpakai ${request.usedVisits||0} · sisa ${request.remainingVisits??request.maxVisits}`:'Tanpa batas jumlah kunjungan selama izin berlaku'}. Masuk–keluar pada stop yang sama dihitung sekali.</p>
+          <p>
+            {request.maxVisits > 0
+              ? `Batas ${request.maxVisits} kunjungan · terpakai ${request.usedVisits || 0} · sisa ${request.remainingVisits ?? request.maxVisits}`
+              : 'Tanpa batas jumlah kunjungan selama izin berlaku'}
+            . Masuk–keluar pada stop yang sama dihitung sekali.
+          </p>
           {request.activeVisitingOutlet && (
             <p className="text-[11px] text-amber-700 ">
               Outlet aktif sebelumnya: {request.activeVisitingOutlet}

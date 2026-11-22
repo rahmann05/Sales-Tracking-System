@@ -4,7 +4,7 @@
 
 .login-wrapper {
   @apply relative w-screen min-h-screen select-none overflow-x-hidden;
-  background: #F5F5F7;
+  background: #f5f5f7;
 }
 
 /* ── Direct Login Container (Desktop & Mobile) ── */
@@ -49,15 +49,15 @@
 }
 
 .role-btn.selected {
-  border-color: #1D1D1F;
-  background: #1D1D1F;
-  color: #FFFFFF;
+  border-color: #1d1d1f;
+  background: #1d1d1f;
+  color: #ffffff;
 }
 
 .role-btn.selected .role-icon,
 .role-btn.selected .role-name,
 .role-btn.selected .role-desc {
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .role-icon {
@@ -86,17 +86,17 @@
 }
 
 .login-input-box:focus-within {
-  border-color: #1D1D1F;
-  background: #FFFFFF;
+  border-color: #1d1d1f;
+  background: #ffffff;
 }
 
 .login-input {
   @apply bg-transparent border-none outline-none text-sm text-on-surface w-full;
-  caret-color: #1D1D1F;
+  caret-color: #1d1d1f;
 }
 
 .login-input::placeholder {
-  color: #C7C7CC;
+  color: #c7c7cc;
 }
 
 .login-input-icon {
@@ -106,8 +106,8 @@
 /* ── Submit Button ── */
 .login-submit-btn {
   @apply w-full py-3 md:py-3.5 mt-1 font-bold rounded-2xl text-sm flex items-center justify-center gap-2 cursor-pointer transition-all duration-150 border-none shadow-sm;
-  background: #1D1D1F;
-  color: #FFFFFF;
+  background: #1d1d1f;
+  color: #ffffff;
 }
 
 .login-submit-btn:hover {
@@ -126,7 +126,7 @@
 /* ── Mobile: Splash Screen ── */
 .login-mobile-splash {
   @apply lg:hidden fixed inset-0 z-50 flex flex-col items-center justify-center gap-6;
-  background: #FFFFFF;
+  background: #ffffff;
   animation: splash-fade-out 0.5s ease-out 1.2s forwards;
 }
 
@@ -140,8 +140,8 @@
 
 .login-mobile-splash-logo {
   @apply w-20 h-20 rounded-[24px] flex items-center justify-center text-3xl;
-  background: #1D1D1F;
-  color: #FFFFFF;
+  background: #1d1d1f;
+  color: #ffffff;
   animation: splash-logo 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

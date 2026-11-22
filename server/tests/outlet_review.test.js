@@ -1,91 +1,364 @@
-import {describe,it} from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {compareOutletEvidence} from '../src/modules/outlets/services/compare-outlet-evidence.service.js';
-import {createOutletSchema,updateOutletSchema} from '../src/modules/outlets/outlets.schema.js';
-import {createRegistrationSchema,finalizeRegistrationSchema} from '../src/modules/customer-registrations/customer-registrations.schema.js';
-import {outletOperationalImpact} from '../src/modules/outlets/services/outlet-operational-impact.service.js';
-import {assertOutletTrade} from '../src/modules/outlets/services/outlet-data-policy.service.js';
-import {outletEvidenceState,outletReviewEvidenceState} from '../../shared/outlet-evidence-policy.mjs';
-import {policyConflicts} from '../../shared/operational-policy.mjs';
-import {calculateNameSimilarity} from '../src/modules/outlets/services/calculate-name-similarity.service.js';
-import {runReverseGeocode,runFindPlace} from '../src/modules/outlets/services/outlet-validation.helpers.js';
-import {outletMapJson} from '../src/modules/outlets/services/outlet-map-request.service.js';
-import {registrationLocation} from '../../shared/registration-policy.mjs';
-const outlet={name:'Toko Sumber Berkah',address:'Jl Melati Bandung',latitude:-6.9,longitude:107.6};
-const none={success:false,error:'ZERO_RESULTS'};
-const reverse={success:true,formattedAddress:outlet.address};
-const forward={success:true,lat:-6.9,lng:107.6,formattedAddress:outlet.address,locationType:'ROOFTOP'};
-const place={success:true,placeName:outlet.name,lat:-6.9,lng:107.6,placeId:'one',businessStatus:'OPERATIONAL'};
-const raw={reverseGeocode:reverse,forwardGeocode:forward,findPlace:place,nearbySearch:none};
-describe('Optional outlet map comparison decisions',()=>{
- it('returns insufficient evidence when all providers have no results',()=>assert.equal(compareOutletEvidence(outlet,Object.fromEntries(Object.keys(raw).map(k=>[k,none]))).code,'NO_EVIDENCE'));
- it('does not penalize a physically plausible address absent from Places',()=>assert.equal(compareOutletEvidence(outlet,{...raw,findPlace:none}).code,'CONSISTENT'));
- it('retains the forward address conflict despite matching nearby Places',()=>{const r=compareOutletEvidence(outlet,{...raw,forwardGeocode:{...forward,lat:-6.1}});assert.equal(r.code,'CONFLICT');assert.ok(r.warnings.some(w=>w.includes('m dari master')));});
- it('treats an approximate or partial geocode as uncertain',()=>{assert.equal(compareOutletEvidence(outlet,{...raw,forwardGeocode:{...forward,locationType:'APPROXIMATE'}}).code,'AMBIGUOUS');assert.equal(compareOutletEvidence(outlet,{...raw,forwardGeocode:{...forward,partialMatch:true}}).code,'AMBIGUOUS');});
- it('retains closed-place warnings without changing operational outlet status',()=>{const r=compareOutletEvidence(outlet,{...raw,findPlace:{...place,businessStatus:'CLOSED_PERMANENTLY'}});assert.equal(r.code,'AMBIGUOUS');assert.ok(r.warnings.length);assert.equal(r.suggestion,null);});
- it('never suggests a candidate past the configured distance limit',()=>{const r=compareOutletEvidence(outlet,{...raw,findPlace:{...place,lat:-6.8928}},{suspectDistance:500});assert.equal(r.code,'CONFLICT');assert.equal(r.suggestion,null);});
- it('permits a nearby strong candidate as a manual comparison suggestion',()=>{const r=compareOutletEvidence(outlet,{...raw,findPlace:{...place,lat:-6.8996}});assert.ok(r.suggestion.distanceMeters>5);assert.ok(r.suggestion.distanceMeters<100);});
- it('does not count nearby context as independent proof of existence',()=>{const r=compareOutletEvidence(outlet,{reverseGeocode:none,forwardGeocode:none,findPlace:none,nearbySearch:{success:true,places:[{name:outlet.name}]}});assert.equal(r.code,'NO_EVIDENCE');});
- it('preserves ambiguity between similarly named nearby branches',()=>{const r=compareOutletEvidence(outlet,{...raw,findPlace:{...place,candidates:[{placeName:outlet.name,placeId:'two',lat:-6.8999,lng:107.6}]}});assert.equal(r.code,'AMBIGUOUS');assert.equal(r.suggestion,null);});
- it('distinguishes provider failure from no evidence',()=>assert.equal(compareOutletEvidence(outlet,{...raw,reverseGeocode:{success:false,error:'REQUEST_DENIED'}}).code,'ERROR'));
- it('does not recommend moving master while another source materially conflicts',()=>{const r=compareOutletEvidence(outlet,{...raw,forwardGeocode:{...forward,lat:-6.1},findPlace:{...place,lat:-6.8996}});assert.equal(r.code,'CONFLICT');assert.equal(r.suggestion,null);});
- it('keeps a distant candidate conflict even when the place is marked closed',()=>assert.equal(compareOutletEvidence(outlet,{...raw,findPlace:{...place,lat:-6.1,businessStatus:'CLOSED_PERMANENTLY'}}).code,'CONFLICT'));
- it('uses configurable name and address thresholds without creating a combined certainty score',()=>{
-  const candidate={...place,placeName:'Berkah Sumber Makmur'},score=calculateNameSimilarity(outlet.name,candidate.placeName)*100;
-  const lower=compareOutletEvidence(outlet,{...raw,findPlace:candidate},{nameMatchPercent:Math.floor(score)});
-  const higher=compareOutletEvidence(outlet,{...raw,findPlace:candidate},{nameMatchPercent:Math.ceil(score)+1});
-  assert.equal(lower.signals.findPlace.state,'MATCH');assert.equal(higher.signals.findPlace.state,'AMBIGUOUS');assert.equal(lower.confidence,undefined);
-  const modified={...raw,reverseGeocode:{...reverse,formattedAddress:'Jl Melati Sukajadi Bandung'}};
-  const similarity=compareOutletEvidence(outlet,modified).signals.reverseGeocode.addressSimilarity;
-  assert.ok(similarity>0&&similarity<1);
-  assert.equal(compareOutletEvidence(outlet,modified,{addressMatchPercent:Math.floor(similarity*100)}).signals.reverseGeocode.state,'MATCH');
-  assert.equal(compareOutletEvidence(outlet,modified,{addressConflictPercent:Math.ceil(similarity*100)+1,addressMatchPercent:100}).signals.reverseGeocode.state,'CONFLICT');
- });
- it('zero ambiguity gap still detects equally similar nearby alternatives',()=>{
-  const result=compareOutletEvidence(outlet,{...raw,findPlace:{...place,candidates:[{placeName:outlet.name,placeId:'two',lat:-6.8999,lng:107.6}]}},{ambiguityGapPercent:0});
-  assert.equal(result.code,'AMBIGUOUS');assert.equal(result.suggestion,null);
- });
- it('freezes evidence expiry and thresholds in each run without expiring older unbounded evidence',()=>{
-  const result=compareOutletEvidence(outlet,raw,{evidenceDays:2,nameMatchPercent:80}),run={snapshot:{...outlet},result};
-  assert.equal(Date.parse(result.expiresAt)-Date.parse(result.checkedAt),2*86400000);assert.equal(result.comparisonPolicy.nameMatchPercent,80);
-  assert.equal(outletEvidenceState(run,outlet,Date.parse(result.expiresAt)-1).expired,false);
-  assert.equal(outletEvidenceState(run,outlet,Date.parse(result.expiresAt)).expired,true);
-  assert.equal(outletEvidenceState({snapshot:{...outlet},result:{}},outlet,Date.now()+3650*86400000).stale,false);
-  assert.equal(outletEvidenceState(run,{...outlet,address:'Alamat berubah'},Date.parse(result.checkedAt)).changed,true);
-  const failed={snapshot:{...outlet},result:{code:'ERROR',checkedAt:result.expiresAt}};
-  assert.equal(outletReviewEvidenceState([failed,run],outlet,Date.parse(result.expiresAt)).expired,true);
-  assert.equal(outletReviewEvidenceState([failed],outlet).unavailable,true);
- });
- it('rejects contradictory thresholds before publication',()=>{
-  for(const values of [{OUTLET_REVIEW_ADDRESS_CONFLICT_PERCENT:70},{OUTLET_REVIEW_NAME_MATCH_PERCENT:90},{OUTLET_REVIEW_ALTERNATIVE_NAME_PERCENT:90}])assert.ok(policyConflicts(values).length);
-  assert.equal(policyConflicts({OUTLET_REVIEW_NAME_MATCH_PERCENT:90,OUTLET_REVIEW_SUGGESTION_NAME_PERCENT:95}).length,0);
- });
+import { compareOutletEvidence } from '../src/modules/outlets/services/compare-outlet-evidence.service.js';
+import { createOutletSchema, updateOutletSchema } from '../src/modules/outlets/outlets.schema.js';
+import {
+  createRegistrationSchema,
+  finalizeRegistrationSchema,
+} from '../src/modules/customer-registrations/customer-registrations.schema.js';
+import { outletOperationalImpact } from '../src/modules/outlets/services/outlet-operational-impact.service.js';
+import { assertOutletTrade } from '../src/modules/outlets/services/outlet-data-policy.service.js';
+import {
+  outletEvidenceState,
+  outletReviewEvidenceState,
+} from '../../shared/outlet-evidence-policy.mjs';
+import { policyConflicts } from '../../shared/operational-policy.mjs';
+import { calculateNameSimilarity } from '../src/modules/outlets/services/calculate-name-similarity.service.js';
+import {
+  runReverseGeocode,
+  runFindPlace,
+} from '../src/modules/outlets/services/outlet-validation.helpers.js';
+import { outletMapJson } from '../src/modules/outlets/services/outlet-map-request.service.js';
+import { registrationLocation } from '../../shared/registration-policy.mjs';
+const outlet = {
+  name: 'Toko Sumber Berkah',
+  address: 'Jl Melati Bandung',
+  latitude: -6.9,
+  longitude: 107.6,
+};
+const none = { success: false, error: 'ZERO_RESULTS' };
+const reverse = { success: true, formattedAddress: outlet.address };
+const forward = {
+  success: true,
+  lat: -6.9,
+  lng: 107.6,
+  formattedAddress: outlet.address,
+  locationType: 'ROOFTOP',
+};
+const place = {
+  success: true,
+  placeName: outlet.name,
+  lat: -6.9,
+  lng: 107.6,
+  placeId: 'one',
+  businessStatus: 'OPERATIONAL',
+};
+const raw = {
+  reverseGeocode: reverse,
+  forwardGeocode: forward,
+  findPlace: place,
+  nearbySearch: none,
+};
+describe('Optional outlet map comparison decisions', () => {
+  it('returns insufficient evidence when all providers have no results', () =>
+    assert.equal(
+      compareOutletEvidence(outlet, Object.fromEntries(Object.keys(raw).map((k) => [k, none])))
+        .code,
+      'NO_EVIDENCE'
+    ));
+  it('does not penalize a physically plausible address absent from Places', () =>
+    assert.equal(compareOutletEvidence(outlet, { ...raw, findPlace: none }).code, 'CONSISTENT'));
+  it('retains the forward address conflict despite matching nearby Places', () => {
+    const r = compareOutletEvidence(outlet, { ...raw, forwardGeocode: { ...forward, lat: -6.1 } });
+    assert.equal(r.code, 'CONFLICT');
+    assert.ok(r.warnings.some((w) => w.includes('m dari master')));
+  });
+  it('treats an approximate or partial geocode as uncertain', () => {
+    assert.equal(
+      compareOutletEvidence(outlet, {
+        ...raw,
+        forwardGeocode: { ...forward, locationType: 'APPROXIMATE' },
+      }).code,
+      'AMBIGUOUS'
+    );
+    assert.equal(
+      compareOutletEvidence(outlet, { ...raw, forwardGeocode: { ...forward, partialMatch: true } })
+        .code,
+      'AMBIGUOUS'
+    );
+  });
+  it('retains closed-place warnings without changing operational outlet status', () => {
+    const r = compareOutletEvidence(outlet, {
+      ...raw,
+      findPlace: { ...place, businessStatus: 'CLOSED_PERMANENTLY' },
+    });
+    assert.equal(r.code, 'AMBIGUOUS');
+    assert.ok(r.warnings.length);
+    assert.equal(r.suggestion, null);
+  });
+  it('never suggests a candidate past the configured distance limit', () => {
+    const r = compareOutletEvidence(
+      outlet,
+      { ...raw, findPlace: { ...place, lat: -6.8928 } },
+      { suspectDistance: 500 }
+    );
+    assert.equal(r.code, 'CONFLICT');
+    assert.equal(r.suggestion, null);
+  });
+  it('permits a nearby strong candidate as a manual comparison suggestion', () => {
+    const r = compareOutletEvidence(outlet, { ...raw, findPlace: { ...place, lat: -6.8996 } });
+    assert.ok(r.suggestion.distanceMeters > 5);
+    assert.ok(r.suggestion.distanceMeters < 100);
+  });
+  it('does not count nearby context as independent proof of existence', () => {
+    const r = compareOutletEvidence(outlet, {
+      reverseGeocode: none,
+      forwardGeocode: none,
+      findPlace: none,
+      nearbySearch: { success: true, places: [{ name: outlet.name }] },
+    });
+    assert.equal(r.code, 'NO_EVIDENCE');
+  });
+  it('preserves ambiguity between similarly named nearby branches', () => {
+    const r = compareOutletEvidence(outlet, {
+      ...raw,
+      findPlace: {
+        ...place,
+        candidates: [{ placeName: outlet.name, placeId: 'two', lat: -6.8999, lng: 107.6 }],
+      },
+    });
+    assert.equal(r.code, 'AMBIGUOUS');
+    assert.equal(r.suggestion, null);
+  });
+  it('distinguishes provider failure from no evidence', () =>
+    assert.equal(
+      compareOutletEvidence(outlet, {
+        ...raw,
+        reverseGeocode: { success: false, error: 'REQUEST_DENIED' },
+      }).code,
+      'ERROR'
+    ));
+  it('does not recommend moving master while another source materially conflicts', () => {
+    const r = compareOutletEvidence(outlet, {
+      ...raw,
+      forwardGeocode: { ...forward, lat: -6.1 },
+      findPlace: { ...place, lat: -6.8996 },
+    });
+    assert.equal(r.code, 'CONFLICT');
+    assert.equal(r.suggestion, null);
+  });
+  it('keeps a distant candidate conflict even when the place is marked closed', () =>
+    assert.equal(
+      compareOutletEvidence(outlet, {
+        ...raw,
+        findPlace: { ...place, lat: -6.1, businessStatus: 'CLOSED_PERMANENTLY' },
+      }).code,
+      'CONFLICT'
+    ));
+  it('uses configurable name and address thresholds without creating a combined certainty score', () => {
+    const candidate = { ...place, placeName: 'Berkah Sumber Makmur' },
+      score = calculateNameSimilarity(outlet.name, candidate.placeName) * 100;
+    const lower = compareOutletEvidence(
+      outlet,
+      { ...raw, findPlace: candidate },
+      { nameMatchPercent: Math.floor(score) }
+    );
+    const higher = compareOutletEvidence(
+      outlet,
+      { ...raw, findPlace: candidate },
+      { nameMatchPercent: Math.ceil(score) + 1 }
+    );
+    assert.equal(lower.signals.findPlace.state, 'MATCH');
+    assert.equal(higher.signals.findPlace.state, 'AMBIGUOUS');
+    assert.equal(lower.confidence, undefined);
+    const modified = {
+      ...raw,
+      reverseGeocode: { ...reverse, formattedAddress: 'Jl Melati Sukajadi Bandung' },
+    };
+    const similarity = compareOutletEvidence(outlet, modified).signals.reverseGeocode
+      .addressSimilarity;
+    assert.ok(similarity > 0 && similarity < 1);
+    assert.equal(
+      compareOutletEvidence(outlet, modified, { addressMatchPercent: Math.floor(similarity * 100) })
+        .signals.reverseGeocode.state,
+      'MATCH'
+    );
+    assert.equal(
+      compareOutletEvidence(outlet, modified, {
+        addressConflictPercent: Math.ceil(similarity * 100) + 1,
+        addressMatchPercent: 100,
+      }).signals.reverseGeocode.state,
+      'CONFLICT'
+    );
+  });
+  it('zero ambiguity gap still detects equally similar nearby alternatives', () => {
+    const result = compareOutletEvidence(
+      outlet,
+      {
+        ...raw,
+        findPlace: {
+          ...place,
+          candidates: [{ placeName: outlet.name, placeId: 'two', lat: -6.8999, lng: 107.6 }],
+        },
+      },
+      { ambiguityGapPercent: 0 }
+    );
+    assert.equal(result.code, 'AMBIGUOUS');
+    assert.equal(result.suggestion, null);
+  });
+  it('freezes evidence expiry and thresholds in each run without expiring older unbounded evidence', () => {
+    const result = compareOutletEvidence(outlet, raw, { evidenceDays: 2, nameMatchPercent: 80 }),
+      run = { snapshot: { ...outlet }, result };
+    assert.equal(Date.parse(result.expiresAt) - Date.parse(result.checkedAt), 2 * 86400000);
+    assert.equal(result.comparisonPolicy.nameMatchPercent, 80);
+    assert.equal(outletEvidenceState(run, outlet, Date.parse(result.expiresAt) - 1).expired, false);
+    assert.equal(outletEvidenceState(run, outlet, Date.parse(result.expiresAt)).expired, true);
+    assert.equal(
+      outletEvidenceState(
+        { snapshot: { ...outlet }, result: {} },
+        outlet,
+        Date.now() + 3650 * 86400000
+      ).stale,
+      false
+    );
+    assert.equal(
+      outletEvidenceState(
+        run,
+        { ...outlet, address: 'Alamat berubah' },
+        Date.parse(result.checkedAt)
+      ).changed,
+      true
+    );
+    const failed = {
+      snapshot: { ...outlet },
+      result: { code: 'ERROR', checkedAt: result.expiresAt },
+    };
+    assert.equal(
+      outletReviewEvidenceState([failed, run], outlet, Date.parse(result.expiresAt)).expired,
+      true
+    );
+    assert.equal(outletReviewEvidenceState([failed], outlet).unavailable, true);
+  });
+  it('rejects contradictory thresholds before publication', () => {
+    for (const values of [
+      { OUTLET_REVIEW_ADDRESS_CONFLICT_PERCENT: 70 },
+      { OUTLET_REVIEW_NAME_MATCH_PERCENT: 90 },
+      { OUTLET_REVIEW_ALTERNATIVE_NAME_PERCENT: 90 },
+    ])
+      assert.ok(policyConflicts(values).length);
+    assert.equal(
+      policyConflicts({
+        OUTLET_REVIEW_NAME_MATCH_PERCENT: 90,
+        OUTLET_REVIEW_SUGGESTION_NAME_PERCENT: 95,
+      }).length,
+      0
+    );
+  });
 });
-it('map requests honor configured radius/timeout and sanitize failure messages containing API keys',async t=>{
- const requests=[],timeouts=[];
- t.mock.method(AbortSignal,'timeout',ms=>{timeouts.push(ms);return new AbortController().signal;});
- t.mock.method(globalThis,'fetch',async url=>{requests.push(String(url));return {ok:true,json:async()=>({status:'ZERO_RESULTS'})};});
- await runFindPlace('Toko','Alamat','secret-key',0,0,null,{searchRadiusMeters:800,timeoutSeconds:3});
- assert.equal(new URL(requests[0]).searchParams.get('radius'),'800');assert.ok(requests.every(url=>url.includes('0,0')||url.includes('0%2C0')));assert.deepEqual(timeouts,[3000,3000]);
- t.mock.method(globalThis,'fetch',async()=>{throw new Error('https://maps.googleapis.com/?key=secret-key');});
- assert.equal((await runReverseGeocode(0,0,'secret-key')).error,'MAP_PROVIDER_ERROR');
- t.mock.method(globalThis,'fetch',async()=>({ok:false,json:async()=>({status:'ZERO_RESULTS'})}));
- await assert.rejects(()=>outletMapJson('https://fixture.invalid'),/MAP_HTTP_ERROR/);
+it('map requests honor configured radius/timeout and sanitize failure messages containing API keys', async (t) => {
+  const requests = [],
+    timeouts = [];
+  t.mock.method(AbortSignal, 'timeout', (ms) => {
+    timeouts.push(ms);
+    return new AbortController().signal;
+  });
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    requests.push(String(url));
+    return { ok: true, json: async () => ({ status: 'ZERO_RESULTS' }) };
+  });
+  await runFindPlace('Toko', 'Alamat', 'secret-key', 0, 0, null, {
+    searchRadiusMeters: 800,
+    timeoutSeconds: 3,
+  });
+  assert.equal(new URL(requests[0]).searchParams.get('radius'), '800');
+  assert.ok(requests.every((url) => url.includes('0,0') || url.includes('0%2C0')));
+  assert.deepEqual(timeouts, [3000, 3000]);
+  t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('https://maps.googleapis.com/?key=secret-key');
+  });
+  assert.equal((await runReverseGeocode(0, 0, 'secret-key')).error, 'MAP_PROVIDER_ERROR');
+  t.mock.method(globalThis, 'fetch', async () => ({
+    ok: false,
+    json: async () => ({ status: 'ZERO_RESULTS' }),
+  }));
+  await assert.rejects(() => outletMapJson('https://fixture.invalid'), /MAP_HTTP_ERROR/);
 });
-it('operational impact ignores fulfilled order history and completed packing but retains outstanding work',async()=>{
- const done={id:'done',status:'APPROVED',items:[{id:'line',quantity:1}]},open={id:'open',status:'APPROVED',items:[{id:'open-line',quantity:2}]};
- const packings=[{sourceOrderId:'done',status:'RELEASED',items:[{lineId:'packed',sourceOrderItemId:'line',quantity:1}],deliveryStops:[{status:'DELIVERED',allocatedItems:[{lineId:'packed',quantity:1}],deliveryRoute:{status:'COMPLETED',cancelledAt:null}}]}];
- const db={pjpStop:{count:async()=>0},order:{findMany:async()=>[done,open]},packingList:{findMany:async()=>packings},deliveryStop:{count:async()=>0}};
- assert.deepEqual(await outletOperationalImpact(db,'outlet'),{scheduled:0,activeVisits:0,orders:1,deliveries:0,packing:0});
- packings[0].items[0].quantity=2;
- assert.equal((await outletOperationalImpact(db,'outlet')).packing,1);
+it('operational impact ignores fulfilled order history and completed packing but retains outstanding work', async () => {
+  const done = { id: 'done', status: 'APPROVED', items: [{ id: 'line', quantity: 1 }] },
+    open = { id: 'open', status: 'APPROVED', items: [{ id: 'open-line', quantity: 2 }] };
+  const packings = [
+    {
+      sourceOrderId: 'done',
+      status: 'RELEASED',
+      items: [{ lineId: 'packed', sourceOrderItemId: 'line', quantity: 1 }],
+      deliveryStops: [
+        {
+          status: 'DELIVERED',
+          allocatedItems: [{ lineId: 'packed', quantity: 1 }],
+          deliveryRoute: { status: 'COMPLETED', cancelledAt: null },
+        },
+      ],
+    },
+  ];
+  const db = {
+    pjpStop: { count: async () => 0 },
+    order: { findMany: async () => [done, open] },
+    packingList: { findMany: async () => packings },
+    deliveryStop: { count: async () => 0 },
+  };
+  assert.deepEqual(await outletOperationalImpact(db, 'outlet'), {
+    scheduled: 0,
+    activeVisits: 0,
+    orders: 1,
+    deliveries: 0,
+    packing: 0,
+  });
+  packings[0].items[0].quantity = 2;
+  assert.equal((await outletOperationalImpact(db, 'outlet')).packing, 1);
 });
-describe('Master and registration data boundaries',()=>{
- it('prevents a retail subtype from being stored as Modern Trade',()=>{assert.throws(()=>assertOutletTrade({channel:'MODERN_TRADE',subChannel:'TOKO_RETAIL'}));assert.doesNotThrow(()=>assertOutletTrade({channel:'MODERN_TRADE',subChannel:'CHAIN_MINIMARKET'}));});
- const body={...outlet,clusterId:'cluster'};
- it('defers required coordinates to policy and rejects partial pairs in the policy evaluator',()=>{const parsed=createRegistrationSchema.parse({body:{name:outlet.name,address:outlet.address}}).body;assert.throws(()=>registrationLocation(parsed,true),/wajib/);assert.deepEqual(registrationLocation(parsed,false),{latitude:null,longitude:null});assert.throws(()=>registrationLocation({...outlet,latitude:null},false),/berpasangan/);});
- it('accepts geographically valid zero latitude without replacing it',()=>assert.equal(createRegistrationSchema.parse({body:{...outlet,latitude:0}}).body.latitude,0));
- it('limits geofence radius to a bounded positive integer',()=>{for(const radiusMeters of [-50,2.5,1000000])assert.equal(createOutletSchema.safeParse({body:{...body,radiusMeters}}).success,false);});
- it('retains NIK fields and requires version and reason on edits',()=>{assert.equal(updateOutletSchema.safeParse({params:{id:'outlet'},body:{taxNumber:'1234567890123456'}}).success,false);assert.equal(updateOutletSchema.parse({params:{id:'outlet'},body:{taxType:'NON_PKP',taxNumber:'1234567890123456',reason:'Perbaikan identitas pemilik',updatedAt:new Date().toISOString()}}).body.taxNumber,'1234567890123456');});
- it('retains real coordinate corrections during activation',()=>assert.equal(finalizeRegistrationSchema.parse({body:{latitude:-6.9,longitude:107.6}}).body.longitude,107.6));
+describe('Master and registration data boundaries', () => {
+  it('prevents a retail subtype from being stored as Modern Trade', () => {
+    assert.throws(() => assertOutletTrade({ channel: 'MODERN_TRADE', subChannel: 'TOKO_RETAIL' }));
+    assert.doesNotThrow(() =>
+      assertOutletTrade({ channel: 'MODERN_TRADE', subChannel: 'CHAIN_MINIMARKET' })
+    );
+  });
+  const body = { ...outlet, clusterId: 'cluster' };
+  it('defers required coordinates to policy and rejects partial pairs in the policy evaluator', () => {
+    const parsed = createRegistrationSchema.parse({
+      body: { name: outlet.name, address: outlet.address },
+    }).body;
+    assert.throws(() => registrationLocation(parsed, true), /wajib/);
+    assert.deepEqual(registrationLocation(parsed, false), { latitude: null, longitude: null });
+    assert.throws(() => registrationLocation({ ...outlet, latitude: null }, false), /berpasangan/);
+  });
+  it('accepts geographically valid zero latitude without replacing it', () =>
+    assert.equal(
+      createRegistrationSchema.parse({ body: { ...outlet, latitude: 0 } }).body.latitude,
+      0
+    ));
+  it('limits geofence radius to a bounded positive integer', () => {
+    for (const radiusMeters of [-50, 2.5, 1000000])
+      assert.equal(
+        createOutletSchema.safeParse({ body: { ...body, radiusMeters } }).success,
+        false
+      );
+  });
+  it('retains NIK fields and requires version and reason on edits', () => {
+    assert.equal(
+      updateOutletSchema.safeParse({
+        params: { id: 'outlet' },
+        body: { taxNumber: '1234567890123456' },
+      }).success,
+      false
+    );
+    assert.equal(
+      updateOutletSchema.parse({
+        params: { id: 'outlet' },
+        body: {
+          taxType: 'NON_PKP',
+          taxNumber: '1234567890123456',
+          reason: 'Perbaikan identitas pemilik',
+          updatedAt: new Date().toISOString(),
+        },
+      }).body.taxNumber,
+      '1234567890123456'
+    );
+  });
+  it('retains real coordinate corrections during activation', () =>
+    assert.equal(
+      finalizeRegistrationSchema.parse({ body: { latitude: -6.9, longitude: 107.6 } }).body
+        .longitude,
+      107.6
+    ));
 });

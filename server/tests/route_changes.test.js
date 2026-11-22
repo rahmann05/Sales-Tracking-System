@@ -1,10 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { 
-  VISIT_STATUS, 
-  ROUTE_CHANGE_TYPE, 
+import {
+  VISIT_STATUS,
+  ROUTE_CHANGE_TYPE,
   ROUTE_CHANGE_STATUS,
-  NOTIFICATION_TYPES 
+  NOTIFICATION_TYPES,
 } from '../src/utils/constants.js';
 
 describe('Route Changes & Incident Management Unit Tests', () => {

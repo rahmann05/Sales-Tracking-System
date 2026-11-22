@@ -11,7 +11,14 @@ export const googlePlacesService = {
   getGoogleMapsUrl: (lat, lng, query = '') => {
     const latNum = Number(lat);
     const lngNum = Number(lng);
-    if (lat!=null&&lng!=null&&Number.isFinite(latNum)&&Number.isFinite(lngNum)&&Math.abs(latNum)<=90&&Math.abs(lngNum)<=180) {
+    if (
+      lat != null &&
+      lng != null &&
+      Number.isFinite(latNum) &&
+      Number.isFinite(lngNum) &&
+      Math.abs(latNum) <= 90 &&
+      Math.abs(lngNum) <= 180
+    ) {
       return `https://www.google.com/maps/search/?api=1&query=${latNum},${lngNum}`;
     }
     if (query && query.trim()) {
@@ -39,7 +46,9 @@ export const googlePlacesService = {
     ) {
       const code = outletOrStop.outletCode || outletOrStop.customerId;
       const targetId = outletOrStop.outletId || outletOrStop.id;
-      const name = (outletOrStop.outletName || outletOrStop.customerName || outletOrStop.name || '').trim().toLowerCase();
+      const name = (outletOrStop.outletName || outletOrStop.customerName || outletOrStop.name || '')
+        .trim()
+        .toLowerCase();
 
       const matched = fallbackOutlets.find((o) => {
         if (targetId && (o.id === targetId || o.outletId === targetId)) return true;
@@ -76,7 +85,11 @@ export const googlePlacesService = {
       return {
         placeName: outlet?.name || outlet?.outletName || 'Outlet',
         category: outlet?.type === 'MODERN_TRADE' ? 'Modern Trade' : 'General Trade',
-        googleMapsUrl: googlePlacesService.getGoogleMapsUrl(null, null, outlet?.name || outlet?.outletName),
+        googleMapsUrl: googlePlacesService.getGoogleMapsUrl(
+          null,
+          null,
+          outlet?.name || outlet?.outletName
+        ),
         photoUrl: outlet?.photoUrl || null,
       };
     }
@@ -118,7 +131,7 @@ export const googlePlacesService = {
             placeName: result.name || outlet.name || outlet.outletName,
             rating: result.rating || null,
             userRatingsTotal: result.user_ratings_total || null,
-            category: result.types ? result.types[0].replace(/_/g, ' ') : (outlet.type || 'Toko'),
+            category: result.types ? result.types[0].replace(/_/g, ' ') : outlet.type || 'Toko',
             businessStatus: result.opening_hours?.open_now ? 'Buka' : 'Tutup / Operasional',
             googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${Number(outlet.latitude)},${Number(outlet.longitude)}`,
             photoUrl,

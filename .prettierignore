@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+storage/
+.backups/
+Analisis/
+docs/
+dokumen perancangan/
+server/prisma/migrations/
+server/prisma/migrations_staging/
+package-lock.json
+*.min.js

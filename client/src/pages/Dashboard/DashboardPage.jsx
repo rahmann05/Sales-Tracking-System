@@ -1,4 +1,4 @@
-import {useWorkspaceState} from '../../shared/hooks/useWorkspaceState';
+import { useWorkspaceState } from '../../shared/hooks/useWorkspaceState';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ActiveRoutesList } from './components/ActiveRoutesList';
@@ -10,7 +10,7 @@ import { googlePlacesService } from '../../services/googlePlacesService';
 import '../../styles/pages/Dashboard.css';
 
 export const DashboardPage = () => {
-  const { user, settings,activeRoutes = [], salesStops = [] } = useApp();
+  const { user, settings, activeRoutes = [], salesStops = [] } = useApp();
   const {
     setMapMode,
     setMarkers,
@@ -23,10 +23,21 @@ export const DashboardPage = () => {
     fitBounds,
     isMapReady,
   } = useMap();
-  const { outlets = [], clusters: mapClusters = [], error: mapDataError, refetchAll } = useMapData();
+  const {
+    outlets = [],
+    clusters: mapClusters = [],
+    error: mapDataError,
+    refetchAll,
+  } = useMapData();
 
-  const [clusterLayer,setClusterLayer]=useWorkspaceState('mapClusters',settings.MAP_DEFAULT_SHOW_CLUSTERS===false?'OFF':'ON');
-  const [outletLayer,setOutletLayer]=useWorkspaceState('mapOutlets',settings.MAP_DEFAULT_SHOW_OUTLETS===false?'OFF':'ON');
+  const [clusterLayer, setClusterLayer] = useWorkspaceState(
+    'mapClusters',
+    settings.MAP_DEFAULT_SHOW_CLUSTERS === false ? 'OFF' : 'ON'
+  );
+  const [outletLayer, setOutletLayer] = useWorkspaceState(
+    'mapOutlets',
+    settings.MAP_DEFAULT_SHOW_OUTLETS === false ? 'OFF' : 'ON'
+  );
   const isSalesRole = user?.role === 'SALES';
 
   // Stops & rute difilter ke jadwal HARI INI
@@ -84,7 +95,7 @@ export const DashboardPage = () => {
       clearPolylines();
       clearPolygons();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── 1. Cluster Polygons (Wilayah Klaster Hari Ini) ─────────────────────────
@@ -93,14 +104,18 @@ export const DashboardPage = () => {
   }, [mapClusters, outlets]);
 
   useEffect(() => {
-    if(!isMapReady)return;
-    if(clusterLayer==='OFF'||clusterPolygons.length===0){clearPolygons();return;}
+    if (!isMapReady) return;
+    if (clusterLayer === 'OFF' || clusterPolygons.length === 0) {
+      clearPolygons();
+      return;
+    }
 
     // Highlight cluster if selected route or filtered sales belongs to it
     const activeClusterName = selectedRoute?.clusterName;
 
     const styledPolygons = clusterPolygons.map((poly) => {
-      const isHighlighted = activeClusterName && poly.name.toLowerCase() === activeClusterName.toLowerCase();
+      const isHighlighted =
+        activeClusterName && poly.name.toLowerCase() === activeClusterName.toLowerCase();
       return {
         ...poly,
         strokeOpacity: isHighlighted ? 1.0 : 0.7,
@@ -110,12 +125,15 @@ export const DashboardPage = () => {
     });
 
     setPolygons(styledPolygons);
-  }, [isMapReady, clusterPolygons, selectedRoute, setPolygons,clusterLayer,clearPolygons]);
+  }, [isMapReady, clusterPolygons, selectedRoute, setPolygons, clusterLayer, clearPolygons]);
 
   // ─── 2. Outlet Markers ──────────────────────────────────────────────────────
   useEffect(() => {
-    if(!isMapReady)return;
-    if(outletLayer==='OFF'||outlets.length===0){clearMarkers();return;}
+    if (!isMapReady) return;
+    if (outletLayer === 'OFF' || outlets.length === 0) {
+      clearMarkers();
+      return;
+    }
 
     let visibleOutlets = outlets;
 
@@ -171,7 +189,8 @@ export const DashboardPage = () => {
         const baseColor = getOutletColor(o);
 
         return {
-          id: o.id,googleMapsOnly:o.googleMapsOnly,
+          id: o.id,
+          googleMapsOnly: o.googleMapsOnly,
           lat: Number(o.latitude),
           lng: Number(o.longitude),
           title: o.name,
@@ -187,7 +206,17 @@ export const DashboardPage = () => {
       });
 
     setMarkers(markersData);
-  }, [isMapReady, outlets, selectedRoute, selectedSalesName, todayRoutes, mapClusters, setMarkers,outletLayer,clearMarkers]);
+  }, [
+    isMapReady,
+    outlets,
+    selectedRoute,
+    selectedSalesName,
+    todayRoutes,
+    mapClusters,
+    setMarkers,
+    outletLayer,
+    clearMarkers,
+  ]);
 
   // ─── 3. Selected Route Polyline (Jalur Rute) ────────────────────────────────
   useEffect(() => {
@@ -202,7 +231,8 @@ export const DashboardPage = () => {
         setPolylines([
           {
             id: `route-polyline-${selectedRoute.id}`,
-            googleMapsOnly:selectedRoute.stops.some(s=>s.googleMapsOnly),path: pathPoints,
+            googleMapsOnly: selectedRoute.stops.some((s) => s.googleMapsOnly),
+            path: pathPoints,
             color: '#2563eb',
             strokeWeight: 4,
             strokeOpacity: 0.95,
@@ -243,8 +273,33 @@ export const DashboardPage = () => {
       {/* Floating Dashboard Left Overlay Panel */}
       <div className="dashboard-overlay">
         <div className="dashboard-left-col">
-          {mapDataError && <div role="alert" className="app-error pointer-events-auto"><p>Data peta belum berhasil diperbarui: {mapDataError}</p><button type="button" className="app-button" onClick={refetchAll}>Coba lagi</button></div>}
-          <div className="app-actions" aria-label="Lapisan peta"><label><input type="checkbox" checked={clusterLayer!=='OFF'} onChange={e=>setClusterLayer(e.target.checked?'ON':'OFF')}/> Wilayah cluster</label><label><input type="checkbox" checked={outletLayer!=='OFF'} onChange={e=>setOutletLayer(e.target.checked?'ON':'OFF')}/> Titik outlet</label></div><ActiveRoutesList
+          {mapDataError && (
+            <div role="alert" className="app-error pointer-events-auto">
+              <p>Data peta belum berhasil diperbarui: {mapDataError}</p>
+              <button type="button" className="app-button" onClick={refetchAll}>
+                Coba lagi
+              </button>
+            </div>
+          )}
+          <div className="app-actions" aria-label="Lapisan peta">
+            <label>
+              <input
+                type="checkbox"
+                checked={clusterLayer !== 'OFF'}
+                onChange={(e) => setClusterLayer(e.target.checked ? 'ON' : 'OFF')}
+              />{' '}
+              Wilayah cluster
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={outletLayer !== 'OFF'}
+                onChange={(e) => setOutletLayer(e.target.checked ? 'ON' : 'OFF')}
+              />{' '}
+              Titik outlet
+            </label>
+          </div>
+          <ActiveRoutesList
             routes={routes}
             salesStops={displayStops}
             selectedRoute={selectedRoute}

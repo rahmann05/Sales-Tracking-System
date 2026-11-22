@@ -2,7 +2,6 @@
 import { prisma } from '../../../config/prisma.js';
 import { parsePagination, buildPaginatedResponse } from '../../../utils/pagination.js';
 
-
 export const getAttendanceHistory = async (userId, query = {}) => {
   const { skip, take, page, limit } = parsePagination(query);
 

@@ -49,14 +49,14 @@
 }
 
 .outlet-reg-radio-card:hover {
-  border-color: var(--color-primary, #4f46e5);
+  border-color: var(--color-primary, #0869cf);
   background: var(--color-surface, #ffffff);
 }
 
 .outlet-reg-radio-card.active {
-  border-color: var(--color-primary, #4f46e5);
-  background: rgba(79, 70, 229, 0.06);
-  box-shadow: 0 0 0 1px var(--color-primary, #4f46e5);
+  border-color: var(--color-primary, #0869cf);
+  background: rgba(8, 105, 207, 0.06);
+  box-shadow: 0 0 0 1px var(--color-primary, #0869cf);
 }
 
 .outlet-reg-input {
@@ -68,12 +68,14 @@
   color: var(--color-on-surface, #1e293b);
   font-size: 0.875rem;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .outlet-reg-input:focus {
-  border-color: var(--color-primary, #4f46e5);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  border-color: var(--color-primary, #0869cf);
+  box-shadow: 0 0 0 3px rgba(8, 105, 207, 0.15);
 }
 
 .outlet-reg-label {
@@ -91,14 +93,14 @@
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
   border-radius: 0.875rem;
-  background: var(--color-primary, #4f46e5);
+  background: var(--color-primary, #0869cf);
   color: #ffffff;
   font-size: 0.875rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 4px 12px rgba(8, 105, 207, 0.25);
 }
 
 .outlet-reg-btn-primary:hover:not(:disabled) {

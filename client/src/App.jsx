@@ -1,4 +1,4 @@
-import { AppContent } from "./AppContent";
+import { AppContent } from './AppContent';
 import React from 'react';
 import { AppProvider } from './context/AppContext';
 import { MapProvider } from './context/MapContext';
@@ -16,11 +16,13 @@ import { MapDataProvider } from './context/MapDataContext';
  * Single Responsibility: Provide global context and render the app shell.
  */
 export default function App() {
-  return <AppProvider>
+  return (
+    <AppProvider>
       <MapProvider>
         <MapDataProvider>
           <AppContent />
         </MapDataProvider>
       </MapProvider>
-    </AppProvider>;
+    </AppProvider>
+  );
 }

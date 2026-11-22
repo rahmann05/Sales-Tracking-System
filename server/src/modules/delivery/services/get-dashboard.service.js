@@ -1,4 +1,4 @@
-import {wibDayRange,wibDateKey} from '../../../../../shared/visit-metrics.mjs';
+import { wibDayRange, wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 /** getDashboard - single-responsibility service (extracted from delivery.service.js). */
 import { prisma } from '../../../config/prisma.js';
 
@@ -22,7 +22,18 @@ export const getDashboard = async (query = {}) => {
       stops: {
         orderBy: { sequence: 'asc' },
         include: {
-          outlet: { select: { id: true, name: true, googleLocation:true,phone:true,clusterId:true,address:true,latitude:true, longitude: true } },
+          outlet: {
+            select: {
+              id: true,
+              name: true,
+              googleLocation: true,
+              phone: true,
+              clusterId: true,
+              address: true,
+              latitude: true,
+              longitude: true,
+            },
+          },
           packingList: { select: { id: true, code: true, totalCartons: true } },
         },
       },

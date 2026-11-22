@@ -1,6 +1,6 @@
-import {printOperationalDocument} from '../../../services/operationalExportService';
+import { printOperationalDocument } from '../../../services/operationalExportService';
 import React from 'react';
-import {PackingLoadSummary} from './PackingLoadSummary';
+import { PackingLoadSummary } from './PackingLoadSummary';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { LuPrinter } from 'react-icons/lu';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
@@ -79,28 +79,46 @@ export function PackingListPrintModal({ document: doc, onClose }) {
               <h2 className="text-xl font-black tracking-tight text-slate-950 uppercase">
                 CV. SINAR ANUGRAH
               </h2>
-              <p className="text-xs text-slate-600 font-medium">
-                Distribusi & Logistik Terpadu
-              </p>
+              <p className="text-xs text-slate-600 font-medium">Distribusi & Logistik Terpadu</p>
               <p className="text-xs text-slate-600">Distribusi barang ke outlet</p>
             </div>
             <div className="text-right">
               <span className="text-sm font-mono font-black text-slate-900 block">{doc.code}</span>
               <span className="text-xs text-slate-600 block">{formattedDate}</span>
               <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-300 inline-block mt-1">
-                Status: {doc.status === 'DRAFT' ? 'DRAFT ADMIN' : 'DIKIRIM KE GUDANG'} (Rev. {doc.revision || 1})
+                Status: {doc.status === 'DRAFT' ? 'DRAFT ADMIN' : 'DIKIRIM KE GUDANG'} (Rev.{' '}
+                {doc.revision || 1})
               </span>
             </div>
           </div>
 
           <div className="operational-document-title">
             <p>DOKUMEN OPERASIONAL PENGIRIMAN</p>
-            <h2>{doc.documentKind==='MANIFEST'?'MANIFEST PENGIRIMAN':'SURAT PERINTAH MUAT / PACKING LIST'}</h2>
+            <h2>
+              {doc.documentKind === 'MANIFEST'
+                ? 'MANIFEST PENGIRIMAN'
+                : 'SURAT PERINTAH MUAT / PACKING LIST'}
+            </h2>
           </div>
-          <dl className="packing-letter-meta"><dt>Nomor</dt><dd>: {doc.code}</dd><dt>Tanggal</dt><dd>: {formattedDate}</dd><dt>Tujuan</dt><dd>: {doc.loadPlanVersion===2?`${new Set(doc.destinations.map(row=>row.outletId)).size} toko sesuai rincian`:doc.outlet?.name||'Outlet belum ditentukan'}</dd></dl>
-          <p className="packing-letter-intro">Mohon siapkan dan periksa muatan berikut sesuai rincian dokumen ini. Jumlah fisik dan penerimaan dicatat oleh pihak terkait pada saat pelaksanaan.</p>
+          <dl className="packing-letter-meta">
+            <dt>Nomor</dt>
+            <dd>: {doc.code}</dd>
+            <dt>Tanggal</dt>
+            <dd>: {formattedDate}</dd>
+            <dt>Tujuan</dt>
+            <dd>
+              :{' '}
+              {doc.loadPlanVersion === 2
+                ? `${new Set(doc.destinations.map((row) => row.outletId)).size} toko sesuai rincian`
+                : doc.outlet?.name || 'Outlet belum ditentukan'}
+            </dd>
+          </dl>
+          <p className="packing-letter-intro">
+            Mohon siapkan dan periksa muatan berikut sesuai rincian dokumen ini. Jumlah fisik dan
+            penerimaan dicatat oleh pihak terkait pada saat pelaksanaan.
+          </p>
 
-          <PackingLoadSummary packing={doc}/>
+          <PackingLoadSummary packing={doc} />
           {/* Store & Delivery Info Grid */}
           <div className="grid grid-cols-2 gap-4 text-xs border border-slate-200 rounded-xl p-3.5 bg-slate-50/50">
             <div>
@@ -108,13 +126,18 @@ export function PackingListPrintModal({ document: doc, onClose }) {
                 Tujuan Pengiriman (Outlet):
               </span>
               <strong className="text-sm text-slate-900 block mt-0.5">
-                {doc.loadPlanVersion===2?'Beberapa tujuan, sesuai tabel di atas':doc.outlet?.name || 'Toko Belum Ditentukan'}
+                {doc.loadPlanVersion === 2
+                  ? 'Beberapa tujuan, sesuai tabel di atas'
+                  : doc.outlet?.name || 'Toko Belum Ditentukan'}
               </strong>
               <span className="text-slate-600 block mt-0.5">
-                Kode Toko: {doc.loadPlanVersion===2?'Lihat rincian tujuan':doc.outlet?.outletCode || '-'}
+                Kode Toko:{' '}
+                {doc.loadPlanVersion === 2 ? 'Lihat rincian tujuan' : doc.outlet?.outletCode || '-'}
               </span>
               <p className="text-slate-700 mt-1 leading-snug">
-                {doc.loadPlanVersion===2?'Alamat dan titik tersimpan per tujuan.':doc.outlet?.address || '-'}
+                {doc.loadPlanVersion === 2
+                  ? 'Alamat dan titik tersimpan per tujuan.'
+                  : doc.outlet?.address || '-'}
               </p>
             </div>
             <div>
@@ -123,14 +146,27 @@ export function PackingListPrintModal({ document: doc, onClose }) {
               </span>
               <div className="mt-1 space-y-0.5">
                 <p>
-                  Total Kemasan: <strong className="text-slate-950">{doc.totalCartons || 0} Karton</strong>
+                  Total Kemasan:{' '}
+                  <strong className="text-slate-950">{doc.totalCartons || 0} Karton</strong>
                 </p>
                 <p>
-                  Perkiraan Bobot: <strong className="text-slate-950">{doc.totalWeight ? `${doc.totalWeight} kg` : '-'}</strong>
+                  Perkiraan Bobot:{' '}
+                  <strong className="text-slate-950">
+                    {doc.totalWeight ? `${doc.totalWeight} kg` : '-'}
+                  </strong>
                 </p>
                 <p>
-                  Sumber Dokumen: <strong className="text-slate-950">{doc.source || 'MANUAL'}</strong>
-                  {doc.sourceOrderIds?.length>1?' (Ref '+doc.sourceOrderIds.length+' order: '+doc.sourceOrderIds.map(id=>id.slice(0,8)).join(', ')+')':doc.sourceOrderId?' (Ref Order: '+doc.sourceOrderId.slice(0,8)+')':''}
+                  Sumber Dokumen:{' '}
+                  <strong className="text-slate-950">{doc.source || 'MANUAL'}</strong>
+                  {doc.sourceOrderIds?.length > 1
+                    ? ' (Ref ' +
+                      doc.sourceOrderIds.length +
+                      ' order: ' +
+                      doc.sourceOrderIds.map((id) => id.slice(0, 8)).join(', ') +
+                      ')'
+                    : doc.sourceOrderId
+                      ? ' (Ref Order: ' + doc.sourceOrderId.slice(0, 8) + ')'
+                      : ''}
                 </p>
               </div>
             </div>
@@ -149,7 +185,9 @@ export function PackingListPrintModal({ document: doc, onClose }) {
                     className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800"
                   >
                     Faktur: <strong>{inv.invoiceNumber}</strong> · {inv.totalCartons} Karton
-                    {inv.totalAmount ? ` · Rp ${Number(inv.totalAmount).toLocaleString('id-ID')}` : ''}
+                    {inv.totalAmount
+                      ? ` · Rp ${Number(inv.totalAmount).toLocaleString('id-ID')}`
+                      : ''}
                   </div>
                 ))}
               </div>
@@ -180,10 +218,19 @@ export function PackingListPrintModal({ document: doc, onClose }) {
                       <td className="p-2.5 font-mono font-semibold text-slate-700">
                         {item.sku || '-'}
                       </td>
-                      <td className="p-2.5 font-bold text-slate-900">{item.name}{doc.loadPlanVersion===2&&<small className="block">{doc.destinations.find(row=>row.id===item.destinationId)?.outlet.name} · {item.sourceOrderCode||'Manual'}</small>}</td>
-                      <td className="p-2.5 text-right font-bold text-slate-900">
-                        {item.quantity}
+                      <td className="p-2.5 font-bold text-slate-900">
+                        {item.name}
+                        {doc.loadPlanVersion === 2 && (
+                          <small className="block">
+                            {
+                              doc.destinations.find((row) => row.id === item.destinationId)?.outlet
+                                .name
+                            }{' '}
+                            · {item.sourceOrderCode || 'Manual'}
+                          </small>
+                        )}
                       </td>
+                      <td className="p-2.5 text-right font-bold text-slate-900">{item.quantity}</td>
                       <td className="p-2.5 text-slate-600">{item.unit || 'unit'}</td>
                       <td className="p-2.5 text-center">
                         <div className="w-4 h-4 border border-slate-400 rounded mx-auto"></div>
@@ -212,11 +259,15 @@ export function PackingListPrintModal({ document: doc, onClose }) {
           )}
 
           {/* Signature Grid */}
-          <div className={`grid grid-cols-4 gap-4 pt-6 border-t border-slate-200 text-center text-xs`}>
+          <div
+            className={`grid grid-cols-4 gap-4 pt-6 border-t border-slate-200 text-center text-xs`}
+          >
             <div>
               <p className="text-slate-500 font-semibold mb-12">Dibuat Oleh (Admin)</p>
               <div className="border-b border-slate-400 w-3/4 mx-auto"></div>
-              <p className="text-slate-700 font-bold mt-1">{doc.createdBy?.name || 'Admin Distribusi'}</p>
+              <p className="text-slate-700 font-bold mt-1">
+                {doc.createdBy?.name || 'Admin Distribusi'}
+              </p>
             </div>
             <div>
               <p className="text-slate-500 font-semibold mb-12">Disiapkan (Gudang)</p>
@@ -229,9 +280,15 @@ export function PackingListPrintModal({ document: doc, onClose }) {
               <p className="text-slate-700 font-bold mt-1">( Pengemudi )</p>
             </div>
             <div>
-              <p className="text-slate-500 font-semibold mb-12">{doc.loadPlanVersion===2?'Penerimaan dicatat per tujuan':'Diterima (Outlet)'}</p>
+              <p className="text-slate-500 font-semibold mb-12">
+                {doc.loadPlanVersion === 2 ? 'Penerimaan dicatat per tujuan' : 'Diterima (Outlet)'}
+              </p>
               <div className="border-b border-slate-400 w-3/4 mx-auto"></div>
-              <p className="text-slate-700 font-bold mt-1">{doc.loadPlanVersion===2?'( Lihat bukti tiap tujuan )':'( Stempel & Ttd Toko )'}</p>
+              <p className="text-slate-700 font-bold mt-1">
+                {doc.loadPlanVersion === 2
+                  ? '( Lihat bukti tiap tujuan )'
+                  : '( Stempel & Ttd Toko )'}
+              </p>
             </div>
           </div>
         </article>

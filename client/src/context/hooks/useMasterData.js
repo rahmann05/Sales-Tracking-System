@@ -31,7 +31,7 @@ export const useMasterData = () => {
     try {
       if (!getAuthToken()) return [];
       const res = await divisionsApi.getAll();
-      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
       setDivisions(list);
       return list;
     } catch (err) {

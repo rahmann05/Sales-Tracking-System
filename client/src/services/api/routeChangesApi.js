@@ -1,30 +1,28 @@
-import { request } from "../httpClient";
-import { queryString } from "./helpers";
+import { request } from '../httpClient';
+import { queryString } from './helpers';
 export const routeChangesApi = {
-  revisit:(id,body)=>request(`/route-changes/${id}/revisit`,{method:'POST',body:JSON.stringify(body)}),
-  replacements:(id,query={})=>request(`/route-changes/${id}/replacements?${queryString(query)}`),
-  assignmentOptions:id=>request(`/route-changes/${id}/assignment`),
-  assignReview:(id,body)=>request(`/route-changes/${id}/assignment`,{method:'PUT',body:JSON.stringify(body)}),
-  rejectReroute: id => request(`/route-changes/${id}/reject`,{method:'PATCH'}),
-  reportClosed: async ({
-    pjpId,
-    pjpStopId,
-    reason,
-    photoUrl
-  }) => {
+  revisit: (id, body) =>
+    request(`/route-changes/${id}/revisit`, { method: 'POST', body: JSON.stringify(body) }),
+  replacements: (id, query = {}) =>
+    request(`/route-changes/${id}/replacements?${queryString(query)}`),
+  assignmentOptions: (id) => request(`/route-changes/${id}/assignment`),
+  assignReview: (id, body) =>
+    request(`/route-changes/${id}/assignment`, { method: 'PUT', body: JSON.stringify(body) }),
+  rejectReroute: (id) => request(`/route-changes/${id}/reject`, { method: 'PATCH' }),
+  reportClosed: async ({ pjpId, pjpStopId, reason, photoUrl }) => {
     return await request('/route-changes', {
       method: 'POST',
       body: JSON.stringify({
         pjpId,
         pjpStopId,
         reason,
-        photoUrl
-      })
+        photoUrl,
+      }),
     });
   },
-  skip: async id => {
+  skip: async (id) => {
     return await request(`/route-changes/${id}/skip`, {
-      method: 'POST'
+      method: 'POST',
     });
   },
   reroute: async (id, replacementOutletId, reason) => {
@@ -32,17 +30,17 @@ export const routeChangesApi = {
       method: 'POST',
       body: JSON.stringify({
         replacementOutletId,
-        reason
-      })
+        reason,
+      }),
     });
   },
-  approveReroute: async id => {
+  approveReroute: async (id) => {
     return await request(`/route-changes/${id}/approve`, {
-      method: 'PATCH'
+      method: 'PATCH',
     });
   },
   getAll: async (params = {}) => {
     const query = queryString(params);
     return await request(`/route-changes${query ? `?${query}` : ''}`);
-  }
+  },
 };

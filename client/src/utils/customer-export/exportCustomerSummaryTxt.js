@@ -1,7 +1,11 @@
-import { downloadBlob } from "./helpers";
-export const exportCustomerSummaryTxt = (data = [], filename = 'RINGKASAN_REGISTRASI_OUTLET.txt') => {
+import { notifyInfo } from '../../services/notificationService';
+import { downloadBlob } from './helpers';
+export const exportCustomerSummaryTxt = (
+  data = [],
+  filename = 'RINGKASAN_REGISTRASI_OUTLET.txt'
+) => {
   if (!data || data.length === 0) {
-    alert('Tidak ada data registrasi customer untuk diekspor.');
+    notifyInfo('Tidak ada data registrasi customer untuk diekspor.');
     return;
   }
   let txt = `========================================================================================\n`;

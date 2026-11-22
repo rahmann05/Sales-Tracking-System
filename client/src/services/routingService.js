@@ -8,14 +8,17 @@ import { request } from './httpClient';
  */
 
 export const routingService = {
-    /**
-     * Resolve rute mengikuti jalan via backend proxy.
-     * @param {Array<{lat: number, lng: number}>} waypoints - Titik berurutan
-     * @returns {Promise<{ legs: Array<{path, distanceKm, durationMin}>, provider: 'google'|'osrm' }>}
-     */
-    fetchRoadRoute: async (waypoints) => {
-        const result=await request('/routing/road-route',{method:'POST',body:JSON.stringify({waypoints})});
+  /**
+   * Resolve rute mengikuti jalan via backend proxy.
+   * @param {Array<{lat: number, lng: number}>} waypoints - Titik berurutan
+   * @returns {Promise<{ legs: Array<{path, distanceKm, durationMin}>, provider: 'google'|'osrm' }>}
+   */
+  fetchRoadRoute: async (waypoints) => {
+    const result = await request('/routing/road-route', {
+      method: 'POST',
+      body: JSON.stringify({ waypoints }),
+    });
 
-        return { legs: result.data.legs, provider: result.data.provider };
-    },
+    return { legs: result.data.legs, provider: result.data.provider };
+  },
 };

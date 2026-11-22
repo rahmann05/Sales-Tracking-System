@@ -1,4 +1,7 @@
-import { assertExportAllowed, downloadOperationalFile } from '../../../services/operationalExportService';
+import {
+  assertExportAllowed,
+  downloadOperationalFile,
+} from '../../../services/operationalExportService';
 import { buildDocumentCsv } from './csvBuilder';
 import { buildDocumentTxt } from './txtBuilder';
 import { sanitizeFilename } from './formatters';
@@ -21,7 +24,7 @@ export function createDocumentExporters(buildBlueprint) {
   const exportDocx = async (...args) => {
     const blueprint = buildBlueprint(...args);
     await assertExportAllowed(blueprint.domain);
-    const {buildDocumentDocx} = await import('./docxBuilder');
+    const { buildDocumentDocx } = await import('./docxBuilder');
     const buffer = await buildDocumentDocx(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'docx');
     await downloadOperationalFile(buffer, filename, MIME_TYPES.docx, blueprint.domain);
@@ -31,7 +34,7 @@ export function createDocumentExporters(buildBlueprint) {
   const exportExcel = async (...args) => {
     const blueprint = buildBlueprint(...args);
     await assertExportAllowed(blueprint.domain);
-    const {buildDocumentExcel} = await import('./excelBuilder');
+    const { buildDocumentExcel } = await import('./excelBuilder');
     const buffer = await buildDocumentExcel(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'xlsx');
     await downloadOperationalFile(buffer, filename, MIME_TYPES.xlsx, blueprint.domain);
@@ -59,7 +62,7 @@ export function createDocumentExporters(buildBlueprint) {
   const exportPdf = async (...args) => {
     const blueprint = buildBlueprint(...args);
     await assertExportAllowed(blueprint.domain);
-    const {buildDocumentPdf} = await import('./pdfBuilder');
+    const { buildDocumentPdf } = await import('./pdfBuilder');
     const buffer = await buildDocumentPdf(blueprint);
     const filename = resolveFilename(blueprint.filename, blueprint.customFilename, 'pdf');
     await downloadOperationalFile(buffer, filename, MIME_TYPES.pdf, blueprint.domain);

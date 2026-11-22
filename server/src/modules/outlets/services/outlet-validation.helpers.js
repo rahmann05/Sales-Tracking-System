@@ -1,7 +1,7 @@
 import { cleanAddressForSearch } from './clean-address-for-search.service.js';
 import { calculateNameSimilarity } from './calculate-name-similarity.service.js';
-import {outletMapJson,outletMapError} from './outlet-map-request.service.js';
-import {OUTLET_COMPARISON_DEFAULTS} from '../../../../../shared/outlet-evidence-policy.mjs';
+import { outletMapJson, outletMapError } from './outlet-map-request.service.js';
+import { OUTLET_COMPARISON_DEFAULTS } from '../../../../../shared/outlet-evidence-policy.mjs';
 /** Shared helpers for outlet-validation services (internal). */
 import { cacheInvalidate } from '../../../utils/cacheHelper.js';
 import { CACHE_KEYS } from '../../../config/cache.js';
@@ -14,45 +14,98 @@ import { broadcastCacheInvalidation } from '../../../config/socket.js';
  * 1 File = 1 Service
  */
 
-
 // ─── Signal Weights ──────────────────────────────────────────────────────────
 export const DEFAULT_WEIGHTS = {
   reverseGeocode: 0.25,
   forwardGeocode: 0.25,
-  findPlace: 0.30,
-  nearbySearch: 0.20,
+  findPlace: 0.3,
+  nearbySearch: 0.2,
 };
 
 // ─── Indonesian Store Name Prefixes to Strip ─────────────────────────────────
 export const STORE_PREFIXES = [
-  'toko ', 'tk. ', 'tk ', 'tb. ', 'tb ', 'ud. ', 'ud ',
-  'cv. ', 'cv ', 'pt. ', 'pt ', 'warung ', 'depot ', 'kios ',
-  'bu ', 'bpk. ', 'bpk ', 'pak ', 'ibu ', 'hj. ', 'hj ',
-  'h. ', 'h ', 'agen ', 'grosir ', 'minimarket ', 'swalayan ',
-  'kedai ', 'mart ',
+  'toko ',
+  'tk. ',
+  'tk ',
+  'tb. ',
+  'tb ',
+  'ud. ',
+  'ud ',
+  'cv. ',
+  'cv ',
+  'pt. ',
+  'pt ',
+  'warung ',
+  'depot ',
+  'kios ',
+  'bu ',
+  'bpk. ',
+  'bpk ',
+  'pak ',
+  'ibu ',
+  'hj. ',
+  'hj ',
+  'h. ',
+  'h ',
+  'agen ',
+  'grosir ',
+  'minimarket ',
+  'swalayan ',
+  'kedai ',
+  'mart ',
 ];
 
 // Noise words in Indonesian street addresses to strip for token comparison
 export const ADDRESS_NOISE_WORDS = new Set([
-  'jl', 'jln', 'jalan', 'gang', 'gg', 'blok', 'no', 'nomor',
-  'rt', 'rw', 'kp', 'kampung', 'ds', 'desa', 'kel', 'kelurahan',
-  'kec', 'kecamatan', 'kab', 'kabupaten', 'kota', 'prov', 'provinsi',
-  'raya', 'besar', 'utama', 'indonesia', 'jawa', 'barat', 'pos', 'kodepos',
-  'dki', 'daerah', 'khusus', 'ibukota',
+  'jl',
+  'jln',
+  'jalan',
+  'gang',
+  'gg',
+  'blok',
+  'no',
+  'nomor',
+  'rt',
+  'rw',
+  'kp',
+  'kampung',
+  'ds',
+  'desa',
+  'kel',
+  'kelurahan',
+  'kec',
+  'kecamatan',
+  'kab',
+  'kabupaten',
+  'kota',
+  'prov',
+  'provinsi',
+  'raya',
+  'besar',
+  'utama',
+  'indonesia',
+  'jawa',
+  'barat',
+  'pos',
+  'kodepos',
+  'dki',
+  'daerah',
+  'khusus',
+  'ibukota',
 ]);
 
 // ─── Name Normalization ──────────────────────────────────────────────────────
 export const NUMBER_WORDS_MAP = {
-  '0': 'nol',
-  '1': 'satu',
-  '2': 'dua',
-  '3': 'tiga',
-  '4': 'empat',
-  '5': 'lima',
-  '6': 'enam',
-  '7': 'tujuh',
-  '8': 'delapan',
-  '9': 'sembilan',
+  0: 'nol',
+  1: 'satu',
+  2: 'dua',
+  3: 'tiga',
+  4: 'empat',
+  5: 'lima',
+  6: 'enam',
+  7: 'tujuh',
+  8: 'delapan',
+  9: 'sembilan',
 };
 
 /**
@@ -111,9 +164,7 @@ export const jaroSimilarity = (s1, s2) => {
     k++;
   }
 
-  return (
-    (matches / s1.length + matches / s2.length + (matches - transpositions / 2) / matches) / 3
-  );
+  return (matches / s1.length + matches / s2.length + (matches - transpositions / 2) / matches) / 3;
 };
 
 /**
@@ -184,10 +235,10 @@ export const extractAddressTokens = (addr) => {
 /**
  * Signal 1: Reverse Geocode (lat/lng → address)
  */
-export const runReverseGeocode = async (lat, lng, apiKey,options={}) => {
+export const runReverseGeocode = async (lat, lng, apiKey, options = {}) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=id`;
-    const data = await outletMapJson(url,options);
+    const data = await outletMapJson(url, options);
 
     if (data.status === 'OK' && data.results?.length > 0) {
       const result = data.results[0];
@@ -210,12 +261,12 @@ export const runReverseGeocode = async (lat, lng, apiKey,options={}) => {
 /**
  * Signal 2: Forward Geocode (address → lat/lng with optional regional context)
  */
-export const runForwardGeocode = async (address, apiKey, adminAnchor = null,options={}) => {
+export const runForwardGeocode = async (address, apiKey, adminAnchor = null, options = {}) => {
   try {
     const queryAddress = cleanAddressForSearch(address);
 
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(queryAddress)}&key=${apiKey}&language=id&region=id`;
-    const data = await outletMapJson(url,options);
+    const data = await outletMapJson(url, options);
 
     if (data.status === 'OK' && data.results?.length > 0) {
       const result = data.results[0];
@@ -241,16 +292,27 @@ export const runForwardGeocode = async (address, apiKey, adminAnchor = null,opti
 /**
  * Signal 3: Find Place with Proximity-First Keyword Search & Clean Text Query Fallback
  */
-export const runFindPlace = async (name, address, apiKey, lat = null, lng = null, adminAnchor = null,options={}) => {
+export const runFindPlace = async (
+  name,
+  address,
+  apiKey,
+  lat = null,
+  lng = null,
+  adminAnchor = null,
+  options = {}
+) => {
   try {
     const cleanName = (name || '').trim();
 
-    const policy={...OUTLET_COMPARISON_DEFAULTS,...options};
+    const policy = { ...OUTLET_COMPARISON_DEFAULTS, ...options };
     // Proximity selection uses the same name threshold as a location suggestion.
     if (lat != null && lng != null) {
-      const cleanKeyword = cleanName.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+      const cleanKeyword = cleanName
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
       const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${policy.searchRadiusMeters}&keyword=${encodeURIComponent(cleanKeyword)}&key=${apiKey}&language=id`;
-      const nearbyData = await outletMapJson(nearbyUrl,policy);
+      const nearbyData = await outletMapJson(nearbyUrl, policy);
 
       if (nearbyData.status === 'OK' && nearbyData.results?.length > 0) {
         let bestPlace = null;
@@ -264,7 +326,7 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
           }
         }
 
-        if (bestPlace && highestSim >= policy.suggestionNamePercent/100) {
+        if (bestPlace && highestSim >= policy.suggestionNamePercent / 100) {
           return {
             success: true,
             placeName: bestPlace.name || '',
@@ -275,7 +337,14 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
             businessStatus: bestPlace.business_status || 'UNKNOWN',
             types: bestPlace.types || [],
             source: 'nearby_proximity',
-            candidates: nearbyData.results.map(p=>({placeName:p.name,placeId:p.place_id,lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,formattedAddress:p.vicinity || '',businessStatus:p.business_status || 'UNKNOWN'})),
+            candidates: nearbyData.results.map((p) => ({
+              placeName: p.name,
+              placeId: p.place_id,
+              lat: p.geometry?.location?.lat,
+              lng: p.geometry?.location?.lng,
+              formattedAddress: p.vicinity || '',
+              businessStatus: p.business_status || 'UNKNOWN',
+            })),
           };
         }
       }
@@ -296,10 +365,13 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
     const biasParam = lat != null && lng != null ? `&locationbias=circle:10000@${lat},${lng}` : '';
 
     const url = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(cleanQuery)}&inputtype=textquery&fields=${fields}&key=${apiKey}&language=id${biasParam}`;
-    const data = await outletMapJson(url,policy);
+    const data = await outletMapJson(url, policy);
 
     if (data.status === 'OK' && data.candidates?.length > 0) {
-      const ranked=[...data.candidates].sort((a,b)=>calculateNameSimilarity(cleanName,b.name)-calculateNameSimilarity(cleanName,a.name));
+      const ranked = [...data.candidates].sort(
+        (a, b) =>
+          calculateNameSimilarity(cleanName, b.name) - calculateNameSimilarity(cleanName, a.name)
+      );
       const place = ranked[0];
       return {
         success: true,
@@ -311,7 +383,14 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
         businessStatus: place.business_status || 'UNKNOWN',
         types: place.types || [],
         source: 'findplace_text',
-        candidates: ranked.map(p=>({placeName:p.name,placeId:p.place_id,lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,formattedAddress:p.formatted_address || '',businessStatus:p.business_status || 'UNKNOWN'})),
+        candidates: ranked.map((p) => ({
+          placeName: p.name,
+          placeId: p.place_id,
+          lat: p.geometry?.location?.lat,
+          lng: p.geometry?.location?.lng,
+          formattedAddress: p.formatted_address || '',
+          businessStatus: p.business_status || 'UNKNOWN',
+        })),
       };
     }
 
@@ -324,10 +403,10 @@ export const runFindPlace = async (name, address, apiKey, lat = null, lng = null
 /**
  * Signal 4: Nearby Search (lat/lng + radius → nearby places)
  */
-export const runNearbySearch = async (lat, lng, apiKey, radius = 200,options={}) => {
+export const runNearbySearch = async (lat, lng, apiKey, radius = 200, options = {}) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${apiKey}&language=id`;
-    const data = await outletMapJson(url,options);
+    const data = await outletMapJson(url, options);
 
     if (data.status === 'OK' && data.results?.length > 0) {
       return {

@@ -3,8 +3,28 @@ import { successResponse } from '../../utils/response.js';
 
 export const create = async (req, res, next) => {
   try {
-    const { pjpStopId, outletId,adminPlaceId,contextReason,items, paymentType, code, requestId, expectedTotal, expectedTermDays,priceOverrideReason } = req.body;
-    const data = await orderService.createOrder(req.user.id, pjpStopId, items, paymentType, code,{requestId,expectedTotal,expectedTermDays,priceOverrideReason,outletId,adminPlaceId,contextReason});
+    const {
+      pjpStopId,
+      outletId,
+      adminPlaceId,
+      contextReason,
+      items,
+      paymentType,
+      code,
+      requestId,
+      expectedTotal,
+      expectedTermDays,
+      priceOverrideReason,
+    } = req.body;
+    const data = await orderService.createOrder(req.user.id, pjpStopId, items, paymentType, code, {
+      requestId,
+      expectedTotal,
+      expectedTermDays,
+      priceOverrideReason,
+      outletId,
+      adminPlaceId,
+      contextReason,
+    });
     return successResponse(res, 201, data, 'Order berhasil dibuat');
   } catch (error) {
     next(error);
@@ -31,7 +51,7 @@ export const getById = async (req, res, next) => {
 
 export const approve = async (req, res, next) => {
   try {
-    const data = await orderService.approveOrder(req.params.id, req.user.id,req.body||{});
+    const data = await orderService.approveOrder(req.params.id, req.user.id, req.body || {});
     return successResponse(res, 200, data, 'Order berhasil disetujui');
   } catch (error) {
     next(error);
@@ -50,7 +70,12 @@ export const batchApprove = async (req, res, next) => {
 
 export const reject = async (req, res, next) => {
   try {
-    const data = await orderService.rejectOrder(req.params.id, req.user.id, req.body?.reason,req.body||{});
+    const data = await orderService.rejectOrder(
+      req.params.id,
+      req.user.id,
+      req.body?.reason,
+      req.body || {}
+    );
     return successResponse(res, 200, data, 'Order berhasil ditolak');
   } catch (error) {
     next(error);

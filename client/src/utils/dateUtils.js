@@ -4,12 +4,13 @@
  */
 
 /** Nama hari ini dalam Bahasa Indonesia, mis. "Senin" */
-export const getTodayNameId = () => new Date().toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',weekday:'long'});
+export const getTodayNameId = () =>
+  new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' });
 
 /** Normalisasi dayOfWeek (string | array) → array lowercase ter-trim */
 const toDayList = (dayOfWeek) => {
-    if (Array.isArray(dayOfWeek)) return dayOfWeek.map((d) => String(d).trim().toLowerCase());
-    return [String(dayOfWeek).trim().toLowerCase()];
+  if (Array.isArray(dayOfWeek)) return dayOfWeek.map((d) => String(d).trim().toLowerCase());
+  return [String(dayOfWeek).trim().toLowerCase()];
 };
 
 /**
@@ -18,9 +19,9 @@ const toDayList = (dayOfWeek) => {
  * Mendukung dayOfWeek berupa string ("Senin") atau array (["Senin","Sabtu"]).
  */
 export const isStopScheduledToday = (stop) => {
-    if (!stop || stop.dayOfWeek == null || stop.dayOfWeek === '') return true;
-    const todayName = getTodayNameId().toLowerCase();
-    return toDayList(stop.dayOfWeek).includes(todayName);
+  if (!stop || stop.dayOfWeek == null || stop.dayOfWeek === '') return true;
+  const todayName = getTodayNameId().toLowerCase();
+  return toDayList(stop.dayOfWeek).includes(todayName);
 };
 
 /**

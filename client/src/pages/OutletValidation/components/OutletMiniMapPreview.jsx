@@ -1,12 +1,101 @@
-import {useFeaturePolicy} from '../../../shared/hooks/useFeaturePolicy';
+import { useFeaturePolicy } from '../../../shared/hooks/useFeaturePolicy';
 import React from 'react';
-import {MapContainer,TileLayer,Circle,CircleMarker,Popup,Polyline} from 'react-leaflet';
-const valid=(lat,lng)=>lat!=null&&lng!=null&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))&&Math.abs(Number(lat))<=90&&Math.abs(Number(lng))<=180;
-export const OutletMiniMapPreview=React.memo(function({latitude,longitude,name='',radiusMeters=50,candidate,candidates}) {
- const mapPolicy=useFeaturePolicy('MAPS');
- if(!mapPolicy.canStart)return <p className="outlet-map-empty" role="status">{mapPolicy.reason} Koordinat dan bukti tetap dapat ditinjau.</p>;
- if(!valid(latitude,longitude))return <div className="outlet-map-empty">Koordinat belum tersedia.</div>;
- const master=[Number(latitude),Number(longitude)],comparisons=(candidates || [candidate]).filter(p=>valid(p?.latitude,p?.longitude));
- const bounds=[master,...comparisons.map(p=>[Number(p.latitude),Number(p.longitude)])];
- return <section className="outlet-location-map" aria-label={`Peta lokasi ${name}`}><MapContainer key={JSON.stringify(bounds)} center={comparisons.length?undefined:master} zoom={comparisons.length?undefined:16} bounds={comparisons.length?bounds:undefined} boundsOptions={{padding:[40,40],maxZoom:17}} scrollWheelZoom={false} className="outlet-map-canvas"><TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'/><Circle center={master} radius={radiusMeters||50} pathOptions={{color:'#1670d2',weight:1,fillOpacity:.08}}/><CircleMarker center={master} radius={8} pathOptions={{color:'#fff',weight:2,fillColor:'#1670d2',fillOpacity:1}}><Popup>Titik master: {name}</Popup></CircleMarker>{comparisons.map((p,i)=><React.Fragment key={i}><CircleMarker center={[p.latitude,p.longitude]} radius={8} pathOptions={{color:'#fff',weight:2,fillColor:i?'#7d5eb1':'#b46c16',fillOpacity:1}}><Popup>{p.label || 'Kandidat peta'} · {p.distanceMeters} m dari master</Popup></CircleMarker><Polyline positions={[master,[p.latitude,p.longitude]]} pathOptions={{color:i?'#7d5eb1':'#b46c16',dashArray:'5 5'}}/></React.Fragment>)}</MapContainer><div className="outlet-map-caption"><span><i/> Titik master · radius {radiusMeters} m</span>{comparisons.map((p,i)=><span key={i}><i style={{background:i?'#7d5eb1':'#b46c16'}}/> {p.label || 'Kandidat'} · {p.distanceMeters} m</span>)}<a href={`https://www.google.com/maps/search/?api=1&query=${master.join(',')}`} target="_blank" rel="noopener noreferrer">Buka peta eksternal ↗</a></div></section>;
+import { MapContainer, TileLayer, Circle, CircleMarker, Popup, Polyline } from 'react-leaflet';
+const valid = (lat, lng) =>
+  lat != null &&
+  lng != null &&
+  Number.isFinite(Number(lat)) &&
+  Number.isFinite(Number(lng)) &&
+  Math.abs(Number(lat)) <= 90 &&
+  Math.abs(Number(lng)) <= 180;
+export const OutletMiniMapPreview = React.memo(function ({
+  latitude,
+  longitude,
+  name = '',
+  radiusMeters = 50,
+  candidate,
+  candidates,
+}) {
+  const mapPolicy = useFeaturePolicy('MAPS');
+  if (!mapPolicy.canStart)
+    return (
+      <p className="outlet-map-empty" role="status">
+        {mapPolicy.reason} Koordinat dan bukti tetap dapat ditinjau.
+      </p>
+    );
+  if (!valid(latitude, longitude))
+    return <div className="outlet-map-empty">Koordinat belum tersedia.</div>;
+  const master = [Number(latitude), Number(longitude)],
+    comparisons = (candidates || [candidate]).filter((p) => valid(p?.latitude, p?.longitude));
+  const bounds = [master, ...comparisons.map((p) => [Number(p.latitude), Number(p.longitude)])];
+  return (
+    <section className="outlet-location-map" aria-label={`Peta lokasi ${name}`}>
+      <MapContainer
+        key={JSON.stringify(bounds)}
+        center={comparisons.length ? undefined : master}
+        zoom={comparisons.length ? undefined : 16}
+        bounds={comparisons.length ? bounds : undefined}
+        boundsOptions={{ padding: [40, 40], maxZoom: 17 }}
+        scrollWheelZoom={false}
+        className="outlet-map-canvas"
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        />
+        <Circle
+          center={master}
+          radius={radiusMeters || 50}
+          pathOptions={{ color: '#1670d2', weight: 1, fillOpacity: 0.08 }}
+        />
+        <CircleMarker
+          center={master}
+          radius={8}
+          pathOptions={{ color: '#fff', weight: 2, fillColor: '#1670d2', fillOpacity: 1 }}
+        >
+          <Popup>Titik master: {name}</Popup>
+        </CircleMarker>
+        {comparisons.map((p, i) => (
+          <React.Fragment key={i}>
+            <CircleMarker
+              center={[p.latitude, p.longitude]}
+              radius={8}
+              pathOptions={{
+                color: '#fff',
+                weight: 2,
+                fillColor: i ? '#7d5eb1' : '#b46c16',
+                fillOpacity: 1,
+              }}
+            >
+              <Popup>
+                {p.label || 'Kandidat peta'} · {p.distanceMeters} m dari master
+              </Popup>
+            </CircleMarker>
+            <Polyline
+              positions={[master, [p.latitude, p.longitude]]}
+              pathOptions={{ color: i ? '#7d5eb1' : '#b46c16', dashArray: '5 5' }}
+            />
+          </React.Fragment>
+        ))}
+      </MapContainer>
+      <div className="outlet-map-caption">
+        <span>
+          <i /> Titik master · radius {radiusMeters} m
+        </span>
+        {comparisons.map((p, i) => (
+          <span key={i}>
+            <i style={{ background: i ? '#7d5eb1' : '#b46c16' }} /> {p.label || 'Kandidat'} ·{' '}
+            {p.distanceMeters} m
+          </span>
+        ))}
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${master.join(',')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Buka peta eksternal ↗
+        </a>
+      </div>
+    </section>
+  );
 });

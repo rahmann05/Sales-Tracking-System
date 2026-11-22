@@ -23,16 +23,22 @@ export const calculateSalesPerformance = ({
   salesName = null,
 }) => {
   // Filter for specific sales rep if provided
-  const todayOffPjp = offPjpAttendances.filter(a => a.createdAt && wibDateKey(a.createdAt) === wibDateKey());
+  const todayOffPjp = offPjpAttendances.filter(
+    (a) => a.createdAt && wibDateKey(a.createdAt) === wibDateKey()
+  );
   const relevantOffPjp = salesName
-    ? todayOffPjp.filter((a) => !a.salesName || a.salesName.toLowerCase() === salesName.toLowerCase())
+    ? todayOffPjp.filter(
+        (a) => !a.salesName || a.salesName.toLowerCase() === salesName.toLowerCase()
+      )
     : todayOffPjp;
 
   // 1. RJP Metrics
   const visitMetrics = summarizeVisits(salesStops);
   const rjpCompleted = visitMetrics.completed;
-  const rjpSkipped = salesStops.filter(s => s.status === 'SKIPPED').length;
-  const rjpClosed = salesStops.filter(s => ['CLOSED', 'CLOSED_REPORTED'].includes(s.status)).length;
+  const rjpSkipped = salesStops.filter((s) => s.status === 'SKIPPED').length;
+  const rjpClosed = salesStops.filter((s) =>
+    ['CLOSED', 'CLOSED_REPORTED'].includes(s.status)
+  ).length;
   const rjpRemaining = visitMetrics.remaining;
   const rjpTotal = visitMetrics.total;
 
@@ -40,7 +46,9 @@ export const calculateSalesPerformance = ({
   const offPjpTotal = relevantOffPjp.length;
   const offPjpValidated = relevantOffPjp.filter((a) => a.validationStatus === 'TERVALIDASI').length;
   const offPjpPending = relevantOffPjp.filter((a) => a.validationStatus === 'MENUNGGU').length;
-  const offPjpUnvalidated = relevantOffPjp.filter((a) => a.validationStatus === 'TIDAK_TERVALIDASI').length;
+  const offPjpUnvalidated = relevantOffPjp.filter(
+    (a) => a.validationStatus === 'TIDAK_TERVALIDASI'
+  ).length;
   const offPjpRejected = relevantOffPjp.filter((a) => a.validationStatus === 'DITOLAK').length;
 
   // 3. Quota & Target Calculations
@@ -49,7 +57,9 @@ export const calculateSalesPerformance = ({
   // Total all recorded visit attempts
   const totalAttemptedVisits = rjpCompleted + offPjpTotal;
 
-  const targetAchievementPercent = Math.round((totalValidVisits / Math.max(1, targetDailyVisits)) * 100);
+  const targetAchievementPercent = Math.round(
+    (totalValidVisits / Math.max(1, targetDailyVisits)) * 100
+  );
   const isTargetMet = totalValidVisits >= targetDailyVisits;
   const remainingToTarget = Math.max(0, targetDailyVisits - totalValidVisits);
 

@@ -27,30 +27,48 @@ export const AppProvider = ({ children }) => {
   const domain = useDomainState();
 
   // 2. Auth session (resets domain state on logout/expiry)
-  const { user:sessionUser, setUser, setUserFromAuth, sessionLoading, sessionError } = useAuthSession(domain.resetDomainState);
+  const {
+    user: sessionUser,
+    setUser,
+    setUserFromAuth,
+    sessionLoading,
+    sessionError,
+  } = useAuthSession(domain.resetDomainState);
 
   const { settings, settingsReady, refreshSettings } = useOperationalSettings(sessionUser);
 
-  const user=useMemo(()=>sessionUser?{...sessionUser,settings}:null,[sessionUser,settings]);
+  const user = useMemo(
+    () => (sessionUser ? { ...sessionUser, settings } : null),
+    [sessionUser, settings]
+  );
   // 3. Live GPS tracking while logged in
 
-
   // 4. Global Tab Navigation State
-  const [activeTab, setActiveTab] = useBrowserNavigation(user,sessionLoading);
+  const [activeTab, setActiveTab] = useBrowserNavigation(user, sessionLoading);
 
   // 5. Master data (clusters & divisions) + fetchers
-  const { clusters, setClusters, fetchClusters, divisions, setDivisions, fetchDivisions } = useMasterData();
+  const { clusters, setClusters, fetchClusters, divisions, setDivisions, fetchDivisions } =
+    useMasterData();
 
   // 6. Shift attendance slice
-  const { shiftAttendance, handleShiftClockIn, handleShiftClockOut, shiftBusy, shiftError } = useShiftAttendance(user);
+  const { shiftAttendance, handleShiftClockIn, handleShiftClockOut, shiftBusy, shiftError } =
+    useShiftAttendance(user);
 
-  const activeSalesVisit=domain.salesStops.some(stop=>['ARRIVED','ORDERED','IN_VISIT'].includes(stop.status));
-  const currentLocation=useLiveGeolocation(settingsReady?user:null,settings,shiftAttendance.clockedIn,activeSalesVisit);
-  const driverTracking=useDriverTracking(settingsReady?user:null,settings);
+  const activeSalesVisit = domain.salesStops.some((stop) =>
+    ['ARRIVED', 'ORDERED', 'IN_VISIT'].includes(stop.status)
+  );
+  const currentLocation = useLiveGeolocation(
+    settingsReady ? user : null,
+    settings,
+    shiftAttendance.clockedIn,
+    activeSalesVisit
+  );
+  const driverTracking = useDriverTracking(settingsReady ? user : null, settings);
 
   // 7. Notification center slice
   const notificationState = useNotifications(user);
-  const { notifications, addNotification, markNotificationAsRead, clearNotifications } = notificationState;
+  const { notifications, addNotification, markNotificationAsRead, clearNotifications } =
+    notificationState;
 
   // 8. Backend hydration effect (runs once per user session)
   const syncStatus = useBackendSync({
@@ -97,109 +115,128 @@ export const AppProvider = ({ children }) => {
     addNotification,
   });
 
-  const value = useMemo(() => ({
-    driverTracking, syncStatus, ...notificationState,
-    settings, settingsReady, refreshSettings, sessionLoading, sessionError,
-    // Current User Session
-    user,
-    setUser,
-    setUserFromAuth,
-    currentLocation,
+  const value = useMemo(
+    () => ({
+      driverTracking,
+      syncStatus,
+      ...notificationState,
+      settings,
+      settingsReady,
+      refreshSettings,
+      sessionLoading,
+      sessionError,
+      // Current User Session
+      user,
+      setUser,
+      setUserFromAuth,
+      currentLocation,
 
-    // Global Tab Navigation
-    activeTab,
-    setActiveTab,
+      // Global Tab Navigation
+      activeTab,
+      setActiveTab,
 
-    shiftBusy, shiftError,
-    // Shift Clock-In State
-    shiftAttendance,
-    handleShiftClockIn,
-    handleShiftClockOut,
+      shiftBusy,
+      shiftError,
+      // Shift Clock-In State
+      shiftAttendance,
+      handleShiftClockIn,
+      handleShiftClockOut,
 
-    // Core Domain State
-    salesStops: domain.salesStops,
-    setSalesStops: domain.setSalesStops,
-    teamMembers: domain.teamMembers,
-    setTeamMembers: domain.setTeamMembers,
-    activeRoutes: domain.activeRoutes,
-    setActiveRoutes: domain.setActiveRoutes,
-    masterRoutes: domain.masterRoutes,
-    setMasterRoutes: domain.setMasterRoutes,
-    salesList: domain.salesList,
-    setSalesList: domain.setSalesList,
-    offPjpAttendances: domain.offPjpAttendances,
-    setOffPjpAttendances: domain.setOffPjpAttendances,
-    orders: domain.orders,
-    setOrders: domain.setOrders,
-    incidents: domain.incidents,
-    setIncidents: domain.setIncidents,
-    products: domain.products,
-    setProducts: domain.setProducts,
+      // Core Domain State
+      salesStops: domain.salesStops,
+      setSalesStops: domain.setSalesStops,
+      teamMembers: domain.teamMembers,
+      setTeamMembers: domain.setTeamMembers,
+      activeRoutes: domain.activeRoutes,
+      setActiveRoutes: domain.setActiveRoutes,
+      masterRoutes: domain.masterRoutes,
+      setMasterRoutes: domain.setMasterRoutes,
+      salesList: domain.salesList,
+      setSalesList: domain.setSalesList,
+      offPjpAttendances: domain.offPjpAttendances,
+      setOffPjpAttendances: domain.setOffPjpAttendances,
+      orders: domain.orders,
+      setOrders: domain.setOrders,
+      incidents: domain.incidents,
+      setIncidents: domain.setIncidents,
+      products: domain.products,
+      setProducts: domain.setProducts,
 
-    // Master Kluster Dinamis (Single Source of Truth)
-    clusters,
-    setClusters,
-    fetchClusters,
+      // Master Kluster Dinamis (Single Source of Truth)
+      clusters,
+      setClusters,
+      fetchClusters,
 
-    // Master Divisi Dinamis (Single Source of Truth)
-    divisions,
-    setDivisions,
-    fetchDivisions,
+      // Master Divisi Dinamis (Single Source of Truth)
+      divisions,
+      setDivisions,
+      fetchDivisions,
 
-    // Notifications
-    notifications,
-    addNotification,
-    markNotificationAsRead,
-    clearNotifications,
+      // Notifications
+      notifications,
+      addNotification,
+      markNotificationAsRead,
+      clearNotifications,
 
-    // Dedicated Domain Actions
-    ...salesActions,
-    ...supervisorActions,
-    ...adminActions,
-  }), [
-    syncStatus, notificationState, settings, settingsReady, refreshSettings, sessionLoading, sessionError,
-    user,
-    setUser,
-    setUserFromAuth,
-    currentLocation,
-    activeTab,
-    shiftAttendance,
-    shiftBusy, shiftError,
-    handleShiftClockIn,
-    handleShiftClockOut,
-    domain.salesStops,
-    domain.setSalesStops,
-    domain.teamMembers,
-    domain.setTeamMembers,
-    domain.activeRoutes,
-    domain.setActiveRoutes,
-    domain.masterRoutes,
-    domain.setMasterRoutes,
-    domain.salesList,
-    domain.setSalesList,
-    domain.offPjpAttendances,
-    domain.setOffPjpAttendances,
-    domain.orders,
-    domain.setOrders,
-    domain.incidents,
-    domain.setIncidents,
-    domain.products,
-    domain.setProducts,
-    clusters,
-    setClusters,
-    fetchClusters,
-    divisions,
-    setDivisions,
-    fetchDivisions,
-    notifications,
-    addNotification,
-    markNotificationAsRead,
-    clearNotifications,
-    salesActions,
-    supervisorActions,
-    adminActions,
-    sessionLoading, sessionError, driverTracking,
-  ]);
+      // Dedicated Domain Actions
+      ...salesActions,
+      ...supervisorActions,
+      ...adminActions,
+    }),
+    [
+      syncStatus,
+      notificationState,
+      settings,
+      settingsReady,
+      refreshSettings,
+      sessionLoading,
+      sessionError,
+      user,
+      setUser,
+      setUserFromAuth,
+      currentLocation,
+      activeTab,
+      shiftAttendance,
+      shiftBusy,
+      shiftError,
+      handleShiftClockIn,
+      handleShiftClockOut,
+      domain.salesStops,
+      domain.setSalesStops,
+      domain.teamMembers,
+      domain.setTeamMembers,
+      domain.activeRoutes,
+      domain.setActiveRoutes,
+      domain.masterRoutes,
+      domain.setMasterRoutes,
+      domain.salesList,
+      domain.setSalesList,
+      domain.offPjpAttendances,
+      domain.setOffPjpAttendances,
+      domain.orders,
+      domain.setOrders,
+      domain.incidents,
+      domain.setIncidents,
+      domain.products,
+      domain.setProducts,
+      clusters,
+      setClusters,
+      fetchClusters,
+      divisions,
+      setDivisions,
+      fetchDivisions,
+      notifications,
+      addNotification,
+      markNotificationAsRead,
+      clearNotifications,
+      salesActions,
+      supervisorActions,
+      adminActions,
+      sessionLoading,
+      sessionError,
+      driverTracking,
+    ]
+  );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

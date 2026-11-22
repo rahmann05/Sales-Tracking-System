@@ -1,86 +1,193 @@
 import React from 'react';
 import { LuCheck } from 'react-icons/lu';
 import { SpvModalShell } from './SpvModalShell';
-import {auditItems} from '../../../../../shared/supervision-checklist.mjs';
-import {useApp} from '../../../context/AppContext';
+import { auditItems } from '../../../../../shared/supervision-checklist.mjs';
+import { useApp } from '../../../context/AppContext';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
-import {followUpAllowed} from '../../../../../shared/follow-up-policy.mjs';
-import {SpvAuditQuestion} from './SpvAuditQuestion';
-import {processPolicyValues} from '../../../../../shared/process-policy.mjs';
+import { followUpAllowed } from '../../../../../shared/follow-up-policy.mjs';
+import { SpvAuditQuestion } from './SpvAuditQuestion';
+import { processPolicyValues } from '../../../../../shared/process-policy.mjs';
 
 /**
  * SpvAuditModal Component
  * Single Responsibility: Modal checklist audit kepatuhan toko & evaluasi sales.
  */
-export const SpvAuditModal = ({ stop, checklist, onChangeChecklist, inputNotes, onChangeNotes, onClose, onSave, error, saving, followUp, onChangeFollowUp, salesOptions=[] }) => {
-    const {settings,user}=useApp(),policyValues=processPolicyValues(stop.policySnapshot,settings),items=auditItems(policyValues);
-    return (
-    <SpvModalShell error={error} saving={saving}
-        title="Form Audit & Evaluasi Supervisi"
-        subtitle={stop.outletName}
-        onClose={onClose}
-        maxWidth="max-w-lg"
-        footer={
-            <>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2.5 rounded-xl border border-border-glass text-xs font-bold text-on-surface-variant hover:bg-surface-variant cursor-pointer"
-                >
-                    Batal
-                </button>
-                <button
-                    type="button"
-                    onClick={onSave}
-                    className="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-                >
-                    <LuCheck className="text-base" />
-                    <span>Simpan Checklist Audit</span>
-                </button>
-            </>
-        }
+export const SpvAuditModal = ({
+  stop,
+  checklist,
+  onChangeChecklist,
+  inputNotes,
+  onChangeNotes,
+  onClose,
+  onSave,
+  error,
+  saving,
+  followUp,
+  onChangeFollowUp,
+  salesOptions = [],
+}) => {
+  const { settings, user } = useApp(),
+    policyValues = processPolicyValues(stop.policySnapshot, settings),
+    items = auditItems(policyValues);
+  return (
+    <SpvModalShell
+      error={error}
+      saving={saving}
+      title="Form Audit & Evaluasi Supervisi"
+      subtitle={stop.outletName}
+      onClose={onClose}
+      maxWidth="max-w-lg"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl border border-border-glass text-xs font-bold text-on-surface-variant hover:bg-surface-variant cursor-pointer"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            className="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <LuCheck className="text-base" />
+            <span>Simpan Checklist Audit</span>
+          </button>
+        </>
+      }
     >
-        <div className="space-y-4 py-2">
-
-            <div>
-                <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider mb-2.5">
-                    Checklist Kepatuhan Toko & Evaluasi Sales:
-                </h4>
-                <div className="space-y-2">
-                    {items.map((item) => (
-                        <SpvAuditQuestion policyValues={policyValues} key={item.key} item={item} value={checklist[item.key]} evidence={checklist._evidence?.[item.key]} onChange={value=>onChangeChecklist({...checklist,[item.key]:value})} onEvidence={proof=>onChangeChecklist({...checklist,_evidence:{...checklist._evidence,[item.key]:proof}})}/>
-                    ))}
-                </div>
-            </div>
-
-            <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface block">
-                    Catatan Supervisi / Arahan Khusus untuk Sales Lapangan:
-                </label>
-                <textarea
-                    rows={3}
-                    value={inputNotes}
-                    onChange={(e) => onChangeNotes(e.target.value)}
-                    placeholder="Tuliskan temuan display, potensi order tambahan, atau instruksi untuk sales..."
-                    className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
-                />
-            </div>
-            {policyValues.FOLLOW_UP_AUTO_ENABLED&&<p className="app-notice">Temuan sesuai aturan Admin dapat menghasilkan tugas otomatis saat disimpan. Penerima awal: {policyValues.FOLLOW_UP_AUTO_OWNER==='CLUSTER_SALES'?'Sales utama cluster':'Sales pemilik PJP'}. Pilihan tugas manual mengesampingkan otomatisasi; tugas lama tidak ditimpa.</p>}
-            {followUp && followUpAllowed(user,'assign') && <fieldset className="space-y-3 border rounded-xl p-3" disabled={saving||stop.followUpReadOnly||followUp.completed||(settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE')}>
-                <legend className="font-bold text-sm">Arahan untuk Sales (bila diperlukan)</legend>
-                {stop.followUpReadOnly&&<p>Target tidak berada di PJP saat ini. Audit aktif tetap dapat diselesaikan; penugasan tindak lanjut mengikuti wilayah dan tim terbaru melalui menu Perlu tindakan.</p>}
-                {settings.FEATURE_FOLLOW_UP_MODE&&settings.FEATURE_FOLLOW_UP_MODE!=='ACTIVE'&&<p>Tugas baru dijeda oleh Admin. Checklist tetap dapat disimpan; tugas terdahulu diselesaikan melalui menu Perlu tindakan.</p>}
-                {followUp.completed?<p>Tugas sudah selesai atau sedang menunggu pemeriksaan. Buka Perlu tindakan untuk melihat tahap terbaru.</p>:<>
-                    <label className="flex gap-2 text-sm"><input type="checkbox" checked={followUp.enabled} onChange={e=>onChangeFollowUp({...followUp,enabled:e.target.checked})}/>Ada bantuan lanjutan yang perlu dilakukan Sales</label>
-                    {followUp.enabled&&<>
-                        <label className="block text-sm">Sales penerima (pemilik kunjungan disarankan)<select className="form-input w-full" value={followUp.ownerId} onChange={e=>onChangeFollowUp({...followUp,ownerId:e.target.value})}><option value="">Pilih sales</option>{salesOptions.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}</select></label>
-                        <label className="block text-sm">Tenggat<input className="form-input w-full" type="date" min={wibDateKey()} value={followUp.dueDate} onChange={e=>onChangeFollowUp({...followUp,dueDate:e.target.value})}/></label>
-                        <label className="block text-sm">Apa yang perlu dilakukan Sales<textarea className="form-input w-full" maxLength={4000} value={followUp.note} onChange={e=>onChangeFollowUp({...followUp,note:e.target.value})}/></label>
-                    </>}
-                    <p className="text-xs">Tugas yang sudah disimpan tetap terbuka sampai diselesaikan dengan catatan.</p>
-                </>}
-            </fieldset>}
+      <div className="space-y-4 py-2">
+        <div>
+          <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider mb-2.5">
+            Checklist Kepatuhan Toko & Evaluasi Sales:
+          </h4>
+          <div className="space-y-2">
+            {items.map((item) => (
+              <SpvAuditQuestion
+                policyValues={policyValues}
+                key={item.key}
+                item={item}
+                value={checklist[item.key]}
+                evidence={checklist._evidence?.[item.key]}
+                onChange={(value) => onChangeChecklist({ ...checklist, [item.key]: value })}
+                onEvidence={(proof) =>
+                  onChangeChecklist({
+                    ...checklist,
+                    _evidence: { ...checklist._evidence, [item.key]: proof },
+                  })
+                }
+              />
+            ))}
+          </div>
         </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-on-surface block">
+            Catatan Supervisi / Arahan Khusus untuk Sales Lapangan:
+          </label>
+          <textarea
+            rows={3}
+            value={inputNotes}
+            onChange={(e) => onChangeNotes(e.target.value)}
+            placeholder="Tuliskan temuan display, potensi order tambahan, atau instruksi untuk sales..."
+            className="w-full p-3 rounded-xl bg-surface-variant/30 border border-border-glass text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        {policyValues.FOLLOW_UP_AUTO_ENABLED && (
+          <p className="app-notice">
+            Temuan sesuai aturan Admin dapat menghasilkan tugas otomatis saat disimpan. Penerima
+            awal:{' '}
+            {policyValues.FOLLOW_UP_AUTO_OWNER === 'CLUSTER_SALES'
+              ? 'Sales utama cluster'
+              : 'Sales pemilik PJP'}
+            . Pilihan tugas manual mengesampingkan otomatisasi; tugas lama tidak ditimpa.
+          </p>
+        )}
+        {followUp && followUpAllowed(user, 'assign') && (
+          <fieldset
+            className="space-y-3 border rounded-xl p-3"
+            disabled={
+              saving ||
+              stop.followUpReadOnly ||
+              followUp.completed ||
+              (settings.FEATURE_FOLLOW_UP_MODE && settings.FEATURE_FOLLOW_UP_MODE !== 'ACTIVE')
+            }
+          >
+            <legend className="font-bold text-sm">Arahan untuk Sales (bila diperlukan)</legend>
+            {stop.followUpReadOnly && (
+              <p>
+                Target tidak berada di PJP saat ini. Audit aktif tetap dapat diselesaikan; penugasan
+                tindak lanjut mengikuti wilayah dan tim terbaru melalui menu Perlu tindakan.
+              </p>
+            )}
+            {settings.FEATURE_FOLLOW_UP_MODE && settings.FEATURE_FOLLOW_UP_MODE !== 'ACTIVE' && (
+              <p>
+                Tugas baru dijeda oleh Admin. Checklist tetap dapat disimpan; tugas terdahulu
+                diselesaikan melalui menu Perlu tindakan.
+              </p>
+            )}
+            {followUp.completed ? (
+              <p>
+                Tugas sudah selesai atau sedang menunggu pemeriksaan. Buka Perlu tindakan untuk
+                melihat tahap terbaru.
+              </p>
+            ) : (
+              <>
+                <label className="flex gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={followUp.enabled}
+                    onChange={(e) => onChangeFollowUp({ ...followUp, enabled: e.target.checked })}
+                  />
+                  Ada bantuan lanjutan yang perlu dilakukan Sales
+                </label>
+                {followUp.enabled && (
+                  <>
+                    <label className="block text-sm">
+                      Sales penerima (pemilik kunjungan disarankan)
+                      <select
+                        className="form-input w-full"
+                        value={followUp.ownerId}
+                        onChange={(e) => onChangeFollowUp({ ...followUp, ownerId: e.target.value })}
+                      >
+                        <option value="">Pilih sales</option>
+                        {salesOptions.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block text-sm">
+                      Tenggat
+                      <input
+                        className="form-input w-full"
+                        type="date"
+                        min={wibDateKey()}
+                        value={followUp.dueDate}
+                        onChange={(e) => onChangeFollowUp({ ...followUp, dueDate: e.target.value })}
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      Apa yang perlu dilakukan Sales
+                      <textarea
+                        className="form-input w-full"
+                        maxLength={4000}
+                        value={followUp.note}
+                        onChange={(e) => onChangeFollowUp({ ...followUp, note: e.target.value })}
+                      />
+                    </label>
+                  </>
+                )}
+                <p className="text-xs">
+                  Tugas yang sudah disimpan tetap terbuka sampai diselesaikan dengan catatan.
+                </p>
+              </>
+            )}
+          </fieldset>
+        )}
+      </div>
     </SpvModalShell>
-);
+  );
 };

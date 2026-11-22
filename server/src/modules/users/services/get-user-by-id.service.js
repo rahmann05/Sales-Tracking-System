@@ -3,7 +3,6 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { USER_SELECT, enrichUserResponse } from './users.helpers.js';
 
-
 export const getUserById = async (id) => {
   const user = await prisma.user.findUnique({
     where: { id },

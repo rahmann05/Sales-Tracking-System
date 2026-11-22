@@ -4,8 +4,8 @@ import { ReportBasisNote } from './ReportBasisNote';
 import { ReportCalendarEditor } from './ReportCalendarEditor';
 import { ReportArchivePanel } from './ReportArchivePanel';
 import { WeeklySalesTable } from './WeeklySalesTable';
-import {reportFilterDefaults} from '../../../../../shared/report-filter-defaults.mjs';
-import {useApp} from '../../../context/AppContext';
+import { reportFilterDefaults } from '../../../../../shared/report-filter-defaults.mjs';
+import { useApp } from '../../../context/AppContext';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { collectPages, reportsApi, usersApi } from '../../../services/api';
 import { WeeklyReportPdfView } from './WeeklyReportPdfView';
@@ -21,7 +21,7 @@ import {
  * Single Responsibility: Weekly Performance Analysis (WTD) & 6-Day Work Week Matrix Table ala ND6.
  */
 export const WeeklyReportView = () => {
-  const {settings}=useApp();
+  const { settings } = useApp();
   const [startDate, setStartDate] = useState(() => reportFilterDefaults(settings).weekStart);
   const [salesmanId, setSalesmanId] = useState('');
   const [search, setSearch] = useState('');
@@ -34,7 +34,7 @@ export const WeeklyReportView = () => {
     period: {
       startDate: '',
       endDate: '',
-      weekDays: []
+      weekDays: [],
     },
     summary: {
       totalPlanCalls: 0,
@@ -45,10 +45,10 @@ export const WeeklyReportView = () => {
       totalOrderAmount: 0,
       totalSkuSold: 0,
       avgDurationMinutes: 0,
-      totalAnomalies: 0
+      totalAnomalies: 0,
     },
     daysSummary: [],
-    salesmen: []
+    salesmen: [],
   });
 
   // Fetch Sales Team
@@ -56,10 +56,10 @@ export const WeeklyReportView = () => {
     const fetchTeam = async () => {
       try {
         const res = await collectPages(usersApi.getAll, {
-          role: 'SALES'
+          role: 'SALES',
         });
         if (res?.data) {
-          setSalesTeam(res.data.filter(u => u.role === 'SALES'));
+          setSalesTeam(res.data.filter((u) => u.role === 'SALES'));
         }
       } catch (err) {
         console.warn('[WeeklyReportView] Failed to fetch sales team:', err.message);
@@ -76,7 +76,7 @@ export const WeeklyReportView = () => {
     try {
       const res = await reportsApi.getWeekly({
         startDate,
-        userId: salesmanId || undefined
+        userId: salesmanId || undefined,
       });
       if (revision === loadRevision.current && res?.data) {
         setReportData(res.data);
@@ -93,8 +93,8 @@ export const WeeklyReportView = () => {
       loadRevision.current++;
     };
   }, [loadData]);
-  const salesOptions = reportSalesOptions(salesTeam,reportData.salesmen,salesmanId);
-  const selectedSalesman = salesOptions.find(s => s.id === salesmanId);
+  const salesOptions = reportSalesOptions(salesTeam, reportData.salesmen, salesmanId);
+  const selectedSalesman = salesOptions.find((s) => s.id === salesmanId);
   const salesmanName = selectedSalesman?.name || '';
 
   // 5-Format Exporters
@@ -104,20 +104,30 @@ export const WeeklyReportView = () => {
   const exportToTxt = () => exportWeeklyTxt(reportData, startDate, salesmanName);
   const exportToPdf = () => exportWeeklyPdf(reportData, startDate, salesmanName);
 
-  const {
-    summary = {},
-    salesmen = [],
-    daysSummary = []
-  } = reportData;
-  const filteredSalesmen = search ? salesmen.filter(s => s.salesmanName.toLowerCase().includes(search.toLowerCase())) : salesmen;
-  return <div className="space-y-5">
-      {error && <div className="app-error" role="alert"><p>Laporan belum berhasil diperbarui: {error}</p><button type="button" className="app-button" onClick={loadData} disabled={isLoading}>Coba lagi</button></div>}
+  const { summary = {}, salesmen = [], daysSummary = [] } = reportData;
+  const filteredSalesmen = search
+    ? salesmen.filter((s) => s.salesmanName.toLowerCase().includes(search.toLowerCase()))
+    : salesmen;
+  return (
+    <div className="space-y-5">
+      {error && (
+        <div className="app-error" role="alert">
+          <p>Laporan belum berhasil diperbarui: {error}</p>
+          <button type="button" className="app-button" onClick={loadData} disabled={isLoading}>
+            Coba lagi
+          </button>
+        </div>
+      )}
       {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
       {!isLoading && !error && <WeeklyMetrics summary={summary} />}
       {!isLoading && !error && <ReportBasisNote basis={reportData.basis} />}
-      <ReportArchivePanel kind="WEEK" period={startDate}/>
-      <div className="flex flex-wrap gap-2">{reportData.basis?.calendarMonths?.map(row=><ReportCalendarEditor key={row.month} month={row.month} onSaved={loadData}/>)}</div>
+      <ReportArchivePanel kind="WEEK" period={startDate} />
+      <div className="flex flex-wrap gap-2">
+        {reportData.basis?.calendarMonths?.map((row) => (
+          <ReportCalendarEditor key={row.month} month={row.month} onSaved={loadData} />
+        ))}
+      </div>
 
       {/* 2. Unified Workspace Card: Header + Filters + Matrix Table */}
       <WeeklySalesTable
@@ -151,5 +161,6 @@ export const WeeklyReportView = () => {
           onClose={() => setIsPdfModalOpen(false)}
         />
       )}
-    </div>;
+    </div>
+  );
 };

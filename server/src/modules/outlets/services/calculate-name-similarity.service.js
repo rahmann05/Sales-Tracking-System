@@ -1,5 +1,9 @@
 /** calculateNameSimilarity - single-responsibility service (extracted from outlet-validation.service.js). */
-import { phoneticIndonesianNormalize, jaroWinklerSimilarity, tokenOverlapSimilarity } from './outlet-validation.helpers.js';
+import {
+  phoneticIndonesianNormalize,
+  jaroWinklerSimilarity,
+  tokenOverlapSimilarity,
+} from './outlet-validation.helpers.js';
 import { normalizeIndonesianStoreName } from './normalize-indonesian-store-name.service.js';
 
 /**

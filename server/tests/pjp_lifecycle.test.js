@@ -59,8 +59,8 @@ describe('PJP Route Lifecycle & Sequencing Unit Tests', () => {
       ],
     };
 
-    const isAllDone = pjp.stops.every((s) => 
-      s.status === VISIT_STATUS.VISITED || s.status === VISIT_STATUS.SKIPPED
+    const isAllDone = pjp.stops.every(
+      (s) => s.status === VISIT_STATUS.VISITED || s.status === VISIT_STATUS.SKIPPED
     );
 
     if (isAllDone) {

@@ -5,7 +5,6 @@
 
 /* ── 1. Mobile Table → Card Transform ── */
 @media (max-width: 767px) {
-
   /* Hide table header on mobile */
   .mobile-card-table thead {
     display: none !important;
@@ -66,7 +65,7 @@
     min-width: 6.5rem;
     font-size: 0.6875rem;
     font-weight: 700;
-    color: var(--color-on-surface-variant, #86868B);
+    color: var(--color-on-surface-variant, #86868b);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     padding-top: 0.125rem;
@@ -256,7 +255,7 @@
     width: 100%;
   }
 
-  .workspace-toolbar-mobile input[type="text"] {
+  .workspace-toolbar-mobile input[type='text'] {
     width: 100% !important;
   }
 }

@@ -26,7 +26,7 @@ const stringToColor = (str) => {
  */
 export const getClusterColorHex = (clusterName = '', callplanName = '', dbColorHex = null) => {
   if (dbColorHex) return dbColorHex;
-  
+
   const target = (clusterName + ' ' + callplanName).trim().toUpperCase();
   if (!target) return '#6366f1'; // Indigo fallback
 
@@ -38,14 +38,14 @@ export const getClusterColorHex = (clusterName = '', callplanName = '', dbColorH
  */
 export const getClusterInfo = (clusterName = '', callplanName = '', dbColorHex = null) => {
   const hex = getClusterColorHex(clusterName, callplanName, dbColorHex);
-  
-  return { 
-    key: clusterName ? clusterName.replace(/\s+/g, '_').toUpperCase() : 'OTHER', 
-    name: clusterName || 'Klaster Regional', 
-    hex, 
+
+  return {
+    key: clusterName ? clusterName.replace(/\s+/g, '_').toUpperCase() : 'OTHER',
+    name: clusterName || 'Klaster Regional',
+    hex,
     // We just return inline styles or simple classes since it's dynamic now
-    bgClass: 'bg-gray-100', 
-    borderClass: 'border-gray-200', 
-    textClass: 'text-gray-800' 
+    bgClass: 'bg-gray-100',
+    borderClass: 'border-gray-200',
+    textClass: 'text-gray-800',
   };
 };

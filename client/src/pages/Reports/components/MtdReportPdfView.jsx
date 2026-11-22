@@ -1,13 +1,15 @@
-import {reportMoney} from '../../../../../shared/report-visibility.mjs';
-import {printOperationalDocument} from '../../../services/operationalExportService';
+import { reportMoney } from '../../../../../shared/report-visibility.mjs';
+import { printOperationalDocument } from '../../../services/operationalExportService';
 import React from 'react';
-import {useApp} from '../../../context/AppContext';
-import {reportExportAllowed} from '../../../../../shared/report-presentation.mjs';
+import { useApp } from '../../../context/AppContext';
+import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { ReportBasisNote } from './ReportBasisNote';
+import { ReportPrintSignatures } from './ReportPrintSignatures';
 import { LuPrinter, LuX } from 'react-icons/lu';
 
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import {
   exportMtdDocx,
   exportMtdExcel,
@@ -21,7 +23,8 @@ import {
  * Renders an official printable sheet for Month-to-Date (MTD) Sales, Target, and LMA Growth analysis.
  */
 export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClose }) => {
-  const {user,settings}=useApp(),canExport=reportExportAllowed(user,settings);
+  const { user, settings } = useApp(),
+    canExport = reportExportAllowed(user, settings);
   if (!reportData) return null;
 
   const { period = {}, summary = {}, channelBreakdown = [], salesmen = [] } = reportData;
@@ -31,9 +34,14 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <NativeDialog
+      open
+      title="Pratinjau Cetak Laporan MTD"
+      onClose={onClose}
+      className="print-sheet-dialog"
+    >
       {/* Action Bar */}
-      <div className="fixed top-4 right-6 z-60 flex flex-wrap items-center gap-2 no-print bg-surface p-2 rounded-2xl shadow-2xl border border-border-glass">
+      <div className="flex flex-wrap items-center justify-end gap-2 no-print bg-surface p-2 mb-3 rounded-2xl border border-border-glass">
         <ExportFormatMenu
           disabled={!canExport}
           onExportDocx={() => exportMtdDocx(reportData, month, year)}
@@ -62,21 +70,19 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
       {/* Printable Sheet */}
       <div
         id="mtd-report-printable"
-        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full shadow-2xl rounded-sm my-auto text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
+        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full mx-auto shadow-2xl rounded-sm text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
         style={{ fontFamily: "'Arial', sans-serif" }}
       >
         {/* Header */}
         <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
           <div>
             <h1 className="text-base font-black tracking-tight text-gray-900 m-0 uppercase">
-              {reportData.meta?.company||'Perusahaan'}
+              {reportData.meta?.company || 'Perusahaan'}
             </h1>
             <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
               FMCG DISTRIBUTOR
             </p>
-            <p className="text-[9px] text-gray-500 m-0 mt-0.5">
-              Distribution Management System
-            </p>
+            <p className="text-[9px] text-gray-500 m-0 mt-0.5">Distribution Management System</p>
           </div>
 
           <div className="text-right">
@@ -87,7 +93,11 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
               Pencapaian Target Periode & Rasio terhadap Bulan Lalu
             </p>
             <p className="text-[9px] font-mono text-gray-500 m-0">
-              Bulan: {period.monthName} {period.year} (Kalender: {period.calendarKnown?`${period.workingDaysElapsed}/${period.totalWorkingDays} hari kerja - ${period.workingDaysRate}`:'belum ditetapkan'})
+              Bulan: {period.monthName} {period.year} (Kalender:{' '}
+              {period.calendarKnown
+                ? `${period.workingDaysElapsed}/${period.totalWorkingDays} hari kerja - ${period.workingDaysRate}`
+                : 'belum ditetapkan'}
+              )
             </p>
           </div>
         </div>
@@ -97,28 +107,36 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
         <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
           <div>
             <span className="text-gray-500 font-semibold block">Salesman / Filter:</span>
-            <strong className="text-gray-900 text-[11px]">{salesmanName || 'Semua Salesman (Tim)'}</strong>
+            <strong className="text-gray-900 text-[11px]">
+              {salesmanName || 'Semua Salesman (Tim)'}
+            </strong>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block">Realisasi vs Target MTD:</span>
             <strong className="text-gray-900 text-[11px]">
               {reportMoney(summary.mtdActualAmount)} / {formatTarget(summary.monthlyTargetAmount)}
             </strong>
-            <span className="text-blue-700 font-bold block">Pencapaian: {summary.overallAchievementRate}</span>
+            <span className="text-blue-700 font-bold block">
+              Pencapaian: {summary.overallAchievementRate}
+            </span>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block">Last Month Actual (LMA):</span>
             <strong className="text-gray-900 text-[11px]">
               {reportMoney(summary.lastMonthActual)}
             </strong>
-            <span className="text-emerald-700 font-bold block">% MTD to LMA: {summary.mtdToLmaRate}</span>
+            <span className="text-emerald-700 font-bold block">
+              % MTD to LMA: {summary.mtdToLmaRate}
+            </span>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block">Call Compliance & EC:</span>
             <strong className="text-gray-900 text-[11px]">
               Call: {summary.mtdCallComplianceRate} • EC: {summary.mtdEffectiveCallRate}
             </strong>
-            <span className="text-purple-700 font-bold block">Total SKU: {summary.totalMtdSkuSold}</span>
+            <span className="text-purple-700 font-bold block">
+              Total SKU: {summary.totalMtdSkuSold}
+            </span>
           </div>
         </div>
 
@@ -130,7 +148,10 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
             </strong>
             <div className="grid grid-cols-3 gap-2">
               {channelBreakdown.map((c) => (
-                <div key={c.channelKey} className="border border-gray-200 p-1.5 rounded-xs bg-white">
+                <div
+                  key={c.channelKey}
+                  className="border border-gray-200 p-1.5 rounded-xs bg-white"
+                >
                   <div className="font-bold text-gray-800">{c.channelName}</div>
                   <div className="flex items-center justify-between text-gray-600 mt-0.5 font-mono">
                     <span>Nilai order disetujui: {reportMoney(c.mtdOmzet)}</span>
@@ -179,7 +200,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
                     {s.clusterName}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-right font-mono whitespace-nowrap">
-                    {formatTarget(s.monthlyTarget,s.target?.status)}
+                    {formatTarget(s.monthlyTarget, s.target?.status)}
                   </td>
                   <td className="p-1.5 border-r border-gray-300 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
                     {reportMoney(s.mtdActualAmount)}
@@ -202,9 +223,7 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
                   <td className="p-1.5 border-r border-gray-300 text-center font-mono font-bold text-purple-700">
                     {s.effectiveCallRate}
                   </td>
-                  <td className="p-1.5 text-center font-mono">
-                    {s.totalSkuSold}
-                  </td>
+                  <td className="p-1.5 text-center font-mono">{s.totalSkuSold}</td>
                 </tr>
               ))}
 
@@ -237,42 +256,15 @@ export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClos
                 <td className="p-1.5 border-r border-black text-center font-mono text-purple-800">
                   {summary.mtdEffectiveCallRate}
                 </td>
-                <td className="p-1.5 text-center font-mono">
-                  {summary.totalMtdSkuSold}
-                </td>
+                <td className="p-1.5 text-center font-mono">{summary.totalMtdSkuSold}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         {/* Signatures Section */}
-        <div className="grid grid-cols-3 gap-4 pt-2 text-center text-[10px] break-inside-avoid">
-          <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Dibuat Oleh (Salesman),</span>
-            <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( {salesmanName || 'Sales Field Terkait'} )
-            </div>
-            <span className="text-[8.5px] text-gray-500">Sales Representative</span>
-          </div>
-
-          <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Diperiksa Oleh (Supervisor),</span>
-            <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( ____________________ )
-            </div>
-            <span className="text-[8.5px] text-gray-500">Supervisor Distribusi</span>
-          </div>
-
-          <div className="border border-gray-300 p-2.5 rounded-sm">
-            <span className="text-gray-500 font-bold block mb-12">Disetujui Oleh (Admin Penjualan),</span>
-            <div className="border-t border-gray-400 pt-1 font-bold text-gray-900">
-              ( ____________________ )
-            </div>
-            <span className="text-[8.5px] text-gray-500">Admin Penjualan</span>
-          </div>
-        </div>
+        <ReportPrintSignatures salesmanName={salesmanName} />
       </div>
-    </div>
+    </NativeDialog>
   );
 };
-

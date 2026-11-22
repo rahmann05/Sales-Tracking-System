@@ -1,0 +1,388 @@
+.demo-dock-root {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 95;
+  font-family: 'Inter', sans-serif;
+  color: #0f172a;
+}
+
+.demo-dock-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.demo-dock-trigger:hover {
+  border-color: #0869cf;
+}
+
+.demo-pill-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.demo-trigger-user {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demo-dock-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 70px;
+  width: min(460px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 96px));
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.2);
+  overflow: hidden;
+}
+
+.demo-dock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.demo-dock-heading {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.demo-dock-sub {
+  font-size: 12px;
+  color: #475569;
+}
+
+.demo-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.demo-notice {
+  margin: 10px 14px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.demo-notice--success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.demo-notice--error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.demo-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 14px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.demo-tab {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.demo-tab--active {
+  color: #0869cf;
+  border-bottom-color: #0869cf;
+}
+
+.demo-dock-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.demo-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.demo-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.demo-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.demo-btn-primary,
+.demo-btn-secondary,
+.demo-btn-mini {
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.demo-btn-primary {
+  background: #0869cf;
+  color: #ffffff;
+  border: 1px solid #0869cf;
+}
+
+.demo-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.demo-btn-secondary {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.demo-btn-mini {
+  min-height: 30px;
+  padding: 4px 10px;
+  background: #eff6ff;
+  color: #0656ab;
+  border: 1px solid #bfdbfe;
+  flex-shrink: 0;
+}
+
+.demo-account-list,
+.demo-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.demo-account-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.demo-account-card--active {
+  border-color: #0869cf;
+  background: #eff6ff;
+}
+
+.demo-account-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.demo-account-name {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.demo-account-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.demo-role-badge {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.demo-role-badge--ADMIN {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.demo-role-badge--SUPERVISOR {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.demo-role-badge--SALES {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.demo-role-badge--KEPALA_GUDANG {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.demo-role-badge--SUPIR {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.demo-active-chip {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #0869cf;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.demo-account-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.demo-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 4px;
+}
+
+.demo-group-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.demo-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.demo-group-desc {
+  font-size: 11px;
+  color: #475569;
+}
+
+.demo-guardrail-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.demo-guardrail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 11px;
+  color: #475569;
+}
+
+.demo-guardrail-item strong {
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.demo-scenario-card {
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.demo-scenario-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.demo-scenario-summary {
+  margin: 4px 0 8px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.demo-scenario-steps {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.demo-scenario-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.demo-step-text {
+  flex: 1;
+}
+
+.demo-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #475569;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+}

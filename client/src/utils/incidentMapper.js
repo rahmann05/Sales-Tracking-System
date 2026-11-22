@@ -5,16 +5,27 @@
  * Supervisor/Admin action-center views.
  */
 
-import {routeChangeWorkflow} from '../../../shared/route-change-workflow.mjs';
+import { routeChangeWorkflow } from '../../../shared/route-change-workflow.mjs';
 const formatTime = (iso) =>
   iso
-    ? new Date(iso).toLocaleString('id-ID', {timeZone:'Asia/Jakarta',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) + ' WIB'
+    ? new Date(iso).toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) + ' WIB'
     : '';
 
 // Server RouteChangeRequest status/type → UI incident status
 const mapRouteChangeStatus = (req) => {
-  if (req.status === 'PENDING_APPROVAL') return routeChangeWorkflow(req).stage==='ADMIN'?'PENDING_ADMIN':'PENDING_SPV';
-  if((req.type==='REVISIT'||req.workflow?.decisionAction==='REVISIT')&&req.status==='APPROVED')return 'RESOLVED_REVISIT';
+  if (req.status === 'PENDING_APPROVAL')
+    return routeChangeWorkflow(req).stage === 'ADMIN' ? 'PENDING_ADMIN' : 'PENDING_SPV';
+  if (
+    (req.type === 'REVISIT' || req.workflow?.decisionAction === 'REVISIT') &&
+    req.status === 'APPROVED'
+  )
+    return 'RESOLVED_REVISIT';
   if (req.status === 'ACKNOWLEDGED') return 'RESOLVED_SKIP';
   if (req.status === 'APPROVED' && req.type === 'SKIP') return 'RESOLVED_SKIP';
   if (req.status === 'APPROVED' && req.type === 'REROUTE') return 'RESOLVED_DIRECT_REROUTE';
@@ -23,9 +34,11 @@ const mapRouteChangeStatus = (req) => {
 };
 
 export const mapServerRouteChange = (req = {}) => ({
-  canDecide:req.canDecide,
-  revisit:req.revisit,decisionAction:req.decisionAction,
-  workflow:req.workflow,decisionMode:routeChangeWorkflow(req).mode,
+  canDecide: req.canDecide,
+  revisit: req.revisit,
+  decisionAction: req.decisionAction,
+  workflow: req.workflow,
+  decisionMode: routeChangeWorkflow(req).mode,
   id: req.id,
   type: 'CLOSED_SHOP',
   stopId: req.pjpStopId,
@@ -42,8 +55,10 @@ export const mapServerRouteChange = (req = {}) => ({
 });
 
 export const mapServerUnlockRequest = (req = {}) => ({
-  maxVisits:req.maxVisits||0,usedVisits:req.usedVisits||0,remainingVisits:req.remainingVisits??null,
-  kind:req.kind||'BOTH',
+  maxVisits: req.maxVisits || 0,
+  usedVisits: req.usedVisits || 0,
+  remainingVisits: req.remainingVisits ?? null,
+  kind: req.kind || 'BOTH',
   id: req.id,
   type: 'UNLOCK_REQUEST',
   requestedBy: req.requestedBy,
@@ -59,7 +74,7 @@ export const mapServerUnlockRequest = (req = {}) => ({
     req.status === 'PENDING_APPROVAL'
       ? 'PENDING'
       : req.status === 'APPROVED' || req.status === 'REJECTED'
-      ? req.status
-      : req.status || 'PENDING',
+        ? req.status
+        : req.status || 'PENDING',
   requestedAt: formatTime(req.createdAt),
 });

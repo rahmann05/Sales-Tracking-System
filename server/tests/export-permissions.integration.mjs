@@ -1,14 +1,35 @@
-import {createRequire} from 'node:module';
-import {fileURLToPath} from 'node:url';
-const require=createRequire(new URL('../../client/package.json',import.meta.url));
-const {build}=require('esbuild');
-const client=fileURLToPath(new URL('../../client/',import.meta.url));
-const result=await build({absWorkingDir:client,bundle:true,platform:'node',format:'cjs',write:false,
- plugins:[{name:'controlled-api',setup(build){
-  build.onResolve({filter:/httpClient$/},()=>({path:'api',namespace:'mock'}));
-  build.onResolve({filter:/notificationService$/},()=>({path:'notices',namespace:'mock'}));
-  build.onLoad({filter:/.*/,namespace:'mock'},args=>({contents:args.path==='api'?'export const request=(path)=>globalThis.exportRequest(path);':'export const notifyError=message=>globalThis.notices.push(message);'}));
- }}],stdin:{resolveDir:client,contents:`
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+const require = createRequire(new URL('../../client/package.json', import.meta.url));
+const { build } = require('esbuild');
+const client = fileURLToPath(new URL('../../client/', import.meta.url));
+const result = await build({
+  absWorkingDir: client,
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  write: false,
+  plugins: [
+    {
+      name: 'controlled-api',
+      setup(build) {
+        build.onResolve({ filter: /httpClient$/ }, () => ({ path: 'api', namespace: 'mock' }));
+        build.onResolve({ filter: /notificationService$/ }, () => ({
+          path: 'notices',
+          namespace: 'mock',
+        }));
+        build.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({
+          contents:
+            args.path === 'api'
+              ? 'export const request=(path)=>globalThis.exportRequest(path);'
+              : 'export const notifyError=message=>globalThis.notices.push(message);',
+        }));
+      },
+    },
+  ],
+  stdin: {
+    resolveDir: client,
+    contents: `
 import assert from 'node:assert/strict';
 import {downloadOperationalFile,printOperationalDocument} from './src/services/operationalExportService';
 module.exports=(async()=>{
@@ -39,6 +60,13 @@ module.exports=(async()=>{
  await printOperationalDocument();assert.equal(prints,1);
  console.log('PASS: export waits for authorization; 403, expired session, offline, invalid response and no session produce no download or print.');
 })();
-`}});
-const mod={exports:{}};
-await new Function('require','module','exports',result.outputFiles[0].text+'\nreturn module.exports;')(require,mod,mod.exports);
+`,
+  },
+});
+const mod = { exports: {} };
+await new Function(
+  'require',
+  'module',
+  'exports',
+  result.outputFiles[0].text + '\nreturn module.exports;'
+)(require, mod, mod.exports);

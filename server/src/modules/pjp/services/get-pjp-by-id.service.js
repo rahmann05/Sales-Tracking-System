@@ -1,11 +1,10 @@
-import {attachAgendaInstructions} from '../../staff-attendance/follow-up-agenda.service.js';
+import { attachAgendaInstructions } from '../../staff-attendance/follow-up-agenda.service.js';
 import { assertSalesAccess } from '../../../utils/team-scope.js';
 /** getPjpById - single-responsibility service (extracted from pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { ROLES } from "../../../utils/constants.js";
+import { ROLES } from '../../../utils/constants.js';
 import { PJP_STOP_INCLUDE } from './pjp.helpers.js';
-
 
 export const getPjpById = async (id, currentUser) => {
   const pjp = await prisma.pjp.findUnique({

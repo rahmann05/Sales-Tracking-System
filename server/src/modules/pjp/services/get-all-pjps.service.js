@@ -1,9 +1,12 @@
 import { teamSalesWhere } from '../../../utils/team-scope.js';
 /** getAllPjps - single-responsibility service (extracted from pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
-import { parsePagination, buildPaginatedResponse, buildDayRange } from '../../../utils/pagination.js';
+import {
+  parsePagination,
+  buildPaginatedResponse,
+  buildDayRange,
+} from '../../../utils/pagination.js';
 import { PJP_STOP_INCLUDE } from './pjp.helpers.js';
-
 
 export const getAllPjps = async (query = {}) => {
   const { date, userId, type, status } = query;
@@ -20,7 +23,21 @@ export const getAllPjps = async (query = {}) => {
     prisma.pjp.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true, role: true, cluster: { select: { id: true, name: true, region: true, supervisor: { select: { id: true, name: true } } } } } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            cluster: {
+              select: {
+                id: true,
+                name: true,
+                region: true,
+                supervisor: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
         stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } },
         _count: { select: { stops: true } },
       },

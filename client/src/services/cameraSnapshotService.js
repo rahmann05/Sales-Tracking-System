@@ -6,7 +6,14 @@ export const cameraSnapshotService = {
   /**
    * Captures snapshot from video, draws watermark, and returns base64 DataURL
    */
-  captureWithWatermark: ({ videoElement, canvasElement, facingMode, userLocation, outletName = '', outputMime='image/jpeg' }) => {
+  captureWithWatermark: ({
+    videoElement,
+    canvasElement,
+    facingMode,
+    userLocation,
+    outletName = '',
+    outputMime = 'image/jpeg',
+  }) => {
     if (!videoElement || !canvasElement) return null;
 
     const width = videoElement.videoWidth || 640;
@@ -49,11 +56,42 @@ export const cameraSnapshotService = {
     ctx.font = `normal ${Math.max(10, Math.round(barHeight * 0.24))}px sans-serif`;
 
     const now = new Date();
-    const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    const dateStr = now.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
     const timeStr = now.toLocaleTimeString('id-ID');
     const infoText = `SINAR ANUGRAH • ${outletName ? outletName + ' • ' : ''}${dateStr} ${timeStr} WIB`;
     ctx.fillText(infoText, 14, height - barHeight + 26);
 
     return canvasElement.toDataURL(outputMime, 0.85);
   },
+
+  /**
+   * Downscales an oversized image DataURL so mobile camera captures stay under the server KB limit.
+   */
+  compressDataUrl: (dataUrl, { maxWidth = 1600, quality = 0.78, outputMime = 'image/jpeg' } = {}) =>
+    new Promise((resolve, reject) => {
+      if (!dataUrl || typeof document === 'undefined') {
+        resolve(dataUrl);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        const scale = img.naturalWidth > maxWidth ? maxWidth / img.naturalWidth : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL(outputMime, quality));
+      };
+      img.onerror = () => reject(new Error('Gambar gagal diproses untuk kompresi.'));
+      img.src = dataUrl;
+    }),
 };

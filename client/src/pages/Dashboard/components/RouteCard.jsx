@@ -8,7 +8,7 @@ import { Avatar } from '../../../shared/components/common/Avatar';
  * Equal height standard: h-full min-h-[110px] flex flex-col justify-between
  */
 export const RouteCard = ({ route, isSelected, onClick }) => {
-  const stopCount = Array.isArray(route?.stops) ? route.stops.length : (route?.stops || 0);
+  const stopCount = Array.isArray(route?.stops) ? route.stops.length : route?.stops || 0;
 
   return (
     <div
@@ -20,11 +20,11 @@ export const RouteCard = ({ route, isSelected, onClick }) => {
       }`}
     >
       <div>
-        {route.code&&<p className="text-xs font-mono mb-1">{route.code}</p>}
+        {route.code && <p className="text-xs font-mono mb-1">{route.code}</p>}
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
             <span className="text-xs font-extrabold text-on-surface">
-              {route.clusterName ? route.clusterName : (route.name || 'Rute Harian')}
+              {route.clusterName ? route.clusterName : route.name || 'Rute Harian'}
             </span>
             <Badge status={route.status} />
           </div>
@@ -36,9 +36,7 @@ export const RouteCard = ({ route, isSelected, onClick }) => {
         <div className="flex items-center justify-between text-xs text-on-surface-variant mt-2">
           <div className="flex items-center gap-2">
             <Avatar src={route.avatar} name={route.repName || route.name} size="sm" />
-            <span className="font-semibold text-on-surface">
-              {route.repName || route.name}
-            </span>
+            <span className="font-semibold text-on-surface">{route.repName || route.name}</span>
           </div>
 
           {(route.warning || route.hasDelayNotice) && (

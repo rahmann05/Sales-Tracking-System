@@ -1,16 +1,24 @@
 import { useMapMarkers } from './hooks/useMapMarkers';
 import { useMapShapes } from './hooks/useMapShapes';
 import { createMapMarker } from '../services/mapMarkerService';
-import React, { createContext, useContext, useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+} from 'react';
 
 const DEFAULT_CENTER = { lat: -6.88498411526505, lng: 107.48995363176957 };
 
 const getInitialCenter = () => {
-    try {
-        const cached = localStorage.getItem('user_gps_location');
-        if (cached) return JSON.parse(cached);
-    } catch  {}
-    return DEFAULT_CENTER;
+  try {
+    const cached = localStorage.getItem('user_gps_location');
+    if (cached) return JSON.parse(cached);
+  } catch {}
+  return DEFAULT_CENTER;
 };
 
 const MapContext = createContext();
@@ -28,198 +36,217 @@ const GPS_BLUE_DOT_SVG = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
  * imperative APIs for markers / polylines so the map NEVER unmounts on tab switch.
  */
 export const MapProvider = ({ children }) => {
-    const mapInstanceRef = useRef(null);
-    const markersRef = useRef(new Map());   // Map<string|number, marker adapter>
-    const polylinesRef = useRef(new Map()); // Map<string|number, google.maps.Polyline>
-    const polygonsRef = useRef(new Map());  // Map<string|number, google.maps.Polygon>
-    const clickListenerRef = useRef(null);
-    const gpsMarkerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef(new Map()); // Map<string|number, marker adapter>
+  const polylinesRef = useRef(new Map()); // Map<string|number, google.maps.Polyline>
+  const polygonsRef = useRef(new Map()); // Map<string|number, google.maps.Polygon>
+  const clickListenerRef = useRef(null);
+  const gpsMarkerRef = useRef(null);
 
-    const [isMapReady, setIsMapReady] = useState(false);
-    const [useFallback, setUseFallback] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
-    // mapState driven by PersistentMapShell (center/zoom) — kept here so pages can read it
-    const [mapState, setMapState] = useState({
-        center: getInitialCenter(),
-        zoom: 11,
-        markers: [],
-        routes: [],
-    });
+  // mapState driven by PersistentMapShell (center/zoom) — kept here so pages can read it
+  const [mapState, setMapState] = useState({
+    center: getInitialCenter(),
+    zoom: 11,
+    markers: [],
+    routes: [],
+  });
 
-    // 'hidden' | 'dashboard' | 'create-cluster' | 'route-map'
-    const [mapMode, setMapMode] = useState('hidden');
+  // 'hidden' | 'dashboard' | 'create-cluster' | 'route-map'
+  const [mapMode, setMapMode] = useState('hidden');
 
-    useEffect(() => {
-        const updateGpsMarker = (location) => {
-            const map = mapInstanceRef.current;
-            if (!map || !window.google) return;
+  useEffect(() => {
+    const updateGpsMarker = (location) => {
+      const map = mapInstanceRef.current;
+      if (!map || !window.google) return;
 
-            if (!gpsMarkerRef.current) {
-                gpsMarkerRef.current = createMapMarker({
-                    position: location,
-                    map,
-                    title: 'Lokasi Anda (GPS)',
-                    icon: {
-                        url: GPS_BLUE_DOT_SVG,
-                        scaledSize: new window.google.maps.Size(32, 32),
-                        anchor: new window.google.maps.Point(16, 16)
-                    },
-                    zIndex: 1000 // Ensure it's on top
-                });
-            } else {
-                gpsMarkerRef.current.setPosition(location);
-            }
-        };
-
-        // Initialize from cache if map just became ready
-        if (isMapReady) {
-            try {
-                const cached = localStorage.getItem('user_gps_location');
-                if (cached) {
-                    const loc = JSON.parse(cached);
-                    updateGpsMarker(loc);
-                }
-            } catch  {}
-        }
-
-        const handleGpsUpdate = (e) => {
-            if (e.detail) {
-                setMapState(prev => ({ ...prev, center: e.detail }));
-                if (mapInstanceRef.current) {
-                    mapInstanceRef.current.panTo(e.detail);
-                }
-                updateGpsMarker(e.detail);
-            }
-        };
-        window.addEventListener('gps_location_updated', handleGpsUpdate);
-        return () => window.removeEventListener('gps_location_updated', handleGpsUpdate);
-    }, [isMapReady]);
-
-    const { cullMarkersToViewport, setMarkers, addMarker, removeMarker, clearMarkers } = useMapMarkers({ mapInstanceRef, markersRef, setMapState });
-
-    /** Called by PersistentMapShell when the underlying google map is created */
-    const setMapInstance = useCallback((map) => {
-        if(mapInstanceRef.current!==map){
-            for(const group of [markersRef,polylinesRef,polygonsRef]){for(const item of group.current.values())item.setMap(null);group.current.clear();}
-            gpsMarkerRef.current?.setMap(null);gpsMarkerRef.current=null;
-            clickListenerRef.current?.remove();clickListenerRef.current=null;
-            if(mapInstanceRef.current&&window.google?.maps?.event)window.google.maps.event.clearInstanceListeners(mapInstanceRef.current);
-        }
-        mapInstanceRef.current = map;
-        setIsMapReady(!!map);
-
-        if (map && window.google) {
-            let timeout = null;
-            map.addListener('idle', () => {
-                if (timeout) clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    cullMarkersToViewport();
-                }, 100);
-            });
-        }
-    }, [cullMarkersToViewport]);
-
-    const setFallback = useCallback((val) => setUseFallback(!!val), []);
-
-    const { setPolylines, clearPolylines, setPolygons, clearPolygons } = useMapShapes({ mapInstanceRef, polylinesRef, polygonsRef, setMapState });
-
-    // When Google Map instance becomes ready, sync any pending markers/routes stored in mapState
-    useEffect(() => {
-        if (!isMapReady || !mapInstanceRef.current || !window.google) return;
-        if (mapState.markers.length > 0 && markersRef.current.size === 0) {
-            setMarkers(mapState.markers);
-        }
-        if (mapState.routes.length > 0 && polylinesRef.current.size === 0) {
-            setPolylines(mapState.routes);
-        }
-    }, [isMapReady, mapState.markers, mapState.routes, setMarkers, setPolylines]);
-
-    const panTo = useCallback((lat, lng, zoom) => {
-        const center = { lat: Number(lat), lng: Number(lng) };
-        setMapState((prev) => ({ ...prev, center, ...(zoom ? { zoom } : {}) }));
-        const map = mapInstanceRef.current;
-        if (!map) return;
-        map.panTo(center);
-        if (zoom) map.setZoom(zoom);
-    }, []);
-
-    const fitBounds = useCallback((points = []) => {
-        const map = mapInstanceRef.current;
-        if (!map || !window.google || points.length === 0) return;
-        const bounds = new window.google.maps.LatLngBounds();
-        points.forEach((p) => bounds.extend({ lat: Number(p.lat), lng: Number(p.lng) }));
-        map.fitBounds(bounds);
-    }, []);
-
-    const addClickListener = useCallback((handler) => {
-        const map = mapInstanceRef.current;
-        if (!map || !window.google || typeof handler !== 'function') return;
-        if (clickListenerRef.current) clickListenerRef.current.remove();
-        clickListenerRef.current = map.addListener('click', (e) => {
-            handler({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      if (!gpsMarkerRef.current) {
+        gpsMarkerRef.current = createMapMarker({
+          position: location,
+          map,
+          title: 'Lokasi Anda (GPS)',
+          icon: {
+            url: GPS_BLUE_DOT_SVG,
+            scaledSize: new window.google.maps.Size(32, 32),
+            anchor: new window.google.maps.Point(16, 16),
+          },
+          zIndex: 1000, // Ensure it's on top
         });
-    }, []);
+      } else {
+        gpsMarkerRef.current.setPosition(location);
+      }
+    };
 
-    const removeClickListener = useCallback(() => {
-        if (clickListenerRef.current) {
-            clickListenerRef.current.remove();
-            clickListenerRef.current = null;
+    // Initialize from cache if map just became ready
+    if (isMapReady) {
+      try {
+        const cached = localStorage.getItem('user_gps_location');
+        if (cached) {
+          const loc = JSON.parse(cached);
+          updateGpsMarker(loc);
         }
-    }, []);
+      } catch {}
+    }
 
-    const value = useMemo(
-        () => ({
-            mapInstanceRef,
-            isMapReady,
-            useFallback,
-            setFallback,
-            setMapInstance,
-            mapState,
-            setMapState,
-            mapMode,
-            setMapMode,
-            setMarkers,
-            addMarker,
-            removeMarker,
-            clearMarkers,
-            setPolylines,
-            clearPolylines,
-            setPolygons,
-            clearPolygons,
-            panTo,
-            fitBounds,
-            addClickListener,
-            removeClickListener,
-        }),
-        [
-            isMapReady,
-            useFallback,
-            setFallback,
-            setMapInstance,
-            mapState,
-            setMapState,
-            mapMode,
-            setMapMode,
-            setMarkers,
-            addMarker,
-            removeMarker,
-            clearMarkers,
-            setPolylines,
-            clearPolylines,
-            setPolygons,
-            clearPolygons,
-            panTo,
-            fitBounds,
-            addClickListener,
-            removeClickListener,
-        ]
-    );
+    const handleGpsUpdate = (e) => {
+      if (e.detail) {
+        setMapState((prev) => ({ ...prev, center: e.detail }));
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.panTo(e.detail);
+        }
+        updateGpsMarker(e.detail);
+      }
+    };
+    window.addEventListener('gps_location_updated', handleGpsUpdate);
+    return () => window.removeEventListener('gps_location_updated', handleGpsUpdate);
+  }, [isMapReady]);
 
-    return <MapContext.Provider value={value}>{children}</MapContext.Provider>;
+  const { cullMarkersToViewport, setMarkers, addMarker, removeMarker, clearMarkers } =
+    useMapMarkers({ mapInstanceRef, markersRef, setMapState });
+
+  /** Called by PersistentMapShell when the underlying google map is created */
+  const setMapInstance = useCallback(
+    (map) => {
+      if (mapInstanceRef.current !== map) {
+        for (const group of [markersRef, polylinesRef, polygonsRef]) {
+          for (const item of group.current.values()) item.setMap(null);
+          group.current.clear();
+        }
+        gpsMarkerRef.current?.setMap(null);
+        gpsMarkerRef.current = null;
+        clickListenerRef.current?.remove();
+        clickListenerRef.current = null;
+        if (mapInstanceRef.current && window.google?.maps?.event)
+          window.google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+      }
+      mapInstanceRef.current = map;
+      setIsMapReady(!!map);
+
+      if (map && window.google) {
+        let timeout = null;
+        map.addListener('idle', () => {
+          if (timeout) clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            cullMarkersToViewport();
+          }, 100);
+        });
+      }
+    },
+    [cullMarkersToViewport]
+  );
+
+  const setFallback = useCallback((val) => {
+    const next = !!val;
+    setUseFallback(next);
+    if (next) setIsMapReady(true);
+  }, []);
+
+  const { setPolylines, clearPolylines, setPolygons, clearPolygons } = useMapShapes({
+    mapInstanceRef,
+    polylinesRef,
+    polygonsRef,
+    setMapState,
+  });
+
+  // When Google Map instance becomes ready, sync any pending markers/routes stored in mapState
+  useEffect(() => {
+    if (!isMapReady || !mapInstanceRef.current || !window.google) return;
+    if (mapState.markers.length > 0 && markersRef.current.size === 0) {
+      setMarkers(mapState.markers);
+    }
+    if (mapState.routes.length > 0 && polylinesRef.current.size === 0) {
+      setPolylines(mapState.routes);
+    }
+  }, [isMapReady, mapState.markers, mapState.routes, setMarkers, setPolylines]);
+
+  const panTo = useCallback((lat, lng, zoom) => {
+    const center = { lat: Number(lat), lng: Number(lng) };
+    setMapState((prev) => ({ ...prev, center, ...(zoom ? { zoom } : {}) }));
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    map.panTo(center);
+    if (zoom) map.setZoom(zoom);
+  }, []);
+
+  const fitBounds = useCallback((points = []) => {
+    const map = mapInstanceRef.current;
+    if (!map || !window.google || points.length === 0) return;
+    const bounds = new window.google.maps.LatLngBounds();
+    points.forEach((p) => bounds.extend({ lat: Number(p.lat), lng: Number(p.lng) }));
+    map.fitBounds(bounds);
+  }, []);
+
+  const addClickListener = useCallback((handler) => {
+    const map = mapInstanceRef.current;
+    if (!map || !window.google || typeof handler !== 'function') return;
+    if (clickListenerRef.current) clickListenerRef.current.remove();
+    clickListenerRef.current = map.addListener('click', (e) => {
+      handler({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+    });
+  }, []);
+
+  const removeClickListener = useCallback(() => {
+    if (clickListenerRef.current) {
+      clickListenerRef.current.remove();
+      clickListenerRef.current = null;
+    }
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      mapInstanceRef,
+      isMapReady,
+      useFallback,
+      setFallback,
+      setMapInstance,
+      mapState,
+      setMapState,
+      mapMode,
+      setMapMode,
+      setMarkers,
+      addMarker,
+      removeMarker,
+      clearMarkers,
+      setPolylines,
+      clearPolylines,
+      setPolygons,
+      clearPolygons,
+      panTo,
+      fitBounds,
+      addClickListener,
+      removeClickListener,
+    }),
+    [
+      isMapReady,
+      useFallback,
+      setFallback,
+      setMapInstance,
+      mapState,
+      setMapState,
+      mapMode,
+      setMapMode,
+      setMarkers,
+      addMarker,
+      removeMarker,
+      clearMarkers,
+      setPolylines,
+      clearPolylines,
+      setPolygons,
+      clearPolygons,
+      panTo,
+      fitBounds,
+      addClickListener,
+      removeClickListener,
+    ]
+  );
+
+  return <MapContext.Provider value={value}>{children}</MapContext.Provider>;
 };
 
 export const useMap = () => {
-    const ctx = useContext(MapContext);
-    if (!ctx) throw new Error('useMap must be used within MapProvider');
-    return ctx;
+  const ctx = useContext(MapContext);
+  if (!ctx) throw new Error('useMap must be used within MapProvider');
+  return ctx;
 };

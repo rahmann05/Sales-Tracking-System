@@ -24,7 +24,12 @@ export const assignByProximity = (outlets, quotas) => {
     let bestIdx = 0;
     let bestDist = Infinity;
     for (let i = 0; i < remaining.length; i++) {
-      const d = haversineKm(current.latitude, current.longitude, remaining[i].latitude, remaining[i].longitude);
+      const d = haversineKm(
+        current.latitude,
+        current.longitude,
+        remaining[i].latitude,
+        remaining[i].longitude
+      );
       if (d < bestDist) {
         bestDist = d;
         bestIdx = i;
@@ -47,8 +52,10 @@ export const assignByProximity = (outlets, quotas) => {
     let totalDistanceKm = 0;
     for (let i = 1; i < slice.length; i++) {
       totalDistanceKm += haversineKm(
-        slice[i - 1].latitude, slice[i - 1].longitude,
-        slice[i].latitude, slice[i].longitude,
+        slice[i - 1].latitude,
+        slice[i - 1].longitude,
+        slice[i].latitude,
+        slice[i].longitude
       );
     }
     result.push({ day, outlets: slice, totalDistanceKm: Math.round(totalDistanceKm * 100) / 100 });

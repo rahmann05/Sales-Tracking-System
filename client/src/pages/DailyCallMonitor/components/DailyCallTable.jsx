@@ -1,7 +1,7 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
 import { DailyCallTableRow } from './DailyCallTableRow';
-import { LuInbox } from "react-icons/lu";
+import { LuInbox } from 'react-icons/lu';
 
 /**
  * DailyCallTable Component
@@ -61,11 +61,19 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
               <th className="text-center py-3.5 px-2 min-w-[70px] whitespace-nowrap">Durasi</th>
               <th className="py-3.5 px-2.5 min-w-[180px]">Customer ID & Nama Toko</th>
               <th className="py-3.5 px-2 min-w-[90px] whitespace-nowrap">Sub Channel</th>
-              <th className="text-center py-3.5 px-2 min-w-[110px] whitespace-nowrap">Call Status</th>
-              <th className="text-right py-3.5 px-2 min-w-[105px] whitespace-nowrap">Order (Rp) / SKU</th>
+              <th className="text-center py-3.5 px-2 min-w-[110px] whitespace-nowrap">
+                Call Status
+              </th>
+              <th className="text-right py-3.5 px-2 min-w-[105px] whitespace-nowrap">
+                Order (Rp) / SKU
+              </th>
               <th className="py-3.5 px-2.5 min-w-[150px]">Alasan / Catatan</th>
-              <th className="text-center py-3.5 px-2 min-w-[100px] whitespace-nowrap">Deviasi GPS</th>
-              <th className="text-center py-3.5 px-2 w-24 min-w-[85px] whitespace-nowrap">Detail</th>
+              <th className="text-center py-3.5 px-2 min-w-[100px] whitespace-nowrap">
+                Deviasi GPS
+              </th>
+              <th className="text-center py-3.5 px-2 w-24 min-w-[85px] whitespace-nowrap">
+                Detail
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-glass/40">
@@ -79,7 +87,13 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
       <div className="p-3 bg-surface-container/60 border-t border-border-glass flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-on-surface-variant">
         <div className="flex items-center gap-3">
           <span>
-            Menampilkan <strong>{isAll ? rows.length : `${startIndex + 1}–${Math.min(startIndex + limit, rows.length)}`}</strong> dari total <strong>{rows.length}</strong> kunjungan
+            Menampilkan{' '}
+            <strong>
+              {isAll
+                ? rows.length
+                : `${startIndex + 1}–${Math.min(startIndex + limit, rows.length)}`}
+            </strong>{' '}
+            dari total <strong>{rows.length}</strong> kunjungan
           </span>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px]">Baris:</span>
@@ -126,4 +140,3 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
     </div>
   );
 };
-

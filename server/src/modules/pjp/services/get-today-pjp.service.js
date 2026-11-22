@@ -1,9 +1,8 @@
-import {attachAgendaInstructions} from '../../staff-attendance/follow-up-agenda.service.js';
+import { attachAgendaInstructions } from '../../staff-attendance/follow-up-agenda.service.js';
 /** getTodayPjp - single-responsibility service (extracted from pjp.service.js). */
 import { prisma } from '../../../config/prisma.js';
-import { buildDayRange } from "../../../utils/pagination.js";
+import { buildDayRange } from '../../../utils/pagination.js';
 import { PJP_STOP_INCLUDE } from './pjp.helpers.js';
-
 
 export const getTodayPjp = async (userId) => {
   const today = new Date();
@@ -12,10 +11,10 @@ export const getTodayPjp = async (userId) => {
   const pjp = await prisma.pjp.findFirst({
     where: { userId, date: dayRange },
     include: {
-      user: { 
-        select: { 
-          id: true, 
-          name: true, 
+      user: {
+        select: {
+          id: true,
+          name: true,
           role: true,
           cluster: {
             select: {
@@ -23,10 +22,10 @@ export const getTodayPjp = async (userId) => {
               name: true,
               region: true,
               supervisor: { select: { id: true, name: true } },
-              users: { select: { id: true, name: true, role: true } }
-            }
-          }
-        } 
+              users: { select: { id: true, name: true, role: true } },
+            },
+          },
+        },
       },
       stops: { include: PJP_STOP_INCLUDE, orderBy: { sequence: 'asc' } },
     },

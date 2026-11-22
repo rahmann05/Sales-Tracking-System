@@ -1,0 +1,88 @@
+.app-toast-region {
+  position: fixed;
+  inset: auto;
+  inset-block-start: max(16px, env(safe-area-inset-top));
+  inset-inline-end: max(12px, env(safe-area-inset-right));
+  max-inline-size: min(380px, calc(100vw - 24px));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  display: grid;
+  gap: 8px;
+  z-index: 90;
+  pointer-events: none;
+}
+
+.app-toast-region[popover]:not(:where(:popover-open, .\:popover-open, .app-toast-open)) {
+  display: none;
+}
+
+.app-toast-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  background: var(--surface, #ffffff);
+  color: var(--on-surface, #1d1d1f);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    display 0.2s ease;
+  transition-behavior: allow-discrete;
+}
+
+.app-toast-card[data-tone='success'] {
+  border-inline-start: 4px solid var(--color-tertiary, #15803d);
+}
+
+.app-toast-card[data-tone='error'] {
+  border-inline-start: 4px solid var(--color-error, #dc2626);
+}
+
+.app-toast-card[data-tone='info'] {
+  border-inline-start: 4px solid var(--primary, #0869cf);
+}
+
+.app-toast-close {
+  flex-shrink: 0;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  background: transparent;
+  color: var(--on-surface-variant, #475569);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@starting-style {
+  .app-toast-card {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (max-width: 400px) {
+  .app-toast-region {
+    inset-inline: 12px;
+    max-inline-size: calc(100vw - 24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast-card {
+    transition: none;
+  }
+}

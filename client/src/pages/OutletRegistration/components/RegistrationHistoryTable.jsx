@@ -1,7 +1,7 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
-import { LuClock, LuMapPin, LuFileText } from "react-icons/lu";
-import { exportCustomerNd6Txt } from "../../../utils/customerExport";
+import { LuClock, LuMapPin, LuFileText } from 'react-icons/lu';
+import { exportCustomerNd6Txt } from '../../../utils/customerExport';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 import {
   exportOutletMasterDocx,
@@ -55,17 +55,47 @@ export const RegistrationHistoryTable = ({
 
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           <ExportFormatMenu
-            disabled={isLoading||Boolean(error)||!submissions.length}
-            onExportDocx={() => exportOutletMasterDocx(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.docx`)}
-            onExportExcel={() => exportOutletMasterXlsx(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.xlsx`)}
-            onExportCsv={() => exportOutletMasterCsv(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.csv`)}
-            onExportTxt={() => exportOutletMasterTxt(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.txt`)}
-            onExportPdf={() => exportOutletMasterPdf(submissions, `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.pdf`)}
+            disabled={isLoading || Boolean(error) || !submissions.length}
+            onExportDocx={() =>
+              exportOutletMasterDocx(
+                submissions,
+                `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.docx`
+              )
+            }
+            onExportExcel={() =>
+              exportOutletMasterXlsx(
+                submissions,
+                `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.xlsx`
+              )
+            }
+            onExportCsv={() =>
+              exportOutletMasterCsv(
+                submissions,
+                `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.csv`
+              )
+            }
+            onExportTxt={() =>
+              exportOutletMasterTxt(
+                submissions,
+                `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.txt`
+              )
+            }
+            onExportPdf={() =>
+              exportOutletMasterPdf(
+                submissions,
+                `Riwayat_Registrasi_Sales_${new Date().toISOString().split('T')[0]}.pdf`
+              )
+            }
           />
           <button
             type="button"
-            disabled={isLoading||Boolean(error)||!submissions.length}
-            onClick={() => exportCustomerNd6Txt(submissions, `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`)}
+            disabled={isLoading || Boolean(error) || !submissions.length}
+            onClick={() =>
+              exportCustomerNd6Txt(
+                submissions,
+                `IMPORT_CUSTOMER_ND6_${new Date().toISOString().split('T')[0]}.txt`
+              )
+            }
             className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
             title="Ekspor Format ND6 TXT"
           >
@@ -82,7 +112,11 @@ export const RegistrationHistoryTable = ({
         </div>
       </div>
 
-      {error ? <p role="alert" className="app-error">Riwayat belum dapat dimuat: {error}</p> : isLoading ? (
+      {error ? (
+        <p role="alert" className="app-error">
+          Riwayat belum dapat dimuat: {error}
+        </p>
+      ) : isLoading ? (
         <div className="py-12 text-center text-xs text-on-surface-variant">
           Memuat data riwayat pendaftaran...
         </div>
@@ -117,15 +151,22 @@ export const RegistrationHistoryTable = ({
             </thead>
             <tbody className="divide-y divide-border-glass">
               {submissions.map((item) => {
-                const badge = STATUS_BADGE_MAP[item.registrationStatus] || {label:item.registrationStatus||'Belum tersedia',cls:'bg-surface-container'};
+                const badge = STATUS_BADGE_MAP[item.registrationStatus] || {
+                  label: item.registrationStatus || 'Belum tersedia',
+                  cls: 'bg-surface-container',
+                };
 
                 return (
                   <tr key={item.id} className="hover:bg-surface-variant/20 transition-colors">
-                    <td data-label="Tanggal" className="whitespace-nowrap text-on-surface-variant font-mono">
+                    <td
+                      data-label="Tanggal"
+                      className="whitespace-nowrap text-on-surface-variant font-mono"
+                    >
                       {new Date(item.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'short',
-                        year: 'numeric',timeZone:'Asia/Jakarta',
+                        year: 'numeric',
+                        timeZone: 'Asia/Jakarta',
                       })}
                     </td>
                     <td data-label="Nama Toko" className="">
@@ -145,7 +186,9 @@ export const RegistrationHistoryTable = ({
                       </span>
                     </td>
                     <td data-label="Status" className="">
-                      {item.registrationCode&&<div className="font-mono text-xs mb-1">{item.registrationCode}</div>}
+                      {item.registrationCode && (
+                        <div className="font-mono text-xs mb-1">{item.registrationCode}</div>
+                      )}
                       <span
                         className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${badge.cls}`}
                       >

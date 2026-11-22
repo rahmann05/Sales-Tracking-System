@@ -1,8 +1,7 @@
 /** unlockOutletDirect - single-responsibility service (extracted from outlet-lock.service.js). */
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { OUTLET_LOCK_STATUS } from "../../../utils/constants.js";
-
+import { OUTLET_LOCK_STATUS } from '../../../utils/constants.js';
 
 export const unlockOutletDirect = async (outletId) => {
   const outlet = await prisma.outlet.findUnique({ where: { id: outletId } });

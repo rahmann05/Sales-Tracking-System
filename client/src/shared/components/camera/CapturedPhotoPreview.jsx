@@ -10,7 +10,11 @@ export const CapturedPhotoPreview = ({ capturedPhoto, onRetake }) => {
 
   return (
     <div className="relative rounded-2xl overflow-hidden aspect-video bg-black border border-border-glass shadow-lg group">
-      <img src={capturedPhoto} alt="Foto Presensi Terambil" className="w-full h-full object-cover" />
+      <img
+        src={capturedPhoto}
+        alt="Foto Presensi Terambil"
+        className="w-full h-full object-cover"
+      />
       <div className="absolute top-3 right-3 flex items-center gap-2">
         <button
           type="button"

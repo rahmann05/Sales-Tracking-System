@@ -1,6 +1,9 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { createOffPjpAttendanceSchema, validateOffPjpSchema } from '../src/modules/absensi/off-pjp.schema.js';
+import {
+  createOffPjpAttendanceSchema,
+  validateOffPjpSchema,
+} from '../src/modules/absensi/off-pjp.schema.js';
 import { createOutletSchema } from '../src/modules/outlets/outlets.schema.js';
 
 describe('Zod Request Validation Schemas Unit Tests', () => {
@@ -115,7 +118,8 @@ describe('Outlet Validation Anti-False-Positive Heuristics Unit Tests', () => {
   describe('Address Keyword & Locality Similarity', () => {
     it('should recognize key kampung and street names despite abbreviations', () => {
       const dbAddr = 'Kp nyenyerean no.157 b RT';
-      const googleAddr = 'Kp.nyenyerean Jl. Sadarmanah No.141, RT.002/RW.018, Leuwigajah, Kec. Cimahi Sel., Kota Cimahi';
+      const googleAddr =
+        'Kp.nyenyerean Jl. Sadarmanah No.141, RT.002/RW.018, Leuwigajah, Kec. Cimahi Sel., Kota Cimahi';
       const sim = service.calculateAddressSimilarity(dbAddr, googleAddr);
       assert.ok(sim >= 0.5, `Expected >= 0.5 for matching kampung token, got ${sim}`);
     });
@@ -175,8 +179,8 @@ describe('Outlet Validation Anti-False-Positive Heuristics Unit Tests', () => {
       const localResult = {
         success: true,
         placeName: 'Toko Azka',
-        lat: -6.899280,
-        lng: 107.525320,
+        lat: -6.89928,
+        lng: 107.52532,
         formattedAddress: 'Jl. Sadarmanah, Cimahi',
       };
 
@@ -197,4 +201,3 @@ describe('Outlet Validation Anti-False-Positive Heuristics Unit Tests', () => {
     });
   });
 });
-

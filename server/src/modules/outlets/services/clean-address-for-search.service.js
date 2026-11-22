@@ -17,8 +17,12 @@ export const cleanAddressForSearch = (rawAddress, adminAnchor = null) => {
 
   // Only append anchor if address is sparse/short (e.g. only street without district)
   const addrTokens = extractAddressTokens(cleaned);
-  const hasSubdistrict = adminAnchor?.subdistrict && cleaned.toLowerCase().includes(adminAnchor.subdistrict.toLowerCase());
-  const hasCity = adminAnchor?.cityOrRegency && cleaned.toLowerCase().includes(adminAnchor.cityOrRegency.toLowerCase());
+  const hasSubdistrict =
+    adminAnchor?.subdistrict &&
+    cleaned.toLowerCase().includes(adminAnchor.subdistrict.toLowerCase());
+  const hasCity =
+    adminAnchor?.cityOrRegency &&
+    cleaned.toLowerCase().includes(adminAnchor.cityOrRegency.toLowerCase());
 
   if (addrTokens.size < 3) {
     if (adminAnchor?.subdistrict && !hasSubdistrict) {

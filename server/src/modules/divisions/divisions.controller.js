@@ -18,7 +18,9 @@ export const createDivision = async (req, res, next) => {
     res.status(201).json({ success: true, data });
   } catch (err) {
     if (err.code === 'P2002') {
-      return res.status(409).json({ success: false, message: 'Divisi dengan nama atau kode ini sudah ada' });
+      return res
+        .status(409)
+        .json({ success: false, message: 'Divisi dengan nama atau kode ini sudah ada' });
     }
     next(err);
   }
