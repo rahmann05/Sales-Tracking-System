@@ -10,15 +10,15 @@ export const UnlockRequestCard = ({ request, onApprove, onReject }) => {
   return (
     <div className="bg-surface border border-amber-500/30 rounded-2xl p-4 shadow-sm space-y-3 bg-amber-500/5 h-full min-h-[240px] flex flex-col justify-between">
       <div>
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex items-start gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 mt-0.5">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 mt-0.5 shrink-0">
               <LuKey className="text-base" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-bold text-on-surface text-sm ">{request.outletName}</h4>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 uppercase">
+                <span className="admin-status admin-status-pending">
                   {request.userRole || 'SALES'}
                 </span>
               </div>

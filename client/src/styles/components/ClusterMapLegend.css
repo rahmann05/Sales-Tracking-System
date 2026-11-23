@@ -72,3 +72,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+@media (max-width: 767px) {
+  .cluster-map-legend {
+    max-width: calc(100vw - 5.5rem);
+    padding: 0.625rem;
+  }
+}

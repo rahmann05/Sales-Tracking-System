@@ -557,7 +557,7 @@
 }
 .sales-cart-line {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   font-size: 14px;
   padding: 10px 0;
@@ -793,6 +793,7 @@
   .sales-pagination {
     gap: 6px;
     padding: 12px;
+    flex-wrap: wrap;
   }
   .sales-pagination button {
     padding: 8px;
@@ -824,10 +825,20 @@
     font: inherit;
     font-size: 14px;
     cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .sales-mobile-nav button svg {
+    flex-shrink: 0;
   }
   .sales-mobile-nav > span {
     font-size: 12px;
     color: #697280;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
   }
   .sales-ui #main-content {
     padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
@@ -872,7 +883,7 @@
     font-size: 16px;
     min-width: 0;
   }
-  .sales-ui .sales-registration-document .flex {
+  .sales-ui .sales-registration-document div.flex {
     flex-wrap: wrap;
   }
 }
@@ -914,12 +925,20 @@
   color: #697280;
   margin: 0;
 }
-.sales-metrics > div {
-  padding: 14px 18px;
-  gap: 7px;
+@media (min-width: 768px) {
+  .sales-metrics > div {
+    padding: 14px 18px;
+    gap: 7px;
+  }
+  .sales-shift {
+    padding: 14px 18px;
+  }
 }
-.sales-shift {
-  padding: 14px 18px;
+@media (max-width: 767px) {
+  .sales-metrics > div {
+    padding: 12px;
+    gap: 6px;
+  }
 }
 .sales-shift h2 {
   margin: 5px 0;
@@ -984,13 +1003,6 @@
   }
   .sales-registration-nav button {
     font-size: 12px !important;
-  }
-  .sales-ui .sales-registration-document .sales-registration-group .flex {
-    align-items: stretch;
-    gap: 8px;
-  }
-  .sales-ui .sales-registration-document .sales-registration-group .flex > span {
-    width: 100%;
   }
   .sales-ui .sales-registration-document .sales-registration-group input {
     min-width: 0;
@@ -1120,12 +1132,27 @@
   justify-self: end;
 }
 @media (max-width: 767px) {
-  .sales-map-workspace {
-    padding: 12px;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 300px auto auto;
-    min-height: 900px;
+  .sales-ui #main-content > .w-full.h-full.pointer-events-none:has(.sales-map-workspace) {
     height: auto;
+    min-height: 100%;
+  }
+  .sales-map-workspace {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto clamp(260px, 38dvh, 320px) auto auto;
+    min-height: 0;
+    height: auto;
+  }
+  .sales-map-scope {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .sales-ui #main-content:has(.sales-map-workspace) :is(.cluster-map-legend, .route-provider-badge) {
+    display: none;
+  }
+  .sales-ui #main-content:has(.sales-map-workspace) .leaflet-top {
+    top: auto;
+    bottom: 16px;
   }
   .sales-map-heading {
     padding: 14px;

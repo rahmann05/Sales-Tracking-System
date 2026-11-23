@@ -34,7 +34,7 @@ export const OutletReportFilterBar = ({ filters, onUpdateFilter, onReset, embedd
               placeholder="Cari toko, kode, alamat..."
               value={filters.search}
               onChange={(e) => onUpdateFilter('search', e.target.value)}
-              className="w-full pl-8 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-8 pr-3 h-10 bg-surface-container rounded-lg text-xs font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             />
           </div>
         </div>
@@ -45,7 +45,7 @@ export const OutletReportFilterBar = ({ filters, onUpdateFilter, onReset, embedd
           <select
             value={filters.status}
             onChange={(e) => onUpdateFilter('status', e.target.value)}
-            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-bold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+            className="w-full px-3 h-10 bg-surface-container rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Status</option>
             <option value="SUBMITTED">Menunggu persetujuan</option>
@@ -63,7 +63,7 @@ export const OutletReportFilterBar = ({ filters, onUpdateFilter, onReset, embedd
           <select
             value={filters.area}
             onChange={(e) => onUpdateFilter('area', e.target.value)}
-            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+            className="w-full px-3 h-10 bg-surface-container rounded-lg text-xs font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Klaster</option>
             {clusters &&
@@ -84,7 +84,7 @@ export const OutletReportFilterBar = ({ filters, onUpdateFilter, onReset, embedd
           <select
             value={filters.channel}
             onChange={(e) => onUpdateFilter('channel', e.target.value)}
-            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+            className="w-full px-3 h-10 bg-surface-container rounded-lg text-xs font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Channel</option>
             <option value="GENERAL_TRADE">General Trade (GT)</option>
@@ -98,7 +98,7 @@ export const OutletReportFilterBar = ({ filters, onUpdateFilter, onReset, embedd
           <select
             value={filters.division}
             onChange={(e) => onUpdateFilter('division', e.target.value)}
-            className="w-full px-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+            className="w-full px-3 h-10 bg-surface-container rounded-lg text-xs font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
           >
             <option value="ALL">Semua Divisi</option>
             <option value="UNICHARM">UNICHARM</option>

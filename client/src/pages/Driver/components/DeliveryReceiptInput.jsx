@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 export function DeliveryReceiptInput({ policy, name, signature, onName, onSignature }) {
   const canvas = useRef(null),
     stroke = useRef(null),
     ink = useRef(false);
+  const [drawingCanvas, setDrawingCanvas] = useState(!signature);
   const nameMode = policy.DELIVERY_RECIPIENT_MODE || 'OPTIONAL',
     signatureMode = policy.DELIVERY_SIGNATURE_MODE || 'DISABLED';
   if (nameMode === 'DISABLED' && signatureMode === 'DISABLED') return null;
@@ -24,6 +25,7 @@ export function DeliveryReceiptInput({ policy, name, signature, onName, onSignat
             className="form-input block w-full"
             maxLength={200}
             minLength={2}
+            placeholder="Nama penerima di toko"
             required={nameMode === 'REQUIRED' || !!signature}
             value={name || ''}
             onChange={(e) => onName(e.target.value)}
@@ -33,7 +35,7 @@ export function DeliveryReceiptInput({ policy, name, signature, onName, onSignat
       {signatureMode !== 'DISABLED' && (
         <div className="space-y-2">
           <p>Tanda tangan penerima {signatureMode === 'REQUIRED' ? '(wajib)' : '(opsional)'}</p>
-          {signature ? (
+          {signature && !drawingCanvas ? (
             <img
               src={signature}
               alt={`Tanda tangan ${name || 'penerima'}`}
@@ -42,7 +44,7 @@ export function DeliveryReceiptInput({ policy, name, signature, onName, onSignat
           ) : (
             <>
               <p className="text-sm">
-                Minta penerima menggambar dengan jari, stylus, atau mouse pada kotak berikut.
+                Minta penerima menggambar dengan jari, stylus, atau mouse pada kotak berikut (bisa beberapa goresan).
               </p>
               <canvas
                 ref={canvas}
@@ -55,7 +57,7 @@ export function DeliveryReceiptInput({ policy, name, signature, onName, onSignat
                   if (e.button !== 0) return;
                   e.currentTarget.setPointerCapture(e.pointerId);
                   stroke.current = point(e);
-                  ink.current = false;
+                  ink.current = true;
                 }}
                 onPointerMove={(e) => {
                   if (!stroke.current) return;
@@ -78,21 +80,24 @@ export function DeliveryReceiptInput({ policy, name, signature, onName, onSignat
                 }}
                 onPointerCancel={() => {
                   stroke.current = null;
-                  canvas.current?.getContext('2d').clearRect(0, 0, 600, 180);
                 }}
               />
             </>
           )}
-          <button
-            type="button"
-            className="app-button min-h-11"
-            onClick={() => {
-              onSignature('');
-              canvas.current?.getContext('2d').clearRect(0, 0, 600, 180);
-            }}
-          >
-            Hapus / ulang tanda tangan
-          </button>
+          {signature && (
+            <button
+              type="button"
+              className="app-button min-h-11"
+              onClick={() => {
+                onSignature('');
+                setDrawingCanvas(true);
+                ink.current = false;
+                canvas.current?.getContext('2d').clearRect(0, 0, 600, 180);
+              }}
+            >
+              {drawingCanvas ? 'Hapus tanda tangan' : 'Ulang tanda tangan'}
+            </button>
+          )}
         </div>
       )}
     </section>

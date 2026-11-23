@@ -1,4 +1,5 @@
 import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
@@ -49,6 +50,7 @@ export const DeliveryRouteBuilder = () => {
     if (!confirm('Hapus rute ini?')) return;
     try {
       await deliveryApi.deleteDeliveryRoute(id);
+      setWorkspaceValues({ deliveryRoute: '' });
       fetchRoutes();
     } catch (err) {
       setError(err.message || 'Gagal menghapus');

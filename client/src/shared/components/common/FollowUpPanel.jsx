@@ -201,6 +201,8 @@ export const FollowUpPanel = () => {
                   id={selected.id}
                   followUp={selected.followUp}
                   policySnapshot={selected.policySnapshot}
+                  targetOutlet={selected.targetOutlet}
+                  outletName={selected.outletName}
                   onChanged={reload}
                 />
               </div>

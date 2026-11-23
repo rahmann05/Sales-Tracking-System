@@ -226,7 +226,7 @@ export const PhysicalDocumentForm = ({
           <span className="text-[11px] text-on-surface-variant font-bold">
             * Pastikan seluruh data fisik outlet dan foto kamera telah sesuai sebelum mengajukan.
           </span>
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto sm:justify-end">
             <button
               type="button"
               onClick={async () => {
@@ -240,7 +240,7 @@ export const PhysicalDocumentForm = ({
                   onReset();
               }}
               disabled={isSubmitting}
-              className="px-4 py-2.5 rounded-xl border-2 border-slate-500 hover:bg-surface-container font-bold text-xs transition-all cursor-pointer"
+              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl border-2 border-slate-500 hover:bg-surface-container font-bold text-xs transition-all cursor-pointer flex items-center"
             >
               Reset Formulir
             </button>
@@ -248,7 +248,7 @@ export const PhysicalDocumentForm = ({
               type="submit"
               disabled={isSubmitting || (!formData.revisionId && !featurePolicy.canStart)}
               title={!formData.revisionId ? featurePolicy.reason : undefined}
-              className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto justify-center px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <LuSend className="text-sm" />
               <span>{isSubmitting ? 'Mengirim Pengajuan...' : 'Ajukan Registrasi Outlet'}</span>

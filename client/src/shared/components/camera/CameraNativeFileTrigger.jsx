@@ -14,7 +14,7 @@ export const CameraNativeFileTrigger = ({
   return (
     <div className="flex justify-center">
       <label
-        className={`text-[11px] flex items-center gap-1 underline transition-colors ${
+        className={`text-[11px] flex items-center justify-center min-h-11 px-3 py-2 md:min-h-0 md:px-0 md:py-0 gap-1 underline transition-colors ${
           requireGps && !isGpsLocked
             ? 'text-slate-500 cursor-not-allowed'
             : 'text-on-surface-variant hover:text-primary cursor-pointer'

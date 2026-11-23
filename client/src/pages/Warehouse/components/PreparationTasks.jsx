@@ -1,6 +1,6 @@
 import { useApp } from '../../../context/AppContext';
 import { canTripAction } from '../../../../../shared/trip-permissions.mjs';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { deliveryApi } from '../../../services/api';
 import {
   preparationStages,
@@ -11,7 +11,12 @@ const stages = {
   CHECK: 'Pemeriksaan barang',
   LOAD: 'Loading / serah terima',
 };
-const stamp = (v) => new Date(v).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+const prepInstructionPresets = [
+  'Siapkan dan cek barang sesuai urutan pengiriman toko',
+  'Prioritaskan penyiapan segera untuk muat armada hari ini',
+  'Penyesuaian penugasan petugas pemeriksa gudang',
+];
+const stamp = (v) => `${new Date(v).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`;
 export function PreparationTasks({ route, people, onChanged, canManage }) {
   const { user } = useApp();
   const [stage, setStage] = useState('PICK'),
@@ -20,6 +25,10 @@ export function PreparationTasks({ route, people, onChanged, canManage }) {
     [note, setNote] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
+  const errorRef = useRef(null);
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
   const enabled = preparationStages(route.policySnapshot?.values),
     pending = enabled.filter((key) => !route.preparation?.[key]);
   const selectedStage = pending.includes(stage) ? stage : pending[0] || '',
@@ -49,20 +58,41 @@ export function PreparationTasks({ route, people, onChanged, canManage }) {
   return (
     <section className="space-y-3">
       <h3 className="font-bold">Pemeriksaan dan serah terima muatan</h3>
-      {enabled.map((key) => {
-        const done = route.preparation?.[key],
-          task = route.preparation?.tasks?.[key];
-        return (
-          <p key={key} className="text-sm">
-            <strong>{stages[key]}</strong> ·{' '}
-            {done
-              ? `Selesai oleh ${done.actorName || done.actorId} · ${stamp(done.at)}`
-              : task
-                ? `${task.ownerName} · Tenggat ${stamp(task.dueAt)}${new Date(task.dueAt) < new Date() ? ' · Terlambat' : ''}`
-                : 'Tim gudang · lanjutkan tahap ini'}
-          </p>
-        );
-      })}
+      <div className="space-y-2">
+        {enabled.map((key) => {
+          const done = route.preparation?.[key],
+            task = route.preparation?.tasks?.[key],
+            isActive = !done && pending[0] === key && route.status === 'DRAFT' && !route.onHold;
+          return (
+            <div
+              key={key}
+              className={`rounded-xl border p-2.5 text-sm ${
+                done
+                  ? 'border-emerald-200 bg-emerald-50/40'
+                  : isActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border-glass'
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <strong>{stages[key]}</strong>
+                <span className="text-xs font-semibold">
+                  {done ? 'Selesai' : isActive ? 'Tahap aktif' : 'Menunggu'}
+                </span>
+              </div>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                {done
+                  ? `Oleh ${done.actorName || 'Petugas'} · ${stamp(done.at)}`
+                  : task
+                    ? `${task.ownerName} · Tenggat ${stamp(task.dueAt)}${new Date(task.dueAt) < new Date() ? ' · Terlambat' : ''}`
+                    : isActive
+                      ? 'Tim gudang siap memproses tahap ini pada panel Kontrol perjalanan.'
+                      : 'Menunggu tahap sebelumnya selesai.'}
+              </p>
+            </div>
+          );
+        })}
+      </div>
       {enabled.length < 3 && (
         <p className="text-sm">
           Dilewati sesuai aturan trip:{' '}
@@ -134,6 +164,23 @@ export function PreparationTasks({ route, people, onChanged, canManage }) {
                     onChange={(e) => setDue(e.target.value)}
                   />
                 </label>
+                <div className="space-y-1.5">
+                  <span className="block text-xs font-semibold text-on-surface-variant">
+                    Pilih instruksi cepat:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {prepInstructionPresets.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                        onClick={() => setNote(preset)}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="block">
                   Instruksi / alasan penugasan
                   <textarea
@@ -146,14 +193,15 @@ export function PreparationTasks({ route, people, onChanged, canManage }) {
                   />
                 </label>
                 <button
+                  type="submit"
                   disabled={!selectedOwner || note.trim().length < 5}
-                  className="min-h-11 border rounded-xl px-3"
+                  className="admin-button primary"
                 >
                   {busy ? 'Menyimpan…' : 'Simpan penugasan'}
                 </button>
               </fieldset>
               {error && (
-                <p role="alert" className="text-red-600">
+                <p ref={errorRef} tabIndex={-1} role="alert" className="text-red-600">
                   {error}
                 </p>
               )}

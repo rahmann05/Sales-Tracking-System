@@ -111,7 +111,7 @@ export function LiveSalesGpsTrackingTab({ onSelectSalesId }) {
         </p>
       )}
       {rows === null ? (
-        <p className="spv-panel" role="status">
+        <p className="spv-panel spv-empty" role="status">
           {loading
             ? 'Memuat posisi tim…'
             : 'Data posisi belum tersedia. Gunakan Perbarui posisi untuk mencoba kembali.'}

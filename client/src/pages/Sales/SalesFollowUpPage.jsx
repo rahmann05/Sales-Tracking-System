@@ -10,8 +10,8 @@ export function SalesFollowUpPage() {
           <p className="admin-eyebrow">Sales / Arahan dan temuan</p>
           <h1>Perlu tindakan</h1>
           <p>
-            Kerjakan arahan dari supervisor. Kunjungan fisik yang dijadwalkan dibuka melalui agenda;
-            komunikasi atau perbaikan data cukup dicatat hasilnya di sini.
+            Kerjakan arahan dari supervisor di lokasi outlet menggunakan verifikasi titik GPS dan
+            kamera langsung, lalu kirim hasilnya untuk diperiksa.
           </p>
         </div>
       </header>

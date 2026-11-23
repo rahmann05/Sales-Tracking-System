@@ -10,6 +10,9 @@ import { SalesTargetEditor } from './SalesTargetEditor';
 import { formatTarget } from '../../../../../shared/sales-targets.mjs';
 import { LuPrinter, LuRefreshCw, LuUser, LuSearch } from 'react-icons/lu';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
+
+const YEAR_OPTIONS = [2025, 2026, 2027];
+
 export function MtdSalesTable({
   MONTH_OPTIONS,
   exportToDocx,
@@ -39,14 +42,14 @@ export function MtdSalesTable({
     canExport = reportExportAllowed(user, settings);
   return (
     <div
-      className={`bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden ${settings.REPORT_TABLE_DENSITY === 'COMPACT' ? 'report-compact' : ''}`}
+      className={`bg-surface border border-border-glass rounded-xl overflow-hidden ${settings.REPORT_TABLE_DENSITY === 'COMPACT' ? 'report-compact' : ''}`}
     >
       {/* Workspace Card Header */}
       <div className="p-4 sm:p-5 border-b border-border-glass bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-on-surface tracking-tight m-0 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-on-surface tracking-tight m-0 flex flex-wrap items-center gap-2">
             Matriks Pencapaian Month-to-Date (MTD)
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container border border-border-glass text-on-surface-variant">
+            <span className="admin-status">
               {reportData.period?.monthName || ''} {year}
             </span>
           </h3>
@@ -56,12 +59,12 @@ export function MtdSalesTable({
         </div>
 
         {/* Utility Action Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={loadData}
             disabled={isLoading}
-            className="p-2.5 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
+            className="h-9 w-9 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-lg text-xs font-semibold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
             title="Refresh Data"
           >
             <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
@@ -80,7 +83,7 @@ export function MtdSalesTable({
             type="button"
             disabled={!canExport || isLoading}
             onClick={() => setIsPdfModalOpen(true)}
-            className="py-2 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
+            className="h-9 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             title="Buka pratinjau cetak formulir resmi"
           >
             <LuPrinter /> Cetak Printer
@@ -89,7 +92,7 @@ export function MtdSalesTable({
       </div>
 
       {/* Workspace Toolbar: Filter Controls */}
-      <div className="p-4 border-b border-border-glass bg-surface-container/30">
+      <div className="p-4 border-b border-border-glass bg-surface-container/25">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
@@ -98,7 +101,7 @@ export function MtdSalesTable({
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="w-full p-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full px-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             >
               {MONTH_OPTIONS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -115,9 +118,9 @@ export function MtdSalesTable({
             <select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full p-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full px-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             >
-              {[2025, 2026, 2027].map((y) => (
+              {YEAR_OPTIONS.map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
@@ -134,7 +137,7 @@ export function MtdSalesTable({
               <select
                 value={salesmanId}
                 onChange={(e) => setSalesmanId(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                className="w-full pl-9 pr-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="">Semua Salesman (Tim)</option>
                 {salesTeam.map((sales) => (
@@ -158,7 +161,7 @@ export function MtdSalesTable({
                 placeholder="Ketik nama salesman..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                className="w-full pl-9 pr-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
               />
             </div>
           </div>
@@ -166,8 +169,13 @@ export function MtdSalesTable({
       </div>
 
       {/* Workspace Body: Salesman MTD Breakdown Table */}
-      <div className="overflow-x-auto mobile-card-table-wrapper">
-        <DataTable className="w-full text-left border-collapse text-xs mobile-card-table">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Matriks pencapaian bulanan per salesman"
+        className="report-table-region mobile-card-table-wrapper"
+      >
+        <DataTable className="w-full text-left text-xs mobile-card-table">
           <thead>
             <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
               <th className="">Salesman</th>
@@ -207,9 +215,9 @@ export function MtdSalesTable({
                 key={s.salesmanId}
                 className="hover:bg-surface-variant/20 transition-colors border-b border-border-glass/60"
               >
-                <td data-label="Salesman" className="font-bold text-on-surface whitespace-nowrap">
+                <th scope="row" data-label="Salesman" className="font-bold text-on-surface whitespace-nowrap">
                   {s.salesmanName}
-                </td>
+                </th>
                 <td
                   hidden={hidden('cluster')}
                   data-label="Klaster"
@@ -305,46 +313,62 @@ export function MtdSalesTable({
           {filteredSalesmen.length > 0 && (
             <tfoot>
               <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
-                <td colSpan={columns.has('cluster') ? 2 : 1}>
+                <td colSpan={columns.has('cluster') ? 2 : 1} className="mobile-full-width">
                   TOTAL HASIL LAPORAN (sebelum pencarian nama)
                 </td>
-                <td hidden={hidden('target')} className="text-right font-mono whitespace-nowrap">
+                <td
+                  hidden={hidden('target')}
+                  data-label="Target"
+                  className="text-right font-mono whitespace-nowrap"
+                >
                   {formatTarget(summary.monthlyTargetAmount)}
                 </td>
                 <td
                   hidden={hidden('revenue')}
+                  data-label="MTD Omzet"
                   className="text-right font-mono font-black text-on-surface whitespace-nowrap"
                 >
                   {reportMoney(summary.mtdActualAmount)}
                 </td>
                 <td
                   hidden={hidden('achievement')}
+                  data-label="Pencapaian"
                   className="text-center font-mono text-purple-700"
                 >
                   {summary.overallAchievementRate}
                 </td>
                 <td
                   hidden={hidden('lastMonth')}
+                  data-label="LMA"
                   className="text-right font-mono whitespace-nowrap text-on-surface-variant"
                 >
                   {reportMoney(summary.lastMonthActual)}
                 </td>
                 <td
                   hidden={hidden('comparison')}
+                  data-label="Perbandingan"
                   className="text-center font-mono text-emerald-700"
                 >
                   {summary.mtdToLmaRate}
                 </td>
-                <td hidden={hidden('calls')} className="text-center font-mono">
+                <td hidden={hidden('calls')} data-label="Calls" className="text-center font-mono">
                   {summary.totalMtdActualCalls}/{summary.totalMtdPlanCalls}
                 </td>
-                <td hidden={hidden('callRate')} className="text-center font-mono text-blue-600">
+                <td
+                  hidden={hidden('callRate')}
+                  data-label="% Call"
+                  className="text-center font-mono text-blue-600"
+                >
                   {summary.mtdCallComplianceRate}
                 </td>
-                <td hidden={hidden('ecRate')} className="text-center font-mono text-emerald-600">
+                <td
+                  hidden={hidden('ecRate')}
+                  data-label="% EC"
+                  className="text-center font-mono text-emerald-600"
+                >
                   {summary.mtdEffectiveCallRate}
                 </td>
-                <td hidden={hidden('sku')} className="text-center font-mono">
+                <td hidden={hidden('sku')} data-label="SKU" className="text-center font-mono">
                   {summary.totalMtdSkuSold} SKU
                 </td>
               </tr>

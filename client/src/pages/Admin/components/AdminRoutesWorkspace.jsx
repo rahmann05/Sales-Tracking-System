@@ -8,18 +8,20 @@ import React, { useState } from 'react';
 import { LuPlus, LuArrowLeft, LuSearch, LuRefreshCw } from 'react-icons/lu';
 import { CreateRouteForm } from '../../Warehouse/components/CreateRouteForm';
 import { RouteOperationsActions } from '../../Warehouse/components/RouteOperationsActions';
+import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
 import { deliveryRouteLabel } from '../../Warehouse/deliveryLabels';
 import { orderedStops, stopDestinationOutlet } from '../../../../../shared/driver-workspace.mjs';
 import { outletOperationalPoint } from '../../../../../shared/outlet-location.mjs';
-const stopPointText = (stop) => {
+
+const hasStopPoint = (stop) => {
   const raw = stopDestinationOutlet(stop);
   const op = outletOperationalPoint(raw);
   const lat = op?.latitude ?? raw?.latitude;
   const lng = op?.longitude ?? raw?.longitude;
-  return lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
-    ? `${Number(lng).toFixed(6)}, ${Number(lat).toFixed(6)}`
-    : 'Titik belum tersedia';
+  return lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
 };
+
 export function AdminRoutesWorkspace({
   role = 'ADMIN',
   routes,
@@ -33,6 +35,7 @@ export function AdminRoutesWorkspace({
   fetchRoutes,
   handleDelete,
 }) {
+  const { setActiveTab } = useApp();
   const featurePolicy = useFeaturePolicy('DELIVERY');
   const [selectedId, setSelectedId] = useWorkspaceState('deliveryRoute', ''),
     [search, setSearch] = useState('');
@@ -40,7 +43,10 @@ export function AdminRoutesWorkspace({
   const [detail, setDetail] = useState(null),
     [detailError, setDetailError] = useState('');
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId) {
+      setDetail(null);
+      return;
+    }
     let active = true;
     setDetailError('');
     deliveryApi
@@ -160,7 +166,16 @@ export function AdminRoutesWorkspace({
           <fieldset disabled={!!error}>
             <WarehouseRouteSummary route={selected} onDelete={handleDelete} />
             <div className="admin-panel p-5 mt-4">
-              <h2 className="font-semibold mb-4">Tindakan perjalanan</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h2 className="font-semibold">Tindakan perjalanan</h2>
+                <button
+                  type="button"
+                  className="admin-button"
+                  onClick={() => setActiveTab(TAB_IDS.DELIVERY_OPERATIONS)}
+                >
+                  Buka di Pantau &amp; Jalankan
+                </button>
+              </div>
               <RouteOperationsActions key={selected.id} route={selected} onChanged={fetchRoutes} />
             </div>
           </fieldset>
@@ -190,7 +205,7 @@ export function AdminRoutesWorkspace({
                     <th>Kendaraan</th>
                     <th>Driver</th>
                     <th>Muatan</th>
-                    <th>Tujuan & Titik Long, Lat Toko</th>
+                    <th>Tujuan pengiriman</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -223,9 +238,9 @@ export function AdminRoutesWorkspace({
                               <strong>
                                 {idx + 1}. {s.outlet?.name || 'Toko'}
                               </strong>
-                              <small className="block admin-footnote">
-                                Long, Lat: {stopPointText(s)}
-                              </small>
+                              {!hasStopPoint(s) && (
+                                <small className="block text-amber-700">Titik lokasi belum lengkap</small>
+                              )}
                             </div>
                           ))}
                           {!route.stops?.length && <span>0 outlet</span>}

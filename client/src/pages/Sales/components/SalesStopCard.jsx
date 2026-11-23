@@ -56,6 +56,15 @@ export const SalesStopCard = React.memo(
                 id={task.id}
                 followUp={task.followUp}
                 policySnapshot={task.policySnapshot}
+                outletName={stop.outletName}
+                targetOutlet={{
+                  id: stop.outletId,
+                  name: stop.outletName,
+                  address: stop.address,
+                  latitude: stop.latitude,
+                  longitude: stop.longitude,
+                  radiusMeters: stop.radiusMeters,
+                }}
                 onChanged={() => window.dispatchEvent(new Event('operational-data-changed'))}
               />
             ))}

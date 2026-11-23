@@ -9,7 +9,7 @@ export const CapturedPhotoPreview = ({ capturedPhoto, onRetake }) => {
   if (!capturedPhoto) return null;
 
   return (
-    <div className="relative rounded-2xl overflow-hidden aspect-video bg-black border border-border-glass shadow-lg group">
+    <div className="relative rounded-2xl overflow-hidden aspect-video min-h-[200px] md:min-h-0 bg-black border border-border-glass shadow-lg group">
       <img
         src={capturedPhoto}
         alt="Foto Presensi Terambil"
@@ -25,8 +25,8 @@ export const CapturedPhotoPreview = ({ capturedPhoto, onRetake }) => {
           <span>Foto Ulang</span>
         </button>
       </div>
-      <div className="absolute bottom-3 left-3 bg-emerald-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md">
-        <LuCheck className="text-sm" />
+      <div className="absolute bottom-3 left-3 right-3 md:right-auto bg-emerald-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md">
+        <LuCheck className="text-sm shrink-0" />
         <span>Foto berhasil dilampirkan. Status GPS ditampilkan terpisah.</span>
       </div>
     </div>

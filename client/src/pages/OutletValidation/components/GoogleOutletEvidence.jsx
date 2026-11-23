@@ -71,7 +71,7 @@ export function GoogleOutletEvidence({
       )}
       <div className="ov-comparison-summary">
         <div>
-          <span className="ov-tag">M · Titik sebelumnya</span>
+          <span className="admin-status">M · Titik sebelumnya</span>
           <h4>{previous.name || outlet.name}</h4>
           <p>{previous.address || 'Alamat belum tersedia'}</p>
           <p>{point(previous)}</p>
@@ -91,7 +91,7 @@ export function GoogleOutletEvidence({
           )}
         </div>
         <div>
-          <span className="ov-tag">G · Kandidat peringkat pertama</span>
+          <span className="admin-status admin-status-route">G · Kandidat peringkat pertama</span>
           <h4>
             {recommended?.name ||
               (recommended ? 'Deskripsi perlu diperbarui' : 'Belum ada rekomendasi yang layak')}
@@ -143,7 +143,7 @@ export function GoogleOutletEvidence({
                   K{i + 1}. {c.name || 'Deskripsi perlu diperbarui'}
                 </strong>
                 {c.placeId === recommended?.placeId && (
-                  <span className="ov-tag">Peringkat pertama</span>
+                  <span className="admin-status admin-status-route">Peringkat pertama</span>
                 )}
                 <span>{c.address || 'Jalankan ulang untuk memuat deskripsi Google.'}</span>
                 <small>

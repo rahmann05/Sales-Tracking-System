@@ -57,26 +57,41 @@ export function DriverPendingSubmissions({ onChanged }) {
     }
   };
   if (!rows.length && !queue.rows.length && !queue.error) return null;
+  const draftIds = new Set(rows.map((row) => row.pending?.requestId));
+  const backgroundOnly = queue.rows.filter((item) => !draftIds.has(item.requestId));
   return (
     <section className="admin-panel p-4 space-y-3">
-      <h2>Pengiriman belum dikonfirmasi ({rows.length})</h2>
+      <h2>Pengiriman belum dikonfirmasi ({rows.length + backgroundOnly.length})</h2>
       <p>
-        Isian tersimpan di browser, belum berarti diterima server. Kirim ulang isian yang sama untuk
-        mengambil hasil tanpa menggandakan transaksi.
+        Bukti pengiriman tersimpan sementara di perangkat. Kirim ulang untuk memastikan data sudah
+        diterima server tanpa menggandakan transaksi.
       </p>
-      <ul>
-        {rows.map((row) => (
-          <li className="flex flex-wrap gap-3 items-center py-2" key={row.key}>
-            <span>
-              {row.pending.type === 'IN' ? 'Bukti tiba' : 'Hasil pengiriman'} ·{' '}
-              {row.pending.outletName || row.pending.stopId}
-            </span>
-            <button className="app-button" disabled={!!busy} onClick={() => retry(row)}>
-              {busy === row.key ? 'Memeriksa…' : 'Kirim ulang & periksa hasil'}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {rows.length > 0 && (
+        <ul>
+          {rows.map((row) => {
+            const matchedQueue = queue.rows.find(
+              (item) => item.requestId === row.pending?.requestId
+            );
+            return (
+              <li className="flex flex-wrap gap-3 items-center py-2" key={row.key}>
+                <span className="min-w-0 break-words">
+                  {row.pending.type === 'IN' ? 'Bukti tiba' : 'Hasil pengiriman'} ·{' '}
+                  {row.pending.outletName || 'Tujuan pengiriman'}
+                  {matchedQueue ? ` (${queueLabels[matchedQueue.state] || matchedQueue.state})` : ''}
+                </span>
+                <button
+                  type="button"
+                  className="admin-button"
+                  disabled={!!busy}
+                  onClick={() => retry(row)}
+                >
+                  {busy === row.key ? 'Memeriksa…' : 'Kirim ulang & periksa hasil'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {error && (
         <p role="alert" className="app-error">
           {error} Jika server meminta perbaikan bukti, buka tujuan terkait lalu gunakan “Periksa
@@ -88,19 +103,21 @@ export function DriverPendingSubmissions({ onChanged }) {
           Antrean otomatis: {queue.error}
         </p>
       )}
-      {queue.rows.length > 0 && (
+      {backgroundOnly.length > 0 && (
         <>
-          <h3>Antrean perangkat ({queue.rows.length})</h3>
+          <h3>Antrean otomatis ({backgroundOnly.length})</h3>
           <p>
-            UUID, foto dan GPS asli dipertahankan.{' '}
+            Bukti foto dan lokasi GPS asli tetap tersimpan aman di perangkat.{' '}
             {queue.enabled
-              ? 'Dikirim saat jaringan dan sesi tersedia. Browser menentukan dukungan pengiriman ketika halaman ditutup.'
-              : 'Pengiriman otomatis dijeda oleh pengaturan; bukti tetap tersimpan.'}
+              ? 'Akan dikirim otomatis saat jaringan dan sesi aktif tersedia.'
+              : 'Pengiriman otomatis sedang dijeda oleh pengaturan; bukti tetap tersimpan.'}
           </p>
           <ul>
-            {queue.rows.map((item) => (
+            {backgroundOnly.map((item) => (
               <li key={item.requestId} className="py-2 space-y-2">
-                <strong>{item.outletName || item.requestId}</strong>
+                <strong className="block min-w-0 break-words">
+                  {item.outletName || 'Tujuan pengiriman'}
+                </strong>
                 <p>
                   {queueLabels[item.state] || item.state}
                   {item.lastError ? ` · ${item.lastError}` : ''}

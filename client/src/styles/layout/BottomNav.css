@@ -73,7 +73,8 @@
 .mobile-menu-link:hover {
   background: var(--surface-container);
 }
-.mobile-menu-link-active {
+.mobile-menu-link-active,
+.mobile-menu-link[aria-current='page'] {
   background: var(--primary);
   color: var(--on-primary);
   font-weight: 600;

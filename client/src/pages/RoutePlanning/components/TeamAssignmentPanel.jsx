@@ -18,6 +18,8 @@ export function TeamAssignmentPanel({ onChanged }) {
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState('assigned');
+  const [teamFilter, setTeamFilter] = useState('');
+  const [sortBy, setSortBy] = useState(user.role === 'ADMIN' ? 'team-asc' : 'name-asc');
   const revision = useRef(0);
   const load = useCallback(async () => {
     const current = ++revision.current;
@@ -60,9 +62,42 @@ export function TeamAssignmentPanel({ onChanged }) {
   };
   const assigned = source.sales.filter((s) => s.supervisorId);
   const unassigned = source.sales.filter((s) => !s.supervisorId);
-  const visible = (scope === 'unassigned' ? unassigned : assigned).filter((s) =>
-    `${s.name} ${s.email}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const baseList =
+    scope === 'unassigned' ? unassigned : scope === 'all' ? source.sales : assigned;
+  const compareText = (a, b) =>
+    String(a || '').localeCompare(String(b || ''), 'id-ID', { sensitivity: 'base' });
+  const visible = baseList
+    .filter((s) => {
+      if (user.role === 'ADMIN' && scope !== 'unassigned' && teamFilter && s.supervisorId !== teamFilter) {
+        return false;
+      }
+      const clusters = (s.assignedClusters || []).map((c) => c.name).join(' ');
+      const haystack = `${s.name} ${s.email} ${s.supervisor?.name || ''} ${clusters}`.toLowerCase();
+      return haystack.includes(search.trim().toLowerCase());
+    })
+    .slice()
+    .sort((a, b) => {
+      const teamA = a.supervisor?.name || '';
+      const teamB = b.supervisor?.name || '';
+      const areaA = (a.assignedClusters || []).map((c) => c.name).join(', ');
+      const areaB = (b.assignedClusters || []).map((c) => c.name).join(', ');
+      if (sortBy === 'team-asc' || sortBy === 'team-desc') {
+        if (!teamA && teamB) return 1;
+        if (teamA && !teamB) return -1;
+        const byTeam = sortBy === 'team-desc' ? compareText(teamB, teamA) : compareText(teamA, teamB);
+        if (byTeam !== 0) return byTeam;
+        return compareText(a.name, b.name);
+      }
+      if (sortBy === 'area-asc') {
+        if (!areaA && areaB) return 1;
+        if (areaA && !areaB) return -1;
+        const byArea = compareText(areaA, areaB);
+        if (byArea !== 0) return byArea;
+        return compareText(a.name, b.name);
+      }
+      if (sortBy === 'name-desc') return compareText(b.name, a.name);
+      return compareText(a.name, b.name);
+    });
   const open = (s) => {
     setSelected(s);
     setSupervisorId(user.role === 'SUPERVISOR' ? user.id : s.supervisorId || '');
@@ -70,19 +105,10 @@ export function TeamAssignmentPanel({ onChanged }) {
     setError('');
   };
   return (
-    <section className="workspace-section space-y-4">
-      <div className="workspace-heading">
-        <div>
-          <h2>{user.role === 'SUPERVISOR' ? 'Sales bawahan' : 'Penugasan supervisor'}</h2>
-          <p>
-            Keanggotaan tim menentukan akses supervisi. Perubahan wilayah dan jadwal dikelola
-            melalui Master RJP.
-          </p>
-        </div>
-        <button className="app-button" onClick={load} disabled={loading}>
-          Muat ulang
-        </button>
-      </div>
+    <section
+      className="workspace-section space-y-4"
+      aria-label={user.role === 'SUPERVISOR' ? 'Sales bawahan' : 'Penugasan supervisor'}
+    >
       {error && (
         <p className="app-error" role="alert">
           {error}
@@ -95,7 +121,7 @@ export function TeamAssignmentPanel({ onChanged }) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Nama atau email"
+            placeholder="Nama, email, atau wilayah"
           />
         </label>
         <label className="app-field">
@@ -105,14 +131,53 @@ export function TeamAssignmentPanel({ onChanged }) {
               {user.role === 'SUPERVISOR' ? 'Tim saya' : 'Sudah ditugaskan'} ({assigned.length})
             </option>
             <option value="unassigned">Belum memiliki tim ({unassigned.length})</option>
+            {user.role === 'ADMIN' && (
+              <option value="all">Semua sales ({source.sales.length})</option>
+            )}
           </select>
         </label>
+        {user.role === 'ADMIN' && (
+          <label className="app-field">
+            Tim / Supervisor
+            <select
+              value={scope === 'unassigned' ? '' : teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              disabled={scope === 'unassigned'}
+            >
+              <option value="">Semua tim</option>
+              {source.supervisors.map((sup) => (
+                <option key={sup.id} value={sup.id}>
+                  {sup.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className="app-field">
+          Urutkan
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            {user.role === 'ADMIN' && (
+              <>
+                <option value="team-asc">Sesuai tim (A–Z)</option>
+                <option value="team-desc">Sesuai tim (Z–A)</option>
+              </>
+            )}
+            <option value="name-asc">Nama sales (A–Z)</option>
+            <option value="name-desc">Nama sales (Z–A)</option>
+            <option value="area-asc">Wilayah tugas (A–Z)</option>
+          </select>
+        </label>
+        <div className="flex items-end">
+          <button type="button" className="app-button" onClick={load} disabled={loading}>
+            Muat ulang
+          </button>
+        </div>
       </div>
       {loading ? (
         <p role="status">Memuat tim…</p>
       ) : (
-        <div className="overflow-x-auto">
-          <DataTable>
+        <div className="overflow-x-auto mobile-card-table-wrapper">
+          <DataTable className="mobile-card-table">
             <thead>
               <tr>
                 <th>Sales</th>
@@ -124,13 +189,19 @@ export function TeamAssignmentPanel({ onChanged }) {
             <tbody>
               {visible.map((s) => (
                 <tr key={s.id}>
-                  <td>
-                    <strong>{s.name}</strong>
-                    <div>{s.email}</div>
+                  <td data-label="Sales">
+                    <div>
+                      <strong>{s.name}</strong>
+                      <div>{s.email}</div>
+                    </div>
                   </td>
-                  {user.role === 'ADMIN' && <td>{s.supervisor?.name || 'Belum ditugaskan'}</td>}
-                  <td>{s.assignedClusters.map((c) => c.name).join(', ') || 'Belum ada wilayah'}</td>
-                  <td>
+                  {user.role === 'ADMIN' && (
+                    <td data-label="Supervisor">{s.supervisor?.name || 'Belum ditugaskan'}</td>
+                  )}
+                  <td data-label="Wilayah tugas">
+                    {s.assignedClusters.map((c) => c.name).join(', ') || 'Belum ada wilayah'}
+                  </td>
+                  <td data-label="Penugasan" className="mobile-full-width">
                     {canAssign &&
                     (user.role === 'ADMIN' || (!s.supervisorId && source.canClaim)) ? (
                       <button

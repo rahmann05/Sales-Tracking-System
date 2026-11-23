@@ -112,7 +112,7 @@ export const CameraGpsStatusBadge = ({
             <button
               type="button"
               onClick={onRefreshGps}
-              className="p-1.5 bg-amber-500/20 rounded-lg hover:bg-amber-500/30 text-amber-800 text-xs"
+              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 md:min-w-0 md:min-h-0 bg-amber-500/20 rounded-lg hover:bg-amber-500/30 text-amber-800 text-xs"
             >
               <LuRefreshCw className="animate-spin" />
             </button>

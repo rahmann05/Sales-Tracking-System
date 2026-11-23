@@ -13,7 +13,6 @@ import { ReportBasisNote } from '../Reports/components/ReportBasisNote';
 import { PageHeader } from '../../shared/components/common/PageHeader';
 import {
   LuPhoneCall,
-  LuCalendar,
   LuListOrdered,
   LuShieldAlert,
   LuUserCheck,
@@ -93,17 +92,12 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       {showHeader && (
         <PageHeader
           badge={
-            <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-              <LuPhoneCall className="text-sm" /> CV. SINAR ANUGRAH • DISTRIBUTION MANAGEMENT
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+              <LuPhoneCall className="text-sm text-primary" /> Laporan Kunjungan
             </span>
           }
           title="Daily Call Report & Audit Absensi Salesman"
           subtitle={`Pemantauan real-time rute PJP, waktu tempuh antar-titik toko, extra call di luar PJP, dan audit absensi janggal per ${formattedDateHeader}`}
-          actions={
-            <span className="px-3.5 py-2 rounded-xl bg-surface border border-border-glass text-primary text-xs font-mono font-bold flex items-center gap-2 shadow-xs">
-              <LuCalendar /> {date}
-            </span>
-          }
         />
       )}
 
@@ -121,17 +115,17 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       <ReportBasisNote basis={reportData?.basis} />
 
       {/* 3. Unified Data & Audit Workspace Card */}
-      <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
+      <div className="bg-surface border border-border-glass rounded-xl overflow-hidden">
         {/* Workspace Card Header: View Switcher (Left) & Actions (Right) */}
-        <div className="p-4 sm:p-5 border-b border-border-glass flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface-container-low/40">
+        <div className="p-4 sm:p-5 border-b border-border-glass flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
             {/* Tab 1: Master Table */}
             <button
               type="button"
               onClick={() => setActiveTableView('ALL_VISITS')}
-              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
+              className={`h-10 px-3.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
                 activeTableView === 'ALL_VISITS'
-                  ? 'bg-primary text-on-primary border-primary shadow-xs'
+                  ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -154,9 +148,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setActiveTableView('SALESMAN_TIMELINE')}
-              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
+              className={`h-10 px-3.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
                 activeTableView === 'SALESMAN_TIMELINE'
-                  ? 'bg-primary text-on-primary border-primary shadow-xs'
+                  ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -179,9 +173,9 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
             <button
               type="button"
               onClick={() => setActiveTableView('ANOMALIES_ONLY')}
-              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
+              className={`h-10 px-3.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-between gap-2 border ${
                 activeTableView === 'ANOMALIES_ONLY'
-                  ? 'bg-primary text-on-primary border-primary shadow-xs'
+                  ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -191,11 +185,11 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               </div>
               {totalAnomalies > 0 ? (
                 <span
-                  className={`px-2 py-0.5 rounded-sm text-[10px] font-bold shrink-0 ${
+                  className={
                     activeTableView === 'ANOMALIES_ONLY'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-rose-50 text-rose-700 border border-rose-200'
-                  }`}
+                      ? 'px-2 py-0.5 rounded-sm text-[10px] font-bold shrink-0 bg-white/20 text-white'
+                      : 'admin-status admin-status-rejected shrink-0'
+                  }
                 >
                   {totalAnomalies} Temuan
                 </span>
@@ -214,12 +208,12 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
           </div>
 
           {/* Quick Actions (Refresh, Excel, Cetak PDF) */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={refreshData}
               disabled={isLoading}
-              className="h-10 w-10 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
+              className="h-10 w-10 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-lg text-xs font-semibold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
               title="Refresh Data"
             >
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
@@ -238,7 +232,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
               disabled={!canExport || isLoading || Boolean(error) || !reportData?.summary}
-              className="h-10 px-3.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
+              className="h-10 px-3.5 bg-primary hover:bg-primary/90 text-on-primary rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / Pratinjau Resmi"
             >
               <LuPrinter /> <span>Cetak Printer</span>

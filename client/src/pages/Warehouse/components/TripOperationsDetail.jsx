@@ -12,7 +12,9 @@ import { deliveryRouteLabel, deliveryStopLabel } from '../deliveryLabels';
 import { stopDestinationOutlet } from '../../../../../shared/driver-workspace.mjs';
 import { outletOperationalPoint } from '../../../../../shared/outlet-location.mjs';
 const stamp = (value) =>
-  value ? new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : 'Belum tercatat';
+  value
+    ? `${new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
+    : 'Belum tercatat';
 const resolveStopPoint = (stop) => {
   const raw = stopDestinationOutlet(stop);
   const op = outletOperationalPoint(raw);
@@ -25,6 +27,7 @@ const resolveStopPoint = (stop) => {
 export function TripOperationsDetail({ route, people, issues, canManage, onChanged }) {
   const r = route,
     work = tripNextWork(r),
+    pendingReturnStop = r.stops?.find((stop) => stop.rejectedCartons > 0 && !stop.returnInspection),
     [selectedStop] = useWorkspaceState('deliveryStop', ''),
     stopRefs = useRef({});
   useEffect(() => {
@@ -51,9 +54,25 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
         </strong>
       </header>
       {work && (
-        <p className="admin-feedback" role="status">
-          <strong>Langkah berikutnya: {work.nextAction}.</strong> {work.explanation}
-        </p>
+        <div className="admin-feedback flex flex-wrap items-center justify-between gap-2" role="status">
+          <span>
+            <strong>Langkah berikutnya: {work.nextAction}.</strong> {work.explanation}
+          </span>
+          {pendingReturnStop && (
+            <button
+              type="button"
+              className="admin-button"
+              onClick={() =>
+                stopRefs.current[pendingReturnStop.id]?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+                })
+              }
+            >
+              Lompat ke pemeriksaan retur ({pendingReturnStop.outlet?.name})
+            </button>
+          )}
+        </div>
       )}
       <div className="admin-trip-summary">
         <div>
@@ -103,7 +122,6 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
           <PreparationTasks route={r} people={people} canManage={canManage} onChanged={onChanged} />
         </section>
         <section>
-          <h3>Masalah / keluhan perjalanan</h3>
           <OperationalIssues
             issues={issues.filter((issue) => issue.routeId === r.id)}
             people={people}
@@ -143,7 +161,6 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
                   {stop.rejectReason ? ` · ${stop.rejectReason}` : ''}
                 </p>
                 <p className="text-xs">
-                  Long, Lat:{' '}
                   {pt ? (
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${pt.latitude},${pt.longitude}`}
@@ -151,10 +168,10 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
                       rel="noopener noreferrer"
                       className="underline font-semibold"
                     >
-                      {pt.longitude.toFixed(6)}, {pt.latitude.toFixed(6)}
+                      Buka titik tujuan di Google Maps
                     </a>
                   ) : (
-                    'Titik belum tersedia'
+                    'Titik tujuan belum tersedia'
                   )}
                 </p>
                 <small>
@@ -176,6 +193,7 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
                   stop={stop}
                   task={r.preparation?.returnTasks?.[stop.id]}
                   people={people}
+                  canManage={canManage}
                   onChanged={onChanged}
                 />
                 <ReturnReceiptAction

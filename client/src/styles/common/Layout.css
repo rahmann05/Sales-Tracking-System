@@ -84,37 +84,37 @@
 
 /* ── Badges ── */
 .badge-base {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold select-none;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium select-none;
 }
 
 .badge-primary {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold select-none;
-  background: rgba(0, 0, 0, 0.06);
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium select-none;
+  background: #eef1f5;
   color: var(--color-on-surface);
 }
 
 .badge-secondary {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold select-none;
-  background: rgba(0, 0, 0, 0.04);
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium select-none;
+  background: #f4f6f9;
   color: var(--color-on-surface-variant);
 }
 
 .badge-tertiary {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold select-none;
-  background: rgba(52, 199, 89, 0.1);
-  color: #34c759;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium select-none;
+  background: #eaf7f0;
+  color: #3d8665;
 }
 
 .badge-warning {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold select-none;
-  background: rgba(255, 149, 0, 0.1);
-  color: #ff9500;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium select-none;
+  background: #fff4df;
+  color: #99752e;
 }
 
 .badge-error {
-  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold select-none;
-  background: rgba(255, 59, 48, 0.1);
-  color: #ff3b30;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium select-none;
+  background: #fff0ee;
+  color: #b96558;
 }
 
 .caption-mono {

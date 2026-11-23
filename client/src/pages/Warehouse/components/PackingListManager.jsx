@@ -157,9 +157,13 @@ export const PackingListManager = () => {
   // Action: DELETE draft
   const handleDeleteDraft = (pl) => {
     if (busyAction) return;
+    const targetLabel =
+      pl.loadPlanVersion === 2
+        ? `${pl.destinations?.length || 0} tujuan`
+        : pl.outlet?.name || 'Draft manual';
     setConfirmDialog({
       title: `Hapus Draft: ${pl.code}`,
-      message: `Apakah Anda yakin ingin menghapus draft packing list ${pl.code} (${pl.outlet?.name})? Tindakan ini tidak dapat dibatalkan.`,
+      message: `Apakah Anda yakin ingin menghapus draft packing list ${pl.code} (${targetLabel})? Tindakan ini tidak dapat dibatalkan.`,
       type: 'danger',
       onConfirm: async () => {
         setConfirmDialog(null);

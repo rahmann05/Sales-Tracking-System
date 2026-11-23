@@ -1,5 +1,7 @@
 import React, { lazy, Suspense } from 'react';
-import { LuRefreshCw, LuNavigation } from 'react-icons/lu';
+import { LuRefreshCw, LuNavigation, LuArrowLeft } from 'react-icons/lu';
+import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
 import { useDriverTrips } from '../useDriverTrips';
 import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
 import {
@@ -8,15 +10,18 @@ import {
   deliveryNavigationUrl,
   validOutletPoint,
   stopDestinationOutlet,
+  deliveryVisitGroups,
 } from '../../../../../shared/driver-workspace.mjs';
 import { deliveryRouteLabel, deliveryStopLabel } from '../../Warehouse/deliveryLabels';
 const DestinationMap = lazy(() =>
   import('./DriverDestinationMap').then((m) => ({ default: m.DriverDestinationMap }))
 );
 export function DriverRouteMap() {
+  const { setActiveTab } = useApp();
   const { routes, activeRoute: trip, selectTrip, loading, error, refresh } = useDriverTrips();
   const [selectedId, selectStop] = useWorkspaceState('driverMapStop', '');
   const stops = React.useMemo(() => orderedStops(trip), [trip]),
+    visitGroups = React.useMemo(() => deliveryVisitGroups(stops), [stops]),
     selected = stops.find((s) => s.id === selectedId),
     target = selected || nextDeliveryStop(stops) || stops[0],
     navigation = deliveryNavigationUrl(stopDestinationOutlet(target));
@@ -28,10 +33,20 @@ export function DriverRouteMap() {
           <h1>Peta tujuan</h1>
           <p>Pilih trip dan tujuan, lalu buka navigasi dari ponsel.</p>
         </div>
-        <button type="button" className="admin-button" disabled={loading} onClick={refresh}>
-          <LuRefreshCw />
-          Perbarui
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="admin-button"
+            onClick={() => setActiveTab(TAB_IDS.DELIVERY_DRIVER_TRIPS)}
+          >
+            <LuArrowLeft />
+            Kembali ke Trip saya
+          </button>
+          <button type="button" className="admin-button" disabled={loading} onClick={refresh}>
+            <LuRefreshCw />
+            Perbarui
+          </button>
+        </div>
       </header>
       {error && (
         <p role="alert" className="admin-feedback error">
@@ -59,8 +74,8 @@ export function DriverRouteMap() {
             </label>
             <p className="admin-footnote">
               Tanggal trip{' '}
-              {new Date(trip.date).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })} ·{' '}
-              {stops.length} tujuan
+              {new Date(trip.date).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB ·{' '}
+              {visitGroups.length} tujuan
             </p>
             {navigation && (
               <a
@@ -83,27 +98,32 @@ export function DriverRouteMap() {
                 </button>
               </div>
               <ol>
-                {stops.map((stop, index) => (
-                  <li key={stop.id}>
-                    <button
-                      type="button"
-                      aria-pressed={selectedId === stop.id}
-                      onClick={() => selectStop(stop.id)}
-                    >
-                      <span className="logistics-sequence">{index + 1}</span>
-                      <span>
-                        <strong>{stop.outlet?.name || 'Outlet'}</strong>
-                        <small>{stop.outlet?.address}</small>
-                        <small>
-                          {deliveryStopLabel(stop.status)}
-                          {!validOutletPoint(stopDestinationOutlet(stop))
-                            ? ' · Koordinat belum tersedia'
-                            : ''}
-                        </small>
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {visitGroups.map((group, index) => {
+                  const primaryStop =
+                    group.stops.find((s) => s.status === 'PENDING') || group.stops[0];
+                  return (
+                    <li key={group.stops[0].id}>
+                      <button
+                        type="button"
+                        aria-pressed={group.stops.some((s) => s.id === selectedId)}
+                        onClick={() => selectStop(primaryStop.id)}
+                      >
+                        <span className="logistics-sequence">{index + 1}</span>
+                        <span>
+                          <strong>{primaryStop.outlet?.name || 'Outlet'}</strong>
+                          <small>{primaryStop.outlet?.address}</small>
+                          <small>
+                            {deliveryStopLabel(primaryStop.status)}
+                            {group.stops.length > 1 ? ` · ${group.stops.length} dokumen` : ''}
+                            {!validOutletPoint(stopDestinationOutlet(primaryStop))
+                              ? ' · Koordinat belum tersedia'
+                              : ''}
+                          </small>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ol>
             </section>
             <section className="admin-panel logistics-map-panel" aria-label="Peta lokasi tujuan">
@@ -112,10 +132,13 @@ export function DriverRouteMap() {
               </Suspense>
             </section>
           </div>
-          <p className="admin-footnote">
-            Titik tujuan dibekukan saat trip dibuat dari outlet yang direferensikan order. Posisi
-            langsung truk ditampilkan terpisah. Navigasi jalan dibuka melalui Google Maps.
-          </p>
+          <details className="admin-footnote">
+            <summary className="cursor-pointer">Catatan titik peta dan navigasi</summary>
+            <p>
+              Titik tujuan dibekukan saat trip dibuat dari outlet yang direferensikan order. Posisi
+              langsung truk ditampilkan terpisah. Navigasi jalan dibuka melalui Google Maps.
+            </p>
+          </details>
         </>
       ) : (
         <p className="admin-empty">

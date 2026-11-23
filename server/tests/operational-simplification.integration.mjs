@@ -589,7 +589,7 @@ try {
   );
   await prisma.pjpStop.update({ where: { id: pjp.stops[0].id }, data: { status: 'VISITED' } });
   const submitted = await run(() =>
-    completeFollowUp(activity.id, sales, 'Penempatan telah diperiksa', '')
+    completeFollowUp(activity.id, sales, { note: 'Penempatan telah diperiksa', ...camera() })
   );
   eq(submitted.followUp.status, 'SUBMITTED');
   await rejects(

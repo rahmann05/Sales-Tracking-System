@@ -68,12 +68,14 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       {/* 4. Durasi */}
       <td data-label="Durasi" className="whitespace-nowrap text-center py-2.5 px-2">
         {row.isDurationAnomaly ? (
-          <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 text-[10px] font-bold border border-rose-500/20 inline-flex items-center gap-1 whitespace-nowrap">
-            <LuTriangleAlert className="text-xs" /> Di bawah batas
-          </span>
+          <span className="admin-status admin-status-rejected">Di bawah batas</span>
         ) : isActual ? (
           <span
-            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${row.durationMinutes == null || row.durationCheckEnabled === false ? 'bg-surface-container text-on-surface-variant' : 'bg-emerald-500/10 text-emerald-600'}`}
+            className={
+              row.durationMinutes == null || row.durationCheckEnabled === false
+                ? 'admin-status'
+                : 'admin-status admin-status-released'
+            }
           >
             {row.durationMinutes == null
               ? 'Tidak tersedia'
@@ -248,14 +250,14 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       </td>
 
       {/* 11. Detail & Foto */}
-      <td className="text-center whitespace-nowrap py-2.5 px-2 w-24 min-w-[85px]">
+      <td className="text-center whitespace-nowrap py-2.5 px-2 w-24 min-w-[85px] mobile-full-width">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onSelectRow(row);
           }}
-          className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs min-w-[78px] h-8 shrink-0 ${
+          className={`inline-flex items-center justify-center gap-1.5 w-full md:w-auto px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs min-w-[78px] h-8 shrink-0 ${
             row.photoIn || row.photoOut
               ? 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
               : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-glass'

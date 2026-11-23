@@ -63,3 +63,17 @@ export const reviewResult = (o) =>
     ? 'Hasil lama · data telah berubah'
     : resultLabels[o?.validationDetails?.code] ||
       (o?.validatedAt ? 'Hasil metode lama' : 'Belum diperiksa · opsional');
+
+export const registrationStatuses = {
+  DRAFT: { label: 'Draf', className: 'admin-status' },
+  SUBMITTED: { label: 'Menunggu approval', className: 'admin-status admin-status-pending' },
+  SPV_APPROVED: { label: 'Siap aktivasi', className: 'admin-status admin-status-route' },
+  REGISTERED_ACTIVE: { label: 'Aktif di sistem', className: 'admin-status admin-status-released' },
+  REJECTED: { label: 'Ditolak', className: 'admin-status admin-status-rejected' },
+};
+
+export const registrationStatusBadge = (status) =>
+  registrationStatuses[status] || {
+    label: status || 'Belum tersedia',
+    className: 'admin-status',
+  };

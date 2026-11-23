@@ -33,7 +33,7 @@ export function SuspiciousAttendanceSummary({
             <h3 className="text-sm font-black text-rose-700 m-0 uppercase tracking-tight">
               Tabel Khusus Audit Absensi Janggal & Anomali Lapangan
             </h3>
-            <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black">
+            <span className="admin-status admin-status-rejected">
               {suspiciousRows.length} Temuan
             </span>
           </div>

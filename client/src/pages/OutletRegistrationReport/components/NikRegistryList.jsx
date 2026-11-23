@@ -18,10 +18,10 @@ export function NikRegistryList({
   validNikCount,
 }) {
   return (
-    <div className="md:col-span-7 border-r border-border-glass p-4 flex flex-col gap-3 overflow-hidden bg-surface-container/20">
+    <div className="md:col-span-7 border-b md:border-b-0 md:border-r border-border-glass p-4 flex flex-col gap-3 md:overflow-hidden bg-surface-container/20">
       {/* Filter Pills */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => setFilterNikStatus('ALL')}
@@ -69,7 +69,7 @@ export function NikRegistryList({
       </div>
 
       {/* Outlet Table List */}
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[420px]">
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[260px] md:max-h-[420px]">
         {filteredList.map((item) => {
           const code = item.customerCode || item.outletCode || '-';
           const name = item.name || item.customerName || '-';

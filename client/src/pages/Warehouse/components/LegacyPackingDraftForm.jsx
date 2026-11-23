@@ -204,15 +204,32 @@ export function LegacyPackingDraftForm({
         />
         <div className="space-y-3">
           {selectedOrders.some((source) => source.status === 'PENDING_APPROVAL') && (
-            <div>
-              <label className="block text-xs font-bold text-on-surface mb-1">
-                Alasan pengecualian: order belum disetujui
+            <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50/40 p-3">
+              <label className="block text-xs font-bold text-amber-900">
+                Alasan pengecualian: order belum disetujui (wajib)
               </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Order mendesak sesuai arahan Supervisor / Admin',
+                  'Jadwal pengiriman reguler area hari ini',
+                  'Persetujuan order menyusul di sistem',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                    onClick={() => setReason(preset)}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
               <textarea
                 aria-label="Alasan pengecualian Admin"
+                required
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Catatan justifikasi override pembuatan packing list dari order pending..."
+                placeholder="Pilih cepat di atas atau tulis alasan justifikasi order pending..."
                 rows={2}
                 className="w-full px-3 py-2 rounded-xl bg-surface border border-border-glass text-xs text-on-surface resize-none"
               />

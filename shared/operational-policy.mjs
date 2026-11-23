@@ -538,6 +538,9 @@ export const OPERATIONAL_CONFIG_GROUPS = [
       bool('SPV_ALLOW_OFF_PJP', 'Izinkan kunjungan SPV luar PJP'),
       bool('FOLLOW_UP_REQUIRE_REVIEW', 'Hasil tugas perlu pemeriksaan'),
       bool('FOLLOW_UP_REQUIRE_EVIDENCE', 'Wajib bukti hasil tugas'),
+      bool('FOLLOW_UP_REQUIRE_PHOTO', 'Wajib foto langsung penyelesaian tugas'),
+      bool('FOLLOW_UP_REQUIRE_GPS', 'Wajib GPS penyelesaian tugas'),
+      bool('FOLLOW_UP_ENFORCE_GEOFENCE', 'Batasi penyelesaian tugas dengan radius'),
       ...Object.keys(VISIT_REFERENCE_CATALOGS).map((key) => ({
         key,
         label: {
@@ -1868,6 +1871,8 @@ export function policyConflicts(values) {
     values.SPV_ENFORCE_GEOFENCE === true
   )
     issues.push('Pembatas radius SPV memerlukan GPS wajib.');
+  if (values.FOLLOW_UP_REQUIRE_GPS === false && values.FOLLOW_UP_ENFORCE_GEOFENCE === true)
+    issues.push('Pembatas radius penyelesaian tugas memerlukan GPS wajib.');
   if (
     values.DELIVERY_ATTENDANCE_MODE !== 'OPTIONAL' &&
     values.DELIVERY_REQUIRE_GPS === false &&

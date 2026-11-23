@@ -83,7 +83,7 @@ export function OutsidePjpOrderDialog({ onClose, onSaved }) {
             <button
               type="button"
               key={o.id}
-              className="app-button text-left"
+              className="app-button !justify-start w-full text-left"
               onClick={() => setOutlet(o)}
             >
               <span>
@@ -97,7 +97,7 @@ export function OutsidePjpOrderDialog({ onClose, onSaved }) {
         {!busy && result && !result.data.length && (
           <p>Tidak ada outlet sesuai pencarian dalam penugasan Anda.</p>
         )}
-        <nav className="app-actions" aria-label="Halaman pilihan outlet">
+        <nav className="app-actions justify-between w-full" aria-label="Halaman pilihan outlet">
           <button
             type="button"
             className="app-button"

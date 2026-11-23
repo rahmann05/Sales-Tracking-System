@@ -121,7 +121,7 @@ export function LegacyAdminApprovalView({
                 </p>
               </div>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-800 border border-amber-500/20">
+            <span className="admin-status admin-status-pending">
               {pendingUnlockCount} Menunggu
             </span>
           </div>

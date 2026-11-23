@@ -21,14 +21,14 @@ export const RouteCard = ({ route, isSelected, onClick }) => {
     >
       <div>
         {route.code && <p className="text-xs font-mono mb-1">{route.code}</p>}
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-start gap-2 mb-2">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="text-xs font-extrabold text-on-surface">
               {route.clusterName ? route.clusterName : route.name || 'Rute Harian'}
             </span>
             <Badge status={route.status} />
           </div>
-          <span className="text-[10px] font-bold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">
+          <span className="text-[10px] font-bold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded shrink-0">
             {stopCount} Stops
           </span>
         </div>

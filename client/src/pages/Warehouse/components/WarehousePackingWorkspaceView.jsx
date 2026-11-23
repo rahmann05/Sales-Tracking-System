@@ -153,7 +153,9 @@ export function WarehousePackingWorkspaceView({
               <button
                 type="button"
                 className="admin-button primary"
-                disabled={!!error}
+                disabled={
+                  !!error || Number(selected.remainingCartons ?? selected.totalCartons ?? 0) <= 0
+                }
                 onClick={() => plan([selected.id])}
               >
                 <LuTruck />
@@ -161,6 +163,11 @@ export function WarehousePackingWorkspaceView({
               </button>
             )}
           </div>
+          {Number(selected.remainingCartons ?? selected.totalCartons ?? 0) <= 0 && (
+            <p className="admin-footnote">
+              Seluruh muatan pada dokumen ini sudah dialokasikan ke perjalanan.
+            </p>
+          )}
           <details>
             <summary>Pemeriksaan faktur dan penerimaan</summary>
             <InvoiceReconciliationPanel packing={selected} admin={false} onChanged={refresh} />
@@ -170,9 +177,15 @@ export function WarehousePackingWorkspaceView({
               <summary>Riwayat dokumen</summary>
               {selected.history.map((h, i) => (
                 <p key={i}>
-                  {h.action} ·{' '}
+                  {{
+                    CREATE: 'Dokumen dibuat',
+                    UPDATE: 'Draft diperbarui',
+                    RELEASE: 'Dikirim ke gudang',
+                    RECALL: 'Ditarik ke draft revisi',
+                  }[h.action] || h.action}{' '}
+                  ·{' '}
                   {h.at
-                    ? new Date(h.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+                    ? `${new Date(h.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
                     : 'Waktu belum tercatat'}
                 </p>
               ))}
@@ -223,12 +236,21 @@ export function WarehousePackingWorkspaceView({
           </div>
           {user.permissions?.can_manage_delivery_routes !== false && chosen.length > 0 && (
             <div className="work-step-intro">
-              <strong>{chosen.length} dokumen dipilih</strong>
+              <div>
+                <strong>
+                  {chosen.length} dokumen dipilih ({chosen.map((c) => c.code).join(', ')})
+                </strong>
+                {chosen.some((row) => row.loadPlanVersion === 2) && (
+                  <small className="block text-on-surface-variant">
+                    Dokumen muatan multi-toko disusun satu dokumen per perjalanan.
+                  </small>
+                )}
+              </div>
               <button
                 type="button"
                 className="admin-button primary"
                 disabled={!!error}
-                onClick={() => plan(chosen)}
+                onClick={() => plan(chosen.map((c) => c.id))}
               >
                 Susun perjalanan dari pilihan
               </button>
@@ -260,32 +282,40 @@ export function WarehousePackingWorkspaceView({
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          aria-label={`Pilih muatan ${p.code}`}
-                          checked={chosen.includes(p.id)}
-                          disabled={
-                            Number(p.remainingCartons) <= 0 ||
-                            !!error ||
-                            (chosen.length > 0 &&
-                              !chosen.includes(p.id) &&
-                              (p.loadPlanVersion === 2 ||
-                                visible.some(
-                                  (row) => row.loadPlanVersion === 2 && chosen.includes(row.id)
-                                )))
-                          }
-                          onChange={(e) =>
-                            setChosen((current) =>
-                              e.target.checked
-                                ? [...current, p.id]
-                                : current.filter((id) => id !== p.id)
-                            )
-                          }
-                        />
-                      </td>
+                  {visible.map((p) => {
+                    const selectedDoc = chosen.some((row) => row.id === p.id);
+                    const hasChosenV2 = chosen.some((row) => row.loadPlanVersion === 2);
+                    const remainingCartons = Number(p.remainingCartons ?? p.totalCartons ?? 0);
+                    return (
+                      <tr key={p.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Pilih muatan ${p.code}`}
+                            checked={selectedDoc}
+                            disabled={
+                              remainingCartons <= 0 ||
+                              !!error ||
+                              (chosen.length > 0 &&
+                                !selectedDoc &&
+                                (p.loadPlanVersion === 2 || hasChosenV2))
+                            }
+                            onChange={(e) =>
+                              setChosen((current) =>
+                                e.target.checked
+                                  ? [
+                                      ...current.filter((row) => row.id !== p.id),
+                                      {
+                                        id: p.id,
+                                        code: p.code,
+                                        loadPlanVersion: p.loadPlanVersion,
+                                      },
+                                    ]
+                                  : current.filter((row) => row.id !== p.id)
+                              )
+                            }
+                          />
+                        </td>
                       <td>
                         <button
                           type="button"
@@ -317,7 +347,8 @@ export function WarehousePackingWorkspaceView({
                           : 'Belum dialokasikan'}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

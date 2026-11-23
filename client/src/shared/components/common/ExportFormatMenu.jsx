@@ -128,8 +128,8 @@ export const ExportFormatMenu = ({
         type="button"
         disabled={disabled || Boolean(busyFormat)}
         onClick={() => setOpen((prev) => !prev)}
-        className={`inline-flex items-center justify-center gap-2 font-bold rounded-xl transition-all cursor-pointer border border-border-glass shadow-xs ${
-          compact ? 'px-3 py-1.5 text-xs' : 'px-3.5 py-2 text-xs'
+        className={`h-9 inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-colors cursor-pointer border border-border-glass ${
+          compact ? 'px-3 text-xs' : 'px-3.5 text-xs'
         } ${
           disabled
             ? 'opacity-50 cursor-not-allowed bg-surface-container text-on-surface-variant'
@@ -146,9 +146,9 @@ export const ExportFormatMenu = ({
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-1.5 w-60 rounded-2xl bg-surface border border-border-glass shadow-xl z-50 py-1.5 overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-border-glass text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
-            Pilih Format Dokumen
+        <div className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-60 max-w-[calc(100vw-2rem)] rounded-xl bg-surface border border-border-glass shadow-lg z-50 py-1.5 overflow-hidden">
+          <div className="px-3 py-1.5 border-b border-border-glass text-xs font-semibold text-on-surface-variant">
+            Pilih format dokumen
           </div>
           {items.map((item) => {
             const Icon = item.icon;

@@ -27,14 +27,16 @@ export const staffAttendanceApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  completeFollowUp: (id, note, evidence) =>
-    request(`/staff-attendance/follow-ups/${id}`, {
+  completeFollowUp: (id, payloadOrNote, evidence) => {
+    const body =
+      payloadOrNote && typeof payloadOrNote === 'object'
+        ? payloadOrNote
+        : { note: payloadOrNote, evidence };
+    return request(`/staff-attendance/follow-ups/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({
-        note,
-        evidence,
-      }),
-    }),
+      body: JSON.stringify(body),
+    });
+  },
   getToday: () => request('/staff-attendance'),
   record: (data) =>
     request('/staff-attendance', {

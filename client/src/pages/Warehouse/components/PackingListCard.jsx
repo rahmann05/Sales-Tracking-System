@@ -7,11 +7,8 @@ import {
   LuTrash2,
   LuPencil,
   LuPrinter,
-  LuTriangleAlert,
-  LuCircleCheck,
   LuStore,
   LuFileText,
-  LuTruck,
   LuClock,
   LuChevronDown,
   LuChevronUp,
@@ -22,6 +19,7 @@ export function PackingListCard({
   busyAction,
   handleDeleteDraft,
   handleTransitionAction,
+  inDetailView = false,
   isAllocated,
   isDeleteBusy,
   isDraft,
@@ -36,24 +34,32 @@ export function PackingListCard({
   settings,
   toggleExpand,
 }) {
+  const showDetail = inDetailView || isExpanded;
+  const actionLabels = {
+    CREATE: 'Dokumen dibuat',
+    UPDATE: 'Draft diperbarui',
+    RELEASE: 'Dikirim ke gudang',
+    RECALL: 'Ditarik ke draft revisi',
+  };
   return (
     <article
       key={pl.id}
-      className={`bg-surface border rounded-2xl p-4 md:p-5 space-y-4 transition-all shadow-xs ${needsCompletion ? 'border-amber-300/80 bg-amber-50/20 dark:bg-amber-950/10' : 'border-border-glass hover:border-primary/20'}`}
+      className={`bg-surface border rounded-xl p-4 md:p-5 space-y-4 transition-all ${needsCompletion ? 'border-amber-300 bg-amber-50/30' : 'border-border-glass'}`}
     >
-      {isExpanded && <PackingLoadSummary packing={pl} />}
       {/* 1. Header Row */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-mono font-black text-base text-on-surface">
+            <h2 className="font-mono font-bold text-base text-on-surface">
               {pl.code}{' '}
               {pl.documentKind === 'MANIFEST' && (
-                <span className="text-xs">· Manifest pengiriman</span>
+                <span className="text-xs font-sans font-medium text-on-surface-variant">
+                  · Manifest pengiriman
+                </span>
               )}
             </h2>
-            <span className="text-on-surface-variant text-sm font-semibold">·</span>
-            <strong className="text-sm font-bold text-on-surface flex items-center gap-1">
+            <span className="text-on-surface-variant text-sm">·</span>
+            <strong className="text-sm font-semibold text-on-surface flex items-center gap-1">
               <LuStore className="text-xs text-primary" />
               <span>
                 {pl.loadPlanVersion === 2
@@ -63,29 +69,17 @@ export function PackingListCard({
             </strong>
 
             {/* Status Badges */}
-            {isDraft && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-300">
-                Draft Admin
-              </span>
-            )}
+            {isDraft && <span className="admin-status admin-status-draft">Draft</span>}
 
             {isReleased && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
-                <LuCircleCheck className="text-[10px]" /> Dikirim ke Gudang
-              </span>
+              <span className="admin-status admin-status-released">Dikirim ke gudang</span>
             )}
 
             {needsCompletion && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 flex items-center gap-1">
-                <LuTriangleAlert className="text-[10px]" /> Perlu Dilengkapi
-              </span>
+              <span className="admin-status admin-status-pending">Perlu dilengkapi</span>
             )}
 
-            {isAllocated && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 flex items-center gap-1">
-                <LuTruck className="text-[10px]" /> Masuk Rute
-              </span>
-            )}
+            {isAllocated && <span className="admin-status admin-status-route">Masuk rute</span>}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
@@ -114,10 +108,10 @@ export function PackingListCard({
         </div>
 
         {/* Cartons Summary Metric */}
-        <div className="text-right p-2.5 rounded-xl bg-surface-container/50 border border-border-glass text-xs space-y-0.5">
+        <div className="text-right p-2.5 rounded-lg bg-surface-container/50 border border-border-glass text-xs space-y-0.5">
           <div>
             Total Muatan:{' '}
-            <strong className="text-on-surface font-black text-sm">{pl.totalCartons || 0}</strong>{' '}
+            <strong className="text-on-surface font-bold text-sm">{pl.totalCartons || 0}</strong>{' '}
             Karton
           </div>
           <div className="text-[11px] text-on-surface-variant flex items-center justify-end gap-2">
@@ -127,7 +121,7 @@ export function PackingListCard({
             <span>·</span>
             <span>
               Sisa:{' '}
-              <strong className="text-emerald-600 dark:text-emerald-400">
+              <strong className="text-emerald-700">
                 {pl.remainingCartons ?? (pl.totalCartons || 0)}
               </strong>
             </span>
@@ -137,83 +131,92 @@ export function PackingListCard({
 
       {/* 2. Expandable Details Trigger */}
       <div>
-        <button
-          type="button"
-          onClick={() => toggleExpand(pl.id)}
-          className="w-full py-2 px-3 rounded-xl bg-surface-container/30 hover:bg-surface-container/60 border border-border-glass text-xs font-bold text-on-surface flex items-center justify-between transition-all cursor-pointer"
-        >
-          <span className="flex items-center gap-1.5">
-            <LuFileText className="text-xs text-primary" />
-            <span>
-              Rincian Barang ({pl.items?.length || 0}), Faktur ({pl.invoices?.length || 0}), &
-              Catatan
+        {!inDetailView && (
+          <button
+            type="button"
+            onClick={() => toggleExpand(pl.id)}
+            className="w-full py-2 px-3 rounded-lg bg-surface-container/30 hover:bg-surface-container/60 border border-border-glass text-xs font-semibold text-on-surface flex items-center justify-between transition-all cursor-pointer"
+          >
+            <span className="flex items-center gap-1.5">
+              <LuFileText className="text-xs text-primary" />
+              <span>
+                Rincian Barang ({pl.items?.length || 0}), Faktur ({pl.invoices?.length || 0}), &
+                Catatan
+              </span>
             </span>
-          </span>
-          {isExpanded ? <LuChevronUp className="text-sm" /> : <LuChevronDown className="text-sm" />}
-        </button>
+            {isExpanded ? <LuChevronUp className="text-sm" /> : <LuChevronDown className="text-sm" />}
+          </button>
+        )}
 
         {/* Expanded Accordion Content */}
-        {isExpanded && (
+        {showDetail && (
           <div className="mt-3 p-4 rounded-xl bg-surface-container/20 border border-border-glass space-y-4 animate-fade-in text-xs">
-            <InvoiceReconciliationPanel packing={pl} admin={admin} onChanged={onChanged} />
-            {/* Items Table */}
-            <div className="space-y-1.5">
-              <span className="font-black uppercase tracking-wider text-[10px] text-on-surface-variant block">
-                Daftar Barang Produk:
-              </span>
-              <div className="border border-border-glass rounded-xl overflow-hidden">
-                <table className="w-full text-left divide-y divide-border-glass">
-                  <thead className="bg-surface-container/60 text-[11px] font-bold text-on-surface-variant">
-                    <tr>
-                      <th className="p-2">SKU</th>
-                      <th className="p-2">Nama Barang</th>
-                      <th className="p-2 text-right">Jumlah</th>
-                      <th className="p-2">Satuan</th>
-                      <th className="p-2 text-right">Sisa Muatan</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-glass bg-surface">
-                    {(pl.remainingItems || pl.items || []).map((item, idx) => (
-                      <tr key={item.lineId || idx} className="hover:bg-surface-container/30">
-                        <td className="p-2 font-mono font-bold text-on-surface-variant">
-                          {item.sku || '-'}
-                        </td>
-                        <td className="p-2 font-bold text-on-surface">{item.name}</td>
-                        <td className="p-2 text-right font-mono font-bold text-on-surface">
-                          {item.quantity}
-                        </td>
-                        <td className="p-2 text-on-surface-variant">{item.unit || 'unit'}</td>
-                        <td className="p-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {item.remaining ?? item.quantity}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Invoices List */}
-            {pl.invoices && pl.invoices.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="font-black uppercase tracking-wider text-[10px] text-on-surface-variant block">
-                  Faktur Terlampir:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {pl.invoices.map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="px-3 py-1.5 rounded-lg border border-border-glass bg-surface font-mono text-[11px]"
-                    >
-                      Faktur: <strong className="text-on-surface">{inv.invoiceNumber}</strong> ·{' '}
-                      {inv.totalCartons} Karton
-                      {inv.totalAmount
-                        ? ` · Rp ${Number(inv.totalAmount).toLocaleString('id-ID')}`
-                        : ''}
-                    </div>
-                  ))}
+            <PackingLoadSummary packing={pl} />
+            {!isDraft && (
+              <InvoiceReconciliationPanel packing={pl} admin={admin} onChanged={onChanged} />
+            )}
+            {/* Legacy v1 Items & Invoices (v2 already rendered in PackingLoadSummary) */}
+            {pl.loadPlanVersion !== 2 && (
+              <>
+                <div className="space-y-1.5">
+                  <span className="font-black uppercase tracking-wider text-[10px] text-on-surface-variant block">
+                    Daftar Barang Produk:
+                  </span>
+                  <div className="border border-border-glass rounded-xl overflow-hidden">
+                    <table className="w-full text-left divide-y divide-border-glass">
+                      <thead className="bg-surface-container/60 text-[11px] font-bold text-on-surface-variant">
+                        <tr>
+                          <th className="p-2">SKU</th>
+                          <th className="p-2">Nama Barang</th>
+                          <th className="p-2 text-right">Jumlah</th>
+                          <th className="p-2">Satuan</th>
+                          <th className="p-2 text-right">Sisa Muatan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-glass bg-surface">
+                        {(pl.remainingItems || pl.items || []).map((item, idx) => (
+                          <tr key={item.lineId || idx} className="hover:bg-surface-container/30">
+                            <td className="p-2 font-mono font-bold text-on-surface-variant">
+                              {item.sku || '-'}
+                            </td>
+                            <td className="p-2 font-bold text-on-surface">{item.name}</td>
+                            <td className="p-2 text-right font-mono font-bold text-on-surface">
+                              {item.quantity}
+                            </td>
+                            <td className="p-2 text-on-surface-variant">{item.unit || 'unit'}</td>
+                            <td className="p-2 text-right font-mono font-bold text-emerald-700">
+                              {item.remaining ?? item.quantity}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+
+                {/* Invoices List */}
+                {pl.invoices && pl.invoices.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="font-black uppercase tracking-wider text-[10px] text-on-surface-variant block">
+                      Faktur Terlampir:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {pl.invoices.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="px-3 py-1.5 rounded-lg border border-border-glass bg-surface font-mono text-[11px]"
+                        >
+                          Faktur: <strong className="text-on-surface">{inv.invoiceNumber}</strong> ·{' '}
+                          {inv.totalCartons} Karton
+                          {inv.totalAmount
+                            ? ` · Rp ${Number(inv.totalAmount).toLocaleString('id-ID')}`
+                            : ''}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Notes & Override Reason */}
@@ -225,7 +228,7 @@ export function PackingListCard({
                   </p>
                 )}
                 {pl.overrideReason && (
-                  <p className="text-amber-800 dark:text-amber-300">
+                  <p className="text-amber-800">
                     <strong className="text-on-surface">Alasan Override:</strong>{' '}
                     {pl.overrideReason}
                   </p>
@@ -243,8 +246,11 @@ export function PackingListCard({
                 <div className="space-y-1 pl-2 border-l-2 border-border-glass">
                   {pl.history.map((h, i) => (
                     <div key={i} className="text-[11px] text-on-surface-variant">
-                      <strong>{h.action}</strong> oleh {h.userId || 'User'} pada{' '}
-                      {h.at ? new Date(h.at).toLocaleString('id-ID') : '-'}
+                      <strong>{actionLabels[h.action] || h.action}</strong> oleh{' '}
+                      {h.actorName || 'Petugas'} pada{' '}
+                      {h.at
+                        ? `${new Date(h.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
+                        : '-'}
                     </div>
                   ))}
                 </div>
@@ -260,7 +266,7 @@ export function PackingListCard({
         <button
           type="button"
           onClick={() => setPrintDoc(pl)}
-          className="px-3 py-1.5 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+          className="px-3 py-1.5 rounded-lg border border-border-glass hover:bg-surface-container text-xs font-semibold text-on-surface flex items-center gap-1.5 transition-all cursor-pointer"
         >
           <LuPrinter className="text-xs text-primary" />
           <span>Cetak / Lihat Dokumen</span>
@@ -288,7 +294,7 @@ export function PackingListCard({
                       50
                     );
                   }}
-                  className="px-3 py-1.5 rounded-xl border border-border-glass hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg border border-border-glass hover:bg-surface-container text-xs font-semibold text-on-surface flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <LuPencil className="text-xs text-primary" />
                   <span>Edit Draft</span>
@@ -298,7 +304,7 @@ export function PackingListCard({
                   type="button"
                   disabled={Boolean(busyAction)}
                   onClick={() => handleDeleteDraft(pl)}
-                  className="px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-xs font-bold text-rose-600 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                   title="Hapus draft packing list ini"
                 >
                   <LuTrash2 className={`text-xs ${isDeleteBusy ? 'animate-spin' : ''}`} />
@@ -309,7 +315,7 @@ export function PackingListCard({
                   type="button"
                   disabled={Boolean(busyAction)}
                   onClick={() => handleTransitionAction(pl, 'RELEASE')}
-                  className="px-4 py-1.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary/90 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <LuSend className={`text-xs ${isReleaseBusy ? 'animate-spin' : ''}`} />
                   <span>{isReleaseBusy ? 'Mengirim…' : 'Kirim ke Gudang'}</span>
@@ -323,7 +329,7 @@ export function PackingListCard({
                 type="button"
                 disabled={Boolean(busyAction)}
                 onClick={() => handleTransitionAction(pl, 'RECALL')}
-                className="px-3 py-1.5 rounded-xl border border-amber-300 hover:bg-amber-50 text-xs font-bold text-amber-800 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg border border-amber-300 hover:bg-amber-50 text-xs font-semibold text-amber-800 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
               >
                 <LuRotateCcw className={`text-xs ${isRecallBusy ? 'animate-spin' : ''}`} />
                 <span>{isRecallBusy ? 'Menarik…' : 'Tarik untuk Revisi'}</span>

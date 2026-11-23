@@ -2,6 +2,7 @@ import { reportMoney } from '../../../../../shared/report-visibility.mjs';
 import React from 'react';
 import { LuPhoneCall, LuShoppingBag, LuCircleCheck } from 'react-icons/lu';
 import { FiAlertTriangle } from 'react-icons/fi';
+import { MetricCard } from '../../../shared/components/common/MetricCard';
 
 /**
  * DailyCallHeaderKpi Component
@@ -26,120 +27,56 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
     totalPlanCalls > 0 ? Math.round((totalPlannedActualCalls / totalPlanCalls) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
-      {/* 1. Plan vs Actual Calls */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-on-surface-variant font-semibold">Realisasi PJP</span>
-          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
-            <LuPhoneCall className="text-base" />
-          </div>
-        </div>
-        <div className="flex items-baseline justify-between">
-          <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
-            {totalPlannedActualCalls}{' '}
-            <span className="text-xs font-normal text-on-surface-variant">
-              / {totalPlanCalls} PJP
-            </span>
-          </div>
-          <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
-            {actualRate}%
-          </span>
-        </div>
-        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
-          {totalActualCalls} kunjungan aktual, termasuk {totalActualCalls - totalPlannedActualCalls}{' '}
-          di luar PJP
-        </p>
-      </div>
-
-      {/* 2. Effective Calls (EC) */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-on-surface-variant font-semibold">Effective Call (EC)</span>
-          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
-            <LuCircleCheck className="text-base" />
-          </div>
-        </div>
-        <div className="flex items-baseline justify-between">
-          <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
-            {totalEffectiveCalls}{' '}
-            <span className="text-xs font-normal text-on-surface-variant">Kunjungan EC</span>
-          </div>
-          <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
-            {effectiveCallRate}
-          </span>
-        </div>
-        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
-          Kunjungan transaksi berhasil
-        </p>
-      </div>
-
-      {/* 3. Omzet Order of The Day */}
-      <div className="bg-surface border border-border-glass rounded-2xl p-4 shadow-xs space-y-2 flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-on-surface-variant font-semibold">
-            Nilai order disetujui
-          </span>
-          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
-            <LuShoppingBag className="text-base" />
-          </div>
-        </div>
-        <div className="flex items-baseline justify-between">
-          <div className="text-lg md:text-xl font-black text-on-surface tracking-tight">
-            {reportMoney(totalOrderAmount)}
-          </div>
-          <span className="text-xs font-bold font-mono text-on-surface bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
-            {totalSkuSold} SKU
-          </span>
-        </div>
-        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
-          Rata-rata durasi:{' '}
-          {avgDurationMinutes == null ? 'Tidak tersedia' : `${avgDurationMinutes} menit`}
-        </p>
-      </div>
-
-      {/* 4. Monitoring Anomali */}
-      <div
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+      <MetricCard
+        label="Realisasi PJP"
+        icon={LuPhoneCall}
+        value={totalPlannedActualCalls}
+        suffix={`/ ${totalPlanCalls} PJP`}
+        badge={`${actualRate}%`}
+        description={`${totalActualCalls} kunjungan aktual, termasuk ${totalActualCalls - totalPlannedActualCalls} di luar PJP`}
+      />
+      <MetricCard
+        label="Effective Call (EC)"
+        icon={LuCircleCheck}
+        value={totalEffectiveCalls}
+        suffix="Kunjungan EC"
+        badge={effectiveCallRate}
+        description="Kunjungan transaksi berhasil"
+      />
+      <MetricCard
+        label="Nilai order disetujui"
+        icon={LuShoppingBag}
+        value={reportMoney(totalOrderAmount)}
+        badge={`${totalSkuSold} SKU`}
+        valueClassName="text-xl"
+        description={`Rata-rata durasi: ${avgDurationMinutes == null ? 'Tidak tersedia' : `${avgDurationMinutes} menit`}`}
+      />
+      <button
+        type="button"
         onClick={onSelectAnomalies}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            onSelectAnomalies?.();
-          }
-        }}
         title="Klik untuk membuka Tabel Khusus Audit Absensi Janggal"
-        className="bg-surface border border-border-glass hover:bg-surface-container rounded-2xl p-4 shadow-xs space-y-2 cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between"
+        className="app-card bg-surface border border-border-glass hover:bg-surface-container/60 rounded-xl p-4 text-left transition-colors cursor-pointer flex flex-col justify-between"
       >
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-on-surface-variant font-semibold">
-            Peringatan & Anomali
+        <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-3">
+          <FiAlertTriangle aria-hidden="true" className="text-lg shrink-0" />
+          <span>Peringatan &amp; Anomali</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+          <div className="text-2xl font-semibold text-on-surface">
+            {totalAnomalies} <span className="text-xs font-normal text-on-surface-variant">Kasus</span>
+          </div>
+          <span
+            className={totalAnomalies > 0 ? 'admin-status admin-status-rejected' : 'admin-status'}
+          >
+            {totalAnomalies > 0 ? 'Perlu Evaluasi →' : 'Belum terdeteksi'}
           </span>
-          <div className="w-9 h-9 rounded-xl bg-surface-container text-on-surface border border-border-glass flex items-center justify-center shrink-0">
-            <FiAlertTriangle className="text-base" />
-          </div>
         </div>
-        <div className="flex flex-wrap gap-2 items-baseline justify-between">
-          <div className="text-xl md:text-2xl font-black text-on-surface tracking-tight">
-            {totalAnomalies}{' '}
-            <span className="text-xs font-normal text-on-surface-variant">Kasus</span>
-          </div>
-          {totalAnomalies > 0 ? (
-            <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg">
-              Perlu Evaluasi &rarr;
-            </span>
-          ) : (
-            <span className="text-xs font-bold text-on-surface-variant bg-surface-container border border-border-glass px-2 py-0.5 rounded-lg">
-              Belum terdeteksi
-            </span>
-          )}
-        </div>
-        <p className="text-[11px] text-on-surface-variant m-0 min-w-0 whitespace-normal break-words">
-          Di bawah batas durasi: {totalDurationAnomalies} • Di luar radius aturan:{' '}
+        <p className="text-xs text-on-surface-variant mt-2">
+          Di bawah batas durasi: {totalDurationAnomalies} · Di luar radius aturan:{' '}
           {totalDistanceAnomalies}
         </p>
-      </div>
+      </button>
     </div>
   );
 };

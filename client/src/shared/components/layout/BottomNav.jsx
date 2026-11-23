@@ -160,7 +160,7 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
               {user?.role === 'ADMIN'
                 ? 'Menu'
                 : activeSecondaryItem
-                  ? activeSecondaryItem.label
+                  ? shortLabels[activeSecondaryItem.id] || activeSecondaryItem.label
                   : 'Lainnya'}
             </span>
           </button>

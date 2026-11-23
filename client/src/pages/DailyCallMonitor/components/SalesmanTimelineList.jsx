@@ -56,8 +56,8 @@ export function SalesmanTimelineList({
                     </span>
 
                     {sales.travelAnomalies === 0 && sales.durationAnomalies === 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold inline-flex items-center gap-1">
-                        <LuCheck className="text-[10px]" /> Tidak ada indikasi durasi/jeda tercatat
+                      <span className="admin-status admin-status-released">
+                        Tidak ada indikasi durasi/jeda tercatat
                       </span>
                     )}
                   </div>
@@ -140,7 +140,7 @@ export function SalesmanTimelineList({
                         {/* Travel Gap Indicator between Stop (sIdx - 1) and Stop (sIdx) */}
                         {stop.prevStopName && (
                           <div
-                            className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 ${isTravelAnom ? 'bg-rose-500/15 border border-rose-500/40 text-rose-800' : 'bg-surface-container border border-border-glass text-on-surface-variant'}`}
+                            className={`p-2 rounded-xl text-xs font-semibold flex flex-wrap items-center justify-between gap-2 ${isTravelAnom ? 'bg-rose-500/15 border border-rose-500/40 text-rose-800' : 'bg-surface-container border border-border-glass text-on-surface-variant'}`}
                           >
                             <div className="flex items-center gap-2">
                               <LuNavigation
@@ -214,7 +214,7 @@ export function SalesmanTimelineList({
                             </div>
 
                             {/* Time & Duration Info */}
-                            <div className="flex items-center gap-3 text-xs self-start sm:self-auto font-mono">
+                            <div className="flex flex-wrap items-center gap-3 text-xs self-start sm:self-auto font-mono">
                               <div>
                                 <span className="text-[10px] text-on-surface-variant block">
                                   Jam In &rarr; Out

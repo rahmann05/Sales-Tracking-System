@@ -125,7 +125,6 @@
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  border-left: 3px solid #0869cf;
 }
 .logistics-next h2 {
   margin: 6px 0;
@@ -449,44 +448,137 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
-  .logistics-stop-list ol,
-  .logistics-stop-list ul {
-    max-height: 340px;
-  }
-  .logistics-stop-list li > button {
-    padding: 14px 12px;
-  }
-  .logistics-next {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 14px;
-    padding: 16px;
-  }
-  .logistics-action-panel,
-  .logistics-gps,
-  .logistics-trip-heading {
-    padding: 16px;
+  .logistics-trip-heading > div:first-child {
+    min-width: 0;
+    max-width: 100%;
   }
   .logistics-heading-tools {
     align-items: stretch;
     flex-direction: column;
+    min-width: 0;
+  }
+  .logistics-heading-tools label {
+    min-width: 0;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
   }
   .logistics-heading-tools select {
+    min-width: 0;
     max-width: 100%;
     width: 100%;
+  }
+  .logistics-stop-list ol,
+  .logistics-stop-list ul {
+    max-height: 220px;
   }
   .logistics-document {
     padding: 16px;
     gap: 20px;
   }
   .logistics-destination-map {
-    height: 380px;
+    height: clamp(260px, 44dvh, 360px);
+  }
+  .logistics-destination-map .leaflet-control-zoom a {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+    font-size: 20px;
+  }
+  .logistics-destination-map .leaflet-popup-content {
+    max-width: min(240px, calc(100vw - 96px));
+  }
+  .logistics-destination-map .leaflet-popup-content a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 600;
   }
   .logistics-dialog {
-    width: calc(100vw - 20px);
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui))
+    .app-dialog.logistics-dialog
+    > .app-dialog-heading {
+    padding: 12px 16px;
+    z-index: 10;
+  }
+  body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui))
+    .app-dialog.logistics-dialog
+    > .app-dialog-body {
+    padding: 0;
   }
   .logistics-dialog .p-5 {
     padding: 16px;
+  }
+  .logistics-dialog .px-5 {
+    padding-inline: 16px;
+  }
+  .logistics-dialog .app-discard-confirm {
+    padding: 16px;
+  }
+  .logistics-dialog label {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .logistics-dialog label:has(> input[type='checkbox']) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+  }
+  .logistics-dialog :is(input, select, textarea):not([type='checkbox']):not([type='radio']) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .logistics-dialog :is(button, .admin-button, .app-button) {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    text-align: center;
+  }
+  .logistics-dialog canvas {
+    height: 140px;
+    min-height: 140px;
+  }
+  .logistics-workspace > .admin-toolbar > a.admin-button {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    text-align: center;
+  }
+  .logistics-workspace > .admin-toolbar > a.admin-button > svg {
+    flex-shrink: 0;
+  }
+  .logistics-stop-detail .work-tabs button {
+    flex: 1 1 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    font-size: 13px;
+    text-align: left;
+  }
+  .logistics-action-panel :is(input, select, textarea):not([type='checkbox']):not([type='radio']) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .logistics-workspace .work-issues > div:first-child,
+  .logistics-workspace .work-issues form .flex.gap-2 {
+    flex-wrap: wrap;
+  }
+  .logistics-workspace details > summary {
+    min-height: 44px;
+    padding-block: 10px;
+    line-height: 1.5;
+    cursor: pointer;
+  }
+  .logistics-workspace .app-notice a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
   .driver-stop-document > div:first-child,
   .driver-stop-document > div:nth-child(2) {
@@ -590,6 +682,9 @@
   .warehouse-home .admin-home-modules,
   .driver-home .admin-home-modules {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .driver-ui #main-content:has(.driver-home) {
+    padding-bottom: 20px !important;
   }
 }
 

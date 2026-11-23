@@ -1,25 +1,28 @@
 /* Modular Badge Styles using Tailwind @apply */
 
 .badge-base {
-  @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold select-none;
+  @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium select-none;
 }
 
 .badge-primary {
-  @apply bg-primary text-on-primary font-bold;
+  @apply bg-primary text-on-primary font-semibold;
 }
 
 .badge-secondary {
-  @apply bg-secondary text-on-secondary font-bold border border-secondary/40;
+  @apply bg-surface-container text-on-surface font-medium border border-border-glass;
 }
 
 .badge-tertiary {
-  @apply bg-tertiary/10 text-tertiary font-semibold;
+  background: #eaf7f0;
+  color: #3d8665;
 }
 
 .badge-warning {
-  @apply bg-amber-500/10 text-amber-600 font-semibold;
+  background: #fff4df;
+  color: #99752e;
 }
 
 .badge-error {
-  @apply bg-error-container text-error font-semibold;
+  background: #fff0ee;
+  color: #b96558;
 }

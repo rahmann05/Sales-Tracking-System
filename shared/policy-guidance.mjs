@@ -61,6 +61,8 @@ export function parameterGuidance(key, values) {
     /^SPV_(REQUIRE_PHOTO|REQUIRE_GPS|ENFORCE_GEOFENCE)$/.test(key)
   )
     return 'Tidak berlaku: kegiatan SPV tidak mewajibkan presensi.';
+  if (String(values.FOLLOW_UP_REQUIRE_GPS) === 'false' && key === 'FOLLOW_UP_ENFORCE_GEOFENCE')
+    return 'Pembatas radius penyelesaian tugas memerlukan GPS wajib.';
   if (driver === 'OPTIONAL' && /^DELIVERY_(REQUIRE_GPS|REQUIRE_GEOFENCE)$/.test(key))
     return 'Tidak berlaku: hasil pengiriman dicatat tanpa presensi wajib.';
   if (driver !== 'IN_OUT' && key === 'DELIVERY_ALLOW_RESULT_WITHOUT_OUT')

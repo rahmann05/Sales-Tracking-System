@@ -29,12 +29,12 @@ export const ReportsPage = () => {
   }, [activeTab, settings.REPORT_WEEKLY_ENABLED, settings.REPORT_MTD_ENABLED, setActiveTab]);
 
   return (
-    <div className="workspace-page reports-workspace space-y-6">
+    <div className="workspace-page reports-workspace space-y-5">
       {/* 1. Suite Header Banner */}
       <PageHeader
         badge={
-          <span className="px-3 py-1 bg-surface-container text-on-surface border border-border-glass text-xs font-black rounded-full uppercase tracking-wider flex items-center gap-1.5">
-            <LuFileSpreadsheet className="text-sm" /> Laporan
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+            <LuFileSpreadsheet className="text-sm text-primary" /> Laporan
           </span>
         }
         title="Laporan operasional"
@@ -46,22 +46,12 @@ export const ReportsPage = () => {
 
       {/* 3. Tab Content */}
       {activeTab === 'DAILY' && (
-        <div className="pt-1">
-          <DailyCallMonitorPage initialTableView="ALL_VISITS" showHeader={false} />
-        </div>
+        <DailyCallMonitorPage initialTableView="ALL_VISITS" showHeader={false} />
       )}
 
-      {activeTab === 'WEEKLY' && (
-        <div className="pt-1">
-          <WeeklyReportView />
-        </div>
-      )}
+      {activeTab === 'WEEKLY' && <WeeklyReportView />}
 
-      {activeTab === 'MTD' && (
-        <div className="pt-1">
-          <MtdReportView />
-        </div>
-      )}
+      {activeTab === 'MTD' && <MtdReportView />}
     </div>
   );
 };

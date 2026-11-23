@@ -40,7 +40,7 @@ export function OutletFieldTaskTable({ busy, error, data, page, setPage, sales, 
                   <small>Pemeriksa: {t.reviewerName}</small>
                 </td>
                 <td data-label="Status / tenggat">
-                  <span className={`ov-tag ${t.overdue ? 'is-overdue' : ''}`}>
+                  <span className={`admin-status ${t.overdue ? 'admin-status-rejected' : ''}`}>
                     {STATUS_LABELS[t.status]}
                     {t.overdue ? ' · terlambat' : ''}
                   </span>

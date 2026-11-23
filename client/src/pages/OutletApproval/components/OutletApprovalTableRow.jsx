@@ -1,11 +1,13 @@
 import React from 'react';
 import { LuMapPin, LuUser } from 'react-icons/lu';
+import { registrationStatusBadge } from '../../OutletManagement/outletPresentation';
 
 /**
  * OutletApprovalTableRow Component
  * Single Responsibility: Render a single row of an outlet registration record in the approval table.
  */
 export const OutletApprovalTableRow = ({ item, onReview }) => {
+  const statusBadge = registrationStatusBadge(item.registrationStatus);
   return (
     <tr className="hover:bg-surface-variant/20 transition-colors">
       {/* Tanggal */}
@@ -57,7 +59,7 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
 
       {/* Channel & Payment */}
       <td data-label="Channel" className="">
-        <span className="px-2 py-0.5 rounded-md bg-surface-container text-[10px] font-bold border border-border-glass">
+        <span className="admin-status">
           {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
         </span>
         <div className="text-[10px] text-on-surface-variant mt-1">
@@ -68,21 +70,9 @@ export const OutletApprovalTableRow = ({ item, onReview }) => {
 
       {/* Status */}
       <td data-label="Status" className="">
-        <span
-          className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
-            item.registrationStatus === 'REGISTERED_ACTIVE'
-              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-              : item.registrationStatus === 'SPV_APPROVED'
-                ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
-                : item.registrationStatus === 'REJECTED'
-                  ? 'bg-red-500/10 text-red-600 border-red-500/20'
-                  : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-          }`}
-        >
-          {item.registrationStatus}
-        </span>
+        <span className={statusBadge.className}>{statusBadge.label}</span>
         {item.customerCode && (
-          <div className="text-[10px] font-mono font-bold text-emerald-600 mt-0.5">
+          <div className="text-[10px] font-mono font-bold text-emerald-700 mt-1">
             Kode: {item.customerCode}
           </div>
         )}

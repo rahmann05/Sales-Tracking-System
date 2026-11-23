@@ -97,6 +97,11 @@
     width: 100%;
   }
 
+  .sales-shift .shift-widget > .app-button,
+  .spv-shift .shift-widget > .app-button {
+    width: 100%;
+  }
+
   .shift-widget {
     gap: 12px;
   }

@@ -19,9 +19,9 @@ export const CameraCaptureButton = ({
       <button
         type="button"
         disabled
-        className="w-full py-3 bg-slate-700/60 text-slate-400 border border-slate-600 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-not-allowed transition-all"
+        className="w-full py-3 px-3 md:px-0 bg-slate-700/60 text-slate-400 border border-slate-600 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-not-allowed transition-all"
       >
-        <LuLock className="text-base text-amber-400" />
+        <LuLock className="text-base text-amber-400 shrink-0" />
         <span>GPS Belum Terdeteksi — Tombol Foto Terkunci</span>
       </button>
     );
@@ -32,9 +32,9 @@ export const CameraCaptureButton = ({
       <button
         type="button"
         disabled
-        className="w-full py-3 bg-rose-950/40 text-rose-300 border border-rose-500/40 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-not-allowed transition-all shadow-sm"
+        className="w-full py-3 px-3 md:px-0 bg-rose-950/40 text-rose-300 border border-rose-500/40 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-not-allowed transition-all shadow-sm"
       >
-        <LuLock className="text-base text-rose-400" />
+        <LuLock className="text-base text-rose-400 shrink-0" />
         <span>
           Di Luar Radius Toko ({distanceMeters}m &gt; {maxRadiusMeters}m) — Presensi Terkunci
         </span>
@@ -46,9 +46,9 @@ export const CameraCaptureButton = ({
     <button
       type="button"
       onClick={onCapture}
-      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
+      className="w-full py-3 px-3 md:px-0 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
     >
-      <LuCamera className="text-base" />
+      <LuCamera className="text-base shrink-0" />
       <span>{label}</span>
     </button>
   );

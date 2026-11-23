@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { LuArrowUpRight, LuSearch } from 'react-icons/lu';
+import React from 'react';
+import { LuArrowUpRight } from 'react-icons/lu';
 import '../../../styles/pages/AdminNavigation.css';
 export function WorkspaceMenuHome({
   role,
@@ -9,13 +9,6 @@ export function WorkspaceMenuHome({
   onNavigate,
   className = '',
 }) {
-  const [search, setSearch] = useState('');
-  const query = search.trim().toLocaleLowerCase('id-ID');
-  const visible = groups.filter((group) =>
-    `${group.label} ${group.description} ${group.items.map((item) => item.label).join(' ')}`
-      .toLocaleLowerCase('id-ID')
-      .includes(query)
-  );
   return (
     <div className={`page-container admin-home ${className}`}>
       <header className="admin-home-heading">
@@ -24,23 +17,13 @@ export function WorkspaceMenuHome({
           <h1>{title}</h1>
           <p>{description}</p>
         </div>
-        <label className="admin-search">
-          <LuSearch aria-hidden="true" />
-          <input
-            type="search"
-            aria-label={`Cari menu ${role}`}
-            placeholder="Cari menu atau fitur…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </label>
       </header>
       <div className="admin-home-section">
         <h2>Ruang kerja {role}</h2>
-        <span>{visible.length} modul tersedia</span>
+        <span>{groups.length} modul tersedia</span>
       </div>
       <div className="admin-home-modules">
-        {visible.map((group) => {
+        {groups.map((group) => {
           const Icon = group.icon;
           return (
             <section className="admin-module-card" key={group.id}>
@@ -70,17 +53,12 @@ export function WorkspaceMenuHome({
           );
         })}
       </div>
-      {!visible.length && (
+      {!groups.length && (
         <div className="admin-empty">
-          <h2>Menu tidak ditemukan</h2>
+          <h2>Belum ada menu tersedia</h2>
           <p>
-            {groups.length
-              ? 'Coba kata kunci yang lebih singkat atau tampilkan semua menu.'
-              : 'Belum ada menu yang diizinkan untuk akun ini. Hubungi Admin untuk memeriksa akses.'}
+            Belum ada menu yang diizinkan untuk akun ini. Hubungi Admin untuk memeriksa akses.
           </p>
-          <button type="button" onClick={() => setSearch('')}>
-            Tampilkan semua menu
-          </button>
         </div>
       )}
     </div>

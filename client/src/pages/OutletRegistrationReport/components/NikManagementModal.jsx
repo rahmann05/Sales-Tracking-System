@@ -118,16 +118,16 @@ export const NikManagementModal = ({ isOpen, onClose, customerList = [], onDataU
       onClose={onClose}
       className="wide-modal-dialog"
     >
-      <div className="flex flex-col max-h-[82vh] overflow-hidden rounded-xl border border-border-glass bg-surface">
+      <div className="flex flex-col md:max-h-[82vh] md:overflow-hidden rounded-xl border border-border-glass bg-surface">
         <div className="px-4 py-3 bg-surface border-b border-border-glass flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-base font-black shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base font-black shrink-0">
               <LuIdCard />
             </div>
             <div>
-              <div className="text-xs font-black text-on-surface flex items-center gap-2">
+              <div className="text-xs font-black text-on-surface flex flex-wrap items-center gap-2">
                 <span>Input NIK 16-digit & Ekspor Resmi</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 text-[10px] font-black border border-emerald-500/30">
+                <span className="admin-status admin-status-released">
                   Format Standar IMPORT NIK
                 </span>
               </div>
@@ -145,7 +145,7 @@ export const NikManagementModal = ({ isOpen, onClose, customerList = [], onDataU
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 flex-1 md:overflow-hidden">
           <NikRegistryList
             customerList={customerList}
             filterNikStatus={filterNikStatus}

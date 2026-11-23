@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
 import { InvoiceLinesEditor } from './InvoiceLinesEditor';
 import { deliveryApi } from '../../../services/api';
+const correctionPresets = [
+  'Koreksi nominal faktur sesuai dokumen fisik tercetak',
+  'Penyesuaian pemetaan produk pada faktur pengiriman',
+  'Penyesuaian tarif atau perlakuan pajak faktur',
+];
+
 export function InvoiceCorrectionForm({ packing, onChanged }) {
   const [invoices, setInvoices] = useState(() =>
       packing.invoices.map((i) => ({
         id: i.id,
+        destinationId: i.destinationId,
         invoiceNumber: i.invoiceNumber,
         totalAmount: i.totalAmount ?? '',
         taxIncluded: i.taxIncluded ?? undefined,
@@ -24,7 +31,7 @@ export function InvoiceCorrectionForm({ packing, onChanged }) {
       await deliveryApi.correctInvoiceCommercial(packing.id, {
         revision: packing.revision,
         note,
-        invoices: invoices.map(({ invoiceNumber: ignored, ...i }) => ({
+        invoices: invoices.map(({ invoiceNumber: ignored, destinationId: ignoredDest, ...i }) => ({
           ...i,
           totalAmount: Number(i.totalAmount),
         })),
@@ -66,7 +73,13 @@ export function InvoiceCorrectionForm({ packing, onChanged }) {
             </label>
             <InvoiceLinesEditor
               invoice={invoice}
-              items={packing.items}
+              items={
+                invoice.destinationId
+                  ? (packing.items || []).filter(
+                      (item) => item.destinationId === invoice.destinationId
+                    )
+                  : packing.items
+              }
               orderLinked={!!packing.sourceOrderId || !!packing.sourceOrderIds?.length}
               onChange={(updated) =>
                 setInvoices(invoices.map((v, n) => (n === index ? updated : v)))
@@ -74,6 +87,23 @@ export function InvoiceCorrectionForm({ packing, onChanged }) {
             />
           </div>
         ))}
+        <div className="space-y-1.5">
+          <span className="block text-xs font-semibold text-on-surface-variant">
+            Pilih alasan cepat koreksi:
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {correctionPresets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                onClick={() => setNote(preset)}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="block">
           Alasan koreksi dan referensi dokumen pelanggan
           <textarea
@@ -84,7 +114,7 @@ export function InvoiceCorrectionForm({ packing, onChanged }) {
             onChange={(e) => setNote(e.target.value)}
           />
         </label>
-        <button className="min-h-11 border rounded-xl px-3">
+        <button type="submit" className="min-h-11 border rounded-xl px-3">
           {busy ? 'Menyimpan...' : 'Simpan koreksi dengan riwayat'}
         </button>
       </fieldset>

@@ -15,6 +15,11 @@ export function ClusterWorkspace({ management: m, onEdit, onOutlets }) {
         .includes(query.toLowerCase())
     ),
     current = visible.find((c) => c.id === selected) || visible[0];
+  const currentOutlets = current
+    ? (m.coverageOutlets || []).filter((o) =>
+        o.clusterId ? o.clusterId === current.id : o.clusterName === current.name
+      )
+    : [];
   return (
     <section className="cluster-workspace">
       <div className="planner-intro">
@@ -125,7 +130,7 @@ export function ClusterWorkspace({ management: m, onEdit, onOutlets }) {
             )}
           </div>
         </section>
-        <section className="admin-panel planner-panel-body">
+        <section className="admin-panel planner-panel-body cluster-detail-panel">
           {current ? (
             <>
               <div className="planner-status-line">
@@ -188,6 +193,32 @@ export function ClusterWorkspace({ management: m, onEdit, onOutlets }) {
                   </div>
                 </fieldset>
               )}
+              <div className="cluster-outlet-members">
+                <div className="cluster-outlet-members-head">
+                  <h3>Daftar outlet dalam cluster</h3>
+                  <span>{currentOutlets.length} outlet</span>
+                </div>
+                {currentOutlets.length > 0 ? (
+                  <ol className="cluster-outlet-list">
+                    {currentOutlets.map((outlet, index) => (
+                      <li key={outlet.id}>
+                        <span className="cluster-outlet-index">{index + 1}</span>
+                        <div className="cluster-outlet-meta">
+                          <div className="cluster-outlet-title-row">
+                            <strong>{outlet.name}</strong>
+                            <span className="cluster-outlet-code">
+                              {outlet.outletCode || 'Tanpa kode'}
+                            </span>
+                          </div>
+                          <small>{outlet.address || 'Alamat belum tercatat'}</small>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="app-empty">Belum ada outlet yang tergabung di cluster ini.</p>
+                )}
+              </div>
             </>
           ) : (
             <p className="app-empty">Pilih wilayah untuk melihat rincian dan penugasannya.</p>

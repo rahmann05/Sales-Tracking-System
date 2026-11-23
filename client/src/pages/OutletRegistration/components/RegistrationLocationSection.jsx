@@ -12,12 +12,12 @@ export function RegistrationLocationSection({
 }) {
   return (
     <div className="border border-slate-700/80 rounded-xl overflow-hidden divide-y divide-slate-700/60 bg-surface">
-      <div className="p-2.5 bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+      <div className="p-2.5 bg-surface-container-low flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
-          <LuMapPin className="text-primary" />
+          <LuMapPin className="text-primary shrink-0" />
           <span className="font-black">Lokasi fisik & foto outlet</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 rounded text-[10px] font-black border border-emerald-500/30 flex items-center gap-1">
             <LuLock className="text-[10px]" />{' '}
             {formData.latitude != null && formData.longitude != null
@@ -82,7 +82,7 @@ export function RegistrationLocationSection({
                 alt="Foto Outlet"
                 className="w-full h-full object-contain"
               />
-              <div className="absolute bottom-2 left-2 bg-black/75 text-white font-mono text-[9px] px-2 py-0.5 rounded">
+              <div className="absolute bottom-2 left-2 right-2 max-w-[calc(100%-1rem)] break-words bg-black/75 text-white font-mono text-[9px] px-2 py-0.5 rounded">
                 Koordinat formulir: {formData.latitude ?? '—'}, {formData.longitude ?? '—'}
               </div>
               <button

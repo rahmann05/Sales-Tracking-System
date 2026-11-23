@@ -149,6 +149,13 @@
   .create-cluster-page {
     bottom: calc(72px + env(safe-area-inset-bottom));
   }
+  .create-cluster-page .map-spacer {
+    flex: 0 0 22%;
+    min-height: 80px;
+  }
+  .cluster-panel-header h1 {
+    font-size: 17px;
+  }
   .cluster-panel-header,
   .cluster-panel-footer {
     padding: 12px 16px;
@@ -157,6 +164,18 @@
     padding: 16px;
   }
   .cluster-steps {
-    margin-top: 10px;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .cluster-steps li {
+    font-size: 10px;
+    align-items: center;
+    text-align: center;
+    gap: 3px;
+  }
+  .cluster-steps li span {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
   }
 }

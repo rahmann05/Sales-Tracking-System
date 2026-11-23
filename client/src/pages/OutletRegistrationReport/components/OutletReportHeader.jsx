@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { LuClipboardList, LuFileText, LuSettings, LuCheck, LuIdCard } from 'react-icons/lu';
+import { LuFileText, LuIdCard } from 'react-icons/lu';
 import { configApi } from '../../../services/api';
+import { useApp } from '../../../context/AppContext';
 import { notifyError } from '../../../services/notificationService';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 
+const FALLBACK_DIVISIONS = [
+  { code: 'BELFOODS', name: 'BELFOODS' },
+  { code: 'UNICHARM', name: 'UNICHARM' },
+  { code: 'GENERAL', name: 'GENERAL' },
+];
+
 /**
  * OutletReportHeader Component
- * Single Responsibility: Render Report title, active division parameter manager for Admin, and 5-format export menus.
+ * Single Responsibility: Render Report title, active division selector, and export actions.
  */
 export const OutletReportHeader = ({
   totalCount,
@@ -15,9 +22,13 @@ export const OutletReportHeader = ({
   onExportNd6TXT,
   onOpenNikModal,
 }) => {
+  const { divisions = [] } = useApp();
   const [activeDivision, setActiveDivision] = useState('BELFOODS');
   const [isUpdatingDiv, setIsUpdatingDiv] = useState(false);
   const [divUpdateSuccess, setDivUpdateSuccess] = useState(false);
+
+  const divisionOptions =
+    Array.isArray(divisions) && divisions.length > 0 ? divisions : FALLBACK_DIVISIONS;
 
   useEffect(() => {
     const loadDiv = async () => {
@@ -50,62 +61,62 @@ export const OutletReportHeader = ({
   };
 
   return (
-    <div className="outlet-reg-header-card bg-surface border border-border-glass rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-xs">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div>
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-extrabold flex items-center gap-1.5">
-              <LuClipboardList /> MASTER REGISTRASI OUTLET
-            </span>
-            <span className="px-3 py-1 bg-surface-container rounded-full text-xs font-bold text-on-surface">
-              Total: {totalCount} Outlet
-            </span>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-high rounded-full text-xs border border-border-glass">
-              <LuSettings className="text-primary text-xs" />
-              <span className="text-[11px] font-bold text-on-surface-variant">
-                Divisi Aktif Sistem:
-              </span>
-              <select
-                value={activeDivision}
-                disabled={isUpdatingDiv}
-                onChange={(e) => handleChangeDivision(e.target.value)}
-                className="bg-transparent font-extrabold text-primary text-xs border-none cursor-pointer focus:ring-0 focus:outline-hidden"
-              >
-                <option value="BELFOODS">BELFOODS (BFI)</option>
-                <option value="UNICHARM">UNICHARM</option>
-                <option value="GENERAL">GENERAL FMCG</option>
-              </select>
-              {divUpdateSuccess && <LuCheck className="text-emerald-600 text-xs" />}
-            </div>
-          </div>
-          <h1 className="text-xl md:text-2xl font-black text-on-surface tracking-tight m-0">
+    <div className="outlet-reg-header-card">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-on-surface-variant m-0">
+            Master registrasi outlet · {totalCount} outlet
+          </p>
+          <h1 className="text-xl md:text-2xl font-bold text-on-surface tracking-tight m-0">
             Laporan registrasi outlet
           </h1>
-          <p className="text-xs text-on-surface-variant mt-1 m-0">
+          <p className="text-xs text-on-surface-variant m-0">
             Telusuri status pengajuan toko, cetak formulir, dan ekspor data pelanggan.
           </p>
         </div>
-        {/* Export & NIK Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap lg:justify-end shrink-0">
+
+        <div className="flex items-end gap-2 flex-wrap lg:justify-end shrink-0">
+          <label className="flex flex-col gap-1 text-[11px] font-semibold text-on-surface-variant">
+            <span>
+              Divisi aktif sistem
+              {divUpdateSuccess && (
+                <span className="ml-1.5 text-emerald-700 font-semibold">· Tersimpan</span>
+              )}
+            </span>
+            <select
+              value={activeDivision}
+              disabled={isUpdatingDiv}
+              onChange={(e) => handleChangeDivision(e.target.value)}
+              className="h-9 px-3 rounded-lg bg-surface border border-border-glass text-xs font-semibold text-on-surface cursor-pointer focus:ring-2 focus:ring-primary outline-none"
+            >
+              {divisionOptions.map((div) => (
+                <option key={div.code} value={div.code}>
+                  {div.name || div.code}
+                </option>
+              ))}
+              {!divisionOptions.some((d) => d.code === activeDivision) && (
+                <option value={activeDivision}>{activeDivision}</option>
+              )}
+            </select>
+          </label>
+
           {onOpenNikModal && (
             <button
               type="button"
               onClick={onOpenNikModal}
-              className="h-9 px-3.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+              className="h-9 px-3.5 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
               title="Kelola dan Input NIK 16-Digit Pemilik Toko"
             >
               <LuIdCard className="text-sm" /> <span>Kelola NIK</span>
             </button>
           )}
 
-          {/* 5-Format Master Outlet Export Menu */}
           <ExportFormatMenu
             label="Ekspor Master Outlet"
             exporters={outletExporters}
             disabled={!totalCount}
           />
 
-          {/* 5-Format Official IMPORT NIK Export Menu */}
           <ExportFormatMenu
             label="Ekspor IMPORT NIK"
             exporters={nikExporters}
@@ -116,7 +127,7 @@ export const OutletReportHeader = ({
             <button
               type="button"
               onClick={onExportNd6TXT}
-              className="h-9 px-3 rounded-xl bg-surface hover:bg-surface-container text-on-surface text-xs font-bold flex items-center gap-1.5 border border-border-glass shadow-xs transition-all cursor-pointer whitespace-nowrap"
+              className="h-9 px-3 rounded-lg bg-surface hover:bg-surface-container text-on-surface text-xs font-semibold flex items-center gap-1.5 border border-border-glass transition-colors cursor-pointer whitespace-nowrap"
               title="Ekspor Format Data Stream ND6 (TXT/Pipe)"
             >
               <LuFileText /> <span>ND6 TXT</span>

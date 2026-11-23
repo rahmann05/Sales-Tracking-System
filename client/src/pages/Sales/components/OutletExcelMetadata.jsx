@@ -17,7 +17,7 @@ export const OutletExcelMetadata = ({ stop }) => {
   return (
     <div className="bg-surface-variant/25 border border-border-glass rounded-xl p-3.5 space-y-2.5 text-xs">
       {/* CallplanName & DayOfWeek */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-0.5">
             CallplanName
@@ -40,7 +40,7 @@ export const OutletExcelMetadata = ({ stop }) => {
       </div>
 
       {/* CustomerID & Customer Name */}
-      <div className="grid grid-cols-2 gap-3 border-t border-border-glass/60 pt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-border-glass/60 pt-2">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-0.5">
             CustomerID
@@ -75,19 +75,19 @@ export const OutletExcelMetadata = ({ stop }) => {
       </div>
 
       {/* Latitude & Longitude */}
-      <div className="grid grid-cols-2 gap-3 border-t border-border-glass/60 pt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-border-glass/60 pt-2">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-0.5">
             Latitude
           </span>
-          <span className="font-mono text-on-surface text-[11px]">{stop.latitude}</span>
+          <span className="font-mono text-on-surface text-[11px] break-all">{stop.latitude}</span>
         </div>
 
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-0.5">
             Longitude
           </span>
-          <span className="font-mono text-on-surface text-[11px]">{stop.longitude}</span>
+          <span className="font-mono text-on-surface text-[11px] break-all">{stop.longitude}</span>
         </div>
       </div>
     </div>

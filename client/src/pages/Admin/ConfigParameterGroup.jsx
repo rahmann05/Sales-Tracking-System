@@ -105,7 +105,7 @@ export function ParameterGroup({
                     {param.label}
                   </label>
                   {modified && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                    <span className="admin-status admin-status-pending">
                       Berbeda dari aturan aktif
                     </span>
                   )}

@@ -80,14 +80,18 @@ export function OutletValidationDetail({ review: r, onRefresh, onClose }) {
     <article className="ov-workspace">
       <header className="ov-detail-header">
         <div>
-          <p className="outlet-eyebrow">
-            {o.outletCode || 'Tanpa kode'} · {OUTLET_STAGE_LABELS[r.workflow?.stage || r.status]}
-          </p>
+          <div className="ov-detail-meta">
+            <span className="admin-status admin-status-route">
+              {OUTLET_STAGE_LABELS[r.workflow?.stage || r.status]}
+            </span>
+            <span className="ov-muted">{o.outletCode || 'Tanpa kode'}</span>
+            <span className="ov-muted">·</span>
+            <span className="ov-muted">
+              Diajukan {r.requestedBy?.name} · {stamp(r.createdAt)}
+            </span>
+          </div>
           <h2>{o.name}</h2>
-          <p>{r.reason}</p>
-          <small>
-            Diajukan {r.requestedBy?.name} · {stamp(r.createdAt)}
-          </small>
+          <p className="ov-detail-reason">{r.reason}</p>
         </div>
         <button type="button" className="app-button" disabled={busy} onClick={onClose}>
           ← Kembali ke antrean
@@ -100,31 +104,43 @@ export function OutletValidationDetail({ review: r, onRefresh, onClose }) {
       )}
       {!closed && <OutletValidationAccessNotice permissions={permissions} map={map} />}
       <section className="ov-conclusion">
-        <div>
-          <h3>
-            {OUTLET_RESULT_LABELS[r.workflow?.resultCode] ||
-              (run
-                ? 'Hasil pemeriksaan Google'
-                : closed
-                  ? 'Pemeriksaan selesai'
-                  : 'Belum diperiksa dengan Google')}
-          </h3>
-          {outletIssues(o).map((k) => (
-            <span className="ov-tag" key={k}>
-              {OUTLET_ISSUE_LABELS[k]}
-            </span>
-          ))}
-          {(closed || readiness.canConfirm) && (
+        <div className="ov-conclusion-body">
+          <div className="ov-conclusion-head">
+            <h3>
+              {OUTLET_RESULT_LABELS[r.workflow?.resultCode] ||
+                (run
+                  ? 'Hasil pemeriksaan Google'
+                  : closed
+                    ? 'Pemeriksaan selesai'
+                    : 'Belum diperiksa dengan Google')}
+            </h3>
+            <div className="ov-issue-list">
+              {outletIssues(o).map((k) => (
+                <span className="admin-status admin-status-pending ov-issue-tag" key={k}>
+                  {OUTLET_ISSUE_LABELS[k]}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="ov-master-inline">
+            <strong>Master saat ini:</strong> {o.address || 'Alamat belum tersedia'} ·{' '}
+            <span>{point(o)}</span>
+            {o.cluster?.name ? ` · ${o.cluster.name}` : ''}
+            {o.radiusMeters != null ? ` · radius ${o.radiusMeters} m` : ''}
+          </div>
+          {(closed || readiness.canConfirm) && Boolean(result?.reasons?.length) && (
             <ul>
-              {result?.reasons?.map((s) => (
+              {result.reasons.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
           )}
           {r.workflow?.technical === 'PARTIAL' && (
-            <p>Sebagian langkah Google belum berhasil. Bukti yang tersedia tetap dapat ditinjau.</p>
+            <p className="ov-muted">
+              Sebagian langkah Google belum berhasil. Bukti yang tersedia tetap dapat ditinjau.
+            </p>
           )}
-          <small>
+          <small className="ov-muted">
             {run
               ? `Terakhir diperiksa ${stamp(run.createdAt)}${cacheExpiresAt ? ` · Cache Google tersedia sampai ${stamp(cacheExpiresAt)}` : ''}`
               : 'Google belum diperiksa.'}
@@ -164,49 +180,101 @@ export function OutletValidationDetail({ review: r, onRefresh, onClose }) {
           </div>
         )}
       </section>
-      <GoogleOutletEvidence
-        key={run?.id || 'unexamined'}
-        run={run}
-        outlet={o}
-        disabled={busy || !map.canStart || map.settings.OUTLET_MAP_COMPARISON_ENABLED === false}
-        onSelect={(placeId) => setPreview({ runId: run?.id, placeId })}
-        onRecheck={
-          !closed && permissions.can_run_outlet_review
-            ? (candidatePlaceId) =>
-                act(() =>
-                  outletValidationApi.validateSingle(o.id, {
-                    reviewId: r.id,
-                    revision: r.revision,
-                    hint,
-                    candidatePlaceId,
-                  })
-                )
-            : undefined
-        }
-        fieldPoints={r.fieldTasks?.filter((t) => t.status === 'DONE').map((t) => t.evidence) || []}
-      />
-      {!closed && (
-        <OutletDigitalReadinessNotice
-          readiness={readiness}
-          adminAvailable={adminReadiness.canConfirm}
-        />
-      )}
-      <section className="ov-section">
-        <h3>Master internal saat ini</h3>
-        <p>{o.address || 'Alamat belum tersedia'}</p>
-        <p className="ov-muted">
-          {point(o)} · {o.cluster?.name} · radius {o.radiusMeters} m
-        </p>
-        <p className="ov-muted">
-          Koordinat Google merupakan referensi dengan masa berlaku. Koreksi permanen memakai sumber
-          internal atau lapangan yang dapat ditelusuri.
-        </p>
-      </section>
-      {!closed && (
-        <>
-          <OutletCorrectionProposal review={r} disabled={busy} act={act} digital={digital} />
-          <OutletFieldReview review={r} disabled={busy} act={act} />
-          {permissions.can_apply_outlet_review && (
+
+      <div className="ov-detail-grid">
+        <div className="ov-detail-main">
+          <GoogleOutletEvidence
+            key={run?.id || 'unexamined'}
+            run={run}
+            outlet={o}
+            disabled={busy || !map.canStart || map.settings.OUTLET_MAP_COMPARISON_ENABLED === false}
+            onSelect={(placeId) => setPreview({ runId: run?.id, placeId })}
+            onRecheck={
+              !closed && permissions.can_run_outlet_review
+                ? (candidatePlaceId) =>
+                    act(() =>
+                      outletValidationApi.validateSingle(o.id, {
+                        reviewId: r.id,
+                        revision: r.revision,
+                        hint,
+                        candidatePlaceId,
+                      })
+                    )
+                : undefined
+            }
+            fieldPoints={
+              r.fieldTasks?.filter((t) => t.status === 'DONE').map((t) => t.evidence) || []
+            }
+          />
+          {!closed && (
+            <>
+              <OutletCorrectionProposal review={r} disabled={busy} act={act} digital={digital} />
+              <OutletFieldReview review={r} disabled={busy} act={act} />
+            </>
+          )}
+          {closed && Boolean(r.fieldTasks?.length) && (
+            <OutletFieldReview review={r} disabled readOnly act={act} />
+          )}
+          <details className="ov-section">
+            <summary>PIC, tenggat, dan riwayat pemeriksaan</summary>
+            <div className="ov-history-stack">
+              <OutletReviewAssignment
+                key={r.revision}
+                review={r}
+                onRefresh={onRefresh}
+                disabled={busy || closed}
+              />
+              {r.runs.length > 0 && (
+                <div>
+                  <h4>Riwayat pemeriksaan</h4>
+                  <ol>
+                    {r.runs.map((x) => (
+                      <li key={x.id}>
+                        {stamp(x.createdAt)} ·{' '}
+                        {OUTLET_RESULT_LABELS[x.result?.code] || x.result?.code} · {x.actor?.name}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {Boolean(o.changes?.length) && (
+                <div>
+                  <h4>Perubahan master</h4>
+                  {o.changes.map((c) => (
+                    <p key={c.id}>
+                      {stamp(c.createdAt)} · {c.reason} · {c.actor?.name}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {run?.result?.steps && (
+                <div>
+                  <h4>Langkah pemeriksaan Google dan kondisi layanan</h4>
+                  <ul>
+                    {run.result.steps.map((s, i) => (
+                      <li key={i}>
+                        {s.strategy} · {s.state} {s.error || s.reason || ''}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="ov-muted">
+                    {run.result.calls} panggilan pada pemeriksaan ini. Skor adalah kemiripan, bukan
+                    probabilitas kebenaran.
+                  </p>
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+
+        <aside className="ov-decision-rail" aria-label="Keputusan dan status verifikasi">
+          {!closed && (
+            <OutletDigitalReadinessNotice
+              readiness={readiness}
+              adminAvailable={adminReadiness.canConfirm}
+            />
+          )}
+          {!closed && permissions.can_apply_outlet_review && (
             <OutletReviewDecisionForm
               review={r}
               user={user}
@@ -224,73 +292,33 @@ export function OutletValidationDetail({ review: r, onRefresh, onClose }) {
               setAcknowledged={(value) => setAcknowledgedKey(value ? ackKey : '')}
             />
           )}
-        </>
-      )}
-      {closed && Boolean(r.fieldTasks?.length) && (
-        <OutletFieldReview review={r} disabled readOnly act={act} />
-      )}
-      {r.decision && (
-        <section className="ov-section">
-          <h3>
-            Keputusan terakhir
-            {r.decision.action === 'ADMIN_DIGITAL_KEEP' ? ' · pertimbangan Admin' : ''}
-          </h3>
-          <p>{r.decision.reason || r.decision.note}</p>
-          {r.decision.adminReview && (
-            <details>
-              <summary>Perbedaan yang diterima Admin</summary>
-              <ul>
-                {r.decision.adminReview.warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-              <p>Penilaian awal: {OUTLET_RESULT_LABELS[r.decision.adminReview.originalCode]}</p>
-            </details>
+          {r.decision && (
+            <section className="ov-section">
+              <h3>
+                Keputusan terakhir
+                {r.decision.action === 'ADMIN_DIGITAL_KEEP' ? ' · pertimbangan Admin' : ''}
+              </h3>
+              <p>{r.decision.reason || r.decision.note}</p>
+              {r.decision.adminReview && (
+                <details>
+                  <summary>Perbedaan yang diterima Admin</summary>
+                  <ul>
+                    {r.decision.adminReview.warnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                  <p>
+                    Penilaian awal: {OUTLET_RESULT_LABELS[r.decision.adminReview.originalCode]}
+                  </p>
+                </details>
+              )}
+              <small className="ov-muted">
+                {r.decision.actor?.name} · {stamp(r.decision.at)}
+              </small>
+            </section>
           )}
-          <small>
-            {r.decision.actor?.name} · {stamp(r.decision.at)}
-          </small>
-        </section>
-      )}
-      {run?.result?.steps && (
-        <details className="ov-section">
-          <summary>Langkah pemeriksaan Google dan kondisi layanan</summary>
-          <ul>
-            {run.result.steps.map((s, i) => (
-              <li key={i}>
-                {s.strategy} · {s.state} {s.error || s.reason || ''}
-              </li>
-            ))}
-          </ul>
-          <p className="ov-muted">
-            {run.result.calls} panggilan pada pemeriksaan ini. Skor adalah kemiripan, bukan
-            probabilitas kebenaran.
-          </p>
-        </details>
-      )}
-      <details className="ov-section">
-        <summary>PIC, tenggat, dan riwayat pemeriksaan</summary>
-        <OutletReviewAssignment
-          key={r.revision}
-          review={r}
-          onRefresh={onRefresh}
-          disabled={busy || closed}
-        />
-        <ol>
-          {r.runs.map((x) => (
-            <li key={x.id}>
-              {stamp(x.createdAt)} · {OUTLET_RESULT_LABELS[x.result?.code] || x.result?.code} ·{' '}
-              {x.actor?.name}
-            </li>
-          ))}
-        </ol>
-        <h4>Perubahan master</h4>
-        {o.changes?.map((c) => (
-          <p key={c.id}>
-            {stamp(c.createdAt)} · {c.reason} · {c.actor?.name}
-          </p>
-        ))}
-      </details>
+        </aside>
+      </div>
     </article>
   );
 }

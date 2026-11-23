@@ -41,6 +41,7 @@ export const DriverStopCard = ({
   onMarkDelivered,
   onMarkRejected,
   disabled = false,
+  disabledReason = '',
   policy = {},
 }) => {
   const statusCfg = STATUS_MAP[stop.status] || {
@@ -102,9 +103,9 @@ export const DriverStopCard = ({
 
       {/* Packing List Info */}
       <div className="px-4 pb-3 space-y-2">
-        <div className="flex items-center gap-2 text-xs bg-surface-variant/20 p-2.5 rounded-xl border border-border-glass">
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs bg-surface-variant/20 p-2.5 rounded-xl border border-border-glass">
           <LuPackage className="text-primary text-sm shrink-0" />
-          <span className="font-bold text-on-surface">{stop.packingList?.code}</span>
+          <span className="font-bold text-on-surface break-words">{stop.packingList?.code}</span>
           <span className="text-on-surface-variant">
             — {stop.allocatedCartons ?? stop.packingList?.totalCartons ?? 0} Karton
           </span>
@@ -114,20 +115,20 @@ export const DriverStopCard = ({
           const item = stop.packingList?.items?.find((p) => p.lineId === i.lineId);
           return (
             <p key={i.lineId} className="text-sm">
-              {item?.name || i.lineId}: {i.quantity} {unitDescription(item)}
+              {item?.name || 'Item muatan'}: {i.quantity} {unitDescription(item)}
             </p>
           );
         })}
         {/* Invoice List */}
         {invoices.length > 0 && (
-          <div className="pl-4 space-y-1">
+          <div className="pl-2 md:pl-4 space-y-1">
             {invoices.map((inv, idx) => (
               <div
                 key={inv.id || idx}
-                className="flex items-center gap-2 text-xs text-on-surface-variant"
+                className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs text-on-surface-variant"
               >
                 <LuFileText className="shrink-0" />
-                <span className="font-semibold text-on-surface">{inv.invoiceNumber}</span>
+                <span className="font-semibold text-on-surface break-words">{inv.invoiceNumber}</span>
                 <span>
                   {stop.allocatedInvoices?.find((i) => i.invoiceId === inv.id)?.cartons ??
                     inv.totalCartons}{' '}
@@ -168,35 +169,43 @@ export const DriverStopCard = ({
               rel="noopener noreferrer"
               className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 text-sm font-bold transition-all shadow-xs"
             >
-              <LuNavigation className="text-base" /> Navigasi ke Toko
+              <LuNavigation className="text-base shrink-0" /> Navigasi ke Toko
             </a>
           )}
 
+          {disabled && disabledReason && (
+            <p role="status" className="admin-feedback warning">
+              {disabledReason}
+            </p>
+          )}
           {!hasArrived ? (
             /* Absen In button (min 48px) */
             <button
+              type="button"
               onClick={onAbsenIn}
               disabled={disabled}
-              className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-primary text-on-primary text-sm font-black shadow-md hover:bg-primary/90 transition-all cursor-pointer"
+              className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-primary text-on-primary text-sm font-black shadow-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
-              <LuCamera className="text-base" /> Absen Sampai di Toko
+              <LuCamera className="text-base shrink-0" /> Absen Sampai di Toko
             </button>
           ) : (
             /* Mark Delivered / Rejected buttons (min 48px each) */
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               <button
+                type="button"
                 onClick={onMarkDelivered}
                 disabled={disabled}
-                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-black shadow-md hover:bg-emerald-700 transition-all cursor-pointer"
+                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-black shadow-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
-                <LuCircleCheck className="text-base" /> Diterima penuh
+                <LuCircleCheck className="text-base shrink-0" /> Diterima penuh
               </button>
               <button
+                type="button"
                 onClick={onMarkRejected}
                 disabled={disabled}
-                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-600 text-white text-sm font-black shadow-md hover:bg-rose-700 transition-all cursor-pointer"
+                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-600 text-white text-sm font-black shadow-md hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
-                <LuCircleX className="text-base" /> Penolakan / sebagian
+                <LuCircleX className="text-base shrink-0" /> Penolakan / sebagian
               </button>
             </div>
           )}

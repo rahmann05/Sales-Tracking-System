@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { request } from '../../../services/httpClient';
 import { useApp } from '../../../context/AppContext';
+
 export function AttentionEscalations() {
   const { user } = useApp();
   const allowed = user?.role === 'ADMIN';
@@ -11,6 +12,7 @@ export function AttentionEscalations() {
     [error, setError] = useState('');
   const revision = useRef(0);
   const scope = `${user?.id}:${page}:${unread}`;
+
   const load = useCallback(async () => {
     if (!allowed) return;
     const version = ++revision.current;
@@ -27,6 +29,7 @@ export function AttentionEscalations() {
       if (version === revision.current) setBusy(false);
     }
   }, [allowed, page, unread, scope]);
+
   useEffect(() => {
     setData(null);
     if (!allowed) return;
@@ -39,7 +42,9 @@ export function AttentionEscalations() {
       window.removeEventListener('focus', load);
     };
   }, [allowed, load]);
+
   if (!allowed) return null;
+
   const read = async (id) => {
     setBusy(true);
     setError('');
@@ -53,23 +58,26 @@ export function AttentionEscalations() {
       setBusy(false);
     }
   };
+
   const current = data?.scope === scope;
+
   return (
-    <details className="border rounded-xl p-4 admin-escalations">
-      <summary className="font-semibold cursor-pointer min-h-11">
-        Eskalasi SLA · {current ? data.unreadCount : '—'} belum dibaca
-      </summary>
-      <div className="space-y-3">
-        <p className="text-xs">
-          Pemberitahuan berdasarkan status saat pemindaian. Membaca notifikasi tidak menyelesaikan
-          pekerjaan; periksa antrean untuk status terbaru. Diperbarui setiap menit saat panel
-          terbuka.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <label>
-            Tampilkan
+    <section className="work-escalations" aria-label="Eskalasi SLA">
+      <div className="work-escalations-head">
+        <div className="work-escalations-title">
+          <h3>Eskalasi SLA</h3>
+          <span
+            className={
+              current && data.unreadCount > 0 ? 'admin-status admin-status-pending' : 'admin-status'
+            }
+          >
+            {current ? `${data.unreadCount} belum dibaca` : 'Memuat status…'}
+          </span>
+        </div>
+        <div className="work-escalations-controls">
+          <label className="app-field">
+            <span>Tampilkan</span>
             <select
-              className="form-input block"
               value={unread ? 'UNREAD' : 'ALL'}
               onChange={(event) => {
                 setUnread(event.target.value === 'UNREAD');
@@ -80,67 +88,80 @@ export function AttentionEscalations() {
               <option value="ALL">Semua riwayat</option>
             </select>
           </label>
-          <button
-            type="button"
-            className="btn btn-secondary min-h-11"
-            disabled={busy}
-            onClick={load}
-          >
-            Perbarui eskalasi
+          <button type="button" className="app-button" disabled={busy} onClick={load}>
+            {busy ? 'Memuat…' : 'Perbarui eskalasi'}
           </button>
         </div>
-        {busy && <p role="status">Memuat eskalasi…</p>}
-        {error && (
-          <p role="alert" className="text-red-600">
-            {error}
-          </p>
-        )}
-        {current &&
-          !error &&
-          data.items.map((item) => (
-            <article key={item.id} className="border-t pt-2 space-y-2">
-              <strong>{item.title}</strong>
-              <p className="text-sm">{item.message}</p>
-              <p className="text-xs">
-                {new Date(item.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
-              </p>
+      </div>
+
+      <p className="work-escalations-note">
+        Pemberitahuan berdasarkan status saat pemindaian. Membaca notifikasi tidak menyelesaikan
+        pekerjaan; periksa antrean untuk status terbaru. Diperbarui setiap menit saat panel terbuka.
+      </p>
+
+      {busy && !current && (
+        <p role="status" className="work-escalations-status">
+          Memuat eskalasi…
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="app-error">
+          {error}
+        </p>
+      )}
+
+      {current && !error && data.items.length > 0 && (
+        <ul className="work-escalations-list">
+          {data.items.map((item) => (
+            <li key={item.id} className="work-escalations-item">
+              <div className="work-escalations-item-body">
+                <strong>{item.title}</strong>
+                <p>{item.message}</p>
+                <small>
+                  {new Date(item.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}{' '}
+                  WIB
+                </small>
+              </div>
               {!item.isRead && (
                 <button
                   type="button"
-                  className="btn btn-secondary min-h-11"
+                  className="app-button"
                   disabled={busy}
                   onClick={() => read(item.id)}
                 >
                   Tandai dibaca
                 </button>
               )}
-            </article>
+            </li>
           ))}
-        {current && !busy && !error && !data.items.length && (
-          <p>Tidak ada eskalasi sesuai filter.</p>
-        )}
-        <nav className="flex items-center gap-2" aria-label="Halaman eskalasi">
+        </ul>
+      )}
+
+      {current && !busy && !error && !data.items.length && (
+        <p className="app-empty">Tidak ada eskalasi sesuai filter.</p>
+      )}
+
+      <footer className="admin-pagination" aria-label="Halaman eskalasi">
+        <span>
+          Halaman {page} · {current ? data.total : '—'} pemberitahuan
+        </span>
+        <div>
           <button
             type="button"
-            className="btn btn-secondary min-h-11"
             disabled={busy || page === 1}
             onClick={() => setPage((value) => value - 1)}
           >
             Sebelumnya
           </button>
-          <span>
-            Halaman {page} · {current ? data.total : '—'} pemberitahuan
-          </span>
           <button
             type="button"
-            className="btn btn-secondary min-h-11"
             disabled={busy || !current || page * data.limit >= data.total}
             onClick={() => setPage((value) => value + 1)}
           >
             Berikutnya
           </button>
-        </nav>
-      </div>
-    </details>
+        </div>
+      </footer>
+    </section>
   );
 }

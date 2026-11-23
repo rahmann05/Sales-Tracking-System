@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { getAdminNavigationGroups } from '../../constants/adminNavigation';
-import { LuArrowUpRight, LuSearch } from 'react-icons/lu';
+import { LuArrowUpRight } from 'react-icons/lu';
 import '../../styles/pages/AdminNavigation.css';
 export function AdminLandingPage() {
   const { user, setActiveTab } = useApp();
-  const [search, setSearch] = useState('');
-  const query = search.trim().toLocaleLowerCase('id-ID');
-  const groups = getAdminNavigationGroups(user).filter((group) =>
-    `${group.label} ${group.description} ${group.items.map((item) => item.label).join(' ')}`
-      .toLocaleLowerCase('id-ID')
-      .includes(query)
-  );
+  const groups = getAdminNavigationGroups(user);
   return (
     <div className="page-container admin-home">
       <header className="admin-home-heading">
@@ -20,16 +14,6 @@ export function AdminLandingPage() {
           <h1>Ruang kerja Anda.</h1>
           <p>Pilih pekerjaan yang ingin Anda selesaikan.</p>
         </div>
-        <label className="admin-search">
-          <LuSearch aria-hidden="true" />
-          <input
-            type="search"
-            aria-label="Cari menu admin"
-            placeholder="Cari menu atau fitur…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </label>
       </header>
       <div className="admin-home-section">
         <h2>Menu admin</h2>
@@ -66,11 +50,8 @@ export function AdminLandingPage() {
       </div>
       {!groups.length && (
         <div className="admin-empty">
-          <h2>Menu tidak ditemukan</h2>
-          <p>Coba kata lain seperti order, outlet, atau pengguna.</p>
-          <button type="button" onClick={() => setSearch('')}>
-            Tampilkan semua menu
-          </button>
+          <h2>Belum ada menu tersedia</h2>
+          <p>Belum ada menu yang diizinkan untuk akun ini.</p>
         </div>
       )}
     </div>

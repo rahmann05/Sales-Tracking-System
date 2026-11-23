@@ -294,9 +294,17 @@ main {
   .workspace-card {
     padding: 16px;
   }
+  .workspace-route-list .workspace-card > div {
+    min-width: 0;
+    flex: 1;
+  }
+  .followup-panel {
+    padding: 12px;
+    min-width: 0;
+  }
   .app-dialog {
     width: calc(100vw - 24px);
-    max-height: calc(100dvh - 24px - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     border-radius: 16px;
   }
   .app-dialog-body {
@@ -314,8 +322,9 @@ main {
   .bottom-nav-container {
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
-  main {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  #main-content {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -339,7 +348,7 @@ main {
   .bottom-nav-label {
     font-size: 0.6875rem !important;
   }
-  .mobile-card-table tbody td::before {
+  .mobile-card-table :is(tbody, tfoot) :is(td, th[scope='row'])[data-label]::before {
     font-size: 0.75rem;
     text-transform: none;
     letter-spacing: 0;
@@ -448,8 +457,7 @@ main {
   gap: 8px;
   padding: 12px 16px;
   border: 1px solid var(--border-glass);
-  border-left: 3px solid #a1a1aa;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--surface-container-low);
 }
 .followup-panel h3 {
@@ -545,7 +553,9 @@ main {
   }
   .mobile-header-container > div:first-child {
     gap: 4px;
-    max-width: 86px;
+    flex: 1;
+    min-width: 0;
+    max-width: none;
   }
   .mobile-header-container .mobile-brand-icon {
     display: none;

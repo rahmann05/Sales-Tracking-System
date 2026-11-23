@@ -117,7 +117,13 @@ try {
   const repeated = await visit({ action: 'AUDIT', checklist: { display: false } });
   eq(repeated.followUp.revision, 1);
   eq(repeated.followUp.history.length, 1);
-  const sent = await completeFollowUp(activity.id, sales, 'Pajangan selesai diperbaiki');
+  const sent = await completeFollowUp(activity.id, sales, {
+    note: 'Pajangan selesai diperbaiki',
+    photoUrl:
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    latitude: -6.9,
+    longitude: 107.6,
+  });
   eq(sent.followUp.status, 'SUBMITTED');
   await reject(
     () =>

@@ -15,6 +15,17 @@ import {
 import { useApp } from '../../../context/AppContext';
 import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
 
+const FILTER_OPTIONS = [
+  { key: 'ALL', label: 'Semua Kunjungan', icon: null },
+  { key: 'EFFECTIVE_CALL', label: 'Effective Call (EC)', icon: LuCheck },
+  { key: 'NON_EFFECTIVE_CALL', label: 'Non-EC (Tanpa Order)', icon: null },
+  { key: 'EXTRA_CALL', label: 'Extra Call', icon: LuPlus },
+  { key: 'SKIPPED', label: 'Terlewat', icon: LuHourglass },
+  { key: 'ANOMALY_TRAVEL', label: 'Jeda Travel Janggal', icon: LuTriangleAlert },
+  { key: 'ANOMALY_DURATION', label: 'Di bawah batas durasi', icon: LuClock },
+  { key: 'ALL_ANOMALIES', label: 'Semua Anomali', icon: LuShieldAlert },
+];
+
 /**
  * DailyCallFilterBar Component
  * Single Responsibility: Filter controls for Date, Salesman, Status Type, Keyword Search, and Export action.
@@ -39,23 +50,13 @@ export const DailyCallFilterBar = ({
 }) => {
   const { user, settings } = useApp(),
     canExport = reportExportAllowed(user, settings);
-  const filterOptions = [
-    { key: 'ALL', label: 'Semua Kunjungan', icon: null },
-    { key: 'EFFECTIVE_CALL', label: 'Effective Call (EC)', icon: LuCheck },
-    { key: 'NON_EFFECTIVE_CALL', label: 'Non-EC (Tanpa Order)', icon: null },
-    { key: 'EXTRA_CALL', label: 'Extra Call', icon: LuPlus },
-    { key: 'SKIPPED', label: 'Terlewat', icon: LuHourglass },
-    { key: 'ANOMALY_TRAVEL', label: 'Jeda Travel Janggal', icon: LuTriangleAlert },
-    { key: 'ANOMALY_DURATION', label: 'Di bawah batas durasi', icon: LuClock },
-    { key: 'ALL_ANOMALIES', label: 'Semua Anomali', icon: LuShieldAlert },
-  ];
 
   return (
     <div
       className={
         embedded
-          ? 'p-4 sm:p-5 border-b border-border-glass bg-surface space-y-3'
-          : 'bg-surface border border-border-glass rounded-2xl p-4 shadow-sm space-y-3'
+          ? 'p-4 sm:p-5 border-b border-border-glass bg-surface-container/25 space-y-3'
+          : 'bg-surface border border-border-glass rounded-xl p-4 space-y-3'
       }
     >
       {/* Top Filter Controls: Date, Salesman, Search, Actions */}
@@ -73,7 +74,7 @@ export const DailyCallFilterBar = ({
               type="date"
               value={date}
               onChange={(e) => onChangeDate(e.target.value)}
-              className="w-full pl-9 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-9 pr-3 h-10 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             />
           </div>
         </div>
@@ -88,7 +89,7 @@ export const DailyCallFilterBar = ({
             <select
               value={salesmanId}
               onChange={(e) => onChangeSalesman(e.target.value)}
-              className="w-full pl-9 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-9 pr-3 h-10 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             >
               <option value="">Semua Salesman (Tim)</option>
               {salesTeam.map((sales) => (
@@ -113,7 +114,7 @@ export const DailyCallFilterBar = ({
               placeholder="Ketik nama toko / kode customer..."
               value={search}
               onChange={(e) => onChangeSearch(e.target.value)}
-              className="w-full pl-9 pr-3 h-10 bg-surface-container rounded-xl text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-9 pr-3 h-10 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             />
           </div>
         </div>
@@ -125,7 +126,7 @@ export const DailyCallFilterBar = ({
               type="button"
               onClick={onRefresh}
               disabled={isLoading}
-              className="h-10 w-10 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 shadow-xs"
+              className="h-10 w-10 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-lg text-xs font-semibold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
               title="Refresh Data"
             >
               <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
@@ -135,7 +136,7 @@ export const DailyCallFilterBar = ({
               type="button"
               onClick={onExport}
               disabled={!canExport || isLoading}
-              className="flex-1 h-10 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
+              className="flex-1 h-10 px-3 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Ekspor Laporan Format Excel ND6"
             >
               <LuDownload /> Excel
@@ -145,7 +146,7 @@ export const DailyCallFilterBar = ({
               type="button"
               onClick={onOpenPdf}
               disabled={!canExport || isLoading}
-              className="flex-1 h-10 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
+              className="flex-1 h-10 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / PDF Resmi"
             >
               <LuPrinter /> Cetak PDF
@@ -157,17 +158,17 @@ export const DailyCallFilterBar = ({
       {/* Bottom Filter Pills */}
       {showStatusPills && (
         <div className="flex items-center gap-1.5 pt-1 w-full overflow-x-auto pb-1 no-scrollbar">
-          {filterOptions.map((opt) => {
+          {FILTER_OPTIONS.map((opt) => {
             const Icon = opt.icon;
             return (
               <button
                 key={opt.key}
                 type="button"
                 onClick={() => onSelectFilter(opt.key)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap border ${
                   filterType === opt.key
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant border border-border-glass'
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface hover:bg-surface-container text-on-surface-variant border-border-glass'
                 }`}
               >
                 {Icon && <Icon className="text-xs shrink-0" />}

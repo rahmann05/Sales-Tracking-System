@@ -96,7 +96,7 @@ export const NotificationCenterDropdown = () => {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl border border-border-glass bg-surface text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all cursor-pointer pointer-events-auto"
+        className="relative p-2 rounded-xl border border-border-glass bg-surface text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-all cursor-pointer pointer-events-auto min-w-[44px] min-h-[44px] flex items-center justify-center md:min-w-0 md:min-h-0"
         aria-label="Buka Notifikasi"
       >
         <LuBell className="text-lg sm:text-xl" />
@@ -136,7 +136,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center md:min-w-0 md:min-h-0"
                 aria-label="Tutup Panel"
               >
                 <LuX className="text-base" />
@@ -192,7 +192,7 @@ export const NotificationCenterDropdown = () => {
             </div>
 
             {/* Action Row */}
-            <div className="flex items-center justify-between text-[11px] font-bold px-1 text-on-surface-variant shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold px-1 text-on-surface-variant shrink-0">
               <button
                 type="button"
                 onClick={handleMarkAllRead}

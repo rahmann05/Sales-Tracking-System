@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useOperationRequest } from '../../../shared/hooks/useOperationRequest';
 import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
@@ -11,6 +11,39 @@ import {
   issueForOwner,
 } from '../../../../../shared/operational-issues.mjs';
 import { responsibleLabels } from '../../../../../shared/operational-attention.mjs';
+
+const issueReportPresets = [
+  {
+    label: 'Barang kurang / selisih',
+    title: 'Selisih jumlah barang',
+    reason: 'Jumlah fisik barang tidak sesuai dengan daftar muatan atau dokumen.',
+    kind: 'GOODS',
+  },
+  {
+    label: 'Kemasan / barang rusak',
+    title: 'Kerusakan barang / kemasan',
+    reason: 'Ditemukan barang atau kemasan dalam kondisi rusak dan perlu pemeriksaan.',
+    kind: 'GOODS',
+  },
+  {
+    label: 'Kendala armada / akses',
+    title: 'Kendala kendaraan atau akses tujuan',
+    reason: 'Perjalanan atau pengiriman terkendala armada maupun akses menuju lokasi toko.',
+    kind: 'GOODS',
+  },
+  {
+    label: 'Masalah dokumen / faktur',
+    title: 'Perbedaan data order atau faktur',
+    reason: 'Data alamat, jumlah order, atau faktur perlu pemeriksaan ulang admin.',
+    kind: 'CONTEXT',
+  },
+];
+
+const resolutionPresets = [
+  'Fisik dan alokasi barang sudah disesuaikan bersama gudang',
+  'Toko sudah dikonfirmasi dan pengiriman dapat dilanjutkan',
+  'Barang dikembalikan ke gudang dan dicatat di pemeriksaan retur',
+];
 const stamp = (value) =>
   value
     ? new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB'
@@ -37,10 +70,12 @@ export function OperationalIssues({
   issues: initialIssues,
   people: initialPeople = [],
   reference,
+  driverView = false,
   onChanged = () => {},
 }) {
   const { user } = useApp(),
-    request = useOperationRequest(`issue:${JSON.stringify(reference || {})}`);
+    request = useOperationRequest(`issue:${JSON.stringify(reference || {})}`),
+    errorRef = useRef(null);
   const [loaded, setLoaded] = useState(null),
     [adding, setAdding] = useState(false),
     [busy, setBusy] = useState(false),
@@ -69,7 +104,18 @@ export function OperationalIssues({
     reload();
   }, [reload]);
   const issues = loaded?.issues || initialIssues || [],
+    visibleIssues = driverView
+      ? issues.filter(
+          (issue) =>
+            !issueIndependent(issue) ||
+            issue.createdById === user.id ||
+            canHandleIssue(user, issue)
+        )
+      : issues,
     people = loaded?.people || initialPeople;
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
   const canReport = reference && canDomainAction(user, 'REPORT_OPERATIONAL_ISSUE');
   const recipientRole = issueResponsibleRole(reference || {}, kind);
   const canAssign = ['ADMIN', 'KEPALA_GUDANG', 'SUPERVISOR'].includes(user?.role);
@@ -113,9 +159,9 @@ export function OperationalIssues({
   };
   return (
     <section className="space-y-3 work-issues" aria-label="Masalah dan keluhan">
-      <div className="flex justify-between gap-3 items-center">
+      <div className="flex flex-wrap justify-between gap-3 items-center">
         <h3 className="font-semibold">
-          Masalah / keluhan {issues.length > 0 && `(${issues.length})`}
+          Masalah / keluhan {visibleIssues.length > 0 && `(${visibleIssues.length})`}
         </h3>
         {canReport && (
           <button
@@ -128,14 +174,14 @@ export function OperationalIssues({
           </button>
         )}
       </div>
-      {reference && !issues.length && !adding && (
+      {reference && !visibleIssues.length && !adding && (
         <p className="admin-footnote">
           Tidak ada masalah tercatat. Buka bagian ini hanya bila ada kendala; transaksi biasa dapat
           langsung dilanjutkan.
         </p>
       )}
       {error && (
-        <p role="alert" className="admin-feedback error">
+        <p ref={errorRef} tabIndex={-1} role="alert" className="admin-feedback error">
           {error}
         </p>
       )}
@@ -184,6 +230,27 @@ export function OperationalIssues({
                 </select>
               </label>
             )}
+            <div className="space-y-1.5">
+              <span className="block text-xs font-semibold text-on-surface-variant">
+                Pilih jenis kendala umum (opsional):
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {issueReportPresets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                    onClick={() => {
+                      setTitle(preset.title);
+                      setReason(preset.reason);
+                      if (reference?.orderId || reference?.salesVisitId) setKind(preset.kind);
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <label className="block">
               Masalah
               <input
@@ -250,7 +317,7 @@ export function OperationalIssues({
           </fieldset>
         </form>
       )}
-      {issues.map((issue) => {
+      {visibleIssues.map((issue) => {
         const evidence = (issue.history || []).find((item) =>
             ['LOCATION_DISCREPANCY', 'TRIP_ENDPOINT_DISCREPANCY'].includes(item.action)
           ),
@@ -451,6 +518,25 @@ export function OperationalIssues({
                       </select>
                     </label>
                   )}
+                  {editing.action === 'RESOLVE' && !independent && !driverView && (
+                    <div className="space-y-1.5">
+                      <span className="block text-xs font-semibold text-on-surface-variant">
+                        Pilih ringkasan penyelesaian:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {resolutionPresets.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                            onClick={() => setNote(preset)}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <label className="block">
                     {editing.action === 'RESOLVE'
                       ? 'Apa yang sudah dilakukan dan hasilnya'
@@ -464,7 +550,7 @@ export function OperationalIssues({
                       onChange={(e) => setNote(e.target.value)}
                     />
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button className="admin-button primary" type="submit">
                       {busy ? 'Menyimpan…' : actions[editing.action]}
                     </button>

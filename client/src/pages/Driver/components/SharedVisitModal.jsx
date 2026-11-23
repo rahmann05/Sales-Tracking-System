@@ -1,16 +1,39 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useApp } from '../../../context/AppContext';
 import { GuardedDialog } from '../../../shared/components/common/GuardedDialog';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
 import { DeliveryReceiptInput } from './DeliveryReceiptInput';
 import { useDriverEvidenceDraft } from '../useDriverEvidenceDraft';
 import { deliveryReceiptError } from '../../../../../shared/delivery-receipt.mjs';
-export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }) {
+import { processPolicyValues } from '../../../../../shared/process-policy.mjs';
+import { outletOperationalPoint } from '../../../../../shared/outlet-location.mjs';
+import {
+  DRIVER_REJECT_REASON_PRESETS,
+  stopDestinationOutlet,
+  validatePartialReject,
+} from '../../../../../shared/driver-workspace.mjs';
+export function SharedVisitModal({
+  stops,
+  primaryStopId,
+  type,
+  policy = {},
+  onClose,
+  onSubmit,
+}) {
   const first = stops[0],
+    point = outletOperationalPoint(stopDestinationOutlet(first)),
+    { settings: runtime } = useApp(),
+    settings = processPolicyValues(Object.keys(policy).length ? { values: policy } : null, runtime),
+    errorRef = useRef(null),
     draft = useDriverEvidenceDraft(first, `shared-${type}`, onSubmit, onClose);
   const values = draft.value,
     results = values.sharedResults || {},
     arrival = type === 'absen_in',
-    logical = !arrival && policy.DELIVERY_ATTENDANCE_MODE !== 'IN_OUT';
+    logical = !arrival && settings.DELIVERY_ATTENDANCE_MODE !== 'IN_OUT',
+    targetId = primaryStopId || first.id,
+    defaultStatus = (stop) =>
+      type === 'rejected' && stop.id === targetId ? 'REJECTED' : 'DELIVERED',
+    hasAccepted = stops.some((stop) => (results[stop.id]?.status || defaultStatus(stop)) !== 'REJECTED');
   const setResult = (id, patch) =>
     draft.setValue((current) => ({
       ...current,
@@ -19,37 +42,86 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
         [id]: { ...current.sharedResults?.[id], ...patch },
       },
     }));
+  const failValidation = (message) => {
+    draft.setError(message);
+    queueMicrotask(() => errorRef.current?.focus());
+  };
   const save = async (event) => {
     event.preventDefault();
     if (values.pending) {
       await draft.send(values.pending);
       return;
     }
-    if (policy.DELIVERY_REQUIRE_PHOTO !== false && !values.photo) {
-      draft.setError('Foto kunjungan wajib diambil.');
+    if (settings.DELIVERY_REQUIRE_PHOTO !== false && !values.photo) {
+      failValidation('Foto kunjungan wajib diambil.');
       return;
     }
     if (
       !logical &&
-      policy.DELIVERY_REQUIRE_GPS !== false &&
+      settings.DELIVERY_REQUIRE_GPS !== false &&
       (!Number.isFinite(values.gps?.lat) || !Number.isFinite(values.gps?.lng))
     ) {
-      draft.setError('Ambil bukti dengan GPS aktif.');
+      failValidation('Ambil bukti dengan GPS aktif.');
       return;
     }
     const rows = [];
     for (const stop of stops) {
       const row = results[stop.id] || {},
-        status = row.status || (type === 'rejected' ? 'REJECTED' : 'DELIVERED');
+        status = row.status || defaultStatus(stop),
+        invoices = stop.allocatedInvoices || [],
+        items = stop.allocatedItems || [],
+        rejectedCartons =
+          status === 'REJECTED'
+            ? stop.allocatedCartons
+            : status === 'DELIVERED'
+              ? 0
+              : Number(row.cartons),
+        rejectedItemsList = Object.entries(row.items || {})
+          .filter(([, q]) => Number(q) > 0)
+          .map(([lineId, q]) => ({ lineId, quantity: Number(q) })),
+        invoiceMap =
+          status === 'PARTIAL_REJECT' && invoices.length === 1
+            ? { [invoices[0].invoiceId]: Number(row.cartons) || 0 }
+            : row.invoices || {},
+        rejectedInvoicesList = Object.entries(invoiceMap)
+          .filter(([, q]) => Number(q) > 0)
+          .map(([invoiceId, q]) => ({ invoiceId, cartons: Number(q) }));
+      const receipt =
+        !arrival && status !== 'REJECTED'
+          ? {
+              recipientName:
+                settings.DELIVERY_RECIPIENT_MODE === 'DISABLED' ? undefined : values.recipientName,
+              signatureDataUrl:
+                settings.DELIVERY_SIGNATURE_MODE === 'DISABLED'
+                  ? undefined
+                  : values.signatureDataUrl,
+            }
+          : {};
       if (!arrival) {
-        const receiptError = deliveryReceiptError(status, values, policy);
-        if (receiptError) {
-          draft.setError(receiptError);
-          return;
+        if (status !== 'REJECTED') {
+          const receiptError = deliveryReceiptError(status, receipt, settings);
+          if (receiptError) {
+            failValidation(receiptError);
+            return;
+          }
         }
         if (status !== 'DELIVERED' && !row.reason?.trim()) {
-          draft.setError(`Isi alasan untuk ${stop.packingList?.code}.`);
+          failValidation(`Isi alasan untuk ${stop.packingList?.code}.`);
           return;
+        }
+        if (status === 'PARTIAL_REJECT') {
+          const partialError = validatePartialReject({
+            allocatedCartons: stop.allocatedCartons,
+            allocatedItems: items,
+            allocatedInvoices: invoices,
+            rejectedCartons,
+            rejectedItems: rejectedItemsList,
+            rejectedInvoices: rejectedInvoicesList,
+          });
+          if (partialError) {
+            failValidation(`${stop.packingList?.code}: ${partialError}`);
+            return;
+          }
         }
       }
       rows.push({
@@ -57,26 +129,12 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
         ...(!arrival
           ? {
               result: {
+                ...receipt,
                 status,
-                rejectReason: row.reason || '',
-                rejectedCartons:
-                  status === 'REJECTED'
-                    ? stop.allocatedCartons
-                    : status === 'DELIVERED'
-                      ? 0
-                      : Number(row.cartons),
-                rejectedItems: Object.entries(row.items || {})
-                  .filter(([, q]) => Number(q) > 0)
-                  .map(([lineId, q]) => ({ lineId, quantity: Number(q) })),
-                rejectedInvoices: Object.entries(row.invoices || {})
-                  .filter(([, q]) => Number(q) > 0)
-                  .map(([invoiceId, q]) => ({ invoiceId, cartons: Number(q) })),
-                recipientName:
-                  policy.DELIVERY_RECIPIENT_MODE === 'DISABLED' ? undefined : values.recipientName,
-                signatureDataUrl:
-                  policy.DELIVERY_SIGNATURE_MODE === 'DISABLED'
-                    ? undefined
-                    : values.signatureDataUrl,
+                rejectReason: (row.reason || '').trim(),
+                rejectedCartons,
+                rejectedItems: status === 'PARTIAL_REJECT' ? rejectedItemsList : [],
+                rejectedInvoices: status === 'PARTIAL_REJECT' ? rejectedInvoicesList : [],
               },
             }
           : {}),
@@ -104,7 +162,7 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
       onClose={onClose}
       className="logistics-dialog"
     >
-      <form className="p-5 space-y-4" onSubmit={save}>
+      <form className="p-5 space-y-4" noValidate onSubmit={save}>
         <div className="work-step-intro">
           <strong>
             {first.outlet?.name} · {stops.length} dokumen
@@ -125,20 +183,30 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
         )}
         <fieldset disabled={draft.busy || !!values.pending} className="space-y-4">
           <DeviceCameraCapture
-            policyValues={policy}
-            photoRequired={policy.DELIVERY_REQUIRE_PHOTO !== false}
+            policyValues={settings}
+            photoRequired={settings.DELIVERY_REQUIRE_PHOTO !== false}
             capturedPhoto={values.photo}
             onCapture={(photo, gps) => draft.setValue((current) => ({ ...current, photo, gps }))}
             onRetake={() => draft.setValue((current) => ({ ...current, photo: null, gps: null }))}
-            requireGps={!logical && policy.DELIVERY_REQUIRE_GPS !== false}
+            requireGps={!logical && settings.DELIVERY_REQUIRE_GPS !== false}
             onLocationChange={
-              policy.DELIVERY_REQUIRE_PHOTO === false ? draft.field('gps') : undefined
+              settings.DELIVERY_REQUIRE_PHOTO === false ? draft.field('gps') : undefined
             }
+            enforceGeofence={false}
+            targetLat={!logical && settings.DELIVERY_REQUIRE_GEOFENCE ? point.latitude : null}
+            targetLng={!logical && settings.DELIVERY_REQUIRE_GEOFENCE ? point.longitude : null}
+            maxRadiusMeters={first.outlet?.radiusMeters || settings.ATTENDANCE_RADIUS_METERS}
             facingModeDefault="environment"
           />
           {stops.map((stop) => {
             const row = results[stop.id] || {},
-              status = row.status || (type === 'rejected' ? 'REJECTED' : 'DELIVERED');
+              status = row.status || defaultStatus(stop),
+              items = stop.allocatedItems || [],
+              invoices = stop.allocatedInvoices || [],
+              invoiceSum = invoices.reduce(
+                (sum, inv) => sum + Math.max(0, Number(row.invoices?.[inv.invoiceId] || 0)),
+                0
+              );
             return (
               <section className="work-target-card space-y-3" key={stop.id}>
                 <strong>
@@ -148,38 +216,82 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
                   <p>Kedatangan dicatat untuk dokumen ini.</p>
                 ) : (
                   <>
-                    <label className="block">
-                      Hasil dokumen
-                      <select
-                        className="form-input block w-full"
-                        value={status}
-                        onChange={(e) => setResult(stop.id, { status: e.target.value })}
-                      >
-                        <option value="DELIVERED">Diterima penuh</option>
-                        <option value="REJECTED">Ditolak seluruhnya / toko tutup</option>
+                    <fieldset className="space-y-1.5">
+                      <legend className="text-xs font-semibold">Hasil dokumen</legend>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="inline-flex items-center gap-2 min-h-11 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`shared-status-${stop.id}`}
+                            checked={status === 'DELIVERED'}
+                            onChange={() => setResult(stop.id, { status: 'DELIVERED' })}
+                          />
+                          <span>Diterima penuh</span>
+                        </label>
+                        <label className="inline-flex items-center gap-2 min-h-11 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`shared-status-${stop.id}`}
+                            checked={status === 'REJECTED'}
+                            onChange={() => setResult(stop.id, { status: 'REJECTED' })}
+                          />
+                          <span>Ditolak penuh</span>
+                        </label>
                         {stop.allocatedCartons > 1 && (
-                          <option value="PARTIAL_REJECT">Diterima sebagian</option>
+                          <label className="inline-flex items-center gap-2 min-h-11 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`shared-status-${stop.id}`}
+                              checked={status === 'PARTIAL_REJECT'}
+                              onChange={() =>
+                                setResult(stop.id, {
+                                  status: 'PARTIAL_REJECT',
+                                  cartons:
+                                    Number(row.cartons) > 0 &&
+                                    Number(row.cartons) < stop.allocatedCartons
+                                      ? row.cartons
+                                      : 1,
+                                })
+                              }
+                            />
+                            <span>Diterima sebagian</span>
+                          </label>
                         )}
-                      </select>
-                    </label>
+                      </div>
+                    </fieldset>
                     {status !== 'DELIVERED' && (
-                      <label className="block">
-                        Alasan
-                        <textarea
-                          required
-                          maxLength={2000}
-                          className="form-input block w-full"
-                          value={row.reason || ''}
-                          onChange={(e) => setResult(stop.id, { reason: e.target.value })}
-                        />
-                      </label>
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          {DRIVER_REJECT_REASON_PRESETS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface-container hover:bg-surface-variant cursor-pointer"
+                              onClick={() => setResult(stop.id, { reason: preset })}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="block">
+                          Alasan *
+                          <textarea
+                            required
+                            maxLength={2000}
+                            className="form-input block w-full"
+                            value={row.reason || ''}
+                            onChange={(e) => setResult(stop.id, { reason: e.target.value })}
+                          />
+                        </label>
+                      </div>
                     )}
                     {status === 'PARTIAL_REJECT' && (
                       <>
                         <label>
-                          Karton ditolak
+                          Karton ditolak (1 s.d. {stop.allocatedCartons - 1})
                           <input
                             type="number"
+                            step="1"
                             min="1"
                             max={stop.allocatedCartons - 1}
                             required
@@ -188,14 +300,15 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
                             onChange={(e) => setResult(stop.id, { cartons: e.target.value })}
                           />
                         </label>
-                        {stop.allocatedItems.map((item) => (
+                        {items.map((item) => (
                           <label className="block" key={item.lineId}>
-                            {stop.packingList?.items.find((line) => line.lineId === item.lineId)
+                            {stop.packingList?.items?.find((line) => line.lineId === item.lineId)
                               ?.name || item.lineId}{' '}
                             · Jumlah ditolak (maks. {item.quantity})
                             <input
                               className="form-input block w-full"
                               type="number"
+                              step="1"
                               min="0"
                               max={item.quantity}
                               value={row.items?.[item.lineId] || 0}
@@ -207,31 +320,51 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
                             />
                           </label>
                         ))}
-                        {stop.allocatedInvoices.map((invoice) => (
-                          <label className="block" key={invoice.invoiceId}>
-                            Karton ditolak faktur{' '}
-                            {
-                              stop.packingList?.invoices.find(
-                                (item) => item.id === invoice.invoiceId
-                              )?.invoiceNumber
-                            }
-                            <input
-                              className="form-input block w-full"
-                              type="number"
-                              min="0"
-                              max={invoice.cartons}
-                              value={row.invoices?.[invoice.invoiceId] || 0}
-                              onChange={(e) =>
-                                setResult(stop.id, {
-                                  invoices: {
-                                    ...row.invoices,
-                                    [invoice.invoiceId]: e.target.value,
-                                  },
-                                })
-                              }
-                            />
-                          </label>
-                        ))}
+                        {invoices.length === 1 ? (
+                          <p className="text-xs text-on-surface-variant">
+                            Faktur{' '}
+                            <strong>
+                              {stop.packingList?.invoices?.find(
+                                (v) => v.id === invoices[0].invoiceId
+                              )?.invoiceNumber || invoices[0].invoiceId}
+                            </strong>
+                            : otomatis {Number(row.cartons) || 0} karton ditolak.
+                          </p>
+                        ) : (
+                          invoices.length > 1 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-on-surface-variant">
+                                Total faktur ditolak: {invoiceSum} / {Number(row.cartons) || 0}{' '}
+                                karton
+                              </p>
+                              {invoices.map((invoice) => (
+                                <label className="block" key={invoice.invoiceId}>
+                                  Karton ditolak faktur{' '}
+                                  {stop.packingList?.invoices?.find(
+                                    (item) => item.id === invoice.invoiceId
+                                  )?.invoiceNumber || invoice.invoiceId}{' '}
+                                  (maks. {invoice.cartons})
+                                  <input
+                                    className="form-input block w-full"
+                                    type="number"
+                                    step="1"
+                                    min="0"
+                                    max={invoice.cartons}
+                                    value={row.invoices?.[invoice.invoiceId] || 0}
+                                    onChange={(e) =>
+                                      setResult(stop.id, {
+                                        invoices: {
+                                          ...row.invoices,
+                                          [invoice.invoiceId]: e.target.value,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          )
+                        )}
                       </>
                     )}
                   </>
@@ -239,9 +372,9 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
               </section>
             );
           })}
-          {!arrival && (
+          {!arrival && hasAccepted && (
             <DeliveryReceiptInput
-              policy={policy}
+              policy={settings}
               name={values.recipientName}
               signature={values.signatureDataUrl}
               onName={draft.field('recipientName')}
@@ -258,7 +391,7 @@ export function SharedVisitModal({ stops, type, policy = {}, onClose, onSubmit }
           </label>
         </fieldset>
         {draft.error && (
-          <p role="alert" className="admin-feedback error">
+          <p ref={errorRef} tabIndex={-1} role="alert" className="admin-feedback error">
             {draft.error}
           </p>
         )}

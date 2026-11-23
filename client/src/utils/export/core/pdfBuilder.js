@@ -226,9 +226,9 @@ export async function buildDocumentPdf(blueprint) {
   }
 
   if (blueprint.signatories?.length) {
-    if (cursorY + 26 > pageHeight - 16) {
+    if (cursorY + 30 > pageHeight - 16) {
       doc.addPage();
-      cursorY = 18;
+      cursorY = 16;
     }
     const count = blueprint.signatories.length;
     const blockWidth = (pageWidth - margin * 2) / count;
@@ -238,18 +238,22 @@ export async function buildDocumentPdf(blueprint) {
       doc.setFontSize(8);
       doc.setTextColor(15, 23, 42);
       doc.text(safeStr(sig.role, ''), centerX, cursorY + 4, { align: 'center' });
-      doc.text(
-        doc.splitTextToSize(`( ${safeStr(sig.name, '........................')} )`, blockWidth - 4),
-        centerX,
-        cursorY + 18,
-        {
-          align: 'center',
-        }
+
+      const sigLineHalf = Math.min(24, (blockWidth - 10) / 2);
+      doc.setDrawColor(148, 163, 184);
+      doc.setLineWidth(0.25);
+      doc.line(centerX - sigLineHalf, cursorY + 17, centerX + sigLineHalf, cursorY + 17);
+
+      const nameLines = doc.splitTextToSize(
+        `( ${safeStr(sig.name, '........................')} )`,
+        blockWidth - 6
       );
+      doc.text(nameLines, centerX, cursorY + 21.5, { align: 'center' });
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(100, 116, 139);
-      doc.text(safeStr(sig.title, ''), centerX, cursorY + 24, { align: 'center' });
+      const titleY = cursorY + 21.5 + nameLines.length * 3.5;
+      doc.text(safeStr(sig.title, ''), centerX, titleY, { align: 'center' });
     });
   }
 

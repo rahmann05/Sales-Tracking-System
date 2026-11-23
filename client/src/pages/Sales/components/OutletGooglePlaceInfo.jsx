@@ -13,7 +13,7 @@ export const OutletGooglePlaceInfo = ({ googlePlaceDetails }) => {
   return (
     <div className="bg-primary/5 border border-primary/20 rounded-xl p-3.5 space-y-2 text-xs">
       {/* Header with Google logo and External Maps Link */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 font-semibold text-on-surface text-xs">
           <FcGoogle className="text-base shrink-0" />
           <span>Info Google Places API</span>

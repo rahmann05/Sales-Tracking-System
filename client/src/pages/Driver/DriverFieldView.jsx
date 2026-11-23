@@ -47,14 +47,44 @@ export function DriverFieldView() {
     progress = routeProgress(trip || {});
   const visitGroups = deliveryVisitGroups(stops);
   const visit = visitGroups.find((group) => group.stops.some((stop) => stop.id === selected?.id));
+  const selectedVisitIndex = visitGroups.findIndex((group) =>
+    group.stops.some((stop) => stop.id === selected?.id)
+  );
   const openEvidence = (type) => {
-    const pending = (visit?.stops || [selected]).filter(
-      (stop) => stop.status === 'PENDING' && (type !== 'absen_in' || !stop.arrivedAt)
+    const policyValues = trip?.policySnapshot?.values;
+    const base = visit?.stops || [selected];
+    const pending = base.filter(
+      (stop) =>
+        stop.status === 'PENDING' &&
+        (type === 'absen_in'
+          ? !stop.arrivedAt
+          : policyValues?.DELIVERY_ATTENDANCE_MODE === 'OPTIONAL' || !!stop.arrivedAt)
     );
-    setModal({ stop: pending[0] || selected, stops: pending, type });
+    const targets = pending.length ? pending : [selected].filter(Boolean);
+    setModal({
+      stop: targets.find((s) => s.id === selected?.id) || targets[0] || selected,
+      stops: targets,
+      type,
+      primaryStopId: selected?.id,
+    });
   };
   const detailRef = useSelectedDetail(selectedStopId ? selected?.id : null, true);
   const disabled = !!error || trip?.status !== 'IN_TRANSIT' || trip?.onHold || !!trip?.returnedAt;
+  const disabledReason = error
+    ? 'Perbarui data trip terlebih dahulu sebelum mengirim bukti.'
+    : !trip
+      ? ''
+      : trip.onHold
+        ? 'Trip sedang ditahan Kepala Gudang. Hubungi gudang sebelum melanjutkan.'
+        : trip.returnedAt
+          ? 'Trip sudah tercatat kembali ke gudang.'
+          : trip.status === 'DRAFT'
+            ? 'Muatan masih disiapkan gudang. Tunggu serah terima selesai.'
+            : trip.status === 'READY'
+              ? 'Konfirmasikan "Berangkat" di panel tindakan perjalanan terlebih dahulu.'
+              : trip.status !== 'IN_TRANSIT'
+                ? 'Status trip belum dalam pengantaran.'
+                : '';
   const destinationGate = deliveryStopGate(
     stops.filter(
       (stop) => stop.id === selected?.id || !visit?.stops.some((member) => member.id === stop.id)
@@ -174,34 +204,56 @@ export function DriverFieldView() {
               </div>
             ))}
           </div>
+          {!trip.returnedAt && ['READY', 'COMPLETED', 'PARTIAL'].includes(trip.status) && (
+            <section className="admin-panel logistics-action-panel">
+              <h2>
+                {trip.status === 'READY'
+                  ? 'Langkah berikutnya: konfirmasi keberangkatan'
+                  : 'Langkah berikutnya: konfirmasi kembali ke gudang'}
+              </h2>
+              <fieldset disabled={!!error}>
+                <RouteOperationsActions key={trip.id} route={trip} driver onChanged={refresh} />
+              </fieldset>
+            </section>
+          )}
           <section className="admin-panel logistics-next">
             <div>
               <p className="admin-eyebrow">
                 {trip.returnedAt
                   ? 'Perjalanan telah kembali'
-                  : next
-                    ? 'Tujuan berikutnya'
-                    : 'Seluruh tujuan telah diproses'}
+                  : trip.status === 'DRAFT'
+                    ? 'Menunggu penyiapan gudang'
+                    : trip.status === 'READY'
+                      ? 'Siap berangkat'
+                      : next
+                        ? 'Tujuan berikutnya'
+                        : 'Seluruh tujuan telah diproses'}
               </p>
               <h2>
                 {trip.returnedAt
                   ? 'Menunggu pemeriksaan dan penutupan gudang'
-                  : next
-                    ? next.outlet?.name
-                    : 'Konfirmasikan perjalanan kembali'}
+                  : trip.status === 'DRAFT'
+                    ? 'Gudang sedang menyiapkan muatan'
+                    : trip.status === 'READY'
+                      ? next
+                        ? `Tujuan pertama: ${next.outlet?.name}`
+                        : 'Periksa serah terima muatan & isi odometer'
+                      : next
+                        ? next.outlet?.name
+                        : 'Konfirmasikan perjalanan kembali di atas'}
               </h2>
               <p>
                 {trip.onHold
                   ? 'Trip ditahan. Hubungi Kepala Gudang sebelum melanjutkan.'
                   : trip.status === 'DRAFT'
-                    ? 'Gudang sedang menyiapkan muatan. Tunggu serah terima.'
+                    ? 'Tunggu gudang menyelesaikan penyiapan, pemeriksaan, dan muat barang.'
                     : trip.status === 'READY'
-                      ? 'Periksa serah terima muatan dan isi odometer sebelum berangkat.'
+                      ? 'Klik "Berangkat" pada panel tindakan perjalanan di atas sebelum mulai mengantar ke toko.'
                       : next?.outlet?.address ||
                         'Trip selesai setelah bukti dan retur diperiksa oleh gudang.'}
               </p>
             </div>
-            {next && (
+            {trip.status === 'IN_TRANSIT' && next && (
               <button
                 type="button"
                 className="admin-button primary"
@@ -217,14 +269,6 @@ export function DriverFieldView() {
           </section>
           {(trip.returnedAt || !['READY', 'COMPLETED', 'PARTIAL'].includes(trip.status)) && (
             <DepartureChecklistSummary route={trip} />
-          )}
-          {!trip.returnedAt && ['READY', 'COMPLETED', 'PARTIAL'].includes(trip.status) && (
-            <section className="admin-panel logistics-action-panel">
-              <h2>Tindakan perjalanan</h2>
-              <fieldset disabled={!!error}>
-                <RouteOperationsActions key={trip.id} route={trip} driver onChanged={refresh} />
-              </fieldset>
-            </section>
           )}
           <div className="logistics-split">
             <section className="admin-panel logistics-stop-list">
@@ -297,22 +341,17 @@ export function DriverFieldView() {
                   <DriverStopCard
                     policy={trip.policySnapshot?.values}
                     stop={selected}
-                    index={stops.indexOf(selected)}
-                    totalStops={stops.length}
+                    index={selectedVisitIndex >= 0 ? selectedVisitIndex : stops.indexOf(selected)}
+                    totalStops={visitGroups.length || stops.length}
                     disabled={disabled || destinationGate.blocked}
+                    disabledReason={disabledReason || destinationGate.reason}
                     onAbsenIn={() => openEvidence('absen_in')}
                     onMarkDelivered={() => openEvidence('delivered')}
                     onMarkRejected={() => openEvidence('rejected')}
                   />
-                  {destinationGate.reason && (
+                  {!disabled && destinationGate.reason && !destinationGate.blocked && (
                     <p role="status" className="admin-feedback">
                       {destinationGate.reason}
-                    </p>
-                  )}
-                  {disabled && selected.status === 'PENDING' && (
-                    <p className="admin-footnote">
-                      Absensi tersedia setelah trip berangkat, tidak ditahan, dan data berhasil
-                      diperbarui.
                     </p>
                   )}
                   <p className="admin-footnote">
@@ -334,16 +373,20 @@ export function DriverFieldView() {
                 {driverTracking.routeCode || 'Trip'}
               </p>
             )}
-            <p className="admin-footnote">
-              Lokasi langsung tersedia saat halaman aktif, izin GPS diberikan, dan jaringan
-              tersambung. Gudang melihat waktu serta sumber posisi terakhir ketika pembaruan
-              berhenti.
-            </p>
+            <details className="admin-footnote">
+              <summary className="cursor-pointer">Informasi cara kerja pelacakan GPS</summary>
+              <p>
+                Lokasi langsung tersedia saat halaman aktif, izin GPS diberikan, dan jaringan
+                tersambung. Gudang melihat waktu serta sumber posisi terakhir ketika pembaruan
+                berhenti.
+              </p>
+            </details>
           </section>
           {
             <section className="admin-panel logistics-action-panel">
               <fieldset disabled={!!error}>
                 <OperationalIssues
+                  driverView
                   reference={trip.closedAt || trip.cancelledAt ? undefined : { routeId: trip.id }}
                   issues={tripIssues}
                   people={[user]}
@@ -358,6 +401,7 @@ export function DriverFieldView() {
         <SharedVisitModal
           stops={modal.stops}
           type={modal.type}
+          primaryStopId={modal.primaryStopId}
           policy={trip?.policySnapshot?.values}
           onClose={() => setModal(null)}
           onSubmit={save}

@@ -28,7 +28,7 @@ export const OffPjpIdentityForm = ({
     </h4>
 
     <div className="space-y-1">
-      <label className="text-xs font-bold text-on-surface flex items-center justify-between">
+      <label className="text-xs font-bold text-on-surface flex flex-wrap items-center justify-between gap-1">
         <span>Nama Toko / Outlet *</span>
         <span className="text-[10px] font-normal text-rose-500">Wajib diisi</span>
       </label>
@@ -43,7 +43,7 @@ export const OffPjpIdentityForm = ({
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
       <div className="space-y-1">
-        <label className="text-xs font-bold text-on-surface flex items-center justify-between">
+        <label className="text-xs font-bold text-on-surface flex flex-wrap items-center justify-between gap-1">
           <span>Nama Pemilik / Customer *</span>
           <span className="text-[10px] font-normal text-rose-500">Wajib</span>
         </label>

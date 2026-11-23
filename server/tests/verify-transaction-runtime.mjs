@@ -404,6 +404,11 @@ try {
   let submission = await request(sales, '/staff-attendance/follow-ups/' + audit.id, 'PATCH', {
     note: prefix + ' hasil sintetis',
     evidence: 'Referensi sintetis untuk uji alur; bukan kegiatan lapangan',
+    photoUrl: photo,
+    latitude: -6.9,
+    longitude: 107.6,
+    accuracy: 5,
+    observedAt: new Date().toISOString(),
   });
   if (submission.followUp.status === 'SUBMITTED') {
     const reviewer = submission.followUp.reviewerMode === 'ADMIN' ? admin : spv;
@@ -421,6 +426,11 @@ try {
     submission = await request(sales, '/staff-attendance/follow-ups/' + audit.id, 'PATCH', {
       note: prefix + ' hasil diperbaiki',
       evidence: 'Referensi sintetis UAT diperbaiki',
+      photoUrl: photo,
+      latitude: -6.9,
+      longitude: 107.6,
+      accuracy: 5,
+      observedAt: new Date().toISOString(),
     });
     submission = await request(
       reviewer,

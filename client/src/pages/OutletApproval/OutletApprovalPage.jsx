@@ -67,7 +67,7 @@ export const OutletApprovalPage = () => {
   };
 
   return (
-    <div className="outlet-reg-container">
+    <div className="outlet-reg-container space-y-5">
       {/* 1. Header with Filters & Search */}
       <OutletApprovalHeader
         userRole={user?.role}

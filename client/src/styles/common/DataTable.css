@@ -19,6 +19,41 @@ table.app-data-table {
 .report-compact {
   --table-cell-padding: 8px 12px;
 }
+.report-table-region {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(640px, 76vh);
+  container-type: inline-size;
+}
+.report-table-region:focus-visible {
+  outline: 2px solid var(--primary, #0869cf);
+  outline-offset: -2px;
+}
+.report-table-region table.app-data-table > thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+}
+@media (min-width: 768px) {
+  .report-table-region table.app-data-table > thead > tr > th:first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 3;
+    background: var(--table-header-bg);
+  }
+  .report-table-region table.app-data-table > tbody > tr > th[scope='row'] {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background: var(--table-row-bg);
+    font-weight: 600;
+    text-align: left;
+  }
+  .report-table-region table.app-data-table > tbody > tr:hover > th[scope='row'],
+  .report-table-region table.app-data-table > tbody > tr:focus-within > th[scope='row'] {
+    background: var(--table-row-hover);
+  }
+}
 table.app-data-table [hidden] {
   display: none !important;
 }
@@ -41,7 +76,7 @@ table.app-data-table [hidden] {
   white-space: normal;
   overflow-wrap: break-word;
 }
-.app-data-table > tbody > tr > td {
+.app-data-table > tbody > tr > :is(td, th[scope='row']) {
   padding: var(--table-cell-padding);
   font-size: 13px;
   line-height: 1.5;
@@ -60,7 +95,7 @@ table.app-data-table [hidden] {
 .app-data-table > tbody > tr:focus-within {
   background: var(--table-row-hover);
 }
-.app-data-table > tbody > tr:last-child > td {
+.app-data-table > tbody > tr:last-child > :is(td, th[scope='row']) {
   border-bottom: 0;
 }
 .app-data-table > tfoot > tr > td {
@@ -69,14 +104,14 @@ table.app-data-table [hidden] {
   border-top: 1px solid var(--table-border);
   font-weight: 650;
 }
-.app-data-table td button:not(:has(img)) {
+.app-data-table :is(td, th[scope='row']) button:not(:has(img)) {
   min-height: 36px;
   min-width: 36px;
   border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
 }
-.app-data-table td button:disabled {
+.app-data-table :is(td, th[scope='row']) button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -116,7 +151,7 @@ table.app-data-table [hidden] {
     gap: 8px;
     box-shadow: none;
   }
-  .app-data-table.mobile-card-table > tbody > tr > td[data-label]::before {
+  .app-data-table.mobile-card-table > tbody > tr > :is(td, th[scope='row'])[data-label]::before {
     font-size: 12px;
     line-height: 1.5;
     font-weight: 600;
@@ -124,7 +159,7 @@ table.app-data-table [hidden] {
     text-transform: none;
     letter-spacing: 0;
   }
-  .app-data-table td button:not(:has(img)) {
+  .app-data-table :is(td, th[scope='row']) button:not(:has(img)) {
     min-height: 44px;
     min-width: 44px;
   }

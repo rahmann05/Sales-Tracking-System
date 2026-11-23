@@ -82,7 +82,7 @@ export function InvoiceReconciliationPanel({ packing, admin, onChanged }) {
       {state.confirmedAt && (
         <p>
           Dikonfirmasi{' '}
-          {new Date(state.confirmedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
+          {new Date(state.confirmedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
         </p>
       )}
       {admin &&
@@ -91,12 +91,30 @@ export function InvoiceReconciliationPanel({ packing, admin, onChanged }) {
         !state.errors.length &&
         ['NEEDS_ALLOCATION', 'STALE'].includes(state.status) && (
           <form onSubmit={submit} className="space-y-3">
-            <p>
-              Total diterima sesuai bukti:{' '}
-              {packing.items
-                .map((i) => `${i.name}: ${state.accepted[i.lineId] || 0} ${i.unit}`)
-                .join('; ')}
-            </p>
+            <div className="space-y-1 rounded-xl border border-border-glass p-2.5 bg-surface-variant/20">
+              <strong className="block">Pembagian total barang diterima per produk:</strong>
+              {packing.items.map((item) => {
+                const target = state.accepted[item.lineId] || 0;
+                const assigned = state.invoices.reduce(
+                  (sum, inv) =>
+                    sum +
+                    Number(
+                      quantities[`${inv.id}:${item.lineId}`] ??
+                        inv.acceptedItems?.find((a) => a.lineId === item.lineId)?.quantity ??
+                        0
+                    ),
+                  0
+                );
+                return (
+                  <p
+                    key={item.lineId}
+                    className={assigned === target ? 'text-emerald-700 font-semibold' : 'text-amber-800'}
+                  >
+                    {item.name}: terbagi <strong>{assigned}</strong> / {target} {item.unit}
+                  </p>
+                );
+              })}
+            </div>
             <fieldset disabled={busy}>
               {state.invoices.map((i) => (
                 <div className="space-y-2 py-2" key={i.id}>
@@ -124,6 +142,26 @@ export function InvoiceReconciliationPanel({ packing, admin, onChanged }) {
                   ))}
                 </div>
               ))}
+              <div className="space-y-1.5 pt-2">
+                <span className="block text-xs font-semibold text-on-surface-variant">
+                  Pilih catatan cepat:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Pembagian diterima per faktur sesuai bukti tanda terima toko',
+                    'Jumlah faktur diverifikasi oleh Admin setelah pengiriman',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                      onClick={() => setNote(preset)}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <label className="block">
                 Catatan pemeriksaan bukti pelanggan
                 <textarea
@@ -134,7 +172,7 @@ export function InvoiceReconciliationPanel({ packing, admin, onChanged }) {
                   onChange={(e) => setNote(e.target.value)}
                 />
               </label>
-              <button className="min-h-11 border rounded-xl px-3">
+              <button type="submit" className="min-h-11 border rounded-xl px-3">
                 {busy ? 'Menyimpan...' : 'Konfirmasi penerimaan per faktur'}
               </button>
             </fieldset>
@@ -142,7 +180,11 @@ export function InvoiceReconciliationPanel({ packing, admin, onChanged }) {
         )}
       {admin && canCorrect && state.status !== 'NO_INVOICE' && (
         <div>
-          <button className="min-h-11 underline" onClick={() => setCorrecting(!correcting)}>
+          <button
+            type="button"
+            className="min-h-11 underline"
+            onClick={() => setCorrecting(!correcting)}
+          >
             {correcting ? 'Tutup koreksi' : 'Koreksi / lengkapi pemetaan dokumen'}
           </button>
           {correcting && (

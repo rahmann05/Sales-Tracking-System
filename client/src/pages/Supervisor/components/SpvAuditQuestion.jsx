@@ -28,6 +28,7 @@ export function SpvAuditQuestion({
           className="config-input"
           rows={3}
           maxLength={4000}
+          required={Boolean(item.required)}
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -39,37 +40,55 @@ export function SpvAuditQuestion({
           step="any"
           min={item.min}
           max={item.max}
+          required={Boolean(item.required)}
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
         />
+      ) : type === 'BOOLEAN' || (Array.isArray(item.options) && item.options.length <= 5) ? (
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={item.label}>
+          {(type === 'BOOLEAN'
+            ? [
+                { key: 'true', label: 'Ya', val: true },
+                { key: 'false', label: 'Tidak', val: false },
+              ]
+            : item.options.map((option) => ({ key: option, label: option, val: option }))
+          ).map((choice) => {
+            const checked = value === choice.val;
+            return (
+              <label
+                key={choice.key}
+                className={`min-h-11 px-4 py-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-colors ${
+                  checked
+                    ? 'border-primary bg-primary/10 text-primary font-semibold'
+                    : 'border-border-glass bg-surface hover:bg-surface-variant/40'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={id}
+                  checked={checked}
+                  required={Boolean(item.required)}
+                  onChange={() => onChange(choice.val)}
+                />
+                <span>{choice.label}</span>
+              </label>
+            );
+          })}
+        </div>
       ) : (
         <select
           id={id}
           className="config-input min-h-11"
+          required={Boolean(item.required)}
           value={value == null ? '' : String(value)}
-          onChange={(e) =>
-            onChange(
-              e.target.value === ''
-                ? null
-                : type === 'BOOLEAN'
-                  ? e.target.value === 'true'
-                  : e.target.value
-            )
-          }
+          onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
         >
           <option value="">Belum diisi</option>
-          {type === 'BOOLEAN' ? (
-            <>
-              <option value="true">Ya</option>
-              <option value="false">Tidak</option>
-            </>
-          ) : (
-            item.options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))
-          )}
+          {(item.options || []).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
         </select>
       )}
       {type === 'NUMBER' && (item.min !== undefined || item.max !== undefined) && (
@@ -86,6 +105,7 @@ export function SpvAuditQuestion({
               className="config-input"
               rows={2}
               maxLength={2000}
+              required={Boolean(item.requireFailureReason)}
               value={evidence.reason || ''}
               onChange={(e) => onEvidence({ ...evidence, reason: e.target.value })}
             />

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { TAB_IDS } from '../../constants/navigation';
 import { TeamAssignmentPanel } from '../RoutePlanning/components/TeamAssignmentPanel';
 import { LiveSalesGpsTrackingTab } from './components/LiveSalesGpsTrackingTab';
 
 export function TeamTrackingPage() {
-  const { user, setActiveTab } = useApp();
+  const { user } = useApp();
   const [tab, setTab] = useState('members');
   const canLiveTracking =
     user.role === 'ADMIN' ||
@@ -13,32 +12,11 @@ export function TeamTrackingPage() {
   const activeView = canLiveTracking ? tab : 'members';
 
   return (
-    <div className="page-container workspace-page space-y-6">
+    <div className="page-container workspace-page space-y-4">
       <header className="workspace-heading">
         <div>
           <h1>{user.role === 'SUPERVISOR' ? 'Tim sales saya' : 'Tim sales & penugasan'}</h1>
-          <p>
-            Kelola keanggotaan tim. Penugasan wilayah dan rencana kunjungan tersedia di Wilayah
-            &amp; jadwal RJP.
-          </p>
-        </div>
-        <div className="app-actions">
-          <button
-            type="button"
-            className="app-button"
-            onClick={() => setActiveTab(TAB_IDS.ROUTE_PLANNING)}
-          >
-            Wilayah &amp; jadwal RJP
-          </button>
-          {user.role === 'ADMIN' && (
-            <button
-              type="button"
-              className="app-button"
-              onClick={() => setActiveTab(TAB_IDS.USER_MANAGEMENT)}
-            >
-              Kelola akun pengguna
-            </button>
-          )}
+          <p>Keanggotaan tim menentukan akses supervisi dan pemantauan posisi sales.</p>
         </div>
       </header>
       {canLiveTracking && (

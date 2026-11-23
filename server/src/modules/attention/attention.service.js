@@ -13,6 +13,7 @@ import { reviewScope } from '../outlets/services/outlet-review-policy.service.js
 import { orderReviewRole } from '../../../../shared/approval-workflow.mjs';
 import { prisma } from '../../config/prisma.js';
 import { followUpScope } from '../staff-attendance/follow-up.service.js';
+import { resolveFollowUpTargets } from '../staff-attendance/follow-up-target.service.js';
 import { fulfillment } from '../../../../shared/delivery-operations.mjs';
 import { packingBalance } from '../../../../shared/packing.mjs';
 import { paginateAttention } from '../../../../shared/attention-queue.mjs';
@@ -140,7 +141,7 @@ export async function collectAttentionRows(user, policy = {}) {
       ? []
       : (async () => {
           const scope = await followUpScope(user);
-          return prisma.staffActivity.findMany({
+          const list = await prisma.staffActivity.findMany({
             where: {
               AND: [
                 scope,
@@ -155,12 +156,16 @@ export async function collectAttentionRows(user, policy = {}) {
             select: {
               id: true,
               userId: true,
+              kind: true,
+              activityKey: true,
               outletName: true,
               checkInAt: true,
               followUp: true,
               policySnapshot: true,
             },
           });
+          const targets = await resolveFollowUpTargets(list, prisma);
+          return list.map((a) => ({ ...a, targetOutlet: targets.get(a.id) || null }));
         })(),
     prisma.user.findMany({
       where: {
@@ -380,6 +385,7 @@ export async function collectAttentionRows(user, policy = {}) {
       activityId: a.id,
       status: f.status,
       followUp: f,
+      targetOutlet: a.targetOutlet || null,
       policySnapshot: a.policySnapshot,
     });
   }

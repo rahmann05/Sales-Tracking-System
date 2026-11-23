@@ -114,7 +114,7 @@ export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClo
           </div>
         </div>
 
-        <ReportBasisNote basis={reportData.basis} />
+        <ReportBasisNote basis={reportData.basis} collapsible={false} />
         {/* Summary Box */}
         <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
           <div>

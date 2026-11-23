@@ -1,6 +1,7 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
 import React from 'react';
 import { LuClock, LuMapPin, LuFileText } from 'react-icons/lu';
+import { registrationStatusBadge } from '../../OutletManagement/outletPresentation';
 import { exportCustomerNd6Txt } from '../../../utils/customerExport';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 import {
@@ -10,25 +11,6 @@ import {
   exportOutletMasterTxt,
   exportOutletMasterPdf,
 } from '../../../utils/export/reports/outletMasterExport';
-
-const STATUS_BADGE_MAP = {
-  SUBMITTED: {
-    label: 'Menunggu Approval',
-    cls: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  },
-  SPV_APPROVED: {
-    label: 'Disetujui SPV',
-    cls: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  },
-  REGISTERED_ACTIVE: {
-    label: 'Aktif di Sistem',
-    cls: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  },
-  REJECTED: {
-    label: 'Ditolak',
-    cls: 'bg-red-500/10 text-red-600 border-red-500/20',
-  },
-};
 
 /**
  * RegistrationHistoryTable Component
@@ -151,10 +133,7 @@ export const RegistrationHistoryTable = ({
             </thead>
             <tbody className="divide-y divide-border-glass">
               {submissions.map((item) => {
-                const badge = STATUS_BADGE_MAP[item.registrationStatus] || {
-                  label: item.registrationStatus || 'Belum tersedia',
-                  cls: 'bg-surface-container',
-                };
+                const badge = registrationStatusBadge(item.registrationStatus);
 
                 return (
                   <tr key={item.id} className="hover:bg-surface-variant/20 transition-colors">
@@ -171,9 +150,9 @@ export const RegistrationHistoryTable = ({
                     </td>
                     <td data-label="Nama Toko" className="">
                       <div className="font-bold text-on-surface">{item.name}</div>
-                      <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
-                        <LuMapPin className="text-primary text-xs shrink-0" />
-                        <span>{item.address}</span>
+                      <div className="text-[11px] text-on-surface-variant flex items-start gap-1 mt-0.5">
+                        <LuMapPin className="text-primary text-xs shrink-0 mt-0.5" />
+                        <span className="min-w-0 flex-1">{item.address}</span>
                       </div>
                     </td>
                     <td data-label="Area" className="">
@@ -181,7 +160,7 @@ export const RegistrationHistoryTable = ({
                       <div className="text-[10px] text-on-surface-variant">{item.division}</div>
                     </td>
                     <td data-label="Channel" className="">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container border border-border-glass">
+                      <span className="admin-status">
                         {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
                       </span>
                     </td>
@@ -189,11 +168,7 @@ export const RegistrationHistoryTable = ({
                       {item.registrationCode && (
                         <div className="font-mono text-xs mb-1">{item.registrationCode}</div>
                       )}
-                      <span
-                        className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${badge.cls}`}
-                      >
-                        {badge.label}
-                      </span>
+                      <span className={badge.className}>{badge.label}</span>
                       {item.customerCode && (
                         <div className="text-[10px] font-mono font-bold text-emerald-600 mt-0.5">
                           Kode: {item.customerCode}

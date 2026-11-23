@@ -40,3 +40,13 @@ export const staffActionSchema = z.object({
     })
     .strict(),
 });
+
+export const followUpCompletionSchema = z.object({
+  note: z.string().max(4000).optional(),
+  evidence: z.string().max(2000).nullable().optional(),
+  photoUrl: z.string().max(2800000).nullable().optional(),
+  latitude: z.number().finite().min(-90).max(90).nullable().optional(),
+  longitude: z.number().finite().min(-180).max(180).nullable().optional(),
+  accuracy: z.number().nonnegative().max(100000).nullable().optional(),
+  observedAt: z.string().datetime().nullable().optional(),
+});

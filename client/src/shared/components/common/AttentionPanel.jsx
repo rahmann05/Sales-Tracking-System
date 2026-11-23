@@ -325,10 +325,12 @@ export function AttentionPanel() {
         </div>
       )}
       {user.role === 'ADMIN' && (
-        <details className="work-advanced">
-          <summary>Pengingat dan pengaturan lanjutan</summary>
-          <AttentionEscalations />
-          {data?.policyNote && <p className="admin-footnote">{data.policyNote}</p>}
+        <details className="admin-panel work-advanced">
+          <summary>Pengingat SLA dan pengaturan lanjutan</summary>
+          <div className="work-advanced-body">
+            <AttentionEscalations />
+            {data?.policyNote && <p className="admin-footnote">{data.policyNote}</p>}
+          </div>
         </details>
       )}
       <NativeDialog
@@ -356,6 +358,8 @@ export function AttentionPanel() {
                 id={selected.activityId}
                 followUp={selected.followUp}
                 policySnapshot={selected.policySnapshot}
+                targetOutlet={selected.targetOutlet}
+                outletName={selected.title}
                 onChanged={reload}
               />
             ) : selected.target === 'AUTO_FOLLOW_UP' ? (

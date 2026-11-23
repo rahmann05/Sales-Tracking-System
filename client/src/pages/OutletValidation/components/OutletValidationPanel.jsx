@@ -33,7 +33,8 @@ export function OutletValidationPanel() {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     [detail, setDetail] = useState(null),
-    [picker, setPicker] = useState(false);
+    [picker, setPicker] = useState(false),
+    [workspaceTab, setWorkspaceTab] = useState('QUEUE');
   const debounced = useDebounce(search, 250),
     version = useRef(0);
   const load = useCallback(async () => {
@@ -115,7 +116,34 @@ export function OutletValidationPanel() {
       ) : (
         <>
           <div className="ov-toolbar">
-            <p>Validasi opsional. Outlet aktif tetap dapat digunakan selama kasus diperiksa.</p>
+            <nav className="ov-workspace-tabs" aria-label="Area validasi outlet">
+              <button
+                type="button"
+                className={workspaceTab === 'QUEUE' ? 'is-active' : ''}
+                aria-pressed={workspaceTab === 'QUEUE'}
+                onClick={() => setWorkspaceTab('QUEUE')}
+              >
+                Antrean validasi
+              </button>
+              <button
+                type="button"
+                className={workspaceTab === 'FIELD' ? 'is-active' : ''}
+                aria-pressed={workspaceTab === 'FIELD'}
+                onClick={() => setWorkspaceTab('FIELD')}
+              >
+                Tugas lapangan
+              </button>
+              {user?.permissions?.can_run_outlet_review && (
+                <button
+                  type="button"
+                  className={workspaceTab === 'JOBS' ? 'is-active' : ''}
+                  aria-pressed={workspaceTab === 'JOBS'}
+                  onClick={() => setWorkspaceTab('JOBS')}
+                >
+                  Riwayat batch
+                </button>
+              )}
+            </nav>
             <button
               type="button"
               className="app-button app-button-primary"
@@ -126,145 +154,159 @@ export function OutletValidationPanel() {
               + Pilih outlet
             </button>
           </div>
-          <nav className="ov-stage-tabs" aria-label="Tahap pemeriksaan">
-            {['ALL', 'OPEN', 'REVIEW', 'WAITING_FIELD', 'SUBMITTED', 'COMPLETED', 'CANCELLED'].map(
-              (s) => (
-                <button
-                  type="button"
-                  key={s}
-                  className={stage === s ? 'is-active' : ''}
-                  aria-pressed={stage === s}
-                  onClick={() => filter(setStage, s)}
-                >
-                  {s === 'ALL' ? 'Semua kasus' : OUTLET_STAGE_LABELS[s]}
-                </button>
-              )
-            )}
-          </nav>
-          <section className="ov-section">
-            <div className="ov-filters">
-              <label className="app-field">
-                Cari outlet
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value, { replace: true });
-                    setPage(1);
-                  }}
-                  placeholder="Nama, kode, atau alamat"
-                />
-              </label>
-              <label className="app-field">
-                Masalah data
-                <select value={issue} onChange={(e) => filter(setIssue, e.target.value)}>
-                  <option value="ALL">Semua masalah</option>
-                  {Object.entries(OUTLET_ISSUE_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="button" className="app-button" disabled={loading} onClick={load}>
-                Perbarui
-              </button>
-            </div>
-            <div className="ov-table-wrap">
-              <table className="ov-table ov-queue">
-                <caption>
-                  {loading ? 'Memuat antrean…' : `${pagination.total} kasus sesuai filter`}
-                </caption>
-                <thead>
-                  <tr>
-                    <th>Outlet</th>
-                    <th>Masalah data</th>
-                    <th>Hasil Google</th>
-                    <th>Tindakan berikutnya</th>
-                    <th>Penanggung jawab / tenggat</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id}>
-                      <td data-label="Outlet">
-                        <strong>{r.outlet.name}</strong>
-                        <small>
-                          {r.outlet.outletCode || 'Tanpa kode'} · {r.outlet.cluster?.name}
-                        </small>
-                        <small>{r.outlet.address}</small>
-                      </td>
-                      <td data-label="Masalah data">
-                        {outletIssues(r.outlet).map((k) => (
-                          <span className="ov-tag" key={k}>
-                            {OUTLET_ISSUE_LABELS[k]}
-                          </span>
-                        ))}
-                        {!outletIssues(r.outlet).length && 'Tinjauan opsional'}
-                      </td>
-                      <td data-label="Hasil Google">
-                        {OUTLET_RESULT_LABELS[r.workflow?.resultCode] || 'Hasil metode lama'}
-                        {r.workflow?.technical && r.workflow.technical !== 'READY' && (
-                          <small className="app-error">
-                            {r.workflow.technical === 'PARTIAL'
-                              ? 'Sebagian layanan gagal'
-                              : 'Pemeriksaan belum berhasil'}
-                          </small>
-                        )}
-                      </td>
-                      <td data-label="Tindakan berikutnya">
-                        {OUTLET_STAGE_LABELS[r.workflow?.stage || r.status]}
-                        <small>{stamp(r.updatedAt)}</small>
-                      </td>
-                      <td data-label="Penanggung jawab / tenggat">
-                        {r.assignment?.ownerName || 'Antrean tim'}
-                        <small>{r.dueAt ? stamp(r.dueAt) : 'Tanpa tenggat kasus'}</small>
-                      </td>
-                      <td data-label="">
-                        <button type="button" className="app-button" onClick={() => select(r.id)}>
-                          Tinjau →
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!loading && !rows.length && (
-                    <tr>
-                      <td colSpan={6}>
-                        <div className="ov-empty">
-                          <strong>Tidak ada kasus sesuai filter</strong>
-                          <p>Pilih outlet untuk memulai pemeriksaan atau ubah filter antrean.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="outlet-pagination">
-              <button
-                type="button"
-                className="app-button"
-                disabled={loading || page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Sebelumnya
-              </button>
-              <span>
-                {page} / {pagination.totalPages}
-              </span>
-              <button
-                type="button"
-                className="app-button"
-                disabled={loading || page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Berikutnya
-              </button>
-            </div>
-          </section>
-          <OutletFieldTaskMonitor onOpenReview={select} />
-          {user?.permissions?.can_run_outlet_review && <OutletValidationJobs onOpen={select} />}
+          {workspaceTab === 'QUEUE' && (
+            <>
+              <nav className="ov-stage-tabs" aria-label="Tahap pemeriksaan">
+                {[
+                  'ALL',
+                  'OPEN',
+                  'REVIEW',
+                  'WAITING_FIELD',
+                  'SUBMITTED',
+                  'COMPLETED',
+                  'CANCELLED',
+                ].map((s) => (
+                  <button
+                    type="button"
+                    key={s}
+                    className={stage === s ? 'is-active' : ''}
+                    aria-pressed={stage === s}
+                    onClick={() => filter(setStage, s)}
+                  >
+                    {s === 'ALL' ? 'Semua kasus' : OUTLET_STAGE_LABELS[s]}
+                  </button>
+                ))}
+              </nav>
+              <section className="ov-section">
+                <div className="ov-filters">
+                  <label className="app-field">
+                    Cari outlet
+                    <input
+                      type="search"
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value, { replace: true });
+                        setPage(1);
+                      }}
+                      placeholder="Nama, kode, atau alamat"
+                    />
+                  </label>
+                  <label className="app-field">
+                    Masalah data
+                    <select value={issue} onChange={(e) => filter(setIssue, e.target.value)}>
+                      <option value="ALL">Semua masalah</option>
+                      {Object.entries(OUTLET_ISSUE_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" className="app-button" disabled={loading} onClick={load}>
+                    Perbarui
+                  </button>
+                </div>
+                <div className="ov-table-wrap">
+                  <table className="ov-table ov-queue">
+                    <caption>
+                      {loading ? 'Memuat antrean…' : `${pagination.total} kasus sesuai filter`}
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th>Outlet</th>
+                        <th>Masalah data</th>
+                        <th>Hasil Google</th>
+                        <th>Tindakan berikutnya</th>
+                        <th>Penanggung jawab / tenggat</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => (
+                        <tr key={r.id}>
+                          <td data-label="Outlet">
+                            <strong>{r.outlet.name}</strong>
+                            <small>
+                              {r.outlet.outletCode || 'Tanpa kode'} · {r.outlet.cluster?.name}
+                            </small>
+                            <small>{r.outlet.address}</small>
+                          </td>
+                          <td data-label="Masalah data">
+                            {outletIssues(r.outlet).map((k) => (
+                              <span className="admin-status ov-issue-tag" key={k}>
+                                {OUTLET_ISSUE_LABELS[k]}
+                              </span>
+                            ))}
+                            {!outletIssues(r.outlet).length && 'Tinjauan opsional'}
+                          </td>
+                          <td data-label="Hasil Google">
+                            {OUTLET_RESULT_LABELS[r.workflow?.resultCode] || 'Hasil metode lama'}
+                            {r.workflow?.technical && r.workflow.technical !== 'READY' && (
+                              <small className="app-error">
+                                {r.workflow.technical === 'PARTIAL'
+                                  ? 'Sebagian layanan gagal'
+                                  : 'Pemeriksaan belum berhasil'}
+                              </small>
+                            )}
+                          </td>
+                          <td data-label="Tindakan berikutnya">
+                            {OUTLET_STAGE_LABELS[r.workflow?.stage || r.status]}
+                            <small>{stamp(r.updatedAt)}</small>
+                          </td>
+                          <td data-label="Penanggung jawab / tenggat">
+                            {r.assignment?.ownerName || 'Antrean tim'}
+                            <small>{r.dueAt ? stamp(r.dueAt) : 'Tanpa tenggat kasus'}</small>
+                          </td>
+                          <td data-label="">
+                            <button type="button" className="app-button" onClick={() => select(r.id)}>
+                              Tinjau →
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {!loading && !rows.length && (
+                        <tr>
+                          <td colSpan={6}>
+                            <div className="ov-empty">
+                              <strong>Tidak ada kasus sesuai filter</strong>
+                              <p>
+                                Pilih outlet untuk memulai pemeriksaan atau ubah filter antrean.
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="outlet-pagination">
+                  <button
+                    type="button"
+                    className="app-button"
+                    disabled={loading || page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    Sebelumnya
+                  </button>
+                  <span>
+                    {page} / {pagination.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="app-button"
+                    disabled={loading || page >= pagination.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Berikutnya
+                  </button>
+                </div>
+              </section>
+            </>
+          )}
+          {workspaceTab === 'FIELD' && <OutletFieldTaskMonitor onOpenReview={select} />}
+          {workspaceTab === 'JOBS' && user?.permissions?.can_run_outlet_review && (
+            <OutletValidationJobs onOpen={select} />
+          )}
         </>
       )}
       {picker && (

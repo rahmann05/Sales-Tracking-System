@@ -60,7 +60,7 @@ export const OutletRegistrationReportPage = () => {
       )}
 
       {/* 3. Unified Workspace: Filter & Report Table */}
-      <div className="bg-surface border border-border-glass rounded-3xl shadow-xs overflow-hidden">
+      <div className="bg-surface border border-border-glass rounded-2xl shadow-xs overflow-hidden">
         <div className="p-4 border-b border-border-glass bg-surface-container/30">
           <OutletReportFilterBar
             filters={filters}

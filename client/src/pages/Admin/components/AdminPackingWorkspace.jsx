@@ -118,7 +118,7 @@ export function AdminPackingWorkspace(props) {
             setSourceOrderId('', { replace: true });
             setForm(null);
             setSuccess(message);
-            if (saved?.id) toggleExpand(saved.id);
+            if (saved?.id && saved.id !== expandedId) toggleExpand(saved.id);
             refresh();
           }}
           onCancel={() => {
@@ -151,6 +151,7 @@ export function AdminPackingWorkspace(props) {
           <PackingListCard
             {...props}
             pl={selected}
+            inDetailView
             onChanged={refresh}
             isDraft={selected.status === 'DRAFT'}
             isReleased={selected.status === 'RELEASED'}

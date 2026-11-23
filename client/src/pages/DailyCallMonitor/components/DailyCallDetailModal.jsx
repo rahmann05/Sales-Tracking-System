@@ -35,7 +35,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
         {/* Modal Header */}
         <div className="flex items-start justify-between pb-3 border-b border-border-glass">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-mono bg-primary/10 text-primary font-bold px-2 py-0.5 rounded">
                 {row.customerId}
               </span>
@@ -139,7 +139,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
 
         {/* Order Details */}
         <div className="p-3.5 bg-surface-container-low rounded-2xl border border-border-glass space-y-2 text-xs">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-1.5">
             <span className="font-bold text-on-surface flex items-center gap-1.5">
               <LuShoppingBag className="text-primary" /> Nilai order kunjungan:
             </span>
@@ -149,7 +149,7 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
                 : `Rp ${(row.orderAmount || 0).toLocaleString('id-ID')}`}
             </strong>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-on-surface-variant border-t border-border-glass pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-on-surface-variant border-t border-border-glass pt-2">
             <span>
               Jumlah SKU Terjual: <strong>{row.skuSold} SKU</strong>
             </span>

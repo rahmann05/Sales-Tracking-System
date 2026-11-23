@@ -215,7 +215,7 @@ export const DeviceCameraCapture = ({
           {photoRequired ? 'Foto wajib dilampirkan.' : 'Foto opsional.'}
         </div>
       ) : photoRequired || cameraRequested ? (
-        <div className="relative rounded-2xl overflow-hidden aspect-video bg-slate-950 border border-border-glass shadow-inner flex items-center justify-center">
+        <div className="relative rounded-2xl overflow-hidden aspect-video min-h-[220px] md:min-h-0 bg-slate-950 border border-border-glass shadow-inner flex items-center justify-center">
           <CameraLiveVideoFeed
             videoRef={videoRef}
             facingMode={facingMode}

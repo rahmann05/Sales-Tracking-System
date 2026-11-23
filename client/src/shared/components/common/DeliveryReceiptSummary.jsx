@@ -11,7 +11,7 @@ export function DeliveryReceiptSummary({ stop }) {
         Penerima: <strong>{proof.recipientName}</strong>
       </p>
       <small>
-        Dicatat {new Date(proof.recordedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
+        Dicatat {new Date(proof.recordedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
       </small>
       {proof.signatureDataUrl && (
         <details>

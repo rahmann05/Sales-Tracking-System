@@ -18,7 +18,7 @@ export const CameraErrorDisplay = ({
   if (!cameraError) return null;
 
   return (
-    <div className="absolute inset-0 p-5 bg-slate-900/95 flex flex-col items-center justify-center text-center gap-3">
+    <div className="absolute inset-0 p-3 sm:p-5 bg-slate-900/95 flex flex-col items-center justify-center text-center gap-2 sm:gap-3 overflow-y-auto">
       <FiAlertCircle className="text-3xl text-rose-500" />
       <div className="space-y-1 max-w-xs">
         <p className="text-xs font-bold text-white">Gagal Membuka Kamera</p>

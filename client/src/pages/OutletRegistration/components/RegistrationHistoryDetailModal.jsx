@@ -53,7 +53,7 @@ export const RegistrationHistoryDetailModal = ({ item, onClose, onRevise }) => {
           {current.customerCode || 'Belum ditetapkan'}
         </p>
         <div className="space-y-3 text-xs">
-          <div className="grid grid-cols-2 gap-2 p-3 bg-surface-container-low rounded-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-surface-container-low rounded-xl">
             <div>
               <strong>Status:</strong> {current.registrationStatus}
             </div>
@@ -91,7 +91,7 @@ export const RegistrationHistoryDetailModal = ({ item, onClose, onRevise }) => {
 
           {current.photoUrl && (
             <div className="p-3 bg-surface-container rounded-xl space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
                 <strong className="text-on-surface">Foto Outlet (Kamera Langsung):</strong>
                 <span className="px-2 py-0.5 bg-primary/10 text-primary font-mono font-bold rounded text-[10px]">
                   ID: {current.photoId || 'PHOTO-REG-LIVE'}
@@ -126,7 +126,7 @@ export const RegistrationHistoryDetailModal = ({ item, onClose, onRevise }) => {
                 href={googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="outlet-reg-btn-primary w-full text-xs py-2"
+                className="outlet-reg-btn-primary w-full text-xs py-2 min-h-11 md:min-h-0"
               >
                 <LuExternalLink /> Buka di Google Maps
               </a>

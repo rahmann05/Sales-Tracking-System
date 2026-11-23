@@ -8,9 +8,10 @@ import {
   departureItems,
 } from '../../../../../shared/warehouse-policy.mjs';
 import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { deliveryApi, vehiclesApi } from '../../../services/api';
 import { DeviceCameraCapture } from '../../../shared/components/camera/DeviceCameraCapture';
+
 const labels = {
   PICK: 'Konfirmasi penyiapan',
   CHECK: 'Konfirmasi pemeriksaan',
@@ -23,6 +24,26 @@ const labels = {
   CANCEL: 'Batalkan trip',
   RESCHEDULE: 'Jadwal / penugasan ulang',
   LEGACY_ODOMETER: 'Rekonsiliasi odometer trip lama',
+};
+
+const reasonPresetsByAction = {
+  HOLD: [
+    'Kendaraan bermasalah di perjalanan',
+    'Cuaca buruk / akses rute terhambat',
+    'Menunggu konfirmasi toko atau gudang',
+  ],
+  RESUME: ['Kendala selesai, perjalanan dilanjutkan', 'Penggantian unit / supir telah siap'],
+  CANCEL: [
+    'Order dijadwalkan ulang ke trip lain',
+    'Salah penugasan kendaraan / supir',
+    'Seluruh pengiriman dibatalkan toko',
+  ],
+  RESCHEDULE: [
+    'Penyesuaian jadwal buka toko tujuan',
+    'Pergantian armada atau supir cadangan',
+    'Penyesuaian kapasitas muatan trip',
+  ],
+  LEGACY_ODOMETER: ['Rekonsiliasi pencatatan odometer trip sebelumnya'],
 };
 export function RouteOperationsActions({ route, onChanged, driver = false }) {
   const { user } = useApp();
@@ -42,6 +63,10 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
   const [busy, setBusy] = useState(false);
   const [tripPhoto, setTripPhoto] = useState(null);
   const [tripGps, setTripGps] = useState(null);
+  const errorRef = useRef(null);
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
   const dirty = Boolean(
     action &&
     (confirmed ||
@@ -126,10 +151,22 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
     action
   );
   const prep = ['PICK', 'CHECK', 'LOAD'].includes(action);
+  const secondaryKeys = driver
+    ? ['RESCHEDULE', 'CANCEL', 'HOLD', 'LEGACY_ODOMETER']
+    : ['START', 'RETURN', 'RESCHEDULE', 'CANCEL', 'HOLD', 'LEGACY_ODOMETER'];
   const submit = async (e) => {
     e.preventDefault();
     if (!canTripAction(user, action)) {
       setError('Izin tindakan berubah. Muat ulang halaman.');
+      return;
+    }
+    if (
+      action === 'RESCHEDULE' &&
+      start &&
+      end &&
+      new Date(`${end}:00+07:00`) <= new Date(`${start}:00+07:00`)
+    ) {
+      setError('Target kembali harus setelah jadwal berangkat.');
       return;
     }
     if (prep && !confirmed) {
@@ -198,15 +235,16 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
       )}
       <div className="flex flex-wrap gap-2">
         {actions
-          .filter(
-            (a) =>
-              canTripAction(user, a) &&
-              !['RESCHEDULE', 'CANCEL', 'HOLD', 'LEGACY_ODOMETER'].includes(a)
-          )
+          .filter((a) => canTripAction(user, a) && !secondaryKeys.includes(a))
           .map((a) => (
             <button
               type="button"
-              className="min-h-11 px-3 border rounded-xl hover:bg-primary/10"
+              aria-pressed={action === a}
+              className={`min-h-11 px-3 border rounded-xl transition-colors ${
+                action === a
+                  ? 'bg-primary text-on-primary border-primary font-semibold'
+                  : 'hover:bg-primary/10'
+              }`}
               key={a}
               disabled={busy}
               onClick={() => changeAction(a)}
@@ -214,24 +252,19 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
               {labels[a]}
             </button>
           ))}
-        {actions.some(
-          (a) =>
-            canTripAction(user, a) &&
-            ['RESCHEDULE', 'CANCEL', 'HOLD', 'LEGACY_ODOMETER'].includes(a)
-        ) && (
+        {actions.some((a) => canTripAction(user, a) && secondaryKeys.includes(a)) && (
           <details>
-            <summary className="min-h-11 cursor-pointer">Ubah / hentikan perjalanan</summary>
-            <div className="flex flex-wrap gap-2">
+            <summary className="min-h-11 cursor-pointer">
+              {driver ? 'Ubah / hentikan perjalanan' : 'Tindakan pengecualian / kendali admin'}
+            </summary>
+            <div className="flex flex-wrap gap-2 pt-2">
               {actions
-                .filter(
-                  (a) =>
-                    canTripAction(user, a) &&
-                    ['RESCHEDULE', 'CANCEL', 'HOLD', 'LEGACY_ODOMETER'].includes(a)
-                )
+                .filter((a) => canTripAction(user, a) && secondaryKeys.includes(a))
                 .map((a) => (
                   <button
                     type="button"
-                    className="admin-button"
+                    aria-pressed={action === a}
+                    className={`admin-button ${action === a ? 'primary' : ''}`}
                     key={a}
                     disabled={busy}
                     onClick={() => changeAction(a)}
@@ -302,6 +335,11 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
                   value={odometer}
                   onChange={(e) => setOdometer(e.target.value)}
                 />
+                {action === 'RETURN' && route.odometerStart != null && (
+                  <small className="text-on-surface-variant">
+                    Odometer saat berangkat: {route.odometerStart} km
+                  </small>
+                )}
               </label>
             )}
             {['START', 'RETURN'].includes(action) && (
@@ -440,6 +478,25 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
                 </p>
               </>
             )}
+            {reasonPresetsByAction[action]?.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="block text-xs font-semibold text-on-surface-variant">
+                  Pilih alasan cepat:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {reasonPresetsByAction[action].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                      onClick={() => setNote(preset)}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <label className="block">
               {exceptional ? 'Alasan perubahan (wajib)' : 'Catatan tambahan (opsional)'}
               <textarea
@@ -450,7 +507,7 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap md:flex-nowrap gap-2">
               <button className="min-h-11 px-4 bg-primary text-on-primary rounded-xl" type="submit">
                 {busy ? 'Menyimpan…' : labels[action]}
               </button>
@@ -464,7 +521,7 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
             </div>
           </fieldset>
           {error && (
-            <p role="alert" className="text-red-600">
+            <p ref={errorRef} tabIndex={-1} role="alert" className="text-red-600">
               {error}
             </p>
           )}

@@ -217,6 +217,7 @@ export function VisitOutcomeInput({
                     multiple
                     disabled={uploading || (value.attachments?.length || 0) >= 3}
                     onChange={attach}
+                    className="w-full max-w-full mt-1"
                   />
                 </label>
               )}
@@ -228,8 +229,8 @@ export function VisitOutcomeInput({
               )}
               <ul>
                 {(value.attachments || []).map((a, i) => (
-                  <li key={i}>
-                    {a.name}{' '}
+                  <li key={i} className="flex items-center justify-between gap-2 flex-wrap py-1">
+                    <span className="min-w-0 break-all">{a.name}</span>
                     <button
                       type="button"
                       className="admin-button"

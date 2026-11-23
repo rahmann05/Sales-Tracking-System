@@ -7,7 +7,9 @@ const TrackingMap = lazy(() =>
   import('./DeliveryTrackingMap').then((module) => ({ default: module.DeliveryTrackingMap }))
 );
 const stamp = (value) =>
-  value ? new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : 'Belum tercatat';
+  value
+    ? `${new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
+    : 'Belum tercatat';
 import { deliveryGpsUnavailable } from '../../../../../shared/delivery-location-status.mjs';
 export function TripMonitorWorkspace({
   routes,

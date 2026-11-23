@@ -8,7 +8,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { prisma } from '../../config/prisma.js';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
-import { staffActionSchema } from './staff-attendance.schema.js';
+import { staffActionSchema, followUpCompletionSchema } from './staff-attendance.schema.js';
 import { recordShift } from './shift.service.js';
 import { recordSupervisorVisit } from './supervisor-visit.service.js';
 import { correctShiftTime, pendingShiftCorrections } from './shift-correction.service.js';
@@ -80,8 +80,9 @@ router.get('/follow-ups', async (req, res, next) => {
 });
 router.patch('/follow-ups/:id', async (req, res, next) => {
   try {
+    const body = followUpCompletionSchema.parse(req.body || {});
     res.json({
-      data: await completeFollowUp(req.params.id, req.user, req.body.note, req.body.evidence),
+      data: await completeFollowUp(req.params.id, req.user, body),
     });
   } catch (e) {
     next(e);

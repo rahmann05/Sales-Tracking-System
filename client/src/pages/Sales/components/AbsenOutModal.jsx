@@ -186,7 +186,7 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     >
       {/* Duration Status Bar */}
       {requireEvidence && (
-        <div className="p-3 bg-surface-container rounded-2xl border border-border-glass flex items-center justify-between text-xs">
+        <div className="p-3 bg-surface-container rounded-2xl border border-border-glass flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-1.5 font-bold text-on-surface">
             <FiClock className="text-primary" />
             <span>Durasi Kunjungan:</span>

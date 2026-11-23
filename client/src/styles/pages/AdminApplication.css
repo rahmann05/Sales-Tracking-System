@@ -578,6 +578,10 @@
   background: #fff0ee;
   color: #b96558;
 }
+.admin-status-route {
+  background: #ebf3fe;
+  color: #2c60a3;
+}
 .admin-pagination {
   display: flex;
   align-items: center;
@@ -1235,6 +1239,7 @@ body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)) .
   .admin-module-nav button {
     font-size: 12px;
     min-height: 44px;
+    flex-shrink: 0;
   }
   .admin-page-heading {
     align-items: flex-start;
@@ -1359,8 +1364,8 @@ body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)) .
     white-space: nowrap;
   }
   .admin-order-detail .admin-panel-heading button {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
   .admin-review-queue {
     grid-template-columns: minmax(0, 1fr);
@@ -1430,6 +1435,7 @@ body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)) .
     padding: 8px;
     min-height: 44px;
     width: 44px;
+    justify-content: center;
     margin: 0;
     border: 0;
   }

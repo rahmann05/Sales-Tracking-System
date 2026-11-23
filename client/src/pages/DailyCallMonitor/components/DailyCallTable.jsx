@@ -48,9 +48,14 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
 
   return (
     <div className="overflow-hidden">
-      <div className="overflow-x-auto mobile-card-table-wrapper">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Tabel rekapitulasi kunjungan harian"
+        className="report-table-region mobile-card-table-wrapper"
+      >
         <DataTable
-          className="w-full text-left border-collapse mobile-card-table"
+          className="w-full text-left mobile-card-table"
           style={{ '--table-cell-padding': '10px 10px' }}
         >
           <thead>

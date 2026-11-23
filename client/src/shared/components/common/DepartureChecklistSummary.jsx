@@ -7,6 +7,7 @@ export function DepartureChecklistSummary({ route }) {
       <summary>
         Checklist keberangkatan · {proof.actorName} ·{' '}
         {new Date(proof.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
+        {proof.failures?.length > 0 ? ` · ${proof.failures.length} kondisi perlu perhatian` : ''}
       </summary>
       <dl>
         {proof.items.map((item) => (

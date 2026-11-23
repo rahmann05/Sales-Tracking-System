@@ -1,5 +1,6 @@
 import React from 'react';
 import { LuMapPin, LuPrinter, LuCheckCheck } from 'react-icons/lu';
+import { registrationStatusBadge } from '../../OutletManagement/outletPresentation';
 
 /**
  * OutletReportTableRow Component
@@ -7,8 +8,7 @@ import { LuMapPin, LuPrinter, LuCheckCheck } from 'react-icons/lu';
  */
 export const OutletReportTableRow = ({ item, onOpenPdf, onOpenFinalize }) => {
   const isApprovedAndReady = item.registrationStatus === 'SPV_APPROVED';
-
-  const isAlreadyActive = item.registrationStatus === 'REGISTERED_ACTIVE';
+  const statusBadge = registrationStatusBadge(item.registrationStatus);
 
   return (
     <tr className="hover:bg-surface-variant/20 transition-colors">
@@ -47,7 +47,7 @@ export const OutletReportTableRow = ({ item, onOpenPdf, onOpenFinalize }) => {
 
       {/* Channel */}
       <td data-label="Channel" className="py-3.5 px-4 whitespace-nowrap">
-        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-surface-container border border-border-glass">
+        <span className="admin-status">
           {item.channel === 'MODERN_TRADE' ? 'MT' : 'GT'} - {item.subChannel}
         </span>
       </td>
@@ -60,27 +60,15 @@ export const OutletReportTableRow = ({ item, onOpenPdf, onOpenFinalize }) => {
 
       {/* Status */}
       <td data-label="Status" className="py-3.5 px-4 whitespace-nowrap">
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-            isAlreadyActive
-              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-              : item.registrationStatus === 'SPV_APPROVED'
-                ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
-                : item.registrationStatus === 'REJECTED'
-                  ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                  : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-          }`}
-        >
-          {item.registrationStatus}
-        </span>
+        <span className={statusBadge.className}>{statusBadge.label}</span>
       </td>
 
       {/* Aksi */}
       <td
         data-label="Aksi Admin"
-        className="py-2.5 px-3 text-center whitespace-nowrap min-w-[130px]"
+        className="py-2.5 px-3 text-center whitespace-nowrap min-w-[130px] mobile-full-width"
       >
-        <div className="flex flex-col items-stretch justify-center gap-1.5 w-full max-w-[130px] mx-auto">
+        <div className="flex flex-col items-stretch justify-center gap-1.5 w-full md:max-w-[130px] md:mx-auto">
           {/* Print PDF Button */}
           <button
             type="button"

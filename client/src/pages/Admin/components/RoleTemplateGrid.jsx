@@ -39,21 +39,15 @@ export function RoleTemplateGrid({
                     <div className="font-bold text-sm text-on-surface flex items-center gap-1.5">
                       {r.name}
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container border border-border-glass text-on-surface-variant">
-                      {r.code}
-                    </span>
+                    <span className="admin-status">{r.code}</span>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-end gap-1">
                   {r.isSystem ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                      Sistem
-                    </span>
+                    <span className="admin-status admin-status-route">Sistem</span>
                   ) : (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Kustom
-                    </span>
+                    <span className="admin-status admin-status-released">Kustom</span>
                   )}
                   <span className="text-[10px] text-on-surface-variant font-medium">
                     {r.userCount || 0} Pengguna

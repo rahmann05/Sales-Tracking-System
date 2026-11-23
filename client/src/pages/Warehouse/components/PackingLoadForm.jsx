@@ -9,6 +9,12 @@ import { InvoiceLinesEditor } from './InvoiceLinesEditor';
 import { loadLogistics, capacityGuidance } from '../../../../../shared/packing-load.mjs';
 import { shipmentInvoiceRequired } from '../../../../../shared/shipment-document.mjs';
 
+const packingOverridePresets = [
+  'Order mendesak sesuai arahan Supervisor / Admin',
+  'Jadwal pengiriman reguler area hari ini',
+  'Persetujuan order menyusul di sistem',
+];
+
 function initialLoad(doc, orders) {
   if (doc)
     return {
@@ -16,6 +22,7 @@ function initialLoad(doc, orders) {
       items: doc.items,
       invoices: doc.invoices.map(
         ({
+          id,
           invoiceNumber,
           totalCartons,
           totalAmount,
@@ -26,6 +33,7 @@ function initialLoad(doc, orders) {
           taxIncluded,
           taxRoundingMode,
         }) => ({
+          tempId: id || crypto.randomUUID(),
           invoiceNumber,
           totalCartons,
           totalAmount: totalAmount ?? '',
@@ -86,6 +94,7 @@ function initialLoad(doc, orders) {
       }));
     items.push(...lines);
     invoices.push({
+      tempId: crypto.randomUUID(),
       invoiceNumber: '',
       destinationId: destination.id,
       sourceOrderIds: [order.id],
@@ -117,6 +126,10 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
     [reason, setReason] = useState(doc?.overrideReason || ''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
+  const errorRef = useRef(null);
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
   const [search, setSearch] = useState(''),
     [outlets, setOutlets] = useState([]),
     [searchError, setSearchError] = useState('');
@@ -168,6 +181,10 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
     doc || { documentKind: 'PACKING' },
     doc?.policySnapshot?.values || settings
   );
+  const selectedOrders = orders || (order ? [order] : []);
+  const hasPendingOrder = Boolean(
+    doc?.overrideReason || selectedOrders.some((row) => row.status === 'PENDING_APPROVAL')
+  );
   const destinations = load.destinations.map((destination) => {
     const invoices = load.invoices.filter((invoice) => invoice.destinationId === destination.id);
     return {
@@ -180,6 +197,24 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
   const totals = loadLogistics({ loadPlanVersion: 2, destinations, items: load.items }),
     vehicle = vehicles.find((row) => row.id === suggestion),
     capacity = capacityGuidance(totals, vehicle);
+  const releaseIssues = [];
+  for (const dest of destinations) {
+    const destItems = load.items.filter(
+      (item) => item.destinationId === dest.id && Number(item.quantity) > 0
+    );
+    const destInvoices = load.invoices.filter((inv) => inv.destinationId === dest.id);
+    if (!dest.point) releaseIssues.push(`${dest.outlet.name}: titik lokasi toko belum tersedia.`);
+    if (!destItems.length)
+      releaseIssues.push(`${dest.outlet.name}: minimal 1 barang dibawa (> 0).`);
+    if (Number(dest.totalCartons) <= 0)
+      releaseIssues.push(`${dest.outlet.name}: jumlah karton harus > 0.`);
+    if (required && !destInvoices.length)
+      releaseIssues.push(`${dest.outlet.name}: faktur wajib dilampirkan.`);
+    if (destInvoices.some((inv) => Number(inv.totalCartons) <= 0))
+      releaseIssues.push(`${dest.outlet.name}: karton tiap faktur harus > 0.`);
+    if (destInvoices.some((inv) => !String(inv.invoiceNumber || '').trim()))
+      releaseIssues.push(`${dest.outlet.name}: nomor faktur masih kosong.`);
+  }
   const setInvoice = (index, invoice) =>
     setLoad((current) => ({
       ...current,
@@ -261,6 +296,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
       invoices: [
         ...current.invoices,
         {
+          tempId: crypto.randomUUID(),
           invoiceNumber: '',
           destinationId: destination.id,
           sourceOrderIds: destination.sourceOrderIds.length === 1 ? destination.sourceOrderIds : [],
@@ -317,6 +353,22 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
   const save = async (event) => {
     event.preventDefault();
     if (busy) return;
+    const releaseAfterSave = event.nativeEvent.submitter?.value === 'RELEASE';
+    if (releaseAfterSave && releaseIssues.length > 0) {
+      setError(releaseIssues[0]);
+      return;
+    }
+    if (hasPendingOrder && !reason.trim()) {
+      setError('Isi alasan pengecualian untuk order yang belum disetujui.');
+      return;
+    }
+    if (
+      releaseAfterSave &&
+      !window.confirm(
+        `Serahkan dokumen ${code || 'packing list'} (${totals.totalCartons} karton) ke Kepala Gudang?`
+      )
+    )
+      return;
     setError('');
     setBusy(true);
     try {
@@ -330,7 +382,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
         loadPlanVersion: 2,
         documentKind: 'PACKING',
         code,
-        releaseAfterSave: event.nativeEvent.submitter?.value === 'RELEASE',
+        releaseAfterSave,
         outletId: destinations[0]?.outletId,
         sourceOrderIds,
         suggestedVehicleId: suggestion || null,
@@ -344,7 +396,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
           })
         ),
         items: activeItems,
-        invoices: load.invoices.map((invoice) => ({
+        invoices: load.invoices.map(({ tempId, ...invoice }) => ({
           ...invoice,
           totalAmount:
             invoice.totalAmount === '' || invoice.totalAmount == null
@@ -381,7 +433,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
         menentukan kendaraan akhir dan urutan pengiriman.
       </div>
       {error && (
-        <p role="alert" className="admin-feedback error">
+        <p ref={errorRef} tabIndex={-1} role="alert" className="admin-feedback error">
           {error}
         </p>
       )}
@@ -419,7 +471,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                   </p>
                 )}
               </header>
-              {destination.sourceOrderIds.length > 0 && (
+              {destination.sourceOrderIds.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {destination.sourceOrderIds.map((id) => (
                     <button
@@ -434,6 +486,25 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                     </button>
                   ))}
                 </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="admin-button"
+                    onClick={() =>
+                      setLoad((current) => ({
+                        ...current,
+                        destinations: current.destinations.filter((d) => d.id !== destination.id),
+                        items: current.items.filter((it) => it.destinationId !== destination.id),
+                        invoices: current.invoices.filter(
+                          (inv) => inv.destinationId !== destination.id
+                        ),
+                      }))
+                    }
+                  >
+                    Hapus tujuan manual ini
+                  </button>
+                </div>
               )}
               <div className="admin-table-scroll">
                 <table className="admin-data-table">
@@ -446,6 +517,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                       <th>Order / produk</th>
                       <th>Dibawa</th>
                       <th>Satuan</th>
+                      {!destination.sourceOrderIds.length && <th>Aksi</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -516,6 +588,24 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                               </label>
                             )}
                           </td>
+                          {!destination.sourceOrderIds.length && (
+                            <td>
+                              <button
+                                type="button"
+                                className="admin-button"
+                                onClick={() =>
+                                  setLoad((current) => ({
+                                    ...current,
+                                    items: current.items.filter(
+                                      (row) => row.lineId !== item.lineId
+                                    ),
+                                  }))
+                                }
+                              >
+                                Hapus
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                   </tbody>
@@ -558,7 +648,10 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                 </div>
                 {load.invoices.map((invoice, i) =>
                   invoice.destinationId !== destination.id ? null : (
-                    <section key={i} className="border rounded-xl p-4 space-y-3">
+                    <section
+                      key={invoice.tempId || i}
+                      className="border rounded-xl p-4 space-y-3"
+                    >
                       <p className="admin-footnote">
                         Order:{' '}
                         {invoice.sourceOrderIds
@@ -629,7 +722,9 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                         onClick={() =>
                           setLoad((current) => ({
                             ...current,
-                            invoices: current.invoices.filter((_, n) => n !== i),
+                            invoices: current.invoices.filter((row, n) =>
+                              invoice.tempId ? row.tempId !== invoice.tempId : n !== i
+                            ),
                           }))
                         }
                       >
@@ -793,6 +888,34 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
             Kapasitas adalah patokan, bukan ukuran pasti. Berat kosong tidak dianggap nol. Kuantitas
             produk tidak otomatis dikonversi menjadi karton.
           </p>
+          {hasPendingOrder && (
+            <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50/40 p-3">
+              <strong className="block text-xs font-semibold text-amber-900">
+                Alasan pengecualian order belum disetujui (wajib)
+              </strong>
+              <div className="flex flex-wrap gap-1.5">
+                {packingOverridePresets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                    onClick={() => setReason(preset)}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                aria-label="Alasan pengecualian order belum disetujui"
+                className="form-input block w-full"
+                required
+                value={reason}
+                maxLength={1000}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Pilih cepat di atas atau tulis alasan persetujuan Admin…"
+              />
+            </div>
+          )}
           <details>
             <summary className="min-h-11 cursor-pointer">Catatan untuk gudang</summary>
             <label>
@@ -804,16 +927,17 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                 onChange={(e) => setNotes(e.target.value)}
               />
             </label>
-            <label>
-              Alasan pengecualian order pending (bila ada)
-              <textarea
-                className="form-input block w-full"
-                value={reason}
-                maxLength={1000}
-                onChange={(e) => setReason(e.target.value)}
-              />
-            </label>
           </details>
+          {!settings.PACKING_AUTO_RELEASE && releaseIssues.length > 0 && destinations.length > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-900 space-y-1">
+              <strong className="block">Syarat sebelum diserahkan ke gudang:</strong>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {releaseIssues.map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <button
             type="submit"
             value="DRAFT"

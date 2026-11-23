@@ -151,7 +151,7 @@ export const RecordMaintenanceModal = ({ vehicle, onClose, onSuccess }) => {
                   >
                     <span>{r.label}</span>
                     <span
-                      className={`w-5 h-5 rounded-md flex items-center justify-center border ${checked ? 'border-primary bg-primary text-on-primary' : 'border-border-glass bg-surface-variant'}`}
+                      className={`w-5 h-5 shrink-0 rounded-md flex items-center justify-center border ${checked ? 'border-primary bg-primary text-on-primary' : 'border-border-glass bg-surface-variant'}`}
                     >
                       {checked && <LuCheck className="text-xs" />}
                     </span>

@@ -99,15 +99,114 @@
   vertical-align: middle;
 }
 .work-advanced {
-  padding: 16px 20px;
-  border: 1px solid var(--admin-border, #dbe2ea);
-  border-radius: 14px;
+  padding: 0;
 }
 .work-advanced > summary {
   cursor: pointer;
   min-height: 44px;
+  padding: 12px 18px;
   display: flex;
   align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-surface, #111827);
+}
+.work-advanced[open] > summary {
+  border-bottom: 1px solid var(--admin-border, #dbe2ea);
+}
+.work-advanced-body {
+  padding: 16px 18px 18px;
+  display: grid;
+  gap: 14px;
+}
+.work-escalations {
+  display: grid;
+  gap: 12px;
+}
+.work-escalations-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.work-escalations-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.work-escalations-title h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+.work-escalations-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.work-escalations-controls .app-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.work-escalations-controls .app-field select {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 12px;
+  width: auto;
+}
+.work-escalations-controls .app-button {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.work-escalations-note,
+.work-escalations-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--on-surface-variant, #64748b);
+  line-height: 1.55;
+}
+.work-escalations-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--admin-border, #dbe2ea);
+  border-radius: 8px;
+}
+.work-escalations-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--admin-border, #dbe2ea);
+}
+.work-escalations-item:last-child {
+  border-bottom: 0;
+}
+.work-escalations-item-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+.work-escalations-item-body strong {
+  font-size: 13px;
+}
+.work-escalations-item-body p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--on-surface-variant, #475569);
+}
+.work-escalations-item-body small {
+  font-size: 11px;
+  color: var(--on-surface-variant, #64748b);
 }
 .work-detail-dialog {
   width: min(760px, calc(100vw - 32px));
@@ -196,7 +295,7 @@
     position: static;
   }
 }
-@media (max-width: 600px) {
+@media (max-width: 767px) {
   .work-summary {
     grid-template-columns: 1fr;
   }

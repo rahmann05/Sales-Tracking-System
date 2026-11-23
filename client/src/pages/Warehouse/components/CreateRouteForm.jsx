@@ -58,6 +58,18 @@ const ready = (pl) =>
   isVehicleLoad(pl)
     ? pl.destinations?.every((destination) => !!destination.point)
     : !pl.destinationConflict && !!pl.destinationPoint;
+const vehicleReasonPresets = [
+  'Armada saran sedang dalam perbaikan / bertugas lain',
+  'Menyesuaikan kapasitas muatan aktual perjalanan',
+  'Penyesuaian akses jalan menuju toko tujuan',
+];
+
+const capacityReasonPresets = [
+  'Karton ringan namun bervolume aman di kendaraan',
+  'Penataan muatan aman disetujui Kepala Gudang',
+  'Rute jarak dekat sesuai kondisi armada',
+];
+
 export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] }) {
   const operation = useOperationRequest('delivery-route');
   const { settings } = useApp(),
@@ -82,6 +94,10 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
+  const errorRef = useRef(null);
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
   const snapshot = JSON.stringify([
       code,
       date,
@@ -178,6 +194,9 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
   const selectedDocs = packings.filter((pl) =>
       entries.some((entry) => entry.packingListId === pl.id)
     ),
+    suggestedVehicleId =
+      selectedDocs.find((pl) => pl.suggestedVehicleId)?.suggestedVehicleId || '',
+    suggestedVehicle = vehicles.find((row) => row.id === suggestedVehicleId),
     changedSuggestion = selectedDocs.some(
       (pl) => pl.suggestedVehicleId && pl.suggestedVehicleId !== vehicleId
     );
@@ -291,7 +310,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
         toko. Setelah rencana tersimpan, lanjutkan pemeriksaan dan serah terima muatan.
       </div>
       {error && (
-        <p className="admin-feedback error" role="alert">
+        <p ref={errorRef} tabIndex={-1} className="admin-feedback error" role="alert">
           {error}
         </p>
       )}
@@ -468,12 +487,19 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
                 .filter((v) => v.isActive && v.condition === 'AVAILABLE')
                 .map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.code} · Patokan {v.maxCartons > 0 ? `${v.maxCartons} karton` : 'belum diisi'}
+                    {v.code} · {v.name} · Patokan{' '}
+                    {v.maxCartons > 0 ? `${v.maxCartons} karton` : 'belum diisi'}
                     {!v.photoUrl ? ' · Foto belum ada' : ''}
                   </option>
                 ))}
             </select>
           </label>
+          {suggestedVehicle && (
+            <p className="admin-footnote">
+              Saran kendaraan Admin: <strong>{suggestedVehicle.code}</strong> ·{' '}
+              {suggestedVehicle.name}
+            </p>
+          )}
           {vehicle && (
             <div>
               {vehicle.photoUrl && (
@@ -500,28 +526,62 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
             . Kapasitas menjadi patokan, bukan kepastian volume muatan.
           </p>
           {changedSuggestion && (
-            <label>
-              Alasan mengganti saran kendaraan Admin
-              <textarea
-                className="form-input block w-full"
-                required
-                value={vehicleReason}
-                maxLength={2000}
-                onChange={(e) => setVehicleReason(e.target.value)}
-              />
-            </label>
+            <div className="space-y-1.5">
+              <span className="block text-xs font-semibold text-on-surface-variant">
+                Alasan cepat mengganti saran kendaraan:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {vehicleReasonPresets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                    onClick={() => setVehicleReason(preset)}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              <label className="block">
+                Alasan mengganti saran kendaraan Admin
+                <textarea
+                  className="form-input block w-full"
+                  required
+                  value={vehicleReason}
+                  maxLength={2000}
+                  onChange={(e) => setVehicleReason(e.target.value)}
+                />
+              </label>
+            </div>
           )}
           {over && (
-            <label>
-              Perkiraan melampaui patokan: alasan persetujuan kepala gudang
-              <textarea
-                className="form-input block w-full"
-                required
-                value={capacityReason}
-                maxLength={2000}
-                onChange={(e) => setCapacityReason(e.target.value)}
-              />
-            </label>
+            <div className="space-y-1.5">
+              <span className="block text-xs font-semibold text-on-surface-variant">
+                Alasan cepat kapasitas:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {capacityReasonPresets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                    onClick={() => setCapacityReason(preset)}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              <label className="block">
+                Perkiraan melampaui patokan: alasan persetujuan kepala gudang
+                <textarea
+                  className="form-input block w-full"
+                  required
+                  value={capacityReason}
+                  maxLength={2000}
+                  onChange={(e) => setCapacityReason(e.target.value)}
+                />
+              </label>
+            </div>
           )}
           <label className="block">
             Supir
@@ -571,6 +631,11 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
               />
             </label>
           </div>
+          {startTime && endTime && endTime <= startTime && (
+            <p role="alert" className="text-xs text-red-700">
+              Target kembali harus setelah waktu berangkat.
+            </p>
+          )}
           <label>
             Titik berangkat
             <select
@@ -642,6 +707,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
               !entries.length ||
               !vehicle?.photoUrl ||
               !driverId ||
+              (Boolean(startTime && endTime) && endTime <= startTime) ||
               (over && !capacityReason.trim()) ||
               (changedSuggestion && !vehicleReason.trim())
             }

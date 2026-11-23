@@ -133,7 +133,7 @@ export function OrderFulfillmentPanel({ orders: provided, onSelect, onChanged, r
               {orderStatusLabel(o.status)} · {fulfillmentLabel(o.fulfillmentStatus)} · Dibuat{' '}
               {new Date(o.createdAt).toLocaleDateString('id-ID')} · Janji kirim:{' '}
               {o.promisedAt
-                ? new Date(o.promisedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+                ? `${new Date(o.promisedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
                 : 'Belum ditetapkan'}
             </span>
           </summary>
@@ -193,7 +193,7 @@ export function OrderFulfillmentPanel({ orders: provided, onSelect, onChanged, r
               <summary className="cursor-pointer min-h-11">Riwayat order</summary>
               {o.history.map((h, n) => (
                 <p className="text-sm py-1" key={n}>
-                  {new Date(h.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} ·{' '}
+                  {new Date(h.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB ·{' '}
                   {h.action} · {h.actorName || h.actorId} · {h.note}
                   {h.lines
                     ? ` · ${h.lines.map((i) => `${i.id.slice(0, 8)}: ${i.quantity}`).join(', ')}`
@@ -240,31 +240,55 @@ export function OrderFulfillmentPanel({ orders: provided, onSelect, onChanged, r
                       </button>
                     )}
                 {canOrderOperation(user, 'PROMISE') && (
-                  <form onSubmit={(e) => save(e, o)} className="space-y-2">
-                    <label className="block">
-                      Janji pengiriman WIB
-                      <input
-                        required
-                        type="datetime-local"
-                        className="form-input block w-full"
-                        value={dates[o.id] || ''}
-                        onChange={(e) => setDates({ ...dates, [o.id]: e.target.value })}
-                      />
-                    </label>
-                    <label className="block">
-                      Catatan konfirmasi pelanggan
-                      <input
-                        required
-                        maxLength={2000}
-                        className="form-input block w-full"
-                        value={notes[o.id] || ''}
-                        onChange={(e) => setNotes({ ...notes, [o.id]: e.target.value })}
-                      />
-                    </label>
-                    <button disabled={busy} className="min-h-11 border rounded-xl px-3">
-                      Simpan janji kirim
-                    </button>
-                  </form>
+                  <details className="border rounded-xl p-3">
+                    <summary className="cursor-pointer min-h-11 font-semibold">
+                      Tetapkan / ubah janji pengiriman
+                    </summary>
+                    <form onSubmit={(e) => save(e, o)} className="space-y-2 pt-2">
+                      <label className="block">
+                        Janji pengiriman WIB
+                        <input
+                          required
+                          type="datetime-local"
+                          className="form-input block w-full"
+                          value={dates[o.id] || ''}
+                          onChange={(e) => setDates({ ...dates, [o.id]: e.target.value })}
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          'Konfirmasi jadwal kirim ulang bersama toko',
+                          'Permintaan pengiriman sesuai jam buka toko',
+                        ].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                            onClick={() => setNotes({ ...notes, [o.id]: preset })}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                      <label className="block">
+                        Catatan konfirmasi pelanggan
+                        <input
+                          required
+                          maxLength={2000}
+                          className="form-input block w-full"
+                          value={notes[o.id] || ''}
+                          onChange={(e) => setNotes({ ...notes, [o.id]: e.target.value })}
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        disabled={busy}
+                        className="min-h-11 border rounded-xl px-3"
+                      >
+                        Simpan janji kirim
+                      </button>
+                    </form>
+                  </details>
                 )}
               </div>
             )}

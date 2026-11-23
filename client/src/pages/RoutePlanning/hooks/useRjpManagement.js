@@ -70,6 +70,7 @@ export const useRjpManagement = () => {
           name: o.name,
           outletCode: o.outletCode,
           address: o.address,
+          clusterId: o.clusterId || o.cluster?.id || null,
           clusterName:
             !o.cluster || o.cluster.deletedAt || o.cluster.name === 'Belum Ditugaskan'
               ? '-'

@@ -37,7 +37,7 @@ export const VisitDurationTimer = ({ startTime, minMinutes = 5 }) => {
 
   return (
     <div className="p-3 bg-surface-container rounded-2xl border border-border-glass space-y-2">
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-1.5 font-bold text-on-surface">
           <LuClock className="text-primary animate-pulse" />
           <span>Durasi Kunjungan:</span>

@@ -1,19 +1,35 @@
 import React, { useState } from 'react';
 import { deliveryApi } from '../../../services/api';
 import { warehouseStaffEligible } from '../../../../../shared/warehouse-policy.mjs';
-export function ReturnAssignment({ stop, task, people, onChanged }) {
+
+const returnAssignPresets = [
+  'Pembagian beban pemeriksaan barang kembali',
+  'Pemeriksa awal berhalangan / pergantian shift',
+  'Perlu pemeriksaan khusus kondisi produk retur',
+];
+
+const formatWibInput = (iso) => {
+  if (!iso) return '';
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+    .format(new Date(iso))
+    .replace(' ', 'T');
+};
+
+export function ReturnAssignment({ stop, task, people, canManage = true, onChanged }) {
   const [ownerId, setOwnerId] = useState(task?.ownerId || ''),
-    [due, setDue] = useState(
-      task?.dueAt
-        ? new Date(Date.parse(task.dueAt) - new Date(task.dueAt).getTimezoneOffset() * 60000)
-            .toISOString()
-            .slice(0, 16)
-        : ''
-    ),
+    [due, setDue] = useState(() => formatWibInput(task?.dueAt)),
     [reason, setReason] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
-  if (!(stop.rejectedCartons > 0) || stop.returnInspection) return null;
+  if (!canManage || !(stop.rejectedCartons > 0) || stop.returnInspection) return null;
   const eligible = people.filter((p) => warehouseStaffEligible(p, 'can_monitor_delivery')),
     invalidOwner = Boolean(ownerId && !eligible.some((p) => p.id === ownerId));
   const save = async (e) => {
@@ -24,7 +40,7 @@ export function ReturnAssignment({ stop, task, people, onChanged }) {
       await deliveryApi.assignReturn(stop.id, {
         revision: task?.revision || 0,
         ownerId: ownerId || null,
-        dueAt: due ? new Date(due).toISOString() : null,
+        dueAt: due ? new Date(`${due}:00+07:00`).toISOString() : null,
         reason,
       });
       setReason('');
@@ -67,7 +83,7 @@ export function ReturnAssignment({ stop, task, people, onChanged }) {
           </p>
         )}
         <label className="app-field">
-          Tenggat (waktu lokal)
+          Tenggat WIB
           <input
             type="datetime-local"
             value={due}
@@ -75,6 +91,23 @@ export function ReturnAssignment({ stop, task, people, onChanged }) {
             onChange={(e) => setDue(e.target.value)}
           />
         </label>
+        <div className="space-y-1.5">
+          <span className="block text-xs font-semibold text-on-surface-variant">
+            Pilih alasan cepat:
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {returnAssignPresets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                className="px-2.5 py-1.5 min-h-[36px] text-xs rounded-lg border border-border-glass bg-surface hover:bg-surface-variant cursor-pointer"
+                onClick={() => setReason(preset)}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="app-field">
           Alasan penugasan
           <textarea
@@ -86,7 +119,11 @@ export function ReturnAssignment({ stop, task, people, onChanged }) {
             onChange={(e) => setReason(e.target.value)}
           />
         </label>
-        <button className="app-button" disabled={busy || invalidOwner || reason.trim().length < 5}>
+        <button
+          type="submit"
+          className="app-button"
+          disabled={busy || invalidOwner || reason.trim().length < 5}
+        >
           {busy ? 'Menyimpan…' : 'Tetapkan pemeriksa retur'}
         </button>
         {error && (

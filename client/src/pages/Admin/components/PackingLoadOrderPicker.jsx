@@ -101,6 +101,11 @@ export function PackingLoadOrderPicker({ allowPending, onSelectMany }) {
               Hapus {order.code}
             </button>
           ))}
+          {selected.length > 1 && (
+            <button type="button" className="admin-button" onClick={() => setSelected([])}>
+              Hapus semua
+            </button>
+          )}
         </div>
         <button
           type="button"
@@ -169,9 +174,9 @@ export function PackingLoadOrderPicker({ allowPending, onSelectMany }) {
                   {order.createdByUser?.name || '—'}
                   <small>
                     {order.promisedAt
-                      ? new Date(order.promisedAt).toLocaleString('id-ID', {
+                      ? `${new Date(order.promisedAt).toLocaleString('id-ID', {
                           timeZone: 'Asia/Jakarta',
-                        })
+                        })} WIB`
                       : 'Tanpa janji kirim khusus'}
                   </small>
                 </td>

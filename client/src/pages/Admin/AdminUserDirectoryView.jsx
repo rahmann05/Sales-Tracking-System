@@ -197,7 +197,7 @@ export function AdminUserDirectoryView({
                             <div className="text-xs text-on-surface-variant">{u.email}</div>
                           </td>
                           <td data-label="Peran">
-                            <span className="px-2.5 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-[11px] font-bold text-neutral-800">
+                            <span className="admin-status">
                               {roles.find((role) => role.code === (u.roleCode || u.role))?.name ||
                                 u.roleLabel ||
                                 u.role}
@@ -222,7 +222,7 @@ export function AdminUserDirectoryView({
                             )}
                           </td>
                           <td data-label="Izin" className="text-center">
-                            <span className="text-[10px] text-primary bg-primary/10 px-2.5 py-1 rounded-full font-bold border border-primary/20">
+                            <span className="admin-status admin-status-route">
                               {activePermCount} izin aktif
                             </span>
                           </td>

@@ -1,12 +1,19 @@
 import { followUpReviewers } from '../../../../shared/follow-up-policy.mjs';
 import { reviewPeople } from '../config/services/approval-readiness.service.js';
 import { processValue } from '../config/services/process-policy.service.js';
+import { getDynamicConfig } from '../config/config.service.js';
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/errors.js';
 import { randomUUID } from 'node:crypto';
 import { assertSalesAccess } from '../../utils/team-scope.js';
+import { assertEvidenceImages } from '../../utils/evidence-images.js';
+import { maybePersistEvidenceImage } from '../../utils/evidence-storage.js';
+import { gpsEvidence } from '../../utils/gps-evidence.js';
+import { distanceToOutlet } from '../../utils/geolocation.js';
+import { findAttendanceException } from '../absensi/services/attendance-policy.service.js';
 import { notifyFollowUp } from './follow-up-notification.service.js';
 import { followUpActor } from './follow-up-access.service.js';
+import { resolveFollowUpOutlet, resolveFollowUpTargets } from './follow-up-target.service.js';
 import { completedVisitStatuses } from '../../../../shared/sales-visit-actions.mjs';
 export async function followUpScope(user, db = prisma) {
   if (user.role === 'ADMIN') return { followUp: { path: ['status'], string_contains: '' } };
@@ -35,7 +42,7 @@ export const listFollowUps = async (user, { status = 'ALL', page = 1, limit = 50
     throw new AppError('Status tindak lanjut tidak valid', 400);
   const current = Math.max(1, Math.floor(Number(page) || 1)),
     size = Math.min(200, Math.max(1, Math.floor(Number(limit) || 50)));
-  return prisma.staffActivity.findMany({
+  const rows = await prisma.staffActivity.findMany({
     where: {
       AND: [
         await followUpScope(user),
@@ -44,6 +51,8 @@ export const listFollowUps = async (user, { status = 'ALL', page = 1, limit = 50
     },
     select: {
       id: true,
+      kind: true,
+      activityKey: true,
       outletName: true,
       followUp: true,
       policySnapshot: true,
@@ -53,8 +62,12 @@ export const listFollowUps = async (user, { status = 'ALL', page = 1, limit = 50
     skip: (current - 1) * size,
     take: size,
   });
+  if (!Array.isArray(rows)) return rows;
+  const targets = await resolveFollowUpTargets(rows, prisma);
+  return rows.map((row) => ({ ...row, targetOutlet: targets.get(row.id) || null }));
 };
-export const completeFollowUp = (id, user, note, evidence) =>
+
+export const completeFollowUp = (id, user, payloadOrNote, legacyEvidence, legacyExtra = {}) =>
   prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
     ({ actor: user } = await followUpActor(tx, user, 'complete'));
@@ -67,12 +80,26 @@ export const completeFollowUp = (id, user, note, evidence) =>
       throw new AppError('Tugas sudah dikirim atau selesai', 409);
     if (record.followUp.ownerId !== user.id)
       throw new AppError('Hanya penerima arahan yang dapat mengirim hasil', 403);
+    const payload =
+      payloadOrNote && typeof payloadOrNote === 'object'
+        ? payloadOrNote
+        : { note: payloadOrNote, evidence: legacyEvidence, ...legacyExtra };
+    const {
+      note,
+      evidence,
+      photoUrl = null,
+      latitude = null,
+      longitude = null,
+      accuracy = null,
+      observedAt = null,
+    } = payload;
+    let closedDecision = null;
     if (record.followUp.scheduledVisit) {
       const visit = await tx.pjpStop.findUnique({
         where: { id: record.followUp.scheduledVisit.stopId },
         include: { pjp: true },
       });
-      const closedDecision =
+      closedDecision =
         visit?.status === 'SKIPPED' &&
         (await tx.routeChangeRequest.findFirst({
           where: {
@@ -93,19 +120,106 @@ export const completeFollowUp = (id, user, note, evidence) =>
     }
     if (typeof note !== 'string' || !note.trim() || note.trim().length > 4000)
       throw new AppError('Catatan penyelesaian wajib, maksimal 4000 karakter', 400);
-    if (
-      (await processValue(record, 'FOLLOW_UP_REQUIRE_EVIDENCE', true)) &&
-      (typeof evidence !== 'string' || !evidence.trim() || evidence.trim().length > 2000)
-    )
+    if (evidence !== undefined && evidence !== null && typeof evidence !== 'string')
+      throw new AppError('Bukti atau referensi hasil tidak valid', 400);
+    const evidenceText = typeof evidence === 'string' ? evidence.trim() : '';
+    if (evidenceText.length > 2000)
+      throw new AppError('Bukti atau referensi hasil maksimal 2000 karakter', 400);
+
+    const [
+      requireEvidence,
+      requirePhoto,
+      requireGps,
+      enforceGeofence,
+      requireReview,
+      globalRadius,
+      useOutletRadius,
+      bypassEmailsRaw,
+    ] = await Promise.all([
+      processValue(record, 'FOLLOW_UP_REQUIRE_EVIDENCE', true),
+      processValue(record, 'FOLLOW_UP_REQUIRE_PHOTO', true),
+      processValue(record, 'FOLLOW_UP_REQUIRE_GPS', true),
+      processValue(record, 'FOLLOW_UP_ENFORCE_GEOFENCE', true),
+      processValue(record, 'FOLLOW_UP_REQUIRE_REVIEW', true),
+      getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50),
+      getDynamicConfig('ATTENDANCE_USE_OUTLET_RADIUS', true),
+      getDynamicConfig('BYPASS_GEOFENCE_EMAILS', ''),
+    ]);
+
+    await assertEvidenceImages({ photoUrl });
+    const hasPhoto = Boolean(typeof photoUrl === 'string' && photoUrl.trim());
+    if (requirePhoto && !closedDecision && !hasPhoto)
+      throw new AppError(
+        'Foto kamera langsung wajib dilampirkan saat berada di lokasi outlet',
+        422
+      );
+
+    const hasGps = Number.isFinite(latitude) && Number.isFinite(longitude);
+    if ((requireGps || (enforceGeofence && !closedDecision)) && !closedDecision && !hasGps)
+      throw new AppError('GPS lokasi wajib diaktifkan sebelum mengirim hasil tugas', 422);
+
+    const gpsMeta = hasGps ? await gpsEvidence({ latitude, longitude, accuracy, observedAt }) : null;
+    const target = await resolveFollowUpOutlet(record, tx);
+    const maxRadius = useOutletRadius
+      ? target?.radiusMeters || globalRadius
+      : globalRadius;
+    const distance =
+      hasGps && target?.outlet ? distanceToOutlet(latitude, longitude, target.outlet) : null;
+    const deviationMeters = distance == null ? null : Math.round(distance);
+    const distanceWarning =
+      distance == null ? 'UNAVAILABLE' : distance > maxRadius ? 'WARNING' : 'OK';
+
+    const bypassEmails = String(bypassEmailsRaw || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const actorEmail =
+      user.email ||
+      (typeof tx.user?.findUnique === 'function'
+        ? (await tx.user.findUnique({ where: { id: user.id }, select: { email: true } }))?.email
+        : null);
+    const isBypassUser = Boolean(actorEmail && bypassEmails.includes(actorEmail.toLowerCase()));
+    const radiusException =
+      target?.id && typeof tx.outletUnlockRequest?.findMany === 'function'
+        ? await findAttendanceException(target.id, user.id, tx, 'GEOFENCE')
+        : null;
+    const hasException = Boolean(radiusException);
+
+    if (enforceGeofence && !closedDecision && !isBypassUser && !hasException) {
+      if (distance === null) {
+        throw new AppError(
+          'Koordinat master outlet belum tersedia. Minta koreksi lokasi atau pengecualian presensi resmi.',
+          422
+        );
+      }
+      if (distance > maxRadius) {
+        throw new AppError(
+          `Pengiriman ditolak. Posisi Anda (${deviationMeters}m) berada di luar radius outlet (${maxRadius}m). Harap dekati lokasi fisik outlet.`,
+          422
+        );
+      }
+    }
+
+    const storedPhotoUrl = hasPhoto
+      ? await maybePersistEvidenceImage(photoUrl, 'attendance')
+      : null;
+
+    if (requireEvidence && !evidenceText && !storedPhotoUrl)
       throw new AppError('Bukti atau referensi hasil wajib diisi, maksimal 2000 karakter', 400);
+
     const submission = {
       id: randomUUID(),
       at: new Date().toISOString(),
       actorId: user.id,
       note: note.trim(),
-      evidence: typeof evidence === 'string' ? evidence.trim() : '',
+      evidence: evidenceText,
+      ...(storedPhotoUrl ? { photoUrl: storedPhotoUrl } : {}),
+      ...(hasGps ? { latitude, longitude } : {}),
+      ...(gpsMeta ? { gpsEvidence: gpsMeta } : {}),
+      ...(deviationMeters != null ? { deviationMeters, distanceWarning } : {}),
+      ...(target?.id ? { targetOutletId: target.id } : {}),
     };
-    const needsReview = await processValue(record, 'FOLLOW_UP_REQUIRE_REVIEW', true);
+    const needsReview = requireReview;
     const followUp = {
       ...record.followUp,
       status: needsReview ? 'SUBMITTED' : 'DONE',

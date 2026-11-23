@@ -109,3 +109,61 @@ export function deliveryStopGate(stops, stopId, values = {}) {
     incomplete,
   };
 }
+
+export const DRIVER_REJECT_REASON_PRESETS = [
+  'Toko tutup saat kunjungan',
+  'Barang rusak / kemasan cacat',
+  'Pesanan tidak sesuai permintaan toko',
+  'Pemilik / penerima tidak di tempat',
+  'Stok toko penuh / batal pesan',
+];
+
+export const MISSING_CHECKOUT_REASON_PRESETS = [
+  'Sinyal atau GPS tidak terkunci di lokasi',
+  'Perangkat bermasalah / baterai habis',
+  'Sudah terlanjur meninggalkan area toko',
+];
+
+export function validatePartialReject({
+  allocatedCartons,
+  allocatedItems = [],
+  allocatedInvoices = [],
+  rejectedCartons,
+  rejectedItems = [],
+  rejectedInvoices = [],
+}) {
+  const total = Number(allocatedCartons || 0);
+  const cartons = Number(rejectedCartons);
+  if (!Number.isInteger(cartons) || cartons < 1 || cartons >= total) {
+    return total <= 1
+      ? 'Muatan 1 karton hanya bisa diterima penuh atau ditolak penuh.'
+      : `Jumlah karton ditolak sebagian harus bilangan bulat 1 hingga ${total - 1}.`;
+  }
+  const itemList = allocatedItems || [];
+  if (itemList.length > 0) {
+    const itemMap = new Map();
+    for (const row of rejectedItems) {
+      const orig = itemList.find((i) => i.lineId === row.lineId);
+      const qty = Number(row.quantity);
+      if (!orig || !Number.isInteger(qty) || qty <= 0 || qty > orig.quantity)
+        return 'Jumlah barang ditolak tidak valid atau melebihi muatan.';
+      itemMap.set(row.lineId, qty);
+    }
+    if (!rejectedItems.length || itemList.every((i) => (itemMap.get(i.lineId) || 0) >= i.quantity))
+      return 'Pilih minimal 1 barang yang ditolak dan sisakan barang yang diterima.';
+  }
+  const invoiceList = allocatedInvoices || [];
+  if (invoiceList.length > 0) {
+    let sum = 0;
+    for (const row of rejectedInvoices) {
+      const orig = invoiceList.find((i) => i.invoiceId === row.invoiceId);
+      const qty = Number(row.cartons);
+      if (!orig || !Number.isInteger(qty) || qty <= 0 || qty > orig.cartons)
+        return 'Jumlah karton ditolak per faktur melebihi alokasi faktur.';
+      sum += qty;
+    }
+    if (sum !== cartons)
+      return `Total karton ditolak per faktur (${sum}) harus sama dengan jumlah karton ditolak (${cartons}).`;
+  }
+  return '';
+}

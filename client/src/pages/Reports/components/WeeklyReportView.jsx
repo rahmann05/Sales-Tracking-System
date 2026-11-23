@@ -6,7 +6,7 @@ import { ReportArchivePanel } from './ReportArchivePanel';
 import { WeeklySalesTable } from './WeeklySalesTable';
 import { reportFilterDefaults } from '../../../../../shared/report-filter-defaults.mjs';
 import { useApp } from '../../../context/AppContext';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { collectPages, reportsApi, usersApi } from '../../../services/api';
 import { WeeklyReportPdfView } from './WeeklyReportPdfView';
 import {
@@ -93,7 +93,10 @@ export const WeeklyReportView = () => {
       loadRevision.current++;
     };
   }, [loadData]);
-  const salesOptions = reportSalesOptions(salesTeam, reportData.salesmen, salesmanId);
+  const salesOptions = useMemo(
+    () => reportSalesOptions(salesTeam, reportData.salesmen, salesmanId),
+    [salesTeam, reportData.salesmen, salesmanId]
+  );
   const selectedSalesman = salesOptions.find((s) => s.id === salesmanId);
   const salesmanName = selectedSalesman?.name || '';
 
@@ -105,11 +108,15 @@ export const WeeklyReportView = () => {
   const exportToPdf = () => exportWeeklyPdf(reportData, startDate, salesmanName);
 
   const { summary = {}, salesmen = [], daysSummary = [] } = reportData;
-  const filteredSalesmen = search
-    ? salesmen.filter((s) => s.salesmanName.toLowerCase().includes(search.toLowerCase()))
-    : salesmen;
+  const filteredSalesmen = useMemo(
+    () =>
+      search
+        ? salesmen.filter((s) => s.salesmanName.toLowerCase().includes(search.toLowerCase()))
+        : salesmen,
+    [salesmen, search]
+  );
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {error && (
         <div className="app-error" role="alert">
           <p>Laporan belum berhasil diperbarui: {error}</p>
@@ -121,13 +128,13 @@ export const WeeklyReportView = () => {
       {isLoading && <p role="status">Memuat laporan…</p>}
       {/* 1. Top Summary KPI Cards */}
       {!isLoading && !error && <WeeklyMetrics summary={summary} />}
-      {!isLoading && !error && <ReportBasisNote basis={reportData.basis} />}
-      <ReportArchivePanel kind="WEEK" period={startDate} />
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <ReportArchivePanel kind="WEEK" period={startDate} />
         {reportData.basis?.calendarMonths?.map((row) => (
           <ReportCalendarEditor key={row.month} month={row.month} onSaved={loadData} />
         ))}
       </div>
+      {!isLoading && !error && <ReportBasisNote basis={reportData.basis} />}
 
       {/* 2. Unified Workspace Card: Header + Filters + Matrix Table */}
       <WeeklySalesTable

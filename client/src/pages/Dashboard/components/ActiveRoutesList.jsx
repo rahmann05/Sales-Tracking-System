@@ -28,7 +28,7 @@ export const ActiveRoutesList = ({
     <Card className="!p-0 rounded-[28px] flex flex-col shadow-xl overflow-hidden border border-border-glass max-h-[520px] w-full bg-white/95 backdrop-blur-xl transition-all">
       {/* Header Section */}
       <div className="p-4 border-b border-border-glass flex flex-col gap-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-extrabold text-on-surface tracking-tight">
               Rute Hari Ini
@@ -39,7 +39,7 @@ export const ActiveRoutesList = ({
                 : 'Monitoring jadwal & progress rute sales hari ini'}
             </p>
           </div>
-          <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+          <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full shrink-0">
             {routes.length} Rute
           </span>
         </div>

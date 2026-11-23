@@ -15,7 +15,7 @@ export function RegistrationDivisionBar({ divisions = [], formData, updateField 
             updateField('divisionName', e.target.value);
             if (selectedDiv) updateField('divisionId', selectedDiv.id);
           }}
-          className="flex-1 px-2.5 py-1 bg-surface font-black text-xs rounded-lg border border-border-glass text-primary focus:border-primary outline-none cursor-pointer"
+          className="flex-1 min-w-0 px-2.5 py-1 bg-surface font-black text-xs rounded-lg border border-border-glass text-primary focus:border-primary outline-none cursor-pointer"
         >
           {!divisions.some((div) => div.name === currentDivision) && (
             <option value={currentDivision}>{currentDivision || 'Pilih divisi'}</option>
@@ -34,7 +34,7 @@ export function RegistrationDivisionBar({ divisions = [], formData, updateField 
           type="text"
           value={formData.branch}
           onChange={(e) => updateField('branch', e.target.value)}
-          className="flex-1 px-2.5 py-1 bg-surface font-bold text-xs rounded-lg border border-border-glass focus:border-primary outline-none"
+          className="flex-1 min-w-0 px-2.5 py-1 bg-surface font-bold text-xs rounded-lg border border-border-glass focus:border-primary outline-none"
           placeholder="PADALARANG"
         />
       </div>

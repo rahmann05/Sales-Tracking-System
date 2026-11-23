@@ -198,7 +198,6 @@
   padding: 16px;
   background: var(--surface-container-low);
   border: 1px solid var(--border-glass);
-  border-left: 3px solid var(--primary);
   border-radius: 8px;
 }
 .config-visually-hidden {

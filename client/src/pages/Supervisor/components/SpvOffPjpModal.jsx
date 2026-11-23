@@ -131,7 +131,7 @@ export const SpvOffPjpModal = ({
 
         {/* 1. Camera & GPS Verification */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5">
             <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
               <LuCamera className="text-sm text-primary" />
               <span>
@@ -214,7 +214,7 @@ export const SpvOffPjpModal = ({
 
         {/* 4. Alamat Toko dengan Auto-Geocoding */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5">
             <label className="text-xs font-bold text-on-surface flex items-center gap-1">
               <LuMapPin className="text-xs text-primary" />
               <span>

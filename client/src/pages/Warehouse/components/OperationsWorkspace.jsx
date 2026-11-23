@@ -104,7 +104,7 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
             supir menjalankannya.
           </p>
         </div>
-        <button className="admin-button" disabled={loading} onClick={refresh}>
+        <button type="button" className="admin-button" disabled={loading} onClick={refresh}>
           {loading ? 'Memperbarui…' : 'Perbarui data'}
         </button>
       </header>
@@ -114,7 +114,7 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
           : data
             ? 'Pembaruan otomatis setiap 30 detik.'
             : 'Memuat antrean…'}{' '}
-        Terakhir berhasil: {stamp(data?.generatedAt)}
+        Terakhir berhasil: {stamp(data?.generatedAt)} WIB
       </p>
       {error && (
         <p role="alert" className="p-3 border border-red-500 rounded-xl text-red-600">
@@ -138,39 +138,30 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
         ))}
       </div>
       {user.role !== 'ADMIN' && <AttentionPanel />}
-      <details className="admin-panel p-4">
-        <summary className="min-h-11 cursor-pointer">
-          Antrean pendukung: dokumen, kewajiban order, masalah, dan faktur
-        </summary>
-        <p className="admin-footnote">
-          Buka bila ada pekerjaan khusus. Untuk memantau kendaraan dan toko, gunakan Perjalanan &
-          lokasi.
-        </p>
-        <nav aria-label="Pemantauan gudang" className="flex flex-wrap gap-2">
-          {[
-            ['routes', 'Perjalanan & lokasi'],
-            ['packing', 'Antrean packing'],
-            ['orders', 'Pemenuhan order'],
-            ['issues', 'Masalah & keluhan'],
-            ['commercial', 'Rekonsiliasi faktur'],
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={tab === id}
-              className={`min-h-11 px-4 rounded-xl border ${tab === id ? 'bg-primary text-on-primary' : ''}`}
-              onClick={() => {
-                if (
-                  window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true }))
-                )
-                  setTab(id);
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-      </details>
+      <nav aria-label="Pemantauan gudang" className="admin-panel p-3 flex flex-wrap gap-2">
+        {[
+          ['routes', `Perjalanan & lokasi (${open.length})`],
+          ['packing', `Antrean packing (${data?.packings?.length || 0})`],
+          ['orders', `Pemenuhan order (${data?.orders?.length || 0})`],
+          ['issues', `Masalah & keluhan (${issues.length})`],
+          ['commercial', `Rekonsiliasi faktur (${data?.commercialQueue?.length || 0})`],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={tab === id}
+            className={`min-h-11 px-4 rounded-xl border ${tab === id ? 'bg-primary text-on-primary border-primary font-semibold' : ''}`}
+            onClick={() => {
+              if (
+                window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true }))
+              )
+                setTab(id);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
       {tab === 'routes' && (
         <>
           <div className="admin-toolbar admin-trip-filters">
@@ -194,6 +185,7 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
             </label>
             {canManage && (
               <button
+                type="button"
                 className="admin-button"
                 onClick={() => setActiveTab(TAB_IDS.DELIVERY_ROUTES)}
               >
@@ -218,6 +210,7 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
             dilepas menjadi antrean gudang.
           </p>
           <button
+            type="button"
             className="min-h-11 border rounded-xl px-4"
             onClick={() => setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST)}
           >
@@ -227,11 +220,14 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
             <details key={p.id} className="border rounded-xl p-4">
               <summary className="cursor-pointer min-h-11">
                 <strong>
-                  {p.code} · {p.outlet?.name}
+                  {p.code} ·{' '}
+                  {p.loadPlanVersion === 2
+                    ? `${p.destinations?.length || 0} tujuan`
+                    : p.outlet?.name || 'Outlet'}
                 </strong>
                 <span className="block">
                   {p.status} · Sisa {p.remainingCartons} karton · Menunggu sejak{' '}
-                  {stamp(p.releasedAt || p.createdAt)}
+                  {stamp(p.releasedAt || p.createdAt)} WIB
                 </span>
               </summary>
               <OperationalIssues
@@ -273,7 +269,10 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
           {data.commercialQueue?.map((p) => (
             <details className="border rounded-xl p-4" key={p.id}>
               <summary className="min-h-11 cursor-pointer">
-                {p.code} · {p.outlet?.name}
+                {p.code} ·{' '}
+                {p.loadPlanVersion === 2
+                  ? `${p.destinations?.length || 0} tujuan`
+                  : p.outlet?.name || 'Outlet'}
               </summary>
               <InvoiceReconciliationPanel
                 packing={p}
