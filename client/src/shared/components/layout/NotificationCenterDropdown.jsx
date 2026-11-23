@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { resolveNotificationTab } from '../../../utils/notificationTab';
+import { resolveNotificationTarget } from '../../../utils/notificationTab';
+import { setWorkspaceValues } from '../../utils/workspaceNavigation';
+import { getNavigationTabs, TAB_IDS } from '../../../constants/navigation';
 import {
   LuBell,
   LuCheckCheck,
@@ -22,6 +24,7 @@ import {
 export const NotificationCenterDropdown = () => {
   const {
     user,
+    activeTab,
     setActiveTab,
     notifications = [],
     markNotificationAsRead,
@@ -39,10 +42,19 @@ export const NotificationCenterDropdown = () => {
 
   const handleSelectNotification = (notif) => {
     markNotificationAsRead?.(notif.id);
-    const target = resolveNotificationTab(notif, user?.role);
-    if (target && setActiveTab) {
-      setActiveTab(target);
-      setIsOpen(false);
+    const resolved = resolveNotificationTarget(notif, user);
+    const allowedTabs = user ? getNavigationTabs(user).map((t) => t.id) : [];
+    const targetTab =
+      resolved?.tab && (!allowedTabs.length || allowedTabs.includes(resolved.tab))
+        ? resolved.tab
+        : TAB_IDS.ROLE_WORKSPACE;
+    const params = resolved?.tab === targetTab && resolved?.params ? resolved.params : {};
+    setIsOpen(false);
+    if (Object.keys(params).length > 0) {
+      setWorkspaceValues(params, { replace: targetTab !== activeTab });
+    }
+    if (targetTab && setActiveTab) {
+      setActiveTab(targetTab);
     }
   };
 

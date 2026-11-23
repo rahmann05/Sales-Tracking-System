@@ -87,25 +87,35 @@ test('NOO radius applies equally to Google and OSM, supports custom radius and o
         CUSTOMER_REG_ENFORCE_PLACES_RADIUS: enabled,
         CUSTOMER_REG_PLACES_RADIUS_METERS: radius,
       });
-      mock(t, globalThis, 'fetch', async (url) => ({
-        json: async () =>
-          String(url).includes('googleapis')
-            ? {
-                results:
-                  provider === 'google'
-                    ? [
-                        {
-                          place_id: 'g1',
-                          name: 'Toko',
-                          geometry: { location: { lat: -6.002, lng: 107 } },
-                        },
-                      ]
-                    : [],
-              }
-            : provider === 'osm'
+      mock(t, globalThis, 'fetch', async (url, options = {}) => {
+        if (String(url).includes('places.googleapis.com')) {
+          assert.equal(url, 'https://places.googleapis.com/v1/places:searchText');
+          assert.equal(options.method, 'POST');
+          assert.equal(options.headers['X-Goog-Api-Key'], 'test');
+          return {
+            json: async () => ({
+              places:
+                provider === 'google'
+                  ? [
+                      {
+                        id: 'g1',
+                        displayName: { text: 'Toko' },
+                        formattedAddress: 'Jl. Padalarang, Bandung Barat',
+                        location: { latitude: -6.002, longitude: 107 },
+                        photos: [{ name: 'places/g1/photos/p1' }],
+                      },
+                    ]
+                  : [],
+            }),
+          };
+        }
+        return {
+          json: async () =>
+            provider === 'osm'
               ? [{ osm_id: 1, lat: '-6.002', lon: '107', display_name: 'Toko', address: {} }]
               : [],
-      }));
+        };
+      });
       const results = await searchPlaces('Toko', -6, 107);
       assert.equal(results.length, count, `${provider}, radius ${radius}, enabled ${enabled}`);
       if (count) assert.ok(results[0].distanceMeters > 100);
@@ -115,13 +125,23 @@ test('NOO radius applies equally to Google and OSM, supports custom radius and o
 
 test('NOO automatic verification cannot label an outside candidate as verified while radius is on', async (t) => {
   configs(t, { MAPS_API_KEY: 'test' });
-  mock(t, globalThis, 'fetch', async () => ({
-    json: async () => ({
-      candidates: [
-        { place_id: 'remote', name: 'Toko', geometry: { location: { lat: -6.002, lng: 107 } } },
-      ],
-    }),
-  }));
+  mock(t, globalThis, 'fetch', async (url, options = {}) => {
+    assert.equal(url, 'https://places.googleapis.com/v1/places:searchText');
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers['X-Goog-Api-Key'], 'test');
+    return {
+      json: async () => ({
+        places: [
+          {
+            id: 'remote',
+            displayName: { text: 'Toko' },
+            formattedAddress: 'Jl. Padalarang, Bandung Barat',
+            location: { latitude: -6.002, longitude: 107 },
+          },
+        ],
+      }),
+    };
+  });
   assert.equal((await validateGooglePlace('Toko', 'Alamat', -6, 107)).isPlaceFound, false);
   configs(t, { MAPS_API_KEY: 'test', CUSTOMER_REG_ENFORCE_PLACES_RADIUS: false });
   assert.equal((await validateGooglePlace('Toko', 'Alamat', -6, 107)).placeId, 'remote');
@@ -189,9 +209,13 @@ test('place fallback and provider failures are explicit and do not leak private 
     PLACE_LOOKUP_ALLOW_FALLBACK: false,
   });
   let calls = 0;
-  mock(t, globalThis, 'fetch', async () => {
+  mock(t, globalThis, 'fetch', async (url) => {
     calls++;
-    return { json: async () => ({ status: 'REQUEST_DENIED', error_message: 'secret-key' }) };
+    assert.equal(url, 'https://places.googleapis.com/v1/places:searchText');
+    return {
+      ok: false,
+      json: async () => ({ error: { status: 'PERMISSION_DENIED', message: 'secret-key' } }),
+    };
   });
   await assert.rejects(
     searchPlaces('Toko', -6, 107),
@@ -206,7 +230,7 @@ test('place fallback and provider failures are explicit and do not leak private 
   mock(t, globalThis, 'fetch', async (url) => ({
     json: async () =>
       String(url).includes('googleapis')
-        ? { status: 'REQUEST_DENIED' }
+        ? { error: { status: 'PERMISSION_DENIED' } }
         : [{ osm_id: 1, lat: '-6', lon: '107', display_name: 'Toko', address: {} }],
   }));
   assert.equal((await searchPlaces('Toko', -6, 107))[0].source, 'OSM_NOMINATIM');

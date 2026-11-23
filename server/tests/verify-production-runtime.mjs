@@ -14,9 +14,9 @@ assert.ok(
   'Explicit production test approval required'
 );
 const env = dotenv.parse(fs.readFileSync('.env.production')),
-  base = 'https://sinar-anugrah-production.up.railway.app',
+  base = 'https://sinar-anugrah-production-1e2523fd.up.railway.app',
   url = new URL(env.DIRECT_URL || env.DATABASE_URL);
-assert.ok(url.hostname.endsWith('.neon.tech') && !url.hostname.includes('-pooler'));
+assert.ok(url.hostname.endsWith('.supabase.com'));
 if (['require', 'prefer', 'verify-ca'].includes(url.searchParams.get('sslmode')))
   url.searchParams.set('sslmode', 'verify-full');
 const pool = new pg.Pool({
@@ -84,16 +84,18 @@ try {
       '/outlets/reviews',
       '/reports/dashboard',
     ],
-    'spv-1': ['/pjp', '/orders', '/outlets/reviews', '/reports/dashboard'],
-    'sales-1': ['/pjp/today', '/orders', '/outlets/field-tasks'],
+    'spv.gt': ['/pjp', '/orders', '/outlets/reviews', '/reports/dashboard'],
+    cahya: ['/pjp/today', '/orders', '/outlets/field-tasks'],
     gudang: ['/delivery/packing-lists', '/delivery/routes', '/delivery/operations'],
-    'supir-1': ['/delivery/routes', '/delivery/my-issues'],
+    supir1: ['/delivery/routes', '/delivery/my-issues'],
   };
   let admin;
+  const accountPasswords = env.PROD_SMOKE_PASSWORDS ? JSON.parse(env.PROD_SMOKE_PASSWORDS) : {};
   for (const [account, endpoints] of Object.entries(paths)) {
+    const email = account + '@sinaranugrah.com';
     const session = await login(
-      account + '.demo@sinaranugrah.test',
-      env.SEED_PASSWORD || 'DemoSinar2026!'
+      email,
+      accountPasswords[email] || env.SEED_PASSWORD
     );
     if (account === 'admin') admin = session;
     check(

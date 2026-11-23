@@ -10,7 +10,7 @@ for (const environment of ['LOCAL', 'PRODUCTION']) {
   assert.ok(
     environment === 'LOCAL'
       ? ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
-      : url.hostname.endsWith('.neon.tech')
+      : url.hostname.endsWith('.supabase.com')
   );
   if (environment === 'PRODUCTION') url.searchParams.set('sslmode', 'verify-full');
   const db = new PrismaClient({ datasources: { db: { url: url.toString() } } });

@@ -111,7 +111,7 @@ export async function getOutletReviews(query, actor) {
     };
   const page = Math.max(1, parseInt(query.page) || 1),
     limit = Math.min(100, Math.max(10, parseInt(query.limit) || 25));
-  const [data, total] = await prisma.$transaction([
+  const [data, total] = await Promise.all([
     prisma.outletReview.findMany({
       where,
       include: { outlet: { include: { cluster: true } } },
@@ -137,11 +137,15 @@ export async function getOutletReview(id, actor) {
     },
   });
   if (!review) throw new AppError('Kasus tidak ditemukan dalam cakupan Anda', 404);
+  const [availableOwners, actors] = await Promise.all([
+    outletReviewOwners(prisma, review.outlet),
+    fieldActors(prisma, review.outlet),
+  ]);
   return {
     ...review,
     runs: review.runs.map(presentOutletRun),
-    availableOwners: await outletReviewOwners(prisma, review.outlet),
-    fieldActors: await fieldActors(prisma, review.outlet),
+    availableOwners,
+    fieldActors: actors,
   };
 }
 export async function decideOutletReview(outletId, reviewId, raw, actor) {

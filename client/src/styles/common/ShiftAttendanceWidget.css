@@ -1,0 +1,103 @@
+.shift-widget {
+  background: #fff;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sales-shift .shift-widget,
+.spv-shift .shift-widget {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+
+.shift-widget-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.shift-widget-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.shift-widget-dot-active {
+  background: #15803d;
+}
+
+.shift-widget-dot-idle {
+  background: #b45309;
+}
+
+.shift-widget-dot-done {
+  background: #64748b;
+}
+
+.shift-widget-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shift-widget-date {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #697280;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.shift-widget-state {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #242931;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+:is(.app-shell #main-content, body) .shift-widget .shift-widget-btn-end.app-button {
+  background: #fff;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+:is(.app-shell #main-content, body) .shift-widget .shift-widget-btn-end.app-button:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+  filter: none;
+}
+
+.shift-widget-error {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 767px) {
+  .sales-shift .shift-widget,
+  .spv-shift .shift-widget {
+    border-top: 1px solid #e2e6ec;
+    padding-top: 14px;
+    width: 100%;
+  }
+
+  .shift-widget {
+    gap: 12px;
+  }
+}

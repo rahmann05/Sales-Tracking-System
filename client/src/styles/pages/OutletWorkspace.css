@@ -376,7 +376,7 @@
   gap: 16px;
   align-items: center;
   border: 1px solid var(--border-glass);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 12px 16px;
   min-height: 46px;
   background: var(--surface);

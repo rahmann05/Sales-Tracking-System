@@ -80,7 +80,7 @@ export class ErrorBoundary extends Component {
               padding: '0.75rem 1.5rem',
               backgroundColor: 'var(--primary)',
               color: 'var(--on-primary)',
-              borderRadius: '12px',
+              borderRadius: '8px',
               border: 'none',
               fontWeight: 700,
               cursor: 'pointer',

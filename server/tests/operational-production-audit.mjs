@@ -6,7 +6,7 @@ import pg from 'pg';
 assert.ok(process.argv.includes('--read-only'), 'Explicit --read-only required');
 const env = dotenv.parse(fs.readFileSync(new URL('../.env.production', import.meta.url)));
 const url = new URL(env.DIRECT_URL || env.DATABASE_URL);
-assert.ok(url.hostname.endsWith('.neon.tech'));
+assert.ok(url.hostname.endsWith('.supabase.com'));
 url.searchParams.set('sslmode', 'verify-full');
 const db = new pg.Client({ connectionString: url.toString(), connectionTimeoutMillis: 15000 });
 const queries = {

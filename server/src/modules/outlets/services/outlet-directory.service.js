@@ -23,7 +23,7 @@ export async function outletDirectory(raw, actor) {
     where.OR = ['name', 'address', 'outletCode', 'ownerName', 'phone'].map((k) => ({
       [k]: { contains: q.search, mode: 'insensitive' },
     }));
-  const [data, total] = await prisma.$transaction([
+  const [data, total] = await Promise.all([
     prisma.outlet.findMany({
       where,
       include: {
@@ -60,19 +60,22 @@ export async function outletDirectory(raw, actor) {
 export async function outletProfile(id, actor) {
   const scope = await reviewScope(actor, prisma);
   delete scope.deletedAt;
-  const outlet = await prisma.outlet.findFirst({
-    where: { id, ...scope },
-    include: {
-      cluster: { include: { assignedSales: { select: { id: true, name: true } } } },
-      registration: true,
-      reviews: { orderBy: { createdAt: 'desc' }, take: 20, include: reviewInclude },
-      changes: { orderBy: { createdAt: 'desc' }, take: 50 },
-    },
-  });
+  const [outlet, operational] = await Promise.all([
+    prisma.outlet.findFirst({
+      where: { id, ...scope },
+      include: {
+        cluster: { include: { assignedSales: { select: { id: true, name: true } } } },
+        registration: true,
+        reviews: { orderBy: { createdAt: 'desc' }, take: 20, include: reviewInclude },
+        changes: { orderBy: { createdAt: 'desc' }, take: 50 },
+      },
+    }),
+    outletOperationalImpact(prisma, id),
+  ]);
   if (!outlet) throw new AppError('Outlet tidak ditemukan dalam cakupan Anda', 404);
   return {
     ...outlet,
     reviews: outlet.reviews.map((r) => ({ ...r, runs: r.runs.map(presentOutletRun) })),
-    operational: await outletOperationalImpact(prisma, id),
+    operational,
   };
 }

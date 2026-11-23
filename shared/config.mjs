@@ -218,7 +218,7 @@ export const CONFIG_DEFINITIONS = [
         key: 'MAPS_MAP_ID',
         label: 'Google Maps map ID',
         description:
-          'Map ID untuk Advanced Marker. Kosong memakai DEMO_MAP_ID untuk pengembangan; isi map ID proyek untuk operasional.',
+          'Map ID Google Maps untuk Advanced Marker. Isi Map ID proyek Google Cloud untuk operasional.',
         type: 'text',
         defaultValue: '',
       },
@@ -920,7 +920,7 @@ export const CONFIG_DEFINITIONS = [
     groupKey: 'SESI',
     groupLabel: 'Sesi & Keamanan',
     groupDescription:
-      'Pengaturan durasi sesi login, expiry token JWT, whitelist akun testing, dan notifikasi.',
+      'Pengaturan durasi sesi login, expiry token JWT, pengecualian radius presensi, dan notifikasi.',
     groupIcon: 'LuKey',
     groupColor: 'rose',
     params: [
@@ -944,7 +944,7 @@ export const CONFIG_DEFINITIONS = [
         key: 'BYPASS_GEOFENCE_EMAILS',
         label: 'Email Bypass Geofence',
         description:
-          'Daftar email akun testing yang boleh absen di luar radius (pisahkan dengan koma).',
+          'Daftar email pengguna dengan pengecualian presensi di luar radius geofence (pisahkan dengan koma).',
         type: 'text',
         defaultValue: '',
       },

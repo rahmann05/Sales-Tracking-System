@@ -1,4 +1,4 @@
-# Production Dockerfile for Sinar Anugrah Backend (targeting Neon PostgreSQL)
+# Production Dockerfile for Sinar Anugrah Backend (targeting Supabase PostgreSQL)
 FROM node:20-alpine AS runner
 
 WORKDIR /app

@@ -47,13 +47,6 @@ export const getMtdReport = async (query = {}) => {
   const lmaEnd = new Date(mtdStart.getTime() - 1);
 
   const calendarMonth = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
-  const calendars = await loadReportCalendars([calendarMonth]);
-  const calendarMetrics = calendarMonthMetrics(
-    calendarMonth,
-    calendars.get(calendarMonth),
-    wibDateKey()
-  );
-  const { total: totalWorkingDays, elapsed: workingDaysElapsed } = calendarMetrics;
 
   // Fetch Salesmen
   const salesWhere = { role: 'SALES', deletedAt: null };
@@ -61,16 +54,30 @@ export const getMtdReport = async (query = {}) => {
   if (clusterId) salesWhere.clusterId = clusterId;
   if (supervisorId) salesWhere.supervisorId = supervisorId;
 
-  const currentSales = await prisma.user.findMany({
-    where: salesWhere,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      cluster: { select: { id: true, name: true, region: true } },
-    },
-    orderBy: { name: 'asc' },
-  });
+  const scope = { userId, clusterId, supervisorId };
+  const [calendars, currentSales, mtdRecords, lmaRecords, companyName] = await Promise.all([
+    loadReportCalendars([calendarMonth]),
+    prisma.user.findMany({
+      where: salesWhere,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        cluster: { select: { id: true, name: true, region: true } },
+      },
+      orderBy: { name: 'asc' },
+    }),
+    loadReportRecords(mtdStart, mtdEnd, { includeOutlets: true, scope }),
+    loadReportRecords(lmaStart, lmaEnd, { scope }),
+    getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
+  ]);
+
+  const calendarMetrics = calendarMonthMetrics(
+    calendarMonth,
+    calendars.get(calendarMonth),
+    wibDateKey()
+  );
+  const { total: totalWorkingDays, elapsed: workingDaysElapsed } = calendarMetrics;
 
   let totalMtdPlan = 0;
   let totalMtdActual = 0;
@@ -103,11 +110,6 @@ export const getMtdReport = async (query = {}) => {
     },
   };
 
-  const scope = { userId, clusterId, supervisorId };
-  const [mtdRecords, lmaRecords] = await Promise.all([
-    loadReportRecords(mtdStart, mtdEnd, { includeOutlets: true, scope }),
-    loadReportRecords(lmaStart, lmaEnd, { scope }),
-  ]);
   const salesmen = mergeReportSales(currentSales, lmaRecords, mtdRecords);
   const targets = await loadSalesTargets(
     salesmen.map((s) => s.id),
@@ -275,7 +277,7 @@ export const getMtdReport = async (query = {}) => {
       channelNote: channelBasisNote,
       unverifiedChannelAmount,
     },
-    meta: { company: await getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH') },
+    meta: { company: companyName },
     period: {
       month: targetMonth,
       monthName: monthNames[targetMonth - 1] || `Bulan ${targetMonth}`,

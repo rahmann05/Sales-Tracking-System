@@ -38,39 +38,66 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
   };
   if (policy.google) {
     try {
-      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(keyword.trim())}&location=${userLat},${userLng}&radius=${radius}&key=${policy.key}`;
-      const data = await fetchPlaceJson(url, policy);
-      for (const item of data?.results || [])
+      const searchUrl = 'https://places.googleapis.com/v1/places:searchText';
+      const fieldMask =
+        'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.types,places.currentOpeningHours.openNow,places.plusCode,places.nationalPhoneNumber,places.internationalPhoneNumber,places.photos,places.googleMapsUri';
+      const biasRadius = Math.max(100, Math.min(50000, Number(radius) || 500));
+      const data = await fetchPlaceJson(searchUrl, policy, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': policy.key,
+          'X-Goog-FieldMask': fieldMask,
+        },
+        body: JSON.stringify({
+          textQuery: keyword.trim(),
+          languageCode: 'id',
+          regionCode: 'ID',
+          pageSize: 10,
+          locationBias: {
+            circle: {
+              center: { latitude: userLat, longitude: userLng },
+              radius: biasRadius,
+            },
+          },
+        }),
+      });
+      for (const item of data?.places || []) {
+        const photoName = item.photos?.[0]?.name;
+        const openNow = item.currentOpeningHours?.openNow ?? null;
         append({
-          placeId: item.place_id,
-          name: item.name,
-          address: item.formatted_address,
-          latitude: item.geometry?.location?.lat,
-          longitude: item.geometry?.location?.lng,
+          placeId: item.id,
+          name: item.displayName?.text || '',
+          address: item.formattedAddress || '',
+          latitude: item.location?.latitude,
+          longitude: item.location?.longitude,
           rating: item.rating ?? null,
-          userRatingsTotal: item.user_ratings_total ?? null,
+          userRatingsTotal: item.userRatingCount ?? null,
           types: item.types || [],
-          openNow: item.opening_hours?.open_now ?? null,
+          openNow,
           openingHoursText:
-            typeof item.opening_hours?.open_now === 'boolean'
-              ? item.opening_hours.open_now
+            typeof openNow === 'boolean'
+              ? openNow
                 ? 'Sedang buka menurut penyedia peta'
                 : 'Sedang tutup menurut penyedia peta'
               : null,
-          plusCode: item.plus_code?.compound_code ?? null,
-          phone: item.formatted_phone_number ?? null,
+          plusCode: item.plusCode?.compoundCode ?? null,
+          phone: item.nationalPhoneNumber ?? item.internationalPhoneNumber ?? null,
           photoUrl:
-            browserKey && item.photos?.[0]?.photo_reference
-              ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photo_reference=${encodeURIComponent(item.photos[0].photo_reference)}&key=${encodeURIComponent(browserKey)}`
+            browserKey && photoName
+              ? `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=600&key=${encodeURIComponent(browserKey)}`
               : null,
           categoryName: null,
           deliveryInfo: [],
-          area: inferredArea(item.formatted_address),
-          googleMapsUrl: item.place_id
-            ? `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(item.place_id)}`
-            : null,
+          area: inferredArea(item.formattedAddress || ''),
+          googleMapsUrl:
+            item.googleMapsUri ||
+            (item.id
+              ? `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(item.id)}`
+              : null),
           source: 'GOOGLE_PLACE',
         });
+      }
     } catch (e) {
       error = e;
     }

@@ -14,13 +14,13 @@ const env = dotenv.parse(fs.readFileSync(production ? '.env.production' : '.env'
 const url = new URL(env.DIRECT_URL || env.DATABASE_URL);
 assert.ok(
   production
-    ? url.hostname.endsWith('.neon.tech')
+    ? url.hostname.endsWith('.supabase.com')
     : ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
 );
 if (production) url.searchParams.set('sslmode', 'verify-full');
 const db = new PrismaClient({ datasources: { db: { url: url.toString() } } });
 const base = production
-  ? 'https://sinar-anugrah-production.up.railway.app/api/v1'
+  ? 'https://sinar-anugrah-production-1e2523fd.up.railway.app/api/v1'
   : 'http://127.0.0.1:5000/api/v1';
 const tag = 'UAT-WORKER-' + randomUUID(),
   users = [],

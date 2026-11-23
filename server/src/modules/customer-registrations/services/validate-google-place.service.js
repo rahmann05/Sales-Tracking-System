@@ -22,19 +22,42 @@ export const validateGooglePlace = async (name, address, lat, lng) => {
 
   if (apiKey && name) {
     try {
-      // 1. TextSearch / FindPlace via Google Places API
-      const query = encodeURIComponent(`${name} ${address || ''}`);
-      const placeUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${query}&inputtype=textquery&fields=name,formatted_address,geometry,place_id&locationbias=circle:${radius}@${lat ?? -6.8722},${lng ?? 107.5422}&key=${apiKey}`;
+      // Text search via Google Places API (New)
+      const placeUrl = 'https://places.googleapis.com/v1/places:searchText';
+      const biasRadius = Math.max(100, Math.min(50000, Number(radius) || 500));
+      const data = await fetchPlaceJson(placeUrl, policy, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask':
+            'places.id,places.displayName,places.formattedAddress,places.location,places.googleMapsUri',
+        },
+        body: JSON.stringify({
+          textQuery: `${name} ${address || ''}`.trim(),
+          languageCode: 'id',
+          regionCode: 'ID',
+          pageSize: 5,
+          locationBias: {
+            circle: {
+              center: {
+                latitude: Number(lat ?? -6.8722),
+                longitude: Number(lng ?? 107.5422),
+              },
+              radius: biasRadius,
+            },
+          },
+        }),
+      });
 
-      const data = await fetchPlaceJson(placeUrl, policy);
-
-      if (data?.candidates && data.candidates.length > 0) {
-        const candidate = data.candidates.find((item) => {
-          const location = item.geometry?.location;
+      if (data?.places && data.places.length > 0) {
+        const candidate = data.places.find((item) => {
+          const location = item.location;
           return (
-            Number.isFinite(location?.lat) &&
-            Number.isFinite(location?.lng) &&
-            (!enforceRadius || getDistanceInMeters(lat, lng, location.lat, location.lng) <= radius)
+            Number.isFinite(location?.latitude) &&
+            Number.isFinite(location?.longitude) &&
+            (!enforceRadius ||
+              getDistanceInMeters(lat, lng, location.latitude, location.longitude) <= radius)
           );
         });
         if (!candidate)
@@ -49,14 +72,16 @@ export const validateGooglePlace = async (name, address, lat, lng) => {
             validatedAt: new Date().toISOString(),
           };
         isPlaceFound = true;
-        placeId = candidate.place_id || null;
-        placeName = candidate.name;
-        placeAddress = candidate.formatted_address;
-        placeLat = candidate.geometry?.location?.lat;
-        placeLng = candidate.geometry?.location?.lng;
-        if (candidate.place_id) {
-          googleMapsUrl = `https://www.google.com/maps/place/?q=place_id:${candidate.place_id}`;
-        }
+        placeId = candidate.id || null;
+        placeName = candidate.displayName?.text || null;
+        placeAddress = candidate.formattedAddress || null;
+        placeLat = candidate.location?.latitude ?? null;
+        placeLng = candidate.location?.longitude ?? null;
+        googleMapsUrl =
+          candidate.googleMapsUri ||
+          (candidate.id
+            ? `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(candidate.id)}`
+            : googleMapsUrl);
       }
     } catch (err) {
       console.warn('[CustomerRegistration] Google Place check error:', err.message);

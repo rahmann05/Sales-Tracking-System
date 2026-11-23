@@ -1,21 +1,43 @@
-import { resolveIdentity } from '../../roles/role-assignment.service.js';
+import { getRoleDefinitions, resolveIdentity } from '../../roles/role-assignment.service.js';
 /** loginUser - single-responsibility service (extracted from auth.service.js). */
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
 import { AppError } from '../../../utils/errors.js';
-import { getDynamicConfig } from '../../config/config.service.js';
+import { effectivePolicy, policyProfiles } from '../../config/services/policy-resolver.service.js';
+import { warmDynamicConfig } from '../../config/services/dynamic-config.service.js';
+
+const LOGIN_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  password: true,
+  role: true,
+  roleCode: true,
+  clusterId: true,
+  supervisorId: true,
+  permissions: true,
+  deletedAt: true,
+  tokenVersion: true,
+};
 
 export const loginUser = async (rawEmail, password) => {
   const email = String(rawEmail || '')
     .trim()
     .toLowerCase();
-  const user = await prisma.user.findFirst({
-    where: {
-      email: { equals: email, mode: 'insensitive' },
-    },
-  });
+  const [exactUser, definitions, profiles] = await Promise.all([
+    prisma.user.findUnique({ where: { email }, select: LOGIN_USER_SELECT }),
+    getRoleDefinitions(),
+    policyProfiles(),
+    warmDynamicConfig(),
+  ]);
+  const user =
+    exactUser ||
+    (await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: LOGIN_USER_SELECT,
+    }));
 
   if (!user || user.deletedAt) {
     throw new AppError('Email atau password salah', 401);
@@ -26,7 +48,7 @@ export const loginUser = async (rawEmail, password) => {
     throw new AppError('Email atau password salah', 401);
   }
 
-  const identity = await resolveIdentity(user);
+  const identity = await resolveIdentity(user, { definitions });
   const payload = {
     id: user.id,
     tokenVersion: user.tokenVersion || 0,
@@ -39,11 +61,10 @@ export const loginUser = async (rawEmail, password) => {
     permissions: identity.permissions,
   };
 
-  const jwtExpiresIn = await getDynamicConfig('JWT_EXPIRES_IN', config.jwtExpiresIn);
-  const jwtRefreshExpiresIn = await getDynamicConfig(
-    'JWT_REFRESH_EXPIRES_IN',
-    config.jwtRefreshExpiresIn
-  );
+  const policy = await effectivePolicy({}, Date.now(), { profiles });
+  const jwtExpiresIn = policy.values.JWT_EXPIRES_IN ?? config.jwtExpiresIn;
+  const jwtRefreshExpiresIn =
+    policy.values.JWT_REFRESH_EXPIRES_IN ?? config.jwtRefreshExpiresIn;
 
   const accessToken = jwt.sign(payload, config.jwtSecret, {
     expiresIn: jwtExpiresIn,

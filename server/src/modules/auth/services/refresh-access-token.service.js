@@ -3,16 +3,32 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
 import { AppError } from '../../../utils/errors.js';
-import { getDynamicConfig } from '../../config/config.service.js';
+import { effectivePolicy, policyProfiles } from '../../config/services/policy-resolver.service.js';
+import { warmDynamicConfig } from '../../config/services/dynamic-config.service.js';
+
+const REFRESH_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  clusterId: true,
+  deletedAt: true,
+  tokenVersion: true,
+};
 
 export const refreshAccessToken = async (refreshToken) => {
   try {
     const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret);
     if (typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())
       throw new AppError('Refresh token tidak valid', 401);
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-    });
+    const [user, profiles] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: REFRESH_USER_SELECT,
+      }),
+      policyProfiles(),
+      warmDynamicConfig(),
+    ]);
 
     if (!user || user.deletedAt) {
       throw new AppError('User tidak ditemukan', 401);
@@ -29,7 +45,8 @@ export const refreshAccessToken = async (refreshToken) => {
       clusterId: user.clusterId,
     };
 
-    const jwtExpiresIn = await getDynamicConfig('JWT_EXPIRES_IN', config.jwtExpiresIn);
+    const policy = await effectivePolicy({}, Date.now(), { profiles });
+    const jwtExpiresIn = policy.values.JWT_EXPIRES_IN ?? config.jwtExpiresIn;
 
     const newAccessToken = jwt.sign(payload, config.jwtSecret, {
       expiresIn: jwtExpiresIn,

@@ -130,11 +130,16 @@ export async function validateOutlet(id, raw, user) {
     now = new Date();
   await prisma.$transaction(async (db) => {
     await lockOutlet(db, id);
-    await reviewActor(db, user, 'can_run_outlet_review');
-    const current = await reviewOutlet(db, actor, id);
+    const [, current, live, tasks] = await Promise.all([
+      reviewActor(db, user, 'can_run_outlet_review'),
+      reviewOutlet(db, actor, id),
+      db.outletReview.findUnique({ where: { id: review.id } }),
+      db.outletFieldTask.count({
+        where: { reviewId: review.id, status: { in: ['OPEN', 'SUBMITTED'] } },
+      }),
+    ]);
     if (current.updatedAt.getTime() !== outlet.updatedAt.getTime())
       throw new AppError('Master berubah selama pemeriksaan. Periksa ulang.', 409);
-    const live = await db.outletReview.findUnique({ where: { id: review.id } });
     if (live.revision !== body.revision || ['COMPLETED', 'CANCELLED'].includes(live.status))
       throw new AppError('Kasus berubah selama pemeriksaan.', 409);
     const run = await db.outletValidationRun.create({
@@ -157,9 +162,6 @@ export async function validateOutlet(id, raw, user) {
       run.id,
       result.candidates.filter((c) => c.refreshed !== false)
     );
-    const tasks = await db.outletFieldTask.count({
-      where: { reviewId: review.id, status: { in: ['OPEN', 'SUBMITTED'] } },
-    });
     const auto =
       values.OUTLET_REVIEW_AUTO_CLOSE === true &&
       result.aligned &&
@@ -240,7 +242,9 @@ export async function validateOutlet(id, raw, user) {
           },
         },
       });
-  });
+    },
+    { maxWait: 15000, timeout: 30000 }
+  );
   invalidateOutletCache();
   return result;
 }

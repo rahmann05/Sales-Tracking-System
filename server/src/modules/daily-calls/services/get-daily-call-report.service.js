@@ -29,15 +29,6 @@ export const getDailyCallReport = async (query = {}) => {
 
   const { userId, filterType, search } = query;
 
-  // Read dynamic configuration parameters
-  const GLOBAL_RADIUS = await getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50);
-  const MIN_VISIT_DURATION = await getDynamicConfig('MINIMUM_VISIT_DURATION_MINUTES', 5);
-  const GAP_SHORT_KM = await getDynamicConfig('TRAVEL_GAP_SHORT_KM', 3);
-  const GAP_SHORT_MINS = await getDynamicConfig('TRAVEL_GAP_SHORT_MINUTES', 45);
-  const GAP_MED_KM = await getDynamicConfig('TRAVEL_GAP_MED_KM', 8);
-  const GAP_MED_MINS = await getDynamicConfig('TRAVEL_GAP_MED_MINUTES', 90);
-  const manualSalesMode = await getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY');
-
   const wherePjp = {
     ...reportScopeWhere(query),
     date: dayRange,
@@ -46,45 +37,141 @@ export const getDailyCallReport = async (query = {}) => {
     wherePjp.userId = userId;
   }
 
-  // 1. Fetch Scheduled PJPs & Stops
-  const pjps = await prisma.pjp.findMany({
-    where: wherePjp,
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          role: true,
-          cluster: { select: { id: true, name: true, region: true } },
-        },
-      },
-      stops: {
-        include: {
-          outlet: true,
-          attendances: { orderBy: { timestamp: 'asc' } },
-          routeChanges: true,
-          orders: { include: { items: true } },
-        },
-        orderBy: { sequence: 'asc' },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  // 2. Fetch Off-PJP calls for same date range if any
   const whereOffPjp = {
     ...reportScopeWhere(query),
     createdAt: dayRange,
   };
   if (userId) whereOffPjp.userId = userId;
-  const offPjpList = await prisma.offPjpAttendance.findMany({
-    where: whereOffPjp,
-    include: {
-      user: { select: { id: true, name: true, cluster: { select: { id: true, name: true } } } },
-      outlet: true,
-    },
-    orderBy: { createdAt: 'asc' },
-  });
+
+  const [
+    GLOBAL_RADIUS,
+    MIN_VISIT_DURATION,
+    GAP_SHORT_KM,
+    GAP_SHORT_MINS,
+    GAP_MED_KM,
+    GAP_MED_MINS,
+    manualSalesMode,
+    companyName,
+    defaultBranch,
+    pjps,
+    offPjpList,
+  ] = await Promise.all([
+    getDynamicConfig('ATTENDANCE_RADIUS_METERS', 50),
+    getDynamicConfig('MINIMUM_VISIT_DURATION_MINUTES', 5),
+    getDynamicConfig('TRAVEL_GAP_SHORT_KM', 3),
+    getDynamicConfig('TRAVEL_GAP_SHORT_MINUTES', 45),
+    getDynamicConfig('TRAVEL_GAP_MED_KM', 8),
+    getDynamicConfig('TRAVEL_GAP_MED_MINUTES', 90),
+    getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY'),
+    getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
+    getDynamicConfig('DEFAULT_BRANCH', 'PADALARANG'),
+    prisma.pjp.findMany({
+      where: wherePjp,
+      select: {
+        id: true,
+        userId: true,
+        date: true,
+        createdAt: true,
+        reportingContext: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            cluster: { select: { id: true, name: true, region: true } },
+          },
+        },
+        stops: {
+          select: {
+            id: true,
+            sequence: true,
+            status: true,
+            validationOnly: true,
+            validationTaskId: true,
+            validationResult: true,
+            visitSession: true,
+            policySnapshot: true,
+            outlet: {
+              select: {
+                id: true,
+                outletCode: true,
+                name: true,
+                address: true,
+                latitude: true,
+                longitude: true,
+                radiusMeters: true,
+                subChannel: true,
+                type: true,
+                visitSchedule: true,
+                itineraryCode: true,
+              },
+            },
+            attendances: {
+              select: {
+                id: true,
+                type: true,
+                timestamp: true,
+                latitude: true,
+                longitude: true,
+                deviationMeters: true,
+                durationMinutes: true,
+                distanceWarning: true,
+                reason: true,
+                earlyReason: true,
+                notes: true,
+                photoUrl: true,
+                visitOutcome: true,
+                manualSalesMode: true,
+                manualSalesStatus: true,
+                isManualSalesApproved: true,
+                orderAmount: true,
+                skuSold: true,
+              },
+              orderBy: { timestamp: 'asc' },
+            },
+            orders: {
+              select: {
+                id: true,
+                status: true,
+                deletedAt: true,
+                totalValue: true,
+                policySnapshot: true,
+                items: { select: { productId: true } },
+              },
+            },
+          },
+          orderBy: { sequence: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.offPjpAttendance.findMany({
+      where: whereOffPjp,
+      select: {
+        id: true,
+        userId: true,
+        createdAt: true,
+        reportingContext: true,
+        policySnapshot: true,
+        outletName: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        photoUrl: true,
+        reason: true,
+        status: true,
+        visitOutcome: true,
+        manualSalesMode: true,
+        manualSalesStatus: true,
+        isManualSalesApproved: true,
+        orderAmount: true,
+        skuSold: true,
+        user: { select: { id: true, name: true, cluster: { select: { id: true, name: true } } } },
+        outlet: { select: { id: true, outletCode: true, visitSchedule: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
 
   // Map to hold rows per salesman for chronological sequence & travel time analysis
   const salesMap = {};
@@ -531,8 +618,8 @@ export const getDailyCallReport = async (query = {}) => {
     meta: {
       date: dateStr,
       reportTitle: 'DAILY CALL & ATTENDANCE AUDIT REPORT',
-      company: await getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
-      branch: await getDynamicConfig('DEFAULT_BRANCH', 'PADALARANG'),
+      company: companyName,
+      branch: defaultBranch,
     },
     summary: {
       totalPlanCalls: totalPlan,

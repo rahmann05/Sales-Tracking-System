@@ -1,7 +1,11 @@
 import { CONFIG_PARAMS } from '../../../../../shared/config.mjs';
 import { POLICY_SECRET_KEYS } from '../../../../../shared/operational-policy.mjs';
 import { prisma } from '../../../config/prisma.js';
-import { getDynamicConfig, configGeneration } from './dynamic-config.service.js';
+import {
+  getDynamicConfig,
+  configGeneration,
+  warmDynamicConfig,
+} from './dynamic-config.service.js';
 let cache = null,
   lastFetch = 0,
   lastGeneration = -1,
@@ -24,7 +28,7 @@ export async function policyProfiles({ fresh = false } = {}) {
   const generation = configGeneration(),
     revision = epoch;
   if (fresh || !cache || lastGeneration !== generation || Date.now() - lastFetch > 5000) {
-    if (!pending || pending.generation !== generation) {
+    if (!pending || pending.generation !== generation || (fresh && !pending.fresh)) {
       const flight = prisma.systemConfig
         .findMany({ where: { key: { startsWith: '_POLICY_PROFILE:' } } })
         .then((rows) => {
@@ -40,7 +44,7 @@ export async function policyProfiles({ fresh = false } = {}) {
           }
           return result;
         });
-      const holder = { generation, flight };
+      const holder = { generation, fresh, flight };
       pending = holder;
       flight
         .finally(() => {
@@ -56,6 +60,7 @@ export async function policyProfiles({ fresh = false } = {}) {
   return cache;
 }
 export async function effectivePolicy(actor = {}, now = Date.now(), options = {}) {
+  await warmDynamicConfig();
   const values = Object.fromEntries(
     await Promise.all(
       CONFIG_PARAMS.map(async (p) => [
@@ -65,7 +70,7 @@ export async function effectivePolicy(actor = {}, now = Date.now(), options = {}
     )
   );
   Object.assign(values, options.baseOverrides || {});
-  const profiles = await policyProfiles({ fresh: options.fresh }),
+  const profiles = options.profiles || (await policyProfiles({ fresh: options.fresh })),
     sources = {},
     versions = [];
   const scopes = [

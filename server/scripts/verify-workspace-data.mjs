@@ -55,7 +55,7 @@ try{
   assert.ok(historyReport.summary.totalOrderAmount>0);
   const clusters=await prisma.cluster.findMany({where:{deletedAt:null},include:{outlets:{where:{deletedAt:null},select:{type:true}}}});
   assert.ok(clusters.every(c=>new Set(c.outlets.map(o=>o.type)).size<=1),'A cluster must never mix GT and MT');
-  const demo=clusters.filter(c=>c.name.includes('(Uji Belfoods)'));
+  const demo=clusters.filter(c=>c.code?.startsWith('BF-')||c.code?.startsWith('UJI-BF-'));
   assert.ok(demo.some(c=>c.outlets.some(o=>o.type==='MODERN_TRADE')));
   assert.ok(demo.every(c=>c.outletCount===c.outlets.length),'Demo cluster totals must match actual outlets');
   for(const driver of users.filter(u=>u.role==='SUPIR')){const routes=await get(`/delivery/routes?date=${date}`,driver);assert.ok(routes.items.length>0,`${driver.name} must have a test delivery route`);assert.ok(routes.items.every(r=>r.driverId===driver.id));}

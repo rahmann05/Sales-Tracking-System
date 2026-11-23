@@ -5,6 +5,7 @@ import { AppError } from '../../utils/errors.js';
 import { assertReviewersRemain } from '../config/services/approval-readiness.service.js';
 import { BUILT_IN_ROLES } from './roles.constants.js';
 import { freshDomainActor } from '../../middlewares/domain-permission.middleware.js';
+import { invalidateRoleDefinitionsCache } from './role-assignment.service.js';
 export const normalizeRoleDefinitions = (list) =>
   list.map(({ userCount, ...role }) => ({
     ...role,
@@ -65,5 +66,6 @@ export async function persistRoleDefinitions(
     },
     { timeout: 30000 }
   );
+  invalidateRoleDefinitionsCache();
   for (const id of ids) getIo()?.in(`user:${id}`).disconnectSockets(true);
 }

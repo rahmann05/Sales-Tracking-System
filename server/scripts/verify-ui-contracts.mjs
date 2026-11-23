@@ -8,7 +8,7 @@ const built=await esbuild.build({absWorkingDir:client,bundle:true,platform:'node
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import assert from 'node:assert/strict';
-import {MonitoringStatus} from './src/shared/components/common/MonitoringStatus.jsx';
+
 import {NotificationCenterDropdown} from './src/shared/components/layout/NotificationCenterDropdown.jsx';
 import {Header} from './src/shared/components/layout/Header.jsx';
 import {MobileHeader} from './src/shared/components/layout/MobileHeader.jsx';
@@ -58,10 +58,10 @@ import {OutletValidationDetail} from './src/pages/OutletValidation/components/Ou
 import {GoogleOutletEvidence} from './src/pages/OutletValidation/components/GoogleOutletEvidence.jsx';
 for(const role of ['ADMIN','SUPERVISOR'])assert.ok(!getNavigationTabs(role).some(tab=>tab.id===TAB_IDS.MASTER_CLUSTERS),'Kluster berada di dalam Master RJP, bukan menu duplikat');
 globalThis.workspaceFixture={user:{id:'admin',role:'ADMIN'},syncStatus:{error:'Gagal memperbarui: Order'},notificationStatus:{error:'Notifikasi gagal'},notifications:[{id:'n',source:'SERVER',title:'Penugasan',message:'Periksa tugas',read:false}],notificationUnreadCount:71,notificationHasMore:true};
-const monitoringHtml=renderToStaticMarkup(<MonitoringStatus/>);assert.match(monitoringHtml,/Gagal diperbarui/);assert.match(monitoringHtml,/Scheduler server/);assert.match(monitoringHtml,/Belum terkonfirmasi/);assert.match(monitoringHtml,/Status pemantauan: perlu diperiksa/);
+
 const inboxHtml=renderToStaticMarkup(<NotificationCenterDropdown/>);assert.match(inboxHtml,/9\+/);
 globalThis.workspaceFixture={user:{id:'sales',role:'SALES'},syncStatus:{lastSuccessAt:new Date().toISOString()},notificationStatus:{lastSuccessAt:new Date().toISOString()}};
-const salesMonitoring=renderToStaticMarkup(<MonitoringStatus/>);assert.doesNotMatch(salesMonitoring,/Scheduler server/);assert.match(salesMonitoring,/Terbaru/);
+
 const commonTable=renderToStaticMarkup(<DataTable className="mobile-card-table" aria-label="Contoh"><thead><tr><th>Nama</th></tr></thead><tbody><tr><td data-label="Nama">Outlet</td></tr></tbody></DataTable>);assert.match(commonTable,/app-data-table mobile-card-table/);assert.match(commonTable,/aria-label="Contoh"/);
 const emptyClusters=renderToStaticMarkup(<ClusterWorkspace management={{masterClusters:[],stats:{totalAllocated:0,totalOutlets:0}}}/>);assert.match(emptyClusters,/Belum ada wilayah/);assert.match(emptyClusters,/Penanggung jawab|penanggung jawab/);assert.match(emptyClusters,/type="search"/);
 const draft={step:2,draft:{region:'Bandung',colorHex:'#111111'},selectedOutlets:[],suggestions:[],routes:[],team:{sales:[],supervisors:[]},outletCount:10};
@@ -86,6 +86,7 @@ for(const role of ['ADMIN','SALES','SUPERVISOR','KEPALA_GUDANG','SUPIR']) {
   const mobile=renderToStaticMarkup(<MobileHeader onLogout={()=>{}}/>);
   const sidebar=renderToStaticMarkup(<Sidebar activeTab="role-workspace" setActiveTab={()=>{}}/>);
   assert.doesNotMatch(header+mobile+sidebar,/Cari data global|Peran Aktif|Peran:/);
+  assert.doesNotMatch(header+mobile,/Pemantauan ·|Scheduler server/);
   assert.equal(header.split('Peran '+role).length-1,1);
   assert.equal(mobile.split('Peran '+role).length-1,1);
   assert.doesNotMatch(sidebar,/Peran /);

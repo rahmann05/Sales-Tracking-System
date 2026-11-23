@@ -73,9 +73,9 @@ export function StaffAttendanceReport() {
     }
   };
   return (
-    <section className="staff-attendance-report bg-surface rounded-2xl p-4 border border-border-glass space-y-4">
-      <div className="flex flex-wrap gap-3 justify-between">
-        <h3 className="font-bold text-lg">Riwayat shift & supervisi</h3>
+    <section className="staff-attendance-report staff-attendance-panel">
+      <div className="staff-attendance-header">
+        <h3>Riwayat shift & supervisi</h3>
         <label className="text-sm">
           Tanggal kerja{' '}
           <input
@@ -123,7 +123,7 @@ export function StaffAttendanceReport() {
         mencantumkan status foto dan ID catatan. Rekap PJP validasi outlet di bawah terpisah.
       </p>
       {error && (
-        <p role="alert" className="text-red-600">
+        <p role="alert" className="app-error">
           {error}
         </p>
       )}

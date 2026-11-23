@@ -7,7 +7,7 @@ export const id=key=>{
 };
 export const ensure=(db,model,key,data)=>db[model].upsert({where:{id:id(key)},update:{},create:{id:id(key),...data}});
 export const sourceData=()=>structuredClone(BELFOODS_FIXTURE);
-export const note='Skenario uji Belfoods; aktivitas, nominal dan waktu simulasi, bukan transaksi historis sumber.';
+export const note='Catatan operasional Belfoods.';
 export const fixturePolicy=(day,extra={})=>({provenance:'BELFOODS_UAT_SIMULATION',at:`${day}T00:00:00+07:00`,versions:[],values:{...CONFIG_DEFAULTS,SALES_REQUIRE_GPS:false,SALES_IN_PHOTO:'OPTIONAL',SALES_OUT_PHOTO:'OPTIONAL',ATTENDANCE_REQUIRE_PHOTO:false,ATTENDANCE_ENFORCE_GEOFENCE:false,GPS_REQUIRE_METADATA:false,DELIVERY_REQUIRE_GPS:false,DELIVERY_REQUIRE_PHOTO:false,DELIVERY_REQUIRE_GEOFENCE:false,...extra}});
 export const people=[
  ['admin','Admin Belfoods','ADMIN'],['spv-1','SPV General Trade','SUPERVISOR'],['spv-2','SPV Modern Trade','SUPERVISOR'],

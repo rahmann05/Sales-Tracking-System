@@ -18,6 +18,7 @@ import {
   authorizeWithPermission,
 } from '../../middlewares/auth.middleware.js';
 import { authorizeDomainAction } from '../../middlewares/domain-permission.middleware.js';
+import { memoryCacheMiddleware } from '../../middlewares/cache.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import {
   createOutletSchema,
@@ -128,7 +129,7 @@ const directoryAccess = (req, res, next) => {
     return next();
   next(new AppError('Akses direktori ditolak', 403));
 };
-router.get('/directory', directoryAccess, async (req, res, next) => {
+router.get('/directory', directoryAccess, memoryCacheMiddleware(30), async (req, res, next) => {
   try {
     res.json({ status: 'success', ...(await outletDirectory(req.query, req.user)) });
   } catch (e) {
@@ -162,6 +163,7 @@ router.post(
 router.get(
   '/validation-summary',
   authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_validate_outlet'),
+  memoryCacheMiddleware(30),
   validationController.getValidationSummary
 );
 router.post(
@@ -177,7 +179,7 @@ router.patch(
 );
 
 // ─── 2. Root Collection CRUD ─────────────────────────────────────────────────
-router.get('/', outletController.getAll);
+router.get('/', memoryCacheMiddleware(30), outletController.getAll);
 router.post(
   '/',
   authorizeWithPermission(['ADMIN', 'SUPERVISOR'], 'can_manage_outlets'),

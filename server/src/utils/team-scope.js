@@ -27,13 +27,18 @@ export async function assertSalesAccess(user, salesId, db = prisma) {
 export async function outletClusterScope(user, db = prisma) {
   if (user.role === 'ADMIN') return { deletedAt: null };
   if (user.role === 'SUPERVISOR') return { deletedAt: null, supervisorId: user.id };
-  const sales = await db.user.findFirst({
-    where: { id: user.id, role: 'SALES', deletedAt: null },
-    select: { supervisorId: true },
-  });
+  const supervisorId =
+    db === prisma && user.role === 'SALES' && Object.hasOwn(user, 'supervisorId')
+      ? user.supervisorId
+      : (
+          await db.user.findFirst({
+            where: { id: user.id, role: 'SALES', deletedAt: null },
+            select: { supervisorId: true },
+          })
+        )?.supervisorId;
   return {
     deletedAt: null,
-    supervisorId: sales?.supervisorId || '__unassigned__',
+    supervisorId: supervisorId || '__unassigned__',
     OR: [{ assignedSalesId: user.id }, { users: { some: { id: user.id } } }],
   };
 }

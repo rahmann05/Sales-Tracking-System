@@ -51,8 +51,6 @@ skills-lock.json
 
 # Local database backups
 .backups/
-.neon
-neon.ts
 .vercel
 .env*
 storage/

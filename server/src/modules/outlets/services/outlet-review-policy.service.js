@@ -32,6 +32,5 @@ export const reviewInclude = {
   fieldTasks: { orderBy: { createdAt: 'desc' }, take: 30 },
 };
 export async function lockOutlet(db, id) {
-  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
-  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`outlet:${id}`}))`;
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories')), pg_advisory_xact_lock(hashtext(${`outlet:${id}`}))`;
 }

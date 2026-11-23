@@ -4,6 +4,7 @@ import { prisma } from './prisma.js';
 import { config } from './index.js';
 import { invalidateConfigCache } from '../modules/config/services/dynamic-config.service.js';
 import { invalidatePolicyCache } from '../modules/config/services/policy-resolver.service.js';
+import { invalidateRoleDefinitionsCache } from '../modules/roles/role-assignment.service.js';
 
 let io = null;
 
@@ -38,6 +39,7 @@ export const createSocketServer = (httpServer) => {
   server.on('policy:invalidate', () => {
     invalidateConfigCache();
     invalidatePolicyCache();
+    invalidateRoleDefinitionsCache();
   });
   server.on('connection', (socket) => {
     const userId = socket.data.userId;
@@ -81,6 +83,7 @@ export const getIo = () => io;
  */
 export const broadcastCacheInvalidation = (dataType) => {
   if (!io) return;
-  if (['policies', 'config', 'configs'].includes(dataType)) io.serverSideEmit('policy:invalidate');
+  if (['policies', 'config', 'configs', 'roles'].includes(dataType))
+    io.serverSideEmit('policy:invalidate');
   io.emit('cache:invalidate', { dataType, timestamp: Date.now() });
 };

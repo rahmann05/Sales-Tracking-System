@@ -15,7 +15,7 @@
   min-height: 44px;
   padding: 10px 16px;
   border: 1px solid var(--admin-border, #dbe2ea);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--admin-surface, #fff);
   color: var(--admin-text, #182334);
   font-weight: 600;
@@ -39,7 +39,7 @@
   text-align: left;
   padding: 16px 20px;
   border: 1px solid var(--admin-border, #dbe2ea);
-  border-radius: 14px;
+  border-radius: var(--ui-card-radius, 12px);
   background: var(--admin-surface, #fff);
   color: var(--admin-text, #182334);
   cursor: pointer;

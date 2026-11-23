@@ -40,7 +40,7 @@ export async function outletFieldVisitReport(raw, user) {
         ...(actor.role === 'SUPERVISOR' ? reportScopeWhere({ supervisorId: actor.id }) : {}),
       },
     };
-  const [rows, total] = await prisma.$transaction([
+  const [rows, total] = await Promise.all([
     prisma.pjpStop.findMany({
       where,
       include: {

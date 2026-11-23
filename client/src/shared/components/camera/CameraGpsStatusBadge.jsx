@@ -82,7 +82,7 @@ export const CameraGpsStatusBadge = ({
                   {geofenceResult?.isInside
                     ? `Dalam Geofence ≤${maxRadiusMeters}m`
                     : isBypassUser
-                      ? `Luar Geofence >${maxRadiusMeters}m (Diizinkan khusus testing)`
+                      ? `Luar Geofence >${maxRadiusMeters}m (Pengecualian radius aktif)`
                       : `Luar Geofence >${maxRadiusMeters}m — Presensi Ditutup`}
                   )
                 </span>

@@ -1,9 +1,16 @@
-import { resolveIdentity } from '../modules/roles/role-assignment.service.js';
+import {
+  getRoleDefinitions,
+  resolveIdentity,
+} from '../modules/roles/role-assignment.service.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/errors.js';
-import { effectivePolicy } from '../modules/config/services/policy-resolver.service.js';
+import {
+  effectivePolicy,
+  policyProfiles,
+} from '../modules/config/services/policy-resolver.service.js';
+import { warmDynamicConfig } from '../modules/config/services/dynamic-config.service.js';
 import { withPolicy } from '../modules/config/services/policy-context.service.js';
 import { featureDecision } from '../../../shared/feature-policy.mjs';
 
@@ -18,26 +25,32 @@ export const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, config.jwtSecret);
     if (typeof decoded !== 'object' || typeof decoded.id !== 'string' || !decoded.id.trim())
       throw new AppError('Token tidak valid', 401);
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        roleCode: true,
-        clusterId: true,
-        supervisorId: true,
-        permissions: true,
-        deletedAt: true,
-        tokenVersion: true,
-      },
-    });
+    const isReadMethod = ['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+    const [user, definitions, profiles] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          roleCode: true,
+          clusterId: true,
+          supervisorId: true,
+          permissions: true,
+          deletedAt: true,
+          tokenVersion: true,
+        },
+      }),
+      getRoleDefinitions({ fresh: !isReadMethod }),
+      policyProfiles({ fresh: !isReadMethod }),
+      warmDynamicConfig(),
+    ]);
     if (!user || user.deletedAt) return next(new AppError('Akun tidak aktif', 401));
     if ((decoded.tokenVersion || 0) !== (user.tokenVersion || 0))
       return next(new AppError('Sesi telah dicabut. Masuk kembali.', 401));
-    req.user = await resolveIdentity(user);
-    req.policy = await effectivePolicy(req.user, Date.now(), { fresh: true });
+    req.user = await resolveIdentity(user, { definitions, fresh: !isReadMethod });
+    req.policy = await effectivePolicy(req.user, Date.now(), { profiles });
     const availability = featureDecision(req.policy.values, req.originalUrl, req.method, req.body);
     // These services validate idempotent replays before rejecting new work.
     const replayAware =
@@ -102,17 +115,20 @@ export const requirePermission = (permissionKey) => {
         return next(new AppError('User tidak terautentikasi', 401));
       }
 
-      const userRecord = await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { permissions: true, role: true, roleCode: true },
-      });
+      let permissions = req.user.permissions;
+      if (!permissions || !req.user.roleCode) {
+        const userRecord = await prisma.user.findUnique({
+          where: { id: req.user.id },
+          select: { permissions: true, role: true, roleCode: true },
+        });
 
-      if (!userRecord) {
-        return next(new AppError('User tidak ditemukan', 404));
+        if (!userRecord) {
+          return next(new AppError('User tidak ditemukan', 404));
+        }
+
+        permissions = (await resolveIdentity(userRecord)).permissions;
       }
 
-      const identity = await resolveIdentity(userRecord);
-      const permissions = identity.permissions;
       if (!permissions[permissionKey]) {
         return next(
           new AppError(`Akses ditolak. Fitur ini memerlukan izin: ${permissionKey}`, 403)

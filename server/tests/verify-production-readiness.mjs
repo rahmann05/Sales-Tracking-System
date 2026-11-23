@@ -19,8 +19,8 @@ assert.ok(
   'Local baseline required'
 );
 assert.ok(
-  new URL(remoteUrl).hostname.endsWith('.neon.tech'),
-  'Configured Neon destination required'
+  new URL(remoteUrl).hostname.endsWith('.supabase.com'),
+  'Configured Supabase destination required'
 );
 const tables = Prisma.dmmf.datamodel.models.map((m) => m.dbName || m.name);
 async function inspect(connectionString) {
@@ -90,7 +90,7 @@ const enumDifferences = [
       .map((r) => r.typname)
   ),
 ];
-const backend = 'https://sinar-anugrah-production.up.railway.app';
+const backend = 'https://sinar-anugrah-production-1e2523fd.up.railway.app';
 const origins = String(production.CLIENT_ORIGIN || '')
   .split(',')
   .map((s) => s.trim())

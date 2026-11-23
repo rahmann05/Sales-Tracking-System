@@ -9,7 +9,6 @@ import { LuLayers, LuLogOut, LuArrowLeft } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { Avatar } from '../common/Avatar';
-import { MonitoringStatus } from '../common/MonitoringStatus';
 import { getNavigationTabs, TAB_IDS } from '../../../constants/navigation';
 import '../../../styles/layout/MobileHeader.css';
 
@@ -36,7 +35,7 @@ export const MobileHeader = ({ onLogout }) => {
           <button
             type="button"
             onClick={() => setActiveTab(TAB_IDS.ROLE_WORKSPACE)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
             title="Kembali ke Menu Utama"
           >
             <LuArrowLeft className="text-xs" />
@@ -64,7 +63,6 @@ export const MobileHeader = ({ onLogout }) => {
 
       {/* Right Controls: Real-time Notifications & User Profile Badge */}
       <div className="mobile-header-actions flex items-center gap-2">
-        <MonitoringStatus />
         <NotificationCenterDropdown />
 
         <button

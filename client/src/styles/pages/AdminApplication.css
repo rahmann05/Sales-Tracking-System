@@ -394,7 +394,7 @@
   border: 0;
   width: 30px;
   height: 30px;
-  border-radius: 7px;
+  border-radius: var(--ui-control-radius, 8px);
   cursor: pointer;
 }
 .admin-inline-metrics {

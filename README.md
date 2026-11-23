@@ -127,7 +127,7 @@ npm run dev
 
 ### 2. Mode Database Lokal & Failover Otomatis Saat Offline
 Backend dilengkapi modul resolusi database pada `server/src/config/database.js`:
-- **`DB_MODE=auto`** *(default)*: Jika `DATABASE_URL` menunjuk ke database remote (mis. Neon), server mengecek jangkauan TCP saat startup (`DB_FALLBACK_TIMEOUT_MS`, default `2500` ms). Saat koneksi internet/remote tidak tersedia, backend **otomatis beralih ke PostgreSQL lokal** menggunakan `LOCAL_DATABASE_URL` atau `DATABASE_URL` lokal di `server/.env`.
+- **`DB_MODE=auto`** *(default)*: Jika `DATABASE_URL` menunjuk ke database remote (mis. Supabase), server mengecek jangkauan TCP saat startup (`DB_FALLBACK_TIMEOUT_MS`, default `2500` ms). Saat koneksi internet/remote tidak tersedia, backend **otomatis beralih ke PostgreSQL lokal** menggunakan `LOCAL_DATABASE_URL` atau `DATABASE_URL` lokal di `server/.env`.
 - **Mode Lokal Eksplisit (tanpa probe remote):**
   ```bash
   npm run dev:local --prefix server

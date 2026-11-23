@@ -35,7 +35,7 @@
   min-height: 44px;
   padding: 6px 10px;
   border: 1px solid var(--border-glass);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--surface-container-low);
   cursor: pointer;
   max-width: 280px;

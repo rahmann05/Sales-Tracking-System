@@ -36,7 +36,7 @@ export function AdminOrderWorkspace({
 }) {
   const { user, setActiveTab } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
-  const [section, setSection] = useState('orders');
+  const [section, setSection] = useWorkspaceState('orderSection', 'orders');
   const [search, setSearch] = useWorkspaceState('orderSearch', ''),
     [selectedId, setSelectedId] = useWorkspaceState('orderDetail', '');
   const [page, setPage] = useState(1);

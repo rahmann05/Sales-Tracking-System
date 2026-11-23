@@ -20,7 +20,7 @@ const control = new pg.Client({ connectionString: local.toString() });
 const report = {
   at: new Date().toISOString(),
   scope:
-    'Full archive restored locally, table counts/migration baseline/FK validation; not Neon failover or provider recovery',
+    'Full archive restored locally, table counts/migration baseline/FK validation; not remote failover or provider recovery',
   archiveSha256: backup.sha256,
 };
 let created = false,

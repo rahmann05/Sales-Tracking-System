@@ -15,6 +15,7 @@
     "prisma:seed": "prisma db seed",
     "prisma:seed:reset": "node prisma/resetBelfoods.js",
     "prisma:import-belfoods": "node prisma/importBelfoods.js",
+    "prisma:clean-prod-labels": "node prisma/cleanProductionLabels.mjs",
     "test": "node --test tests/**/*.test.js",
     "verify:source": "node scripts/verify-source.mjs",
     "verify:notification-monitoring": "node scripts/verify-notification-monitoring.mjs",

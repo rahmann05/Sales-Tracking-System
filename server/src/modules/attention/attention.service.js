@@ -9,7 +9,6 @@ import { attentionHistory } from './attention-history.service.js';
 import { followUpReviewers } from '../../../../shared/follow-up-policy.mjs';
 import { reviewPeople } from '../config/services/approval-readiness.service.js';
 import { addSlaHours } from '../../../../shared/business-clock.mjs';
-import { outletReviewOwners } from '../outlets/services/outlet-review-assignment.service.js';
 import { reviewScope } from '../outlets/services/outlet-review-policy.service.js';
 import { orderReviewRole } from '../../../../shared/approval-workflow.mjs';
 import { prisma } from '../../config/prisma.js';
@@ -41,7 +40,20 @@ export async function collectAttentionRows(user, policy = {}) {
     returnReceivedAt: true,
     reusableCartons: true,
   };
-  const [orders, packings, routes, issues, activities, people] = await Promise.all([
+  const [
+    orders,
+    packings,
+    routes,
+    issues,
+    activities,
+    people,
+    blocked,
+    reviewers,
+    exceptionRows,
+    cases,
+    locationRows,
+    outletReviews,
+  ] = await Promise.all([
     prisma.order.findMany({
       where: {
         deletedAt: null,
@@ -118,32 +130,38 @@ export async function collectAttentionRows(user, policy = {}) {
         }),
     !spv && user.permissions?.can_monitor_delivery === false
       ? []
-      : prisma.deliveryIssue.findMany({
-          where: { AND: [{ status: 'OPEN' }, await issueScope(prisma, user)] },
-        }),
+      : (async () => {
+          const scope = await issueScope(prisma, user);
+          return prisma.deliveryIssue.findMany({
+            where: { AND: [{ status: 'OPEN' }, scope] },
+          });
+        })(),
     warehouse
       ? []
-      : prisma.staffActivity.findMany({
-          where: {
-            AND: [
-              await followUpScope(user),
-              {
-                OR: [
-                  { followUp: { path: ['status'], equals: 'OPEN' } },
-                  { followUp: { path: ['status'], equals: 'SUBMITTED' } },
-                ],
-              },
-            ],
-          },
-          select: {
-            id: true,
-            userId: true,
-            outletName: true,
-            checkInAt: true,
-            followUp: true,
-            policySnapshot: true,
-          },
-        }),
+      : (async () => {
+          const scope = await followUpScope(user);
+          return prisma.staffActivity.findMany({
+            where: {
+              AND: [
+                scope,
+                {
+                  OR: [
+                    { followUp: { path: ['status'], equals: 'OPEN' } },
+                    { followUp: { path: ['status'], equals: 'SUBMITTED' } },
+                  ],
+                },
+              ],
+            },
+            select: {
+              id: true,
+              userId: true,
+              outletName: true,
+              checkInAt: true,
+              followUp: true,
+              policySnapshot: true,
+            },
+          });
+        })(),
     prisma.user.findMany({
       where: {
         deletedAt: null,
@@ -159,50 +177,74 @@ export async function collectAttentionRows(user, policy = {}) {
       },
       select: { id: true, name: true, role: true, supervisorId: true },
     }),
+    warehouse
+      ? []
+      : prisma.staffActivity.findMany({
+          where: {
+            checklist: { path: ['autoFollowUp', 'status'], equals: 'BLOCKED' },
+            ...(spv ? { userId: user.id } : {}),
+          },
+          select: { id: true, userId: true, outletName: true, checklist: true, followUp: true },
+        }),
+    reviewPeople(prisma),
+    exceptionAttentionRows(user),
+    canDomainAction(user, 'SYSTEM')
+      ? prisma.systemConfig.findMany({
+          where: {
+            key: { startsWith: '_AUTO_DELEGATION_CASE:' },
+            OR: [
+              { value: { path: ['state'], equals: 'BLOCKED' } },
+              { value: { path: ['state'], equals: 'RETRY' } },
+            ],
+          },
+          orderBy: { updatedAt: 'asc' },
+        })
+      : [],
+    outletLocationAttentionRows(user, policy),
+    warehouse || user.permissions?.can_validate_outlet === false
+      ? []
+      : (async () => {
+          const scope = await reviewScope(user, prisma);
+          return prisma.outletReview.findMany({
+            where: {
+              status: { in: ['OPEN', 'WAITING_FIELD'] },
+              outlet: scope,
+            },
+            include: {
+              outlet: {
+                select: {
+                  id: true,
+                  name: true,
+                  cluster: { select: { id: true, supervisorId: true } },
+                },
+              },
+              fieldTasks: { where: { status: { in: ['OPEN', 'SUBMITTED'] } }, take: 1 },
+            },
+          });
+        })(),
   ]);
-  const blocked = warehouse
-    ? []
-    : await prisma.staffActivity.findMany({
-        where: {
-          checklist: { path: ['autoFollowUp', 'status'], equals: 'BLOCKED' },
-          ...(spv ? { userId: user.id } : {}),
-        },
-        select: { id: true, userId: true, outletName: true, checklist: true, followUp: true },
-      });
-  const reviewers = await reviewPeople(prisma);
-  const rows = await exceptionAttentionRows(user),
+  const rows = [...exceptionRows],
     name = (id) => people.find((p) => p.id === id)?.name || null;
-  if (canDomainAction(user, 'SYSTEM')) {
-    const cases = await prisma.systemConfig.findMany({
-      where: {
-        key: { startsWith: '_AUTO_DELEGATION_CASE:' },
-        OR: [
-          { value: { path: ['state'], equals: 'BLOCKED' } },
-          { value: { path: ['state'], equals: 'RETRY' } },
-        ],
-      },
-      orderBy: { updatedAt: 'asc' },
+  for (const row of cases)
+    rows.push({
+      key: row.key,
+      category: 'EXCEPTION',
+      stage: 'AUTO_DELEGATION',
+      title: `Auto-delegasi · ${row.value.label}`,
+      since: row.value.updatedAt,
+      ownerId: user.id,
+      ownerName: user.name,
+      responsibleRole: 'ADMIN',
+      needsReview: true,
+      nextAction:
+        row.value.lastError ||
+        'Menunggu pemindaian ulang. Periksa aturan, sakelar global dan status worker.',
+      target: 'SYSTEM_CONFIG',
     });
-    for (const row of cases)
-      rows.push({
-        key: row.key,
-        category: 'EXCEPTION',
-        stage: 'AUTO_DELEGATION',
-        title: `Auto-delegasi · ${row.value.label}`,
-        since: row.value.updatedAt,
-        ownerId: user.id,
-        ownerName: user.name,
-        responsibleRole: 'ADMIN',
-        needsReview: true,
-        nextAction:
-          row.value.lastError ||
-          'Menunggu pemindaian ulang. Periksa aturan, sakelar global dan status worker.',
-        target: 'SYSTEM_CONFIG',
-      });
-  }
-  const reviewAssignments = await loadOrderReviewAssignments(
-    orders.filter((order) => order.status === 'PENDING_APPROVAL')
-  );
+  const pendingOrders = orders.filter((order) => order.status === 'PENDING_APPROVAL');
+  const reviewAssignments = pendingOrders.length
+    ? await loadOrderReviewAssignments(pendingOrders)
+    : new Map();
   for (const o of orders) {
     if (
       o.status === 'APPROVED' &&
@@ -341,26 +383,20 @@ export async function collectAttentionRows(user, policy = {}) {
       policySnapshot: a.policySnapshot,
     });
   }
-  const locationRows = await outletLocationAttentionRows(user, policy);
-  const outletReviews =
-    warehouse || user.permissions?.can_validate_outlet === false
-      ? []
-      : await prisma.outletReview.findMany({
-          where: {
-            status: { in: ['OPEN', 'WAITING_FIELD'] },
-            outlet: await reviewScope(user, prisma),
-          },
-          include: {
-            outlet: { include: { cluster: true } },
-            fieldTasks: { where: { status: { in: ['OPEN', 'SUBMITTED'] } }, take: 1 },
-          },
-        });
+  const isOutletReviewOwner = (person, outlet) =>
+    !person.deletedAt &&
+    (person.role === 'ADMIN' ||
+      (person.role === 'SUPERVISOR' && person.id === outlet.cluster?.supervisorId)) &&
+    person.permissions?.can_validate_outlet === true &&
+    ['can_run_outlet_review', 'can_apply_outlet_review', 'can_assign_outlet_review'].some(
+      (key) => person.permissions[key] === true
+    );
   for (const review of outletReviews) {
     const task = review.fieldTasks?.[0],
       submitted = task?.status === 'SUBMITTED',
       owner = task
         ? people.find((p) => p.id === (submitted ? task.reviewerId : task.ownerId))
-        : (await outletReviewOwners(prisma, review.outlet)).find((p) => p.id === review.ownerId);
+        : reviewers.find((p) => p.id === review.ownerId && isOutletReviewOwner(p, review.outlet));
     rows.push({
       key: `outlet-review:${review.id}`,
       category: 'OUTLET_REVIEW',

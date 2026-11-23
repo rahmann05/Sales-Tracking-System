@@ -4,7 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -260,6 +261,7 @@ model User {
 
   @@index([role])
   @@index([clusterId])
+  @@index([deletedAt, role])
 }
 
 model Cluster {
@@ -388,6 +390,7 @@ model Outlet {
   @@index([channel])
   @@index([type])
   @@index([deletedAt])
+  @@index([deletedAt, name, id])
   @@index([validationStatus])
 }
 
@@ -538,6 +541,8 @@ model OffPjpAttendance {
   @@index([manualSalesStatus])
   @@index([reportSupervisorId, createdAt])
   @@index([reportClusterId, createdAt])
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model OutletUnlockRequest {
@@ -604,6 +609,7 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model NotificationOutbox {
@@ -1032,6 +1038,7 @@ model Order {
   @@index([createdBy, createdAt])
   @@index([createdBy, status, createdAt])
   @@index([outletId])
+  @@index([deletedAt, status, createdAt])
 }
 
 model OrderItem {
@@ -1098,6 +1105,7 @@ model PackingList {
   @@index([sourceOrderIds], type: Gin)
   @@index([createdById])
   @@index([createdAt])
+  @@index([status])
 }
 
 model Invoice {
@@ -1175,6 +1183,7 @@ model DeliveryRoute {
   @@index([status])
   @@index([driverId, date])
   @@index([createdById])
+  @@index([closedAt, cancelledAt])
 }
 
 model DeliveryStop {

@@ -149,7 +149,7 @@ export const ALL_PERMISSIONS = [
   {
     key: 'can_validate_outlet',
     label: 'Validasi Koordinat GPS',
-    desc: 'Boleh memperbaiki, menguji toleransi jarak, dan mengunci koordinat GPS toko',
+    desc: 'Boleh memperbaiki, memeriksa toleransi jarak, dan mengunci koordinat GPS toko',
     category: 'Master Outlet & NOO',
   },
   {

@@ -3,6 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { config } from '../../../config/index.js';
 import { currentPolicy } from './policy-context.service.js';
 import { effectivePolicy } from './policy-resolver.service.js';
+import { invalidateRoleDefinitionsCache } from '../../roles/role-assignment.service.js';
 
 let cache = {};
 let lastFetch = 0;
@@ -10,6 +11,33 @@ let generation = 0;
 let pending = null;
 const CACHE_TTL = 60000; // 1 minute (60000 ms)
 export const configGeneration = () => generation;
+
+export async function warmDynamicConfig() {
+  if (Date.now() - lastFetch <= CACHE_TTL) return cache;
+  const revision = generation;
+  if (!pending) {
+    const flight = prisma.systemConfig
+      .findMany({
+        where: { key: { in: [...Object.keys(CONFIG_DEFAULTS), 'LOGISTICS_METRICS'] } },
+      })
+      .then((rows) => {
+        if (revision === generation) {
+          cache = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+          lastFetch = Date.now();
+        }
+      });
+    const holder = { flight };
+    pending = holder;
+    flight
+      .finally(() => {
+        if (pending === holder) pending = null;
+      })
+      .catch(() => {});
+  }
+  await pending.flight;
+  if (revision !== generation) return warmDynamicConfig();
+  return cache;
+}
 
 /**
  * Fetches a configuration value dynamically from the database, falling back to cache or environment config.
@@ -22,30 +50,7 @@ export const getDynamicConfig = async (key, defaultValue, { base = false } = {})
   if (policy?.values?.[key] !== undefined) return policy.values[key];
   if (!policy && !base && Object.hasOwn(CONFIG_DEFAULTS, key))
     return (await effectivePolicy()).values[key];
-  if (Date.now() - lastFetch > CACHE_TTL) {
-    const revision = generation;
-    if (!pending) {
-      const flight = prisma.systemConfig
-        .findMany({
-          where: { key: { in: [...Object.keys(CONFIG_DEFAULTS), 'LOGISTICS_METRICS'] } },
-        })
-        .then((rows) => {
-          if (revision === generation) {
-            cache = Object.fromEntries(rows.map((row) => [row.key, row.value]));
-            lastFetch = Date.now();
-          }
-        });
-      const holder = { flight };
-      pending = holder;
-      flight
-        .finally(() => {
-          if (pending === holder) pending = null;
-        })
-        .catch(() => {});
-    }
-    await pending.flight;
-    if (revision !== generation) return getDynamicConfig(key, defaultValue, { base });
-  }
+  await warmDynamicConfig();
 
   if (cache[key] !== undefined) {
     const val = cache[key];
@@ -88,4 +93,5 @@ export const invalidateConfigCache = () => {
   lastFetch = 0;
   pending = null;
   cache = {};
+  invalidateRoleDefinitionsCache();
 };

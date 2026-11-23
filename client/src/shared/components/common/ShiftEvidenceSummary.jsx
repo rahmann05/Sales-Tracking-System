@@ -70,10 +70,7 @@ export function ShiftEvidenceSummary({ row }) {
           </div>
           <div className="staff-attendance-stages">
             {attendanceStages(data).map((e) => (
-              <section
-                key={e.key}
-                className="border border-border-glass rounded-xl p-3 grid content-start gap-2 min-w-0"
-              >
+              <section key={e.key}>
                 <strong>{e.label}</strong>
                 <p>Presensi asli: {attendanceTime(e.at)}</p>
                 {!e.at && e.activityAt && (
@@ -156,7 +153,7 @@ export function ShiftEvidenceSummary({ row }) {
           {(data.timeCorrection?.accepted ||
             data.timeCorrection?.pending ||
             data.timeCorrection?.history?.length > 0) && (
-            <section className="border-t border-border-glass pt-3 grid gap-2">
+            <section className="staff-attendance-correction-section">
               <strong>Koreksi administratif</strong>
               <p>Koreksi tidak mengganti foto, lokasi, atau waktu presensi asli.</p>
               {data.timeCorrection.accepted && (

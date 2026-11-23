@@ -66,7 +66,9 @@ export const MapDataProvider = ({ children }) => {
     if (!user?.id) return;
     const socketUrl =
       import.meta.env.VITE_SOCKET_URL ||
-      (import.meta.env.PROD ? 'https://sinar-anugrah-production.up.railway.app' : undefined);
+      (import.meta.env.PROD
+        ? 'https://sinar-anugrah-production-1e2523fd.up.railway.app'
+        : undefined);
     const socket = io(socketUrl, {
       auth: { token: localStorage.getItem('token') },
       transports: import.meta.env.PROD ? ['websocket'] : ['polling', 'websocket'],

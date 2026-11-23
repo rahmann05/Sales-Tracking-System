@@ -51,13 +51,34 @@ export const getOrders = async (currentUser, query = {}) => {
     prisma.order.count({ where }),
   ]);
 
-  const packings = await prisma.packingList.findMany({
-    where: packingOrderWhere(data.map((o) => o.id)),
-    include: { deliveryStops: true },
-  });
-  const assignments = ['ADMIN', 'SUPERVISOR'].includes(currentUser.role)
-    ? await loadOrderReviewAssignments(data)
-    : new Map();
+  if (!data.length) {
+    return buildPaginatedResponse([], total, page, limit);
+  }
+
+  const [packings, assignments] = await Promise.all([
+    prisma.packingList.findMany({
+      where: packingOrderWhere(data.map((o) => o.id)),
+      select: {
+        id: true,
+        sourceOrderId: true,
+        sourceOrderIds: true,
+        items: true,
+        deliveryStops: {
+          select: {
+            id: true,
+            status: true,
+            returnInspection: true,
+            allocatedItems: true,
+            rejectedItems: true,
+            reusableItems: true,
+          },
+        },
+      },
+    }),
+    ['ADMIN', 'SUPERVISOR'].includes(currentUser.role)
+      ? loadOrderReviewAssignments(data)
+      : Promise.resolve(new Map()),
+  ]);
   return buildPaginatedResponse(
     data.map((o) => ({
       ...fulfillment(orderSnapshot(o), packings),

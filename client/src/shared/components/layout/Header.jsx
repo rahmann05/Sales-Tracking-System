@@ -7,7 +7,6 @@ import {
 import React, { memo } from 'react';
 import { LuLogOut, LuChevronRight } from 'react-icons/lu';
 import { StatusMonitor } from '../common/StatusMonitor';
-import { MonitoringStatus } from '../common/MonitoringStatus';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { useApp } from '../../../context/AppContext';
 import { Avatar } from '../common/Avatar';
@@ -62,7 +61,6 @@ export const Header = memo(({ onLogout }) => {
       </div>
       <div className="header-actions">
         <StatusMonitor label="WIB" />
-        <MonitoringStatus />
         <NotificationCenterDropdown />
         <button
           type="button"

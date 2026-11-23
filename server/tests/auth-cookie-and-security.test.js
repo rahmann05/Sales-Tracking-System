@@ -166,7 +166,7 @@ test('resolveNotificationTab maps notification types to role-specific tabs', () 
     resolveNotificationTab({ type: 'PACKING_READY' }, 'KEPALA_GUDANG'),
     'delivery-packing-list'
   );
-  assert.equal(resolveNotificationTab({ title: 'Trip Pengiriman' }, 'SUPIR'), 'role-workspace');
+  assert.equal(resolveNotificationTab({ title: 'Trip Pengiriman' }, 'SUPIR'), 'driver-trips');
   assert.equal(resolveNotificationTab({ title: 'Trip Pengiriman' }, 'ADMIN'), 'delivery-monitor');
   assert.equal(resolveNotificationTab({ type: 'ORDER_PENDING' }, 'SALES'), 'sales-orders');
   assert.equal(resolveNotificationTab({ type: 'ORDER_PENDING' }, 'SUPERVISOR'), 'spv-approval');

@@ -16,7 +16,17 @@ export const useDailyCallMonitor = ({ enabled = true } = {}) => {
   const [salesmanId, setSalesmanId] = useWorkspaceState('callSales', '');
   const [filterType, setFilterType] = useWorkspaceState('callType', defaults.filterType);
   const [search, setSearch] = useWorkspaceState('callSearch', '');
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [salesTeam, setSalesTeam] = useState([]);
+
+  useEffect(() => {
+    if (!search) {
+      setDebouncedSearch('');
+      return;
+    }
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const [reportData, setReportData] = useState({
     summary: {
@@ -65,13 +75,12 @@ export const useDailyCallMonitor = ({ enabled = true } = {}) => {
     setIsLoading(true);
     setError('');
     setSelectedRow(null);
-    setReportData({ summary: null, rows: [], salesmanSummaries: [] });
     try {
       const res = await dailyCallsApi.getReport({
         date,
         userId: salesmanId || undefined,
         filterType,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
       });
 
       if (revision === loadRevision.current && res?.data) {
@@ -82,7 +91,7 @@ export const useDailyCallMonitor = ({ enabled = true } = {}) => {
     } finally {
       if (revision === loadRevision.current) setIsLoading(false);
     }
-  }, [date, salesmanId, filterType, search, enabled]);
+  }, [date, salesmanId, filterType, debouncedSearch, enabled]);
 
   useEffect(() => {
     loadData();

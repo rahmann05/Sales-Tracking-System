@@ -4,6 +4,7 @@ import { ShiftEvidenceDialog } from './ShiftEvidenceDialog';
 import { shiftDateKey } from '../../../../../shared/shift-policy.mjs';
 import { CONFIG_DEFAULTS } from '../../../../../shared/config.mjs';
 import { useDomainPermission } from '../../hooks/useDomainPermission';
+import '../../../styles/common/ShiftAttendanceWidget.css';
 
 export function ShiftAttendanceWidget() {
   const canStart = useDomainPermission('START_SHIFT');
@@ -25,23 +26,19 @@ export function ShiftAttendanceWidget() {
   const start = () => setDialog(true);
   if (settings.FEATURE_SHIFT_MODE === 'OFF' && !shift.clockedIn) return null;
 
+  const dotModifier = shift.clockOutTime
+    ? 'shift-widget-dot-done'
+    : shift.clockedIn
+      ? 'shift-widget-dot-active'
+      : 'shift-widget-dot-idle';
+
   return (
-    <div className="rounded-2xl border border-border-glass p-3 sm:px-4 sm:py-3 bg-surface-container/50 shadow-xs flex flex-wrap items-center justify-between gap-4">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div
-          className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-            shift.clockOutTime
-              ? 'bg-slate-400'
-              : shift.clockedIn
-                ? 'bg-emerald-500 animate-pulse'
-                : 'bg-amber-400'
-          }`}
-        />
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-            Shift · {dateKey} WIB
-          </p>
-          <p className="text-xs font-semibold text-on-surface truncate">
+    <div className="shift-widget">
+      <div className="shift-widget-status">
+        <span className={`shift-widget-dot ${dotModifier}`} aria-hidden="true" />
+        <div className="shift-widget-meta">
+          <p className="shift-widget-date">Shift · {dateKey} WIB</p>
+          <p className="shift-widget-state">
             {shift.finished && !shift.clockOutTime
               ? 'Kegiatan shift selesai (tanpa bukti keluar)'
               : shift.clockOutTime
@@ -63,18 +60,14 @@ export function ShiftAttendanceWidget() {
             (!shift.clockedIn && ['PAUSED', 'OFF'].includes(settings.FEATURE_SHIFT_MODE))
           }
           onClick={start}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50 ${
-            shift.clockedIn
-              ? 'bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border border-rose-500/20'
-              : 'bg-primary hover:bg-primary/90 text-on-primary'
-          }`}
+          className={`app-button ${shift.clockedIn ? 'shift-widget-btn-end' : 'app-button-primary'}`}
         >
           {shiftBusy ? 'Menyimpan…' : shift.clockedIn ? 'Akhiri Shift' : 'Mulai Shift'}
         </button>
       )}
 
       {shiftError && (
-        <p role="alert" className="text-xs text-rose-600 w-full mt-1">
+        <p role="alert" className="app-error shift-widget-error">
           {shiftError}
         </p>
       )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { customerRegistrationsApi } from '../../../services/api';
 import { notifyError, confirmAction } from '../../../services/notificationService';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
 
 /**
  * useOutletApproval Hook
@@ -15,7 +16,8 @@ export const useOutletApproval = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const loadRevision = useRef(0);
-  const [filterStatus, setFilterStatus] = useState('SUBMITTED');
+  const [filterStatus, setFilterStatus] = useWorkspaceState('outletApprovalStatus', 'SUBMITTED');
+  const [targetId, setTargetId] = useWorkspaceState('outletApprovalId', '');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
 
@@ -60,6 +62,26 @@ export const useOutletApproval = () => {
     };
   }, [loadData]);
 
+  useEffect(() => {
+    if (!targetId) return;
+    const match = items.find((row) => row.id === targetId);
+    if (match) {
+      setSelectedItem(match);
+      return;
+    }
+    if (isLoading) return;
+    let active = true;
+    customerRegistrationsApi
+      .getById(targetId)
+      .then((res) => {
+        if (active && res?.data) setSelectedItem(res.data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [targetId, items, isLoading]);
+
   const handleApprove = async (item) => {
     const confirmed = await confirmAction(`Setujui pengajuan registrasi outlet "${item.name}"?`, {
       title: 'Setujui Pengajuan NOO',
@@ -71,6 +93,7 @@ export const useOutletApproval = () => {
       await customerRegistrationsApi.approve(item.id);
       setFeedbackMsg({ type: 'success', text: `Outlet "${item.name}" berhasil disetujui!` });
       setSelectedItem(null);
+      if (targetId) setTargetId('');
       await loadData();
     } catch (err) {
       setFeedbackMsg({ type: 'error', text: err.message || 'Gagal menyetujui pengajuan' });
@@ -90,6 +113,7 @@ export const useOutletApproval = () => {
       setFeedbackMsg({ type: 'success', text: `Outlet "${selectedItem.name}" telah ditolak.` });
       setIsRejectModalOpen(false);
       setSelectedItem(null);
+      if (targetId) setTargetId('');
       setRejectReason('');
       await loadData();
     } catch (err) {
@@ -118,7 +142,10 @@ export const useOutletApproval = () => {
     setPage,
     pagination,
     selectedItem,
-    setSelectedItem,
+    setSelectedItem: (item) => {
+      setSelectedItem(item);
+      if (!item && targetId) setTargetId('');
+    },
     isProcessing,
     isRejectModalOpen,
     setIsRejectModalOpen,

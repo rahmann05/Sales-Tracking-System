@@ -127,7 +127,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
           type="button"
           onClick={form.handleConfirm}
           disabled={form.saving}
-          className="w-full py-3.5 bg-primary text-on-primary font-bold text-xs rounded-2xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
+          className="w-full py-3.5 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
         >
           <FiCheckCircle className="text-base" />
           <span>

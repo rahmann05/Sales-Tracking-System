@@ -78,13 +78,13 @@
   gap: 4px;
   flex-wrap: wrap;
   background: #e9edf2;
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 4px;
 }
 .sales-tabs button {
   min-height: 44px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   padding: 10px 14px;
   color: #606b7b;
@@ -1038,6 +1038,35 @@
 .sales-map-list .sales-toolbar {
   padding: 16px;
   border-bottom: 1px solid #e2e6ec;
+}
+.sales-map-scope {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.sales-map-scope-btn {
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+  background: #f5f7fa;
+  color: #3d4856;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.sales-map-scope-btn:hover {
+  background: #eaf0f7;
+}
+.sales-map-scope-btn[aria-pressed='true'] {
+  background: #0869cf;
+  color: #fff;
+  border-color: #0869cf;
+}
+.sales-map-empty-cta {
+  margin-top: 12px;
 }
 .sales-map-list label {
   width: 100%;

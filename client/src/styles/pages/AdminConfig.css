@@ -492,12 +492,12 @@
   padding: 8px;
   border: 1px solid var(--border-glass);
   background: var(--surface);
-  border-radius: 14px;
+  border-radius: 10px;
 }
 .policy-group-tabs button {
   padding: 10px 14px;
   min-height: 44px;
-  border-radius: 9px;
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
 }

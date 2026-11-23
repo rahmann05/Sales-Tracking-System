@@ -94,7 +94,12 @@ export function ShiftEvidenceDialog({ action, dateKey, values, busy, error, onCl
           <button type="button" className="app-button" disabled={busy} onClick={onClose}>
             Batal
           </button>
-          <button type="button" className="app-button" disabled={busy || !ready} onClick={submit}>
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            disabled={busy || !ready}
+            onClick={submit}
+          >
             {busy ? 'Menyimpan…' : 'Konfirmasi'}
           </button>
         </div>

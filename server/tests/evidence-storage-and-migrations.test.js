@@ -24,6 +24,7 @@ test('listMigrationFolders discovers disk migrations dynamically and assertMigra
   const folders = listMigrationFolders(migrationsDir);
   assert.ok(folders.length >= 42);
   assert.equal(folders.includes('202611220001_composite_query_indexes'), true);
+  assert.equal(folders.includes('20261123194000_perf_hot_query_indexes'), true);
 
   const ok = assertMigrationIntegrity(folders, folders);
   assert.equal(ok.ok, true);
@@ -31,7 +32,7 @@ test('listMigrationFolders discovers disk migrations dynamically and assertMigra
 
   assert.throws(
     () => assertMigrationIntegrity(folders.slice(0, -1), folders),
-    /Missing applied Prisma migrations: .*202611220001_composite_query_indexes/
+    new RegExp(`Missing applied Prisma migrations: .*${folders.at(-1)}`)
   );
 });
 

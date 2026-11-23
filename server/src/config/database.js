@@ -164,6 +164,33 @@ export async function resolveDatabaseConfig({
   };
 }
 
+/**
+ * Applies connection_limit and pool_timeout defaults for remote PgBouncer / Supabase pooler URLs
+ * so small container runtimes do not throttle concurrent dashboard queries.
+ */
+export function applyPoolerDefaults(urlString, env = process.env) {
+  if (!urlString || typeof urlString !== 'string' || isLocalDatabaseUrl(urlString)) return urlString;
+  try {
+    const parsed = new URL(urlString);
+    const isPooler =
+      parsed.searchParams.get('pgbouncer') === 'true' ||
+      parsed.port === '6543' ||
+      parsed.hostname.includes('pooler.supabase.com');
+    if (!isPooler) return urlString;
+    if (!parsed.searchParams.has('connection_limit')) {
+      const limit = Math.max(5, Number(env.PRISMA_CONNECTION_LIMIT) || 15);
+      parsed.searchParams.set('connection_limit', String(limit));
+    }
+    if (!parsed.searchParams.has('pool_timeout')) {
+      const timeout = Math.max(10, Number(env.PRISMA_POOL_TIMEOUT) || 20);
+      parsed.searchParams.set('pool_timeout', String(timeout));
+    }
+    return parsed.toString();
+  } catch {
+    return urlString;
+  }
+}
+
 export const getActiveDatabaseState = () => ({ ...activeDatabaseState });
 
 export const setActiveDatabaseState = (state) => {

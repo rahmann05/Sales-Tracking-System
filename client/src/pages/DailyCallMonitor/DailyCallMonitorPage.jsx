@@ -140,7 +140,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                 <span className="truncate">Tabel Master Call</span>
               </div>
               <span
-                className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
+                className={`text-[10px] font-mono px-1.5 py-0.5 rounded-sm shrink-0 ${
                   activeTableView === 'ALL_VISITS'
                     ? 'bg-white/20 text-white'
                     : 'bg-surface-container'
@@ -165,7 +165,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                 <span className="truncate">Timeline & Rute</span>
               </div>
               <span
-                className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
+                className={`text-[10px] font-mono px-1.5 py-0.5 rounded-sm shrink-0 ${
                   activeTableView === 'SALESMAN_TIMELINE'
                     ? 'bg-white/20 text-white'
                     : 'bg-surface-container'
@@ -191,7 +191,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               </div>
               {totalAnomalies > 0 ? (
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                  className={`px-2 py-0.5 rounded-sm text-[10px] font-bold shrink-0 ${
                     activeTableView === 'ANOMALIES_ONLY'
                       ? 'bg-white/20 text-white'
                       : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -201,7 +201,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
                 </span>
               ) : (
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-sm shrink-0 ${
                     activeTableView === 'ANOMALIES_ONLY'
                       ? 'bg-white/20 text-white'
                       : 'bg-surface-container'

@@ -58,9 +58,6 @@ export const getWeeklyReport = async (query = {}) => {
     });
   }
   const calendarMonths = [...new Set(weekDays.map((day) => day.dateStr.slice(0, 7)))];
-  const calendars = await loadReportCalendars(calendarMonths);
-  for (const day of weekDays)
-    day.isWorkingDay = calendarWorkingDay(calendars.get(day.dateStr.slice(0, 7)), day.dateStr);
 
   // Fetch Salesmen
   const salesWhere = { role: 'SALES', deletedAt: null };
@@ -68,16 +65,27 @@ export const getWeeklyReport = async (query = {}) => {
   if (clusterId) salesWhere.clusterId = clusterId;
   if (supervisorId) salesWhere.supervisorId = supervisorId;
 
-  const currentSales = await prisma.user.findMany({
-    where: salesWhere,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      cluster: { select: { id: true, name: true, region: true } },
-    },
-    orderBy: { name: 'asc' },
-  });
+  const [calendars, currentSales, records, companyName] = await Promise.all([
+    loadReportCalendars(calendarMonths),
+    prisma.user.findMany({
+      where: salesWhere,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        cluster: { select: { id: true, name: true, region: true } },
+      },
+      orderBy: { name: 'asc' },
+    }),
+    loadReportRecords(start, end, {
+      byDay: true,
+      scope: { userId, clusterId, supervisorId },
+    }),
+    getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
+  ]);
+
+  for (const day of weekDays)
+    day.isWorkingDay = calendarWorkingDay(calendars.get(day.dateStr.slice(0, 7)), day.dateStr);
 
   let totalWeeklyPlan = 0;
   let totalWeeklyActual = 0;
@@ -105,10 +113,6 @@ export const getWeeklyReport = async (query = {}) => {
     anomalies: 0,
   }));
 
-  const records = await loadReportRecords(start, end, {
-    byDay: true,
-    scope: { userId, clusterId, supervisorId },
-  });
   const salesmen = mergeReportSales(currentSales, records);
   // A weekly target covers Monday through Sunday; custom/short ranges cannot use it.
   const isFullWeek =
@@ -282,7 +286,7 @@ export const getWeeklyReport = async (query = {}) => {
       targetNote: targetBasisNote,
       targetCoverage: targetCoverage(salesmanRows.map((s) => s.target)),
     },
-    meta: { company: await getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH') },
+    meta: { company: companyName },
     period: {
       startDate: wibDateKey(start),
       endDate: wibDateKey(end),

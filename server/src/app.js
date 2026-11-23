@@ -9,16 +9,18 @@ import path from 'path';
 
 import { config } from './config/index.js';
 import apiRouter from './routes/index.js';
+import { compressionMiddleware } from './middlewares/compression.middleware.js';
 import { notFoundHandler } from './middlewares/notFound.middleware.js';
 import { errorHandler } from './middlewares/errorHandler.middleware.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: config.env === 'development' ? 5000 : 200,
+  max: config.env === 'development' ? 5000 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Terlalu banyak request, coba lagi setelah 15 menit' },
@@ -99,6 +101,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+app.use(compressionMiddleware);
 app.use('/api/v1/auth', authLimiter);
 app.use('/api', apiRouter);
 

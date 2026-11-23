@@ -29,12 +29,22 @@ const router = Router();
 
 router.use('/health', healthRoutes);
 
+const NON_MASTER_CACHE_MUTATIONS = [
+  /^\/users\/location\/?$/,
+  /^\/delivery\/routes\/[^/]+\/location\/?$/,
+  /^\/notifications\/(?:read-all|[^/]+\/read)\/?$/,
+];
+
 const v1Router = Router();
 v1Router.use((req, res, next) => {
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method))
-    res.on('finish', () => {
-      if (res.statusCode < 400) invalidateCache();
-    });
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    const requestPath = (req.path || '').split('?')[0];
+    if (!NON_MASTER_CACHE_MUTATIONS.some((pattern) => pattern.test(requestPath))) {
+      res.on('finish', () => {
+        if (res.statusCode < 400) invalidateCache();
+      });
+    }
+  }
   next();
 });
 v1Router.use('/health', healthRoutes);

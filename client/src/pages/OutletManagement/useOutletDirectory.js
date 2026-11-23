@@ -5,7 +5,7 @@ import { outletsApi, clustersApi } from '../../services/api';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import { useWorkspaceState } from '../../shared/hooks/useWorkspaceState';
 export function useOutletDirectory(prefix = 'outlet') {
-  const { settings } = useApp(),
+  const { settings, clusters: appClusters } = useApp(),
     size = Number(settings.WORKSPACE_PAGE_SIZE || 25);
   const [search, setSearch] = useWorkspaceState(prefix + 'Search', ''),
     [cluster, setCluster] = useWorkspaceState(prefix + 'Cluster', ''),
@@ -16,10 +16,12 @@ export function useOutletDirectory(prefix = 'outlet') {
     [page, setPage] = useWorkspaceState(prefix + 'Page', '1');
   const [data, setData] = useState([]),
     [pagination, setPagination] = useState({ total: 0, totalPages: 1 }),
-    [clusters, setClusters] = useState([]),
+    [fallbackClusters, setFallbackClusters] = useState([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     [clusterError, setClusterError] = useState('');
+  const clusters =
+    Array.isArray(appClusters) && appClusters.length > 0 ? appClusters : fallbackClusters;
   const debounced = useDebounce(search, 250),
     version = useRef(0);
   const load = useCallback(async () => {
@@ -56,11 +58,15 @@ export function useOutletDirectory(prefix = 'outlet') {
     };
   }, [load]);
   useEffect(() => {
+    if (Array.isArray(appClusters) && appClusters.length > 0) {
+      setClusterError('');
+      return;
+    }
     let live = true;
     clustersApi
       .getAll()
       .then((r) => {
-        if (live) setClusters(r.data || []);
+        if (live) setFallbackClusters(r.data || []);
       })
       .catch((e) => {
         if (live) setClusterError(e.message);
@@ -68,7 +74,7 @@ export function useOutletDirectory(prefix = 'outlet') {
     return () => {
       live = false;
     };
-  }, []);
+  }, [appClusters]);
   const filter = (setter, value) => {
     setter(value, { replace: true });
     setPage('1', { replace: true });

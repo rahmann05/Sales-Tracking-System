@@ -18,7 +18,7 @@ export const errorHandler = (err, req, res, next) => {
     return errorResponse(res, 400, 'Validasi input gagal', formattedErrors);
   }
 
-  if (['P1001', 'P1002', 'P1008', 'P1017', 'P2024'].includes(err.code))
+  if (['P1001', 'P1002', 'P1008', 'P1017', 'P2024', 'P2028'].includes(err.code))
     return errorResponse(
       res,
       503,
