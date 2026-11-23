@@ -42,7 +42,8 @@
 :is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui) .sidebar-brand-icon {
   width: 32px;
   height: 32px;
-  background: #01144c;
+  background: #ffffff;
+  border: 1px solid #e2e6ec;
   border-radius: 10px;
 }
 :is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui) .sidebar-brand-title {

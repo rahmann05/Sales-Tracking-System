@@ -14,8 +14,9 @@
 
 .sidebar-brand-icon {
   @apply w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0;
-  background: #01144c;
-  color: #ffffff;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-brand-title {

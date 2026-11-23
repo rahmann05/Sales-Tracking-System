@@ -42,11 +42,11 @@ export const MobileHeader = ({ onLogout }) => {
             <span>Menu</span>
           </button>
         ) : (
-          <div className="mobile-brand-icon overflow-hidden">
+          <div className="mobile-brand-icon overflow-hidden bg-white">
             <img
               src="/logo-mark.png"
               alt="Sinar Anugrah"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain p-0.5"
             />
           </div>
         )}

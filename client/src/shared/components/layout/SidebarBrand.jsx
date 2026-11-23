@@ -9,11 +9,11 @@ import '../../../styles/layout/Sidebar.css';
 export const SidebarBrand = () => (
   <div className="sidebar-brand">
     <div className="flex items-center gap-3">
-      <div className="sidebar-brand-icon overflow-hidden shadow-xs">
+      <div className="sidebar-brand-icon overflow-hidden shadow-xs bg-white">
         <img
           src="/logo-mark.png"
           alt="Sinar Anugrah"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain p-0.5"
         />
       </div>
       <div>

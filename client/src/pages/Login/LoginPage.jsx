@@ -11,11 +11,11 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
     <div className="login-wrapper">
       {/* Mobile: Splash Screen Animation */}
       <div className="login-mobile-splash">
-        <div className="login-mobile-splash-logo overflow-hidden shadow-lg">
+        <div className="login-mobile-splash-logo overflow-hidden shadow-lg p-2 bg-white">
           <img
             src="/logo-mark.png"
             alt="Sinar Anugrah"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         </div>
         <h1 className="login-mobile-splash-title">Sinar Anugrah</h1>
@@ -30,7 +30,7 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
             <img
               src="/logo-mark.png"
               alt="CV Sinar Anugrah"
-              className="w-14 h-14 rounded-2xl shadow-sm object-cover mb-1 border border-border-glass"
+              className="w-14 h-14 rounded-2xl shadow-sm object-contain p-1.5 mb-1 bg-white border border-border-glass"
             />
             <h1 className="text-2xl font-black text-on-surface tracking-tight">
               CV. SINAR ANUGRAH

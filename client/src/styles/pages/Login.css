@@ -144,8 +144,9 @@
 
 .login-mobile-splash-logo {
   @apply w-20 h-20 rounded-[24px] flex items-center justify-center text-3xl;
-  background: #01144c;
-  color: #ffffff;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   animation: splash-logo 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
