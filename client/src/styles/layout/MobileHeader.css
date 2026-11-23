@@ -8,7 +8,9 @@
 }
 
 .mobile-brand-icon {
-  @apply w-8 h-8 rounded-xl bg-primary text-on-primary flex items-center justify-center text-lg font-bold shadow-md;
+  @apply w-8 h-8 rounded-xl flex items-center justify-center text-lg font-bold shadow-sm;
+  background: #01144c;
+  color: #ffffff;
 }
 
 .mobile-brand-title {

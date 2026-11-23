@@ -5,7 +5,7 @@ import {
   roleParentTab,
 } from '../../../constants/roleNavigation';
 import React from 'react';
-import { LuLayers, LuLogOut, LuArrowLeft } from 'react-icons/lu';
+import { LuLogOut, LuArrowLeft } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { Avatar } from '../common/Avatar';
@@ -42,8 +42,12 @@ export const MobileHeader = ({ onLogout }) => {
             <span>Menu</span>
           </button>
         ) : (
-          <div className="mobile-brand-icon">
-            <LuLayers />
+          <div className="mobile-brand-icon overflow-hidden">
+            <img
+              src="/logo-mark.png"
+              alt="Sinar Anugrah"
+              className="w-full h-full object-cover"
+            />
           </div>
         )}
         <div className="min-w-0 flex-1">

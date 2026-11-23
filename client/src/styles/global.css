@@ -27,9 +27,10 @@
 
   --on-surface: #1d1d1f;
   --on-surface-variant: #475569;
-  --primary: #0869cf;
-  --primary-hover: #0656ab;
-  --primary-light: #eff6ff;
+  --primary: #1b66ca;
+  --primary-hover: #1452a3;
+  --primary-light: #eef5ff;
+  --brand-navy: #01144c;
   --on-primary: #ffffff;
   --border-glass: rgba(0, 0, 0, 0.08);
   --border-subtle: var(--border-glass);

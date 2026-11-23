@@ -14,7 +14,7 @@
 
 .sidebar-brand-icon {
   @apply w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0;
-  background: #1d1d1f;
+  background: #01144c;
   color: #ffffff;
 }
 
@@ -42,7 +42,7 @@
 }
 
 .sidebar-nav-btn-active {
-  background: #1d1d1f !important;
+  background: #01144c !important;
   color: #ffffff !important;
   font-weight: 600;
 }

@@ -49,9 +49,10 @@
 }
 
 .role-btn.selected {
-  border-color: #1d1d1f;
-  background: #1d1d1f;
+  border-color: #01144c;
+  background: #01144c;
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(1, 20, 76, 0.18);
 }
 
 .role-btn.selected .role-icon,
@@ -86,13 +87,14 @@
 }
 
 .login-input-box:focus-within {
-  border-color: #1d1d1f;
+  border-color: #1b66ca;
   background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(27, 102, 202, 0.12);
 }
 
 .login-input {
   @apply bg-transparent border-none outline-none text-sm text-on-surface w-full;
-  caret-color: #1d1d1f;
+  caret-color: #1b66ca;
 }
 
 .login-input::placeholder {
@@ -106,12 +108,14 @@
 /* ── Submit Button ── */
 .login-submit-btn {
   @apply w-full py-3 md:py-3.5 mt-1 font-bold rounded-xl text-sm flex items-center justify-center gap-2 cursor-pointer transition-all duration-150 border-none shadow-sm;
-  background: #1d1d1f;
+  background: #1b66ca;
   color: #ffffff;
+  box-shadow: 0 2px 8px rgba(27, 102, 202, 0.22);
 }
 
 .login-submit-btn:hover {
-  background: #333336;
+  background: #1452a3;
+  box-shadow: 0 4px 14px rgba(27, 102, 202, 0.32);
 }
 
 .login-submit-btn:active {
@@ -140,7 +144,7 @@
 
 .login-mobile-splash-logo {
   @apply w-20 h-20 rounded-[24px] flex items-center justify-center text-3xl;
-  background: #1d1d1f;
+  background: #01144c;
   color: #ffffff;
   animation: splash-logo 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }

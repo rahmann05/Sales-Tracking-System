@@ -1,7 +1,7 @@
 /* One admin workspace: restrained surfaces, clear density, consistent interaction. */
 .app-shell:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui) {
-  --primary: #0869cf;
-  --color-primary: #0869cf;
+  --primary: #1b66ca;
+  --color-primary: #1b66ca;
   --color-on-primary: #fff;
   --on-primary: #fff;
   --on-surface: #242931;
@@ -14,7 +14,7 @@
   --background: #f6f7f9;
   --border-glass: #e2e6ec;
   --color-border-glass: #e2e6ec;
-  --admin-accent-soft: #eaf2fd;
+  --admin-accent-soft: #edf4fe;
   --ui-card-radius: 12px;
   --ui-control-radius: 8px;
   --ui-card-padding: 20px;
@@ -42,7 +42,7 @@
 :is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui) .sidebar-brand-icon {
   width: 32px;
   height: 32px;
-  background: #242931;
+  background: #01144c;
   border-radius: 10px;
 }
 :is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui) .sidebar-brand-title {

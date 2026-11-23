@@ -1,5 +1,4 @@
 import React from 'react';
-import { LuLayers } from 'react-icons/lu';
 import '../../../styles/layout/Sidebar.css';
 
 /**
@@ -7,15 +6,15 @@ import '../../../styles/layout/Sidebar.css';
  * Single Responsibility: Display the app brand/logo section.
  */
 
-export /**
- * SidebarBrand Component
- * Single Responsibility: Display the app brand/logo section.
- */
-const SidebarBrand = () => (
+export const SidebarBrand = () => (
   <div className="sidebar-brand">
     <div className="flex items-center gap-3">
-      <div className="sidebar-brand-icon">
-        <LuLayers />
+      <div className="sidebar-brand-icon overflow-hidden shadow-xs">
+        <img
+          src="/logo-mark.png"
+          alt="Sinar Anugrah"
+          className="w-full h-full object-cover"
+        />
       </div>
       <div>
         <h1 className="sidebar-brand-title">Sinar Anugrah</h1>

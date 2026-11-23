@@ -1,5 +1,4 @@
 import React from 'react';
-import { LuLayers } from 'react-icons/lu';
 import { LoginFormCard } from './components/LoginFormCard';
 import '../../styles/pages/Login.css';
 
@@ -12,11 +11,15 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
     <div className="login-wrapper">
       {/* Mobile: Splash Screen Animation */}
       <div className="login-mobile-splash">
-        <div className="login-mobile-splash-logo">
-          <LuLayers />
+        <div className="login-mobile-splash-logo overflow-hidden shadow-lg">
+          <img
+            src="/logo-mark.png"
+            alt="Sinar Anugrah"
+            className="w-full h-full object-cover"
+          />
         </div>
         <h1 className="login-mobile-splash-title">Sinar Anugrah</h1>
-        <p className="login-mobile-splash-subtitle">Sales Tracking System</p>
+        <p className="login-mobile-splash-subtitle">Sales & Distribusi System</p>
       </div>
 
       {/* Main Direct Login Form Container (Desktop & Mobile) */}
@@ -24,13 +27,15 @@ export const LoginPage = ({ onLogin, loading = false, error = '' }) => {
         <div className="login-form-container animate-fade-in-up">
           {/* Brand Header */}
           <div className="flex flex-col items-center text-center gap-2 mb-2">
-            <div className="w-14 h-14 rounded-2xl bg-[#1D1D1F] text-white flex items-center justify-center text-2xl shadow-sm mb-1">
-              <LuLayers />
-            </div>
+            <img
+              src="/logo-mark.png"
+              alt="CV Sinar Anugrah"
+              className="w-14 h-14 rounded-2xl shadow-sm object-cover mb-1 border border-border-glass"
+            />
             <h1 className="text-2xl font-black text-on-surface tracking-tight">
               CV. SINAR ANUGRAH
             </h1>
-            <p className="text-xs text-on-surface-variant max-w-xs">Platform Sales Tracking</p>
+            <p className="text-xs text-on-surface-variant max-w-xs">Platform Sales & Distribusi</p>
           </div>
 
           {/* Login Card */}
