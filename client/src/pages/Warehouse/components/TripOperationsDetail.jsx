@@ -1,7 +1,10 @@
 import { DeliveryReceiptSummary } from '../../../shared/components/common/DeliveryReceiptSummary';
 import { DepartureChecklistSummary } from '../../../shared/components/common/DepartureChecklistSummary';
 import React, { useEffect, useRef } from 'react';
+import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
 import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import { tripNextWork } from '../../../../../shared/operational-attention.mjs';
 import { RouteOperationsActions } from './RouteOperationsActions';
 import { PreparationTasks } from './PreparationTasks';
@@ -25,6 +28,7 @@ const resolveStopPoint = (stop) => {
     : null;
 };
 export function TripOperationsDetail({ route, people, issues, canManage, onChanged }) {
+  const { user, setActiveTab } = useApp();
   const r = route,
     work = tripNextWork(r),
     pendingReturnStop = r.stops?.find((stop) => stop.rejectedCartons > 0 && !stop.returnInspection),
@@ -54,7 +58,10 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
         </strong>
       </header>
       {work && (
-        <div className="admin-feedback flex flex-wrap items-center justify-between gap-2" role="status">
+        <div
+          className="admin-feedback flex flex-wrap items-center justify-between gap-2"
+          role="status"
+        >
           <span>
             <strong>Langkah berikutnya: {work.nextAction}.</strong> {work.explanation}
           </span>
@@ -134,6 +141,7 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
         <h3>Urutan pengiriman</h3>
         {r.stops.map((stop) => {
           const pt = resolveStopPoint(stop);
+          const needsReturn = stop.rejectedCartons > 0 && !stop.returnInspection;
           return (
             <article
               key={stop.id}
@@ -144,8 +152,10 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
               aria-label={`Tujuan ${stop.sequence}: ${stop.outlet?.name}`}
               style={
                 selectedStop === stop.id
-                  ? { outline: '2px solid var(--color-primary, #0066cc)', outlineOffset: 4 }
-                  : undefined
+                  ? { outline: '2px solid var(--color-primary, #1b66ca)', outlineOffset: 4 }
+                  : needsReturn
+                    ? { borderColor: '#fbbf24', backgroundColor: '#fffbeb' }
+                    : undefined
               }
             >
               <div className="admin-stop-number">{stop.sequence}</div>
@@ -160,7 +170,37 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
                   {stop.allocatedCartons} karton · Ditolak {stop.rejectedCartons || 0}
                   {stop.rejectReason ? ` · ${stop.rejectReason}` : ''}
                 </p>
-                <p className="text-xs">
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  {stop.packingListId && (
+                    <button
+                      type="button"
+                      className="admin-table-link"
+                      onClick={() => {
+                        setWorkspaceValues(
+                          { packingDetail: stop.packingListId },
+                          { tab: TAB_IDS.DELIVERY_PACKING_LIST }
+                        );
+                        setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST);
+                      }}
+                    >
+                      <strong>{stop.packingList?.code || 'Buka Packing List'}</strong>
+                    </button>
+                  )}
+                  {user?.role === 'ADMIN' && stop.outletId && (
+                    <button
+                      type="button"
+                      className="admin-table-link"
+                      onClick={() => {
+                        setWorkspaceValues(
+                          { outletId: stop.outletId },
+                          { tab: TAB_IDS.OUTLET_MANAGEMENT }
+                        );
+                        setActiveTab(TAB_IDS.OUTLET_MANAGEMENT);
+                      }}
+                    >
+                      <strong>Profil outlet</strong>
+                    </button>
+                  )}
                   {pt ? (
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${pt.latitude},${pt.longitude}`}
@@ -171,9 +211,9 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
                       Buka titik tujuan di Google Maps
                     </a>
                   ) : (
-                    'Titik tujuan belum tersedia'
+                    <span>Titik tujuan belum tersedia</span>
                   )}
-                </p>
+                </div>
                 <small>
                   Tiba {stamp(stop.arrivedAt)} · Selesai {stamp(stop.completedAt)}
                 </small>

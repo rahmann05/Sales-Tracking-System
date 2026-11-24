@@ -65,8 +65,10 @@ export function AdminPackingTable({ items, loading, onSelect }) {
                     <span className="admin-status admin-status-pending">Perlu dilengkapi</span>
                   ) : draft ? (
                     'Siap diperiksa'
+                  ) : item.deliveryStops?.length ? (
+                    <span className="admin-status admin-status-route">Masuk rute</span>
                   ) : (
-                    '—'
+                    'Siap dijadwalkan rute'
                   )}
                 </td>
               </tr>

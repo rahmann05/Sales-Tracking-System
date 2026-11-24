@@ -775,7 +775,7 @@
 :is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)
   .admin-packing-editor
   > form
-  fieldset
+  fieldset:not(.work-route-layout)
   > div:last-child {
   position: sticky;
   bottom: 0;
@@ -830,13 +830,13 @@
   border-top: 1px solid #edf0f4;
   padding: 15px 17px;
   background: white;
-  color: #8390a2;
-  font-size: 11px;
+  color: #475569;
+  font-size: 12px;
   cursor: pointer;
 }
 .admin-trip-item[aria-pressed='true'] {
   background: #eef5ff;
-  box-shadow: inset 3px 0 #096ad0;
+  box-shadow: inset 3px 0 #1b66ca;
 }
 .admin-trip-item:hover {
   background: #f4f8ff;
@@ -848,12 +848,12 @@
   gap: 10px;
 }
 .admin-trip-item-heading strong {
-  color: #45556c;
+  color: #01144c;
   font-size: 13px;
   font-weight: 600;
 }
 .admin-trip-progress {
-  height: 4px;
+  height: 5px;
   background: #e4eaf2;
   display: block;
   border-radius: 3px;
@@ -863,19 +863,21 @@
 .admin-trip-progress > span {
   display: block;
   height: 100%;
-  background: #6c9dde;
+  background: #1b66ca;
 }
 .admin-location-label {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #9a885d;
+  color: #9a5700;
+  font-weight: 500;
 }
 .admin-location-label.live {
-  color: #41816d;
+  color: #166534;
 }
 .admin-trip-alert {
-  color: #b17f3a;
+  color: #b45309;
+  font-weight: 600;
   line-height: 1.5;
 }
 .admin-trip-map > section {
@@ -885,8 +887,8 @@
 }
 .admin-trip-map > section > p {
   padding: 11px 15px;
-  font-size: 10px;
-  color: #919bad;
+  font-size: 12px;
+  color: #475569;
   line-height: 1.6;
 }
 .admin-trip-map .leaflet-container {
@@ -894,16 +896,16 @@
 }
 .admin-trip-map > p {
   padding: 70px 35px;
-  color: #667386;
+  color: #475569;
   text-align: center;
 }
 .admin-trip-detail > .admin-panel-heading {
   padding: 20px;
 }
 .admin-trip-detail > .admin-panel-heading > strong {
-  font-size: 12px;
-  font-weight: 500;
-  color: #72849a;
+  font-size: 13px;
+  font-weight: 600;
+  color: #01144c;
 }
 .admin-trip-summary {
   display: grid;
@@ -917,17 +919,17 @@
   gap: 6px;
 }
 .admin-trip-summary span {
-  font-size: 10px;
-  color: #919bad;
+  font-size: 12px;
+  color: #64748b;
 }
 .admin-trip-summary strong {
-  font-size: 12px;
-  color: #586b83;
+  font-size: 13px;
+  color: #0f172a;
   font-weight: 600;
 }
 .admin-trip-summary small {
-  font-size: 10px;
-  color: #9aa5b4;
+  font-size: 12px;
+  color: #475569;
 }
 .admin-trip-work {
   display: grid;
@@ -939,7 +941,7 @@
 .admin-trip-work h3,
 .admin-trip-stops > h3 {
   font-size: 14px;
-  color: #586b83;
+  color: #01144c;
   font-weight: 600;
   margin-bottom: 14px;
 }
@@ -949,8 +951,11 @@
 .admin-trip-stops > article {
   display: flex;
   gap: 14px;
-  border-top: 1px solid #edf0f4;
-  padding: 16px 0;
+  border: 1px solid #edf0f4;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 10px;
+  background: #ffffff;
 }
 .admin-stop-number {
   display: grid;
@@ -959,9 +964,10 @@
   height: 28px;
   flex: none;
   border-radius: 8px;
-  background: #eff3f8;
-  color: #7d8da3;
-  font-size: 11px;
+  background: #edf4fe;
+  color: #01144c;
+  font-weight: 600;
+  font-size: 12px;
 }
 .admin-stop-content {
   min-width: 0;
@@ -974,30 +980,35 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .admin-stop-content h4 {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #5b6e87;
+  color: #0f172a;
 }
 .admin-stop-content p,
 .admin-stop-content small {
-  font-size: 11px;
-  color: #8b98aa;
+  font-size: 12px;
+  color: #475569;
 }
 .admin-trip-history {
   border-top: 1px solid #edf0f4;
   padding: 15px 20px;
   font-size: 12px;
-  color: #8493a8;
+  color: #475569;
 }
 .admin-trip-history summary {
   cursor: pointer;
-  min-height: 30px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #01144c;
 }
 .admin-trip-history p {
   padding: 8px 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 :is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)
   .delivery-operations-workspace
@@ -1621,7 +1632,7 @@ body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)) .
 }
 @media (min-width: 1200px) {
   .admin-order-list .admin-table-scroll {
-    max-height: max(240px, calc(100dvh - 480px));
+    max-height: max(320px, calc(100dvh - 300px));
   }
   .admin-order-list .admin-data-table thead {
     position: sticky;
@@ -1631,7 +1642,8 @@ body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)) .
   .admin-order-detail {
     display: flex;
     flex-direction: column;
-    max-height: max(300px, calc(100dvh - 430px));
+    max-height: max(380px, calc(100dvh - 240px));
+    overflow-y: auto;
   }
   .admin-order-detail .admin-panel-heading {
     flex-shrink: 0;
@@ -1640,8 +1652,7 @@ body:has(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui)) .
     .admin-order-detail
     .pending-order-card {
     min-height: 0;
-    overflow: hidden;
-    flex: 1;
+    flex: 1 0 auto;
   }
   .admin-order-detail .poc-content {
     overflow-y: auto;

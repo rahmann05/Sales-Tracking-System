@@ -9,6 +9,8 @@ export function useOutletDirectory(prefix = 'outlet') {
     size = Number(settings.WORKSPACE_PAGE_SIZE || 25);
   const [search, setSearch] = useWorkspaceState(prefix + 'Search', ''),
     [cluster, setCluster] = useWorkspaceState(prefix + 'Cluster', ''),
+    [channel, setChannel] = useWorkspaceState(prefix + 'Channel', ''),
+    [quality, setQuality] = useWorkspaceState(prefix + 'Quality', 'ALL'),
     [status, setStatus] = useWorkspaceState(
       prefix + 'Status',
       workspaceChoice('MASTER_OUTLET_DEFAULT_STATUS', settings.MASTER_OUTLET_DEFAULT_STATUS)
@@ -32,6 +34,8 @@ export function useOutletDirectory(prefix = 'outlet') {
       const res = await outletsApi.directory({
         search: debounced,
         clusterId: cluster || undefined,
+        channel: channel || undefined,
+        quality: quality && quality !== 'ALL' ? quality : undefined,
         status,
         page,
         limit: size,
@@ -50,11 +54,16 @@ export function useOutletDirectory(prefix = 'outlet') {
     } finally {
       if (request === version.current) setLoading(false);
     }
-  }, [debounced, cluster, status, page, setPage, size]);
+  }, [debounced, cluster, channel, quality, status, page, setPage, size]);
   useEffect(() => {
     load();
+    const onChanged = () => load();
+    if (typeof window !== 'undefined')
+      window.addEventListener('operational-data-changed', onChanged);
     return () => {
       version.current++;
+      if (typeof window !== 'undefined')
+        window.removeEventListener('operational-data-changed', onChanged);
     };
   }, [load]);
   useEffect(() => {
@@ -91,6 +100,10 @@ export function useOutletDirectory(prefix = 'outlet') {
     setSearch: (v) => filter(setSearch, v),
     cluster,
     setCluster: (v) => filter(setCluster, v),
+    channel,
+    setChannel: (v) => filter(setChannel, v),
+    quality,
+    setQuality: (v) => filter(setQuality, v),
     status,
     setStatus: (v) => filter(setStatus, v),
     page: Number(page) || 1,

@@ -4,14 +4,27 @@ export const TAX_ROUNDING_LABELS = {
   DOWN: 'Bulatkan ke bawah',
   UP: 'Bulatkan ke atas',
 };
+export function resolveTaxIncluded(taxRatePercent, taxIncluded) {
+  return Number(taxRatePercent) === 0 && typeof taxIncluded !== 'boolean' ? true : taxIncluded;
+}
+
+export function hasCompleteTaxTerms(taxRatePercent, taxIncluded) {
+  return (
+    Number.isFinite(taxRatePercent) &&
+    taxRatePercent >= 0 &&
+    (taxRatePercent === 0 || typeof taxIncluded === 'boolean')
+  );
+}
+
 export function orderPricing(items, taxRatePercent, taxIncluded, taxRoundingMode = 'NEAREST') {
   if (!Object.hasOwn(TAX_ROUNDING_LABELS, taxRoundingMode))
     throw new Error('Aturan pembulatan pajak tidak valid');
+  const effectiveIncluded = resolveTaxIncluded(taxRatePercent, taxIncluded);
   const subtotal = items.reduce(
     (sum, item) => sum + Number(item.unitPrice) * Number(item.quantity),
     0
   );
-  const rawTax = taxIncluded
+  const rawTax = effectiveIncluded
     ? (subtotal * taxRatePercent) / (100 + taxRatePercent)
     : (subtotal * taxRatePercent) / 100;
   // Avoid a binary-float artefact rounding an exact rupiah up by one.
@@ -25,9 +38,9 @@ export function orderPricing(items, taxRatePercent, taxIncluded, taxRoundingMode
   return {
     subtotal,
     taxAmount,
-    totalValue: taxIncluded ? subtotal : subtotal + taxAmount,
+    totalValue: effectiveIncluded ? subtotal : subtotal + taxAmount,
     taxRatePercent,
-    taxIncluded,
+    taxIncluded: effectiveIncluded,
     taxRoundingMode,
   };
 }

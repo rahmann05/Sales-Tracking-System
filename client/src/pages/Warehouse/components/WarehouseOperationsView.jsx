@@ -56,26 +56,89 @@ export function WarehouseOperationsView({
           {error} Data terakhir tetap ditampilkan. Perbarui sebelum melakukan tindakan.
         </p>
       )}
-      <div className="logistics-metrics">
-        {[
-          ['Trip belum ditutup', data ? open.length : '—'],
-          [
-            'Trip perlu perhatian',
-            data
+      <nav className="logistics-flow-strip" aria-label="Alur kerja gudang">
+        <button
+          type="button"
+          className="logistics-flow-step"
+          onClick={() => setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST)}
+        >
+          <span className="logistics-flow-num">1</span>
+          <span className="logistics-flow-step-text">
+            <span>Muatan dari Admin</span>
+            <small>{data?.packings?.length || 0} dokumen menunggu</small>
+          </span>
+        </button>
+        {canManage && (
+          <button
+            type="button"
+            className="logistics-flow-step"
+            onClick={() => setActiveTab(TAB_IDS.DELIVERY_ROUTES)}
+          >
+            <span className="logistics-flow-num">2</span>
+            <span className="logistics-flow-step-text">
+              <span>Rute pengiriman</span>
+              <small>Susun armada &amp; supir</small>
+            </span>
+          </button>
+        )}
+        <button
+          type="button"
+          className="logistics-flow-step"
+          aria-current="step"
+          onClick={() => guarded(() => setFilter('OPEN'))}
+        >
+          <span className="logistics-flow-num">3</span>
+          <span className="logistics-flow-step-text">
+            <span>Pantau &amp; retur</span>
+            <small>{open.length} trip terbuka</small>
+          </span>
+        </button>
+        <button
+          type="button"
+          className="logistics-flow-step"
+          onClick={() => setActiveTab(TAB_IDS.WAREHOUSE_ATTENTION)}
+        >
+          <span className="logistics-flow-num">4</span>
+          <span className="logistics-flow-step-text">
+            <span>Perlu tindakan</span>
+            <small>Selesaikan kendala</small>
+          </span>
+        </button>
+      </nav>
+      <div className="logistics-kpi-strip">
+        <button
+          type="button"
+          className="logistics-kpi-card"
+          aria-pressed={filter === 'OPEN'}
+          onClick={() => guarded(() => setFilter('OPEN'))}
+        >
+          <span>Trip belum ditutup</span>
+          <strong>{data ? open.length : '—'}</strong>
+        </button>
+        <button
+          type="button"
+          className="logistics-kpi-card"
+          aria-pressed={filter === 'ATTENTION'}
+          onClick={() => guarded(() => setFilter('ATTENTION'))}
+        >
+          <span>Trip perlu perhatian</span>
+          <strong>
+            {data
               ? open.filter((r) => r.alerts?.length || issues.some((i) => i.routeId === r.id))
                   .length
-              : '—',
-          ],
-          [
-            'Masalah lewat tenggat',
-            data ? issues.filter((i) => i.dueAt && new Date(i.dueAt) < new Date()).length : '—',
-          ],
-        ].map(([label, value]) => (
-          <div key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
+              : '—'}
+          </strong>
+        </button>
+        <button
+          type="button"
+          className="logistics-kpi-card"
+          onClick={() => setActiveTab(TAB_IDS.WAREHOUSE_ATTENTION)}
+        >
+          <span>Masalah lewat tenggat</span>
+          <strong>
+            {data ? issues.filter((i) => i.dueAt && new Date(i.dueAt) < new Date()).length : '—'}
+          </strong>
+        </button>
       </div>
       <div className="admin-toolbar">
         <label className="admin-select-label">

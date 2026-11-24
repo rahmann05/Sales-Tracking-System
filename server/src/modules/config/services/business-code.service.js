@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
-import { getDynamicConfig } from './dynamic-config.service.js';
+import { getDynamicConfig, invalidateConfigCache } from './dynamic-config.service.js';
+import { invalidatePolicyCache } from './policy-resolver.service.js';
 import {
   CODE_ENTITIES,
   CODE_CONFIG_GROUPS,
@@ -101,4 +102,47 @@ export async function validateCodeUpdate(key, value, id, db = prisma) {
       409
     );
   return resolveBusinessCode(key, value, { db, excludeId: id, optional: entity.optional });
+}
+
+export async function ensureAutoInvoiceCodingDefault(db = prisma) {
+  const current = await db.systemConfig.findUnique({ where: { key: 'CODE_INVOICE_MODE' } });
+  if (!current || current.value !== 'MANUAL') return false;
+  const audited = await db.auditEvent.findFirst({
+    where: { entityType: 'SYSTEM_CONFIG', entityId: 'CODE_INVOICE_MODE' },
+    select: { id: true },
+  });
+  if (audited) return false;
+  await db.systemConfig.update({
+    where: { key: 'CODE_INVOICE_MODE' },
+    data: { value: 'INCREMENT' },
+  });
+  const resetRow = await db.systemConfig.findUnique({ where: { key: 'CODE_INVOICE_RESET' } });
+  if (!resetRow) {
+    await db.systemConfig.create({ data: { key: 'CODE_INVOICE_RESET', value: 'DAILY' } });
+  } else if (resetRow.value === 'NONE') {
+    await db.systemConfig.update({
+      where: { key: 'CODE_INVOICE_RESET' },
+      data: { value: 'DAILY' },
+    });
+  }
+  invalidateConfigCache();
+  invalidatePolicyCache();
+  return true;
+}
+
+export async function ensureDefaultTaxOff(db = prisma) {
+  const current = await db.systemConfig.findUnique({ where: { key: 'TAX_RATE_PERCENT' } });
+  if (!current || Number(current.value) !== 11) return false;
+  const audited = await db.auditEvent.findFirst({
+    where: { entityType: 'SYSTEM_CONFIG', entityId: 'TAX_RATE_PERCENT' },
+    select: { id: true },
+  });
+  if (audited) return false;
+  await db.systemConfig.update({
+    where: { key: 'TAX_RATE_PERCENT' },
+    data: { value: 0 },
+  });
+  invalidateConfigCache();
+  invalidatePolicyCache();
+  return true;
 }

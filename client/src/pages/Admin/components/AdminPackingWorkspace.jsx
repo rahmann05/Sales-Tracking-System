@@ -1,4 +1,6 @@
 import { ordersApi } from '../../../services/api';
+import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
 import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
 import { useFeaturePolicy } from '../../../shared/hooks/useFeaturePolicy';
 import React, { useState, useEffect } from 'react';
@@ -11,6 +13,7 @@ import { PackingLoadOrderPicker as AdminPackingOrderPicker } from './PackingLoad
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import { AdminPackingTable } from './AdminPackingTable';
 export function AdminPackingWorkspace(props) {
+  const { user, setActiveTab } = useApp();
   const featurePolicy = useFeaturePolicy('PACKING');
   const {
     busyAction,
@@ -75,12 +78,27 @@ export function AdminPackingWorkspace(props) {
         </h1>
         <p>
           {form
-            ? 'Susun faktur dan barang dari beberapa order/toko untuk satu muatan kendaraan.'
+            ? 'Periksa jumlah barang yang dibawa dan isi jumlah karton fisik per toko. Faktur terbentuk otomatis dari order.'
             : selected
               ? 'Periksa rincian, kelengkapan, dan riwayat dokumen.'
               : 'Siapkan dokumen muatan sebelum diserahkan ke kepala gudang.'}
         </p>
       </div>
+      {form && (
+        <button
+          type="button"
+          className="admin-button"
+          onClick={() => {
+            if (!window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true })))
+              return;
+            setSourceOrderId('', { replace: true });
+            setForm(null);
+          }}
+        >
+          <LuArrowLeft aria-hidden="true" />
+          Daftar packing
+        </button>
+      )}
       {!form && !selected && (
         <div className="admin-heading-actions">
           <button type="button" className="admin-button" disabled={loading} onClick={refresh}>
@@ -165,19 +183,92 @@ export function AdminPackingWorkspace(props) {
         </div>
       ) : (
         <>
-          <div className="admin-inline-metrics">
-            <span>
-              <strong>{metrics.total}</strong> dokumen
-            </span>
-            <span>
-              <strong>{metrics.draftCount}</strong> draft
-            </span>
-            <span>
-              <strong>{metrics.releasedCount}</strong> dikirim ke gudang
-            </span>
-            <span>
-              <strong>{metrics.incompleteCount}</strong> perlu dilengkapi
-            </span>
+          <nav className="logistics-flow-strip" aria-label="Alur packing hingga pengiriman">
+            {user?.permissions?.can_approve_order !== false && (
+              <button
+                type="button"
+                className="logistics-flow-step"
+                onClick={() => setActiveTab(TAB_IDS.ADMIN_APPROVAL)}
+              >
+                <span className="logistics-flow-num">1</span>
+                <span className="logistics-flow-step-text">
+                  <span>Order &amp; persetujuan</span>
+                  <small>Cek order masuk</small>
+                </span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="logistics-flow-step"
+              aria-current="step"
+              onClick={() => setStatus('')}
+            >
+              <span className="logistics-flow-num">2</span>
+              <span className="logistics-flow-step-text">
+                <span>Packing &amp; faktur</span>
+                <small>
+                  {metrics.draftCount} draft · {metrics.releasedCount} dilepas
+                </small>
+              </span>
+            </button>
+            {user?.permissions?.can_manage_delivery_routes !== false && (
+              <button
+                type="button"
+                className="logistics-flow-step"
+                onClick={() => setActiveTab(TAB_IDS.DELIVERY_ROUTES)}
+              >
+                <span className="logistics-flow-num">3</span>
+                <span className="logistics-flow-step-text">
+                  <span>Rute pengiriman</span>
+                  <small>Jadwalkan armada</small>
+                </span>
+              </button>
+            )}
+            {user?.permissions?.can_monitor_delivery !== false && (
+              <button
+                type="button"
+                className="logistics-flow-step"
+                onClick={() => setActiveTab(TAB_IDS.DELIVERY_MONITOR)}
+              >
+                <span className="logistics-flow-num">4</span>
+                <span className="logistics-flow-step-text">
+                  <span>Monitor &amp; retur</span>
+                  <small>Pantau trip aktif</small>
+                </span>
+              </button>
+            )}
+          </nav>
+          <div className="logistics-kpi-strip" role="group" aria-label="Ringkasan packing list">
+            {[
+              ['', 'Semua dokumen', metrics.total, status === ''],
+              ['DRAFT', 'Draft admin', metrics.draftCount, status === 'DRAFT'],
+              ['RELEASED', 'Dikirim ke gudang', metrics.releasedCount, status === 'RELEASED'],
+            ].map(([nextStatus, label, count, pressed]) => (
+              <button
+                key={label}
+                type="button"
+                className="logistics-kpi-card"
+                aria-pressed={pressed}
+                onClick={() => {
+                  setStatus(nextStatus);
+                  setPage(1);
+                }}
+              >
+                <span>{label}</span>
+                <strong>{count}</strong>
+              </button>
+            ))}
+            <button
+              type="button"
+              className="logistics-kpi-card"
+              onClick={() => {
+                setStatus('DRAFT');
+                setPage(1);
+              }}
+            >
+              <span>Perlu dilengkapi</span>
+              <strong>{metrics.incompleteCount}</strong>
+            </button>
           </div>
           <div className="admin-toolbar">
             <label className="admin-search">
@@ -255,20 +346,24 @@ export function AdminPackingWorkspace(props) {
           }}
         />
         {settings?.PACKING_SOURCE_MODE !== 'ORDER' && (
-          <details>
-            <summary className="min-h-11 cursor-pointer">Dokumen tanpa referensi order</summary>
-            <p>Gunakan untuk kebutuhan khusus. Dokumen ini tidak memenuhi jumlah order Sales.</p>
-            <button
-              type="button"
-              className="admin-button"
-              onClick={() => {
-                setSourceOpen(false);
-                setSourceOrderId('');
-                setForm({});
-              }}
-            >
-              Buat draft manual
-            </button>
+          <details className="packing-disclosure mt-4">
+            <summary>Dokumen tanpa referensi order</summary>
+            <div className="packing-disclosure-body">
+              <p className="text-xs text-on-surface-variant">
+                Gunakan untuk kebutuhan khusus. Dokumen ini tidak memenuhi jumlah order Sales.
+              </p>
+              <button
+                type="button"
+                className="admin-button"
+                onClick={() => {
+                  setSourceOpen(false);
+                  setSourceOrderId('');
+                  setForm({});
+                }}
+              >
+                Buat draft manual
+              </button>
+            </div>
           </details>
         )}
       </NativeDialog>

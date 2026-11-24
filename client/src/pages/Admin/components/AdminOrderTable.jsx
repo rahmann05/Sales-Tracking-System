@@ -53,6 +53,16 @@ export function AdminOrderTable({ orders, selectedId, onSelect, loading }) {
                 <span className={`admin-status admin-status-${order.status?.toLowerCase()}`}>
                   {labels[order.status] || order.status}
                 </span>
+                {order.status === 'APPROVED' && order.fulfillmentStatus && (
+                  <small>
+                    {{
+                      OPEN: 'Belum dipacking',
+                      PARTIAL: 'Sebagian dikirim',
+                      FULFILLED: 'Terpenuhi',
+                      CLOSED_WITH_CANCELLATION: 'Sisa dibatalkan',
+                    }[order.fulfillmentStatus] || order.fulfillmentStatus}
+                  </small>
+                )}
               </td>
             </tr>
           ))}

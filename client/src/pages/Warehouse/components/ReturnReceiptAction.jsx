@@ -49,7 +49,10 @@ export function ReturnReceiptAction({ stop, onReceived, assignment }) {
       </p>
     );
   const invoiceRows = stop.rejectedInvoices || [];
-  const invoiceSum = invoiceRows.reduce((sum, inv) => sum + Number(invoices[inv.invoiceId] || 0), 0);
+  const invoiceSum = invoiceRows.reduce(
+    (sum, inv) => sum + Number(invoices[inv.invoiceId] || 0),
+    0
+  );
   const submit = async (e) => {
     e.preventDefault();
     if (invoiceRows.length > 0 && invoiceSum !== Number(reusable)) {
@@ -80,6 +83,8 @@ export function ReturnReceiptAction({ stop, onReceived, assignment }) {
           .filter(([, v]) => Number(v) > 0)
           .map(([invoiceId, v]) => ({ invoiceId, cartons: Number(v) })),
       });
+      window.dispatchEvent(new CustomEvent('operational-data-changed'));
+      window.dispatchEvent(new Event('delivery:changed'));
       await onReceived();
     } catch (e) {
       setError(e.message);
@@ -98,32 +103,60 @@ export function ReturnReceiptAction({ stop, onReceived, assignment }) {
           layak akan menjadi tindak lanjut.
         </p>
         <fieldset disabled={busy} className="space-y-3">
-          <button
-            type="button"
-            className="admin-button"
-            onClick={() => {
-              const all = String(stop.rejectedCartons);
-              const nextItems = {};
-              for (const row of stop.rejectedItems || []) {
-                nextItems[row.lineId] = {
-                  received: String(row.quantity),
-                  reusable: String(row.quantity),
-                };
-              }
-              const nextInvoices = {};
-              for (const inv of stop.rejectedInvoices || []) {
-                nextInvoices[inv.invoiceId] = String(inv.cartons);
-              }
-              setReceived(all);
-              setReusable(all);
-              setItems(nextItems);
-              setInvoices(nextInvoices);
-              if (!note.trim()) setNote(returnNotePresets[0]);
-              setError('');
-            }}
-          >
-            Semua kembali utuh &amp; layak
-          </button>
+          <div className="logistics-preset-chips">
+            <button
+              type="button"
+              className="logistics-preset-chip"
+              onClick={() => {
+                const all = String(stop.rejectedCartons);
+                const nextItems = {};
+                for (const row of stop.rejectedItems || []) {
+                  nextItems[row.lineId] = {
+                    received: String(row.quantity),
+                    reusable: String(row.quantity),
+                  };
+                }
+                const nextInvoices = {};
+                for (const inv of stop.rejectedInvoices || []) {
+                  nextInvoices[inv.invoiceId] = String(inv.cartons);
+                }
+                setReceived(all);
+                setReusable(all);
+                setItems(nextItems);
+                setInvoices(nextInvoices);
+                if (!note.trim()) setNote(returnNotePresets[0]);
+                setError('');
+              }}
+            >
+              Semua kembali utuh &amp; layak
+            </button>
+            <button
+              type="button"
+              className="logistics-preset-chip"
+              onClick={() => {
+                const all = String(stop.rejectedCartons);
+                const nextItems = {};
+                for (const row of stop.rejectedItems || []) {
+                  nextItems[row.lineId] = {
+                    received: String(row.quantity),
+                    reusable: '0',
+                  };
+                }
+                const nextInvoices = {};
+                for (const inv of stop.rejectedInvoices || []) {
+                  nextInvoices[inv.invoiceId] = '0';
+                }
+                setReceived(all);
+                setReusable('0');
+                setItems(nextItems);
+                setInvoices(nextInvoices);
+                if (!note.trim()) setNote(returnNotePresets[1]);
+                setError('');
+              }}
+            >
+              Semua fisik kembali, rusak / tidak layak
+            </button>
+          </div>
           <label className="block">
             Karton diterima fisik
             <input
@@ -147,7 +180,13 @@ export function ReturnReceiptAction({ stop, onReceived, assignment }) {
               max={received || 0}
               className="form-input block w-full"
               value={reusable}
-              onChange={(e) => setReusable(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setReusable(next);
+                if (invoiceRows.length === 1) {
+                  setInvoices({ [invoiceRows[0].invoiceId]: next });
+                }
+              }}
             />
           </label>
           {(stop.rejectedItems || []).map((i) => (

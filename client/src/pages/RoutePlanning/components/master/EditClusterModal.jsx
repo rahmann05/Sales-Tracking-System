@@ -67,23 +67,25 @@ export function EditClusterModal({ isOpen, cluster, onClose, onSave }) {
     setBusy(true);
     setError('');
     try {
-      if (!review) {
+      let activeReview = review;
+      if (!activeReview) {
         const detail = await clustersApi.getById(cluster.id);
-        setReview(
-          (
-            await clustersApi.impact({
-              clusterId: cluster.id,
-              outletIds: detail.data.outlets.map((o) => o.id),
-              supervisorId: form.supervisorId || null,
-              assignedSalesId: form.assignedSalesId || null,
-            })
-          ).data
-        );
-        return;
+        activeReview = (
+          await clustersApi.impact({
+            clusterId: cluster.id,
+            outletIds: detail.data.outlets.map((o) => o.id),
+            supervisorId: form.supervisorId || null,
+            assignedSalesId: form.assignedSalesId || null,
+          })
+        ).data;
+        if (activeReview.requiresConfirmation) {
+          setReview(activeReview);
+          return;
+        }
       }
       await onSave(cluster.id, {
         ...form,
-        impactToken: review.token,
+        impactToken: activeReview.token,
         name: form.name.trim(),
         region: form.region.trim(),
         supervisorId: form.supervisorId || null,
@@ -179,6 +181,7 @@ export function EditClusterModal({ isOpen, cluster, onClose, onSave }) {
                 .map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
+                    {s.assignedClusters?.length ? ` · ${s.assignedClusters.length} wilayah` : ''}
                   </option>
                 ))}
             </select>
@@ -198,7 +201,7 @@ export function EditClusterModal({ isOpen, cluster, onClose, onSave }) {
             className="app-button app-button-primary"
             disabled={busy || loading || !teamLoaded}
           >
-            {busy ? 'Memproses…' : review ? 'Simpan perubahan wilayah' : 'Tinjau dampak perubahan'}
+            {busy ? 'Memproses…' : review ? 'Konfirmasi & simpan' : 'Simpan perubahan'}
           </button>
         </div>
       </form>

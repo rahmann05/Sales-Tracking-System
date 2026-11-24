@@ -705,12 +705,12 @@ export const CONFIG_DEFINITIONS = [
       },
       {
         key: 'TAX_RATE_PERCENT',
-        label: 'Persentase PPN',
+        label: 'Persentase PPN (0% = nonaktif)',
         description:
-          'Besaran tarif Pajak Pertambahan Nilai (%) yang diterapkan pada kalkulasi faktur dan invoice.',
+          'Isi 0 untuk menonaktifkan perhitungan pajak secara default. Isi persentase (mis. 11) bila perhitungan PPN diaktifkan pada order dan faktur.',
         type: 'number',
         unit: '%',
-        defaultValue: 11,
+        defaultValue: 0,
         min: 0,
         max: 100,
       },

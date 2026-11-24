@@ -38,64 +38,67 @@ export function OutletReviewAssignment({ review, onRefresh, disabled }) {
     <div className="outlet-notice">
       <div>
         <strong>
-          PIC:{' '}
+          Pemeriksa kantor (Admin/SPV):{' '}
           {review.availableOwners?.find((u) => u.id === review.ownerId)?.name ||
             review.assignment?.ownerName ||
             'Antrean Admin'}
         </strong>
-        <p>Tenggat: {review.dueAt ? stamp(review.dueAt) : 'Belum ditetapkan'}</p>
+        <p>Tenggat SLA kantor: {review.dueAt ? stamp(review.dueAt) : 'Belum ditetapkan'}</p>
         {!['COMPLETED', 'CANCELLED'].includes(review.status) &&
           user?.permissions?.can_assign_outlet_review && (
-            <details>
-              <summary>Atur PIC dan tenggat kasus</summary>
-              <form className="app-form" onSubmit={save}>
-                <label className="app-field">
-                  Penanggung jawab
-                  <select
-                    value={ownerId}
-                    disabled={disabled || busy}
-                    onChange={(e) => setOwnerId(e.target.value)}
+            <details className="packing-disclosure mt-2">
+              <summary>Alihkan pemeriksa kantor atau ubah tenggat SLA</summary>
+              <div className="packing-disclosure-body">
+                <form className="app-form" onSubmit={save}>
+                  <label className="app-field">
+                    Pemeriksa kantor (Admin / Supervisor)
+                    <select
+                      value={ownerId}
+                      disabled={disabled || busy}
+                      onChange={(e) => setOwnerId(e.target.value)}
+                    >
+                      <option value="">Antrean Admin</option>
+                      {review.availableOwners?.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="app-field">
+                    Tenggat SLA kantor (waktu lokal)
+                    <input
+                      type="datetime-local"
+                      value={due}
+                      disabled={disabled || busy}
+                      onChange={(e) => setDue(e.target.value)}
+                    />
+                  </label>
+                  <label className="app-field">
+                    Alasan pengalihan / pengaturan SLA
+                    <textarea
+                      required
+                      minLength={5}
+                      maxLength={2000}
+                      value={reason}
+                      disabled={disabled || busy}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
+                  </label>
+                  {error && (
+                    <p role="alert" className="app-error">
+                      {error}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    className="app-button"
+                    disabled={disabled || busy || reason.trim().length < 5}
                   >
-                    <option value="">Antrean Admin</option>
-                    {review.availableOwners?.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="app-field">
-                  Tenggat (waktu lokal)
-                  <input
-                    type="datetime-local"
-                    value={due}
-                    disabled={disabled || busy}
-                    onChange={(e) => setDue(e.target.value)}
-                  />
-                </label>
-                <label className="app-field">
-                  Alasan penugasan
-                  <textarea
-                    required
-                    minLength={5}
-                    maxLength={2000}
-                    value={reason}
-                    disabled={disabled || busy}
-                    onChange={(e) => setReason(e.target.value)}
-                  />
-                </label>
-                {error && (
-                  <p role="alert" className="app-error">
-                    {error}
-                  </p>
-                )}
-                <button
-                  className="app-button"
-                  disabled={disabled || busy || reason.trim().length < 5}
-                >
-                  {busy ? 'Menyimpan…' : 'Simpan penugasan'}
-                </button>
-              </form>
+                    {busy ? 'Menyimpan…' : 'Simpan pengalihan pemeriksa'}
+                  </button>
+                </form>
+              </div>
             </details>
           )}
       </div>

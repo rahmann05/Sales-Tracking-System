@@ -20,8 +20,34 @@ export async function listTemplates(user) {
       name: true,
       supervisorId: true,
       supervisor: { select: { name: true } },
-      assignedClusters: { where: { deletedAt: null }, select: { id: true, name: true } },
-      cluster: { select: { name: true, supervisor: { select: { name: true } } } },
+      clusterId: true,
+      assignedClusters: {
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          routes: {
+            where: { isActive: true },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+            select: { outletOrder: true },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      },
+      cluster: {
+        select: {
+          id: true,
+          name: true,
+          supervisor: { select: { name: true } },
+          routes: {
+            where: { isActive: true },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+            select: { outletOrder: true },
+          },
+        },
+      },
       pjpTemplates: {
         include: {
           stops: {

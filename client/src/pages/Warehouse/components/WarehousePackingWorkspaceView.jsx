@@ -32,6 +32,13 @@ export function WarehousePackingWorkspaceView({
     (result.items || []).find((p) => p.id === selectedId) ||
     (result.selected?.id === selectedId ? result.selected : null);
   const [chosen, setChosen] = useState([]);
+  const remainingQueue = (result.items || []).filter(
+    (p) => Number(p.remainingCartons ?? p.totalCartons ?? 0) > 0
+  );
+  const remainingCartonsTotal = remainingQueue.reduce(
+    (sum, p) => sum + Number(p.remainingCartons ?? p.totalCartons ?? 0),
+    0
+  );
   const plan = (ids) => {
     setWorkspaceValues(
       { routePacking: ids.join(','), deliveryPlan: '1', deliveryRoute: '' },
@@ -61,6 +68,89 @@ export function WarehousePackingWorkspaceView({
           </button>
         )}
       </header>
+      {!selected && (
+        <nav className="logistics-flow-strip" aria-label="Alur kerja gudang">
+          <button
+            type="button"
+            className="logistics-flow-step"
+            aria-current="step"
+            onClick={() => setScope('remaining')}
+          >
+            <span className="logistics-flow-num">1</span>
+            <span className="logistics-flow-step-text">
+              <span>Muatan dari Admin</span>
+              <small>{remainingQueue.length} dokumen siap</small>
+            </span>
+          </button>
+          {user.permissions?.can_manage_delivery_routes !== false && (
+            <button
+              type="button"
+              className="logistics-flow-step"
+              onClick={() => setActiveTab(TAB_IDS.DELIVERY_ROUTES)}
+            >
+              <span className="logistics-flow-num">2</span>
+              <span className="logistics-flow-step-text">
+                <span>Rute pengiriman</span>
+                <small>Kendaraan &amp; supir</small>
+              </span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="logistics-flow-step"
+            onClick={() => setActiveTab(TAB_IDS.DELIVERY_MONITOR)}
+          >
+            <span className="logistics-flow-num">3</span>
+            <span className="logistics-flow-step-text">
+              <span>Pantau &amp; retur</span>
+              <small>Lacak trip &amp; retur</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="logistics-flow-step"
+            onClick={() => setActiveTab(TAB_IDS.WAREHOUSE_ATTENTION)}
+          >
+            <span className="logistics-flow-num">4</span>
+            <span className="logistics-flow-step-text">
+              <span>Perlu tindakan</span>
+              <small>Tindak lanjut gudang</small>
+            </span>
+          </button>
+        </nav>
+      )}
+      {!selected && (
+        <div className="logistics-kpi-strip" role="group" aria-label="Ringkasan muatan">
+          <button
+            type="button"
+            className="logistics-kpi-card"
+            aria-pressed={scope === 'remaining'}
+            onClick={() => {
+              setScope('remaining');
+              setPage(1);
+            }}
+          >
+            <span>Menunggu dijadwalkan</span>
+            <strong>{remainingQueue.length}</strong>
+          </button>
+          <button
+            type="button"
+            className="logistics-kpi-card"
+            aria-pressed={scope === 'all'}
+            onClick={() => {
+              setScope('all');
+              setPage(1);
+            }}
+          >
+            <span>Semua hasil</span>
+            <strong>{result.total || 0}</strong>
+          </button>
+          <div className="logistics-kpi-card" style={{ cursor: 'default' }}>
+            <span>Karton belum terjadwal</span>
+            <strong>{remainingCartonsTotal}</strong>
+          </div>
+        </div>
+      )}
       {error && (
         <p role="alert" className="admin-feedback error">
           {error} Perbarui data sebelum merencanakan alokasi.
@@ -168,27 +258,31 @@ export function WarehousePackingWorkspaceView({
               Seluruh muatan pada dokumen ini sudah dialokasikan ke perjalanan.
             </p>
           )}
-          <details>
+          <details className="packing-disclosure">
             <summary>Pemeriksaan faktur dan penerimaan</summary>
-            <InvoiceReconciliationPanel packing={selected} admin={false} onChanged={refresh} />
+            <div className="packing-disclosure-body">
+              <InvoiceReconciliationPanel packing={selected} admin={false} onChanged={refresh} />
+            </div>
           </details>
           {selected.history?.length > 0 && (
-            <details>
+            <details className="packing-disclosure">
               <summary>Riwayat dokumen</summary>
-              {selected.history.map((h, i) => (
-                <p key={i}>
-                  {{
-                    CREATE: 'Dokumen dibuat',
-                    UPDATE: 'Draft diperbarui',
-                    RELEASE: 'Dikirim ke gudang',
-                    RECALL: 'Ditarik ke draft revisi',
-                  }[h.action] || h.action}{' '}
-                  ·{' '}
-                  {h.at
-                    ? `${new Date(h.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
-                    : 'Waktu belum tercatat'}
-                </p>
-              ))}
+              <div className="packing-disclosure-body">
+                {selected.history.map((h, i) => (
+                  <p key={i} className="text-xs text-on-surface-variant">
+                    {{
+                      CREATE: 'Dokumen dibuat',
+                      UPDATE: 'Draft diperbarui',
+                      RELEASE: 'Dikirim ke gudang',
+                      RECALL: 'Ditarik ke draft revisi',
+                    }[h.action] || h.action}{' '}
+                    ·{' '}
+                    {h.at
+                      ? `${new Date(h.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
+                      : 'Waktu belum tercatat'}
+                  </p>
+                ))}
+              </div>
             </details>
           )}
         </section>
@@ -316,37 +410,59 @@ export function WarehousePackingWorkspaceView({
                             }
                           />
                         </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="admin-table-link"
-                          onClick={() => select(p.id)}
-                        >
-                          <strong>{p.code}</strong>
-                          <span>
-                            {p.loadPlanVersion === 2
-                              ? `${new Set(p.destinations.map((row) => row.outletId)).size} toko · ${p.destinations.length} tujuan`
-                              : p.outlet?.name || 'Outlet belum tersedia'}
-                          </span>
-                        </button>
-                      </td>
-                      <td>
-                        {p.releasedAt
-                          ? new Date(p.releasedAt).toLocaleDateString('id-ID', {
-                              timeZone: 'Asia/Jakarta',
-                            })
-                          : 'Belum tercatat'}
-                      </td>
-                      <td>{p.totalCartons || 0}</td>
-                      <td>
-                        <strong>{p.remainingCartons ?? p.totalCartons ?? 0}</strong>
-                      </td>
-                      <td>
-                        {p.deliveryStops?.length
-                          ? `${p.deliveryStops.length} alokasi`
-                          : 'Belum dialokasikan'}
-                      </td>
-                    </tr>
+                        <td>
+                          <button
+                            type="button"
+                            className="admin-table-link"
+                            onClick={() => select(p.id)}
+                          >
+                            <strong>{p.code}</strong>
+                            <span>
+                              {p.loadPlanVersion === 2
+                                ? `${new Set(p.destinations.map((row) => row.outletId)).size} toko · ${p.destinations.length} tujuan`
+                                : p.outlet?.name || 'Outlet belum tersedia'}
+                            </span>
+                          </button>
+                        </td>
+                        <td>
+                          {p.releasedAt
+                            ? new Date(p.releasedAt).toLocaleDateString('id-ID', {
+                                timeZone: 'Asia/Jakarta',
+                              })
+                            : 'Belum tercatat'}
+                        </td>
+                        <td>{p.totalCartons || 0}</td>
+                        <td>
+                          <strong>{p.remainingCartons ?? p.totalCartons ?? 0}</strong>
+                        </td>
+                        <td>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>
+                              {p.deliveryStops?.length
+                                ? `${p.deliveryStops.length} alokasi`
+                                : 'Belum dialokasikan'}
+                            </span>
+                            {remainingCartons > 0 &&
+                              user.permissions?.can_manage_delivery_routes !== false && (
+                                <button
+                                  type="button"
+                                  className="admin-button"
+                                  disabled={!!error}
+                                  onClick={() => {
+                                    setWorkspaceValues(
+                                      { routePacking: p.id, deliveryPlan: '1', deliveryRoute: '' },
+                                      { tab: TAB_IDS.DELIVERY_ROUTES }
+                                    );
+                                    setActiveTab(TAB_IDS.DELIVERY_ROUTES);
+                                  }}
+                                >
+                                  <LuTruck />
+                                  Susun perjalanan
+                                </button>
+                              )}
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>

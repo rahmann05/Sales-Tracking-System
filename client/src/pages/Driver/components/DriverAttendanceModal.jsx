@@ -59,8 +59,7 @@ export const DriverAttendanceModal = ({ stop, type, onClose, onSubmitAttendance,
   const partial =
     type === 'rejected' &&
     total > 1 &&
-    (draft.value.rejectionMode === 'PARTIAL' ||
-      (Number(cartons) > 0 && Number(cartons) < total));
+    (draft.value.rejectionMode === 'PARTIAL' || (Number(cartons) > 0 && Number(cartons) < total));
   const invoiceMap =
     partial && invoices.length === 1
       ? { [invoices[0].invoiceId]: Number(cartons) || 0 }
@@ -316,29 +315,45 @@ export const DriverAttendanceModal = ({ stop, type, onClose, onSubmitAttendance,
                     <fieldset className="space-y-2">
                       <legend>Jumlah barang ditolak (wajib sisakan yang diterima)</legend>
                       {items.map((item) => (
-                        <label className="flex justify-between gap-2" key={item.lineId}>
-                          <span>
-                            {stop.packingList?.items?.find((i) => i.lineId === item.lineId)?.name ||
-                              item.lineId}{' '}
-                            (muatan {item.quantity}{' '}
-                            {unitDescription(
-                              stop.packingList?.items?.find((i) => i.lineId === item.lineId)
-                            )}
-                            )
-                          </span>
-                          <input
-                            aria-label="Jumlah barang ditolak"
-                            type="number"
-                            step="1"
-                            min="0"
-                            max={item.quantity}
-                            className="w-24 border rounded p-2"
-                            value={rejected[item.lineId] || 0}
-                            onChange={(e) =>
-                              setRejected({ ...rejected, [item.lineId]: e.target.value })
-                            }
-                          />
-                        </label>
+                        <div
+                          className="flex flex-wrap items-center justify-between gap-2"
+                          key={item.lineId}
+                        >
+                          <label className="flex-1 flex justify-between gap-2 min-w-[200px]">
+                            <span>
+                              {stop.packingList?.items?.find((i) => i.lineId === item.lineId)
+                                ?.name || item.lineId}{' '}
+                              (muatan {item.quantity}{' '}
+                              {unitDescription(
+                                stop.packingList?.items?.find((i) => i.lineId === item.lineId)
+                              )}
+                              )
+                            </span>
+                            <input
+                              aria-label="Jumlah barang ditolak"
+                              type="number"
+                              step="1"
+                              min="0"
+                              max={item.quantity}
+                              className="w-24 border rounded p-2"
+                              value={rejected[item.lineId] || 0}
+                              onChange={(e) =>
+                                setRejected({ ...rejected, [item.lineId]: e.target.value })
+                              }
+                            />
+                          </label>
+                          {item.quantity > 0 && (
+                            <button
+                              type="button"
+                              className="logistics-preset-chip"
+                              onClick={() =>
+                                setRejected({ ...rejected, [item.lineId]: item.quantity })
+                              }
+                            >
+                              Tolak semua ({item.quantity})
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </fieldset>
                   )}
@@ -354,7 +369,13 @@ export const DriverAttendanceModal = ({ stop, type, onClose, onSubmitAttendance,
                   ) : (
                     invoices.length > 1 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-on-surface-variant">
+                        <p
+                          className={`text-xs font-semibold ${
+                            invoiceRejectedTotal === (Number(cartons) || 0)
+                              ? 'text-emerald-700'
+                              : 'text-amber-800'
+                          }`}
+                        >
                           Total faktur ditolak: {invoiceRejectedTotal} / {Number(cartons) || 0}{' '}
                           karton
                         </p>

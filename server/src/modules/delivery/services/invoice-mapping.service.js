@@ -1,4 +1,9 @@
 import { AppError } from '../../../utils/errors.js';
+import {
+  orderPricing,
+  hasCompleteTaxTerms,
+  resolveTaxIncluded,
+} from '../../../../../shared/order-pricing.mjs';
 export function mapInvoiceCommercial(invoice, items, order) {
   const orders = Array.isArray(order) ? order : order ? [order] : [];
   const referenced = orders.filter(
@@ -38,22 +43,38 @@ export function mapInvoiceCommercial(invoice, items, order) {
       : order && Math.abs(order.totalValue - subtotal - order.taxAmount) < 0.005
         ? false
         : null);
+  const mappedItems = (invoice.items || []).map((line) => {
+    const packingItem = items.find((i) => i.lineId === line.lineId);
+    if (!packingItem) throw new AppError('Barang faktur tidak ditemukan di packing', 400);
+    const source = orders
+      .flatMap((o) => o.items)
+      .find((i) => i.id === (packingItem.sourceOrderItemId || packingItem.lineId));
+    if (orders.length && !source) throw new AppError('Baris faktur tidak sesuai order sumber', 409);
+    return { ...line, ...(source ? { unitPrice: source.unitPrice } : {}) };
+  });
+  const taxRoundingMode =
+    order?.policySnapshot?.values?.ORDER_TAX_ROUNDING_MODE || invoice.taxRoundingMode || 'NEAREST';
+  const taxRatePercent = order ? order.taxRatePercent : invoice.taxRatePercent;
+  const rawTaxIncluded = order ? included : invoice.taxIncluded;
+  const taxIncluded = resolveTaxIncluded(taxRatePercent, rawTaxIncluded);
+  const hasExplicitAmount =
+    invoice.totalAmount !== undefined && invoice.totalAmount !== null && invoice.totalAmount !== '';
+  const canAutoPrice =
+    orders.length > 0 &&
+    !hasExplicitAmount &&
+    mappedItems.length > 0 &&
+    mappedItems.every((i) => Number.isFinite(i.unitPrice) && i.unitPrice >= 0) &&
+    hasCompleteTaxTerms(taxRatePercent, taxIncluded);
   return {
     ...invoice,
-    items: (invoice.items || []).map((line) => {
-      const packingItem = items.find((i) => i.lineId === line.lineId);
-      if (!packingItem) throw new AppError('Barang faktur tidak ditemukan di packing', 400);
-      const source = orders
-        .flatMap((o) => o.items)
-        .find((i) => i.id === (packingItem.sourceOrderItemId || packingItem.lineId));
-      if (orders.length && !source)
-        throw new AppError('Baris faktur tidak sesuai order sumber', 409);
-      return { ...line, ...(source ? { unitPrice: source.unitPrice } : {}) };
-    }),
-    taxRoundingMode:
-      order?.policySnapshot?.values?.ORDER_TAX_ROUNDING_MODE ||
-      invoice.taxRoundingMode ||
-      'NEAREST',
-    ...(order ? { taxRatePercent: order.taxRatePercent, taxIncluded: included } : {}),
+    items: mappedItems,
+    taxRoundingMode,
+    ...(order ? { taxRatePercent, taxIncluded } : {}),
+    ...(canAutoPrice
+      ? {
+          totalAmount: orderPricing(mappedItems, taxRatePercent, taxIncluded, taxRoundingMode)
+            .totalValue,
+        }
+      : {}),
   };
 }

@@ -1,5 +1,6 @@
 import { WarehouseOperationsView } from './WarehouseOperationsView';
 import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { deliveryApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
@@ -46,8 +47,13 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
   useEffect(() => {
     refresh(true);
     const timer = setInterval(() => refresh(false), 30000);
+    const onChanged = () => refresh(false);
+    window.addEventListener('operational-data-changed', onChanged);
+    window.addEventListener('delivery:changed', onChanged);
     return () => {
       clearInterval(timer);
+      window.removeEventListener('operational-data-changed', onChanged);
+      window.removeEventListener('delivery:changed', onChanged);
       flight.current++;
     };
   }, [refresh]);
@@ -121,20 +127,85 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
           {error}
         </p>
       )}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <nav className="logistics-flow-strip" aria-label="Alur pengiriman menyeluruh">
+        {user.permissions?.can_approve_order !== false && (
+          <button
+            type="button"
+            className="logistics-flow-step"
+            onClick={() => setActiveTab(TAB_IDS.ADMIN_APPROVAL)}
+          >
+            <span className="logistics-flow-num">1</span>
+            <span className="logistics-flow-step-text">
+              <span>Order &amp; persetujuan</span>
+              <small>{data?.orders.length || 0} order terbuka</small>
+            </span>
+          </button>
+        )}
+        {user.permissions?.can_manage_packing_list !== false && (
+          <button
+            type="button"
+            className="logistics-flow-step"
+            onClick={() => setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST)}
+          >
+            <span className="logistics-flow-num">2</span>
+            <span className="logistics-flow-step-text">
+              <span>Packing &amp; faktur</span>
+              <small>{data?.packings.length || 0} belum dialokasikan</small>
+            </span>
+          </button>
+        )}
+        {canManage && (
+          <button
+            type="button"
+            className="logistics-flow-step"
+            onClick={() => setActiveTab(TAB_IDS.DELIVERY_ROUTES)}
+          >
+            <span className="logistics-flow-num">3</span>
+            <span className="logistics-flow-step-text">
+              <span>Rute pengiriman</span>
+              <small>Rakit &amp; tugaskan armada</small>
+            </span>
+          </button>
+        )}
+        <button
+          type="button"
+          className="logistics-flow-step"
+          aria-current="step"
+          onClick={() => setTab('routes')}
+        >
+          <span className="logistics-flow-num">4</span>
+          <span className="logistics-flow-step-text">
+            <span>Monitor &amp; retur</span>
+            <small>{open.length} trip berjalan</small>
+          </span>
+        </button>
+      </nav>
+      <div className="logistics-kpi-strip" role="group" aria-label="Ringkasan antrean operasional">
         {[
-          ['Order terbuka', data?.orders.length || 0],
-          ['Packing belum dialokasikan / draft', data?.packings.length || 0],
-          ['Trip belum ditutup', open.length],
+          ['orders', 'Order terbuka', data?.orders.length || 0],
+          ['packing', 'Packing belum selesai / draft', data?.packings.length || 0],
+          ['routes', 'Trip belum ditutup', open.length],
           [
+            'issues',
             'Masalah lewat tenggat',
             issues.filter((i) => i.dueAt && new Date(i.dueAt) < new Date()).length,
           ],
-        ].map(([label, value]) => (
-          <div key={label} className="p-4 bg-surface border rounded-xl">
-            <p className="text-sm">{label}</p>
-            <strong className="text-3xl">{value}</strong>
-          </div>
+        ].map(([targetTab, label, value]) => (
+          <button
+            key={targetTab}
+            type="button"
+            className="logistics-kpi-card"
+            aria-pressed={tab === targetTab}
+            onClick={() => {
+              if (
+                window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true }))
+              )
+                setTab(targetTab);
+            }}
+          >
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </button>
         ))}
       </div>
       {user.role !== 'ADMIN' && <AttentionPanel />}
@@ -217,19 +288,57 @@ export function OperationsWorkspace({ section = 'routes' } = {}) {
             Buka dokumen packing
           </button>
           {data?.packings.map((p) => (
-            <details key={p.id} className="border rounded-xl p-4">
+            <details
+              key={p.id}
+              className="border border-border-glass bg-surface rounded-xl p-4 space-y-3"
+            >
               <summary className="cursor-pointer min-h-11">
-                <strong>
-                  {p.code} ·{' '}
-                  {p.loadPlanVersion === 2
-                    ? `${p.destinations?.length || 0} tujuan`
-                    : p.outlet?.name || 'Outlet'}
-                </strong>
-                <span className="block">
-                  {p.status} · Sisa {p.remainingCartons} karton · Menunggu sejak{' '}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <strong>
+                    {p.code} ·{' '}
+                    {p.loadPlanVersion === 2
+                      ? `${p.destinations?.length || 0} tujuan`
+                      : p.outlet?.name || 'Outlet'}
+                  </strong>
+                  <span className={`admin-status admin-status-${p.status?.toLowerCase()}`}>
+                    {p.status === 'DRAFT' ? 'Draft Admin' : 'Dilepas ke gudang'}
+                  </span>
+                </div>
+                <span className="block text-xs text-on-surface-variant mt-1">
+                  Sisa {p.remainingCartons} karton · Menunggu sejak{' '}
                   {stamp(p.releasedAt || p.createdAt)} WIB
                 </span>
               </summary>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button
+                  type="button"
+                  className="admin-button"
+                  onClick={() => {
+                    setWorkspaceValues(
+                      { packingDetail: p.id },
+                      { tab: TAB_IDS.DELIVERY_PACKING_LIST }
+                    );
+                    setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST);
+                  }}
+                >
+                  Buka dokumen packing
+                </button>
+                {p.status === 'RELEASED' && p.remainingCartons > 0 && canManage && (
+                  <button
+                    type="button"
+                    className="admin-button primary"
+                    onClick={() => {
+                      setWorkspaceValues(
+                        { routePacking: p.id, deliveryPlan: '1', deliveryRoute: '' },
+                        { tab: TAB_IDS.DELIVERY_ROUTES }
+                      );
+                      setActiveTab(TAB_IDS.DELIVERY_ROUTES);
+                    }}
+                  >
+                    Susun perjalanan
+                  </button>
+                )}
+              </div>
               <OperationalIssues
                 issues={issues.filter((i) => i.packingListId === p.id && !i.routeId)}
                 people={data.people}

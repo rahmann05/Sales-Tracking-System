@@ -1,15 +1,35 @@
 import React, { useState, useRef } from 'react';
 import { NativeDialog } from '../../shared/components/common/NativeDialog';
 import { outletValidationApi } from '../../services/api';
+import { useApp } from '../../context/AppContext';
 import { useFormDraft } from '../../shared/hooks/useFormDraft';
 import { useFeaturePolicy } from '../../shared/hooks/useFeaturePolicy';
+import { outletIssues, OUTLET_ISSUE_LABELS } from '../../../../shared/outlet-validation.mjs';
+
+function defaultReviewReason(outlets) {
+  if (outlets.length === 1) {
+    const flags = outletIssues(outlets[0]);
+    if (flags.length) {
+      return `Periksa kualitas master: ${flags.map((k) => OUTLET_ISSUE_LABELS[k]).join(', ')}.`;
+    }
+  }
+  return `Pemeriksaan kualitas identitas dan titik lokasi untuk ${outlets.length} outlet terpilih.`;
+}
+
 export function OutletReviewRequest({ outlets, onClose, onSaved }) {
+  const { user } = useApp();
+  const canRunGoogle = Boolean(user?.permissions?.can_run_outlet_review);
   const draft = useFormDraft(
       `outlet-batch:${outlets
         .map((o) => o.id)
         .sort()
         .join(',')}`,
-      () => ({ reason: '', run: false, requestId: crypto.randomUUID(), pending: null })
+      () => ({
+        reason: defaultReviewReason(outlets),
+        run: outlets.length > 1 && canRunGoogle,
+        requestId: crypto.randomUUID(),
+        pending: null,
+      })
     ),
     d = draft.value;
   const { settings } = useFeaturePolicy('OUTLET_REVIEW');

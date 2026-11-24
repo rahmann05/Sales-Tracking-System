@@ -38,12 +38,12 @@ export function AdminCreateOrderDialog({ onClose, onSaved }) {
       clearTimeout(timer);
     };
   }, [query, page, outlet]);
-  async function search() {
-    if (!outlet) return;
+  async function loadPlaces(targetOutlet = outlet, customQuery = placeQuery) {
+    if (!targetOutlet || customQuery.trim().length < 3) return;
     setBusy(true);
     setError('');
     try {
-      const res = await ordersApi.adminPlaces(outlet.id, placeQuery);
+      const res = await ordersApi.adminPlaces(targetOutlet.id, customQuery);
       setPlaces(res.data || []);
       setPlace(null);
     } catch (e) {
@@ -52,6 +52,25 @@ export function AdminCreateOrderDialog({ onClose, onSaved }) {
       setBusy(false);
     }
   }
+  const selectOutlet = (row) => {
+    const nextQuery = `${row.name} ${row.address || ''}`.trim();
+    setOutlet(row);
+    setPlaceQuery(nextQuery);
+    setPlaces(null);
+    if (nextQuery.length >= 3) loadPlaces(row, nextQuery);
+  };
+  const verifiedMasterPlace =
+    outlet?.googleLocation?.placeId &&
+    Number.isFinite(Number(outlet.googleLocation.latitude ?? outlet.latitude)) &&
+    Number.isFinite(Number(outlet.googleLocation.longitude ?? outlet.longitude))
+      ? {
+          placeId: outlet.googleLocation.placeId,
+          name: outlet.googleLocation.name || outlet.name,
+          address: outlet.googleLocation.formattedAddress || outlet.address || '',
+          latitude: Number(outlet.googleLocation.latitude ?? outlet.latitude),
+          longitude: Number(outlet.googleLocation.longitude ?? outlet.longitude),
+        }
+      : null;
   if (place)
     return (
       <InputOrderModal
@@ -74,6 +93,28 @@ export function AdminCreateOrderDialog({ onClose, onSaved }) {
   return (
     <NativeDialog open title="Buat order Admin" onClose={onClose}>
       <div className="grid gap-4">
+        <div className="logistics-flow-strip" aria-label="Langkah pembuatan order Admin">
+          <div
+            className={`logistics-flow-step ${!outlet ? 'is-active' : ''}`}
+            style={{ cursor: 'default' }}
+          >
+            <span className="logistics-flow-num">1</span>
+            <span className="logistics-flow-step-text">
+              <span>Pilih outlet</span>
+              <small>{outlet ? outlet.name : 'Cari di daftar toko'}</small>
+            </span>
+          </div>
+          <div
+            className={`logistics-flow-step ${outlet ? 'is-active' : ''}`}
+            style={{ cursor: 'default' }}
+          >
+            <span className="logistics-flow-num">2</span>
+            <span className="logistics-flow-step-text">
+              <span>Konfirmasi titik kirim Google</span>
+              <small>{verifiedMasterPlace ? 'Titik master tersedia' : 'Pilih kandidat peta'}</small>
+            </span>
+          </div>
+        </div>
         <p>
           Admin memilih outlet dan mengonfirmasi titik pengirimannya dari Google. Titik yang dipilih
           disimpan pada order dan menjadi tujuan tetap supir saat packing dikirim.
@@ -96,10 +137,7 @@ export function AdminCreateOrderDialog({ onClose, onSaved }) {
                 className="app-button text-left"
                 type="button"
                 key={row.id}
-                onClick={() => {
-                  setOutlet(row);
-                  setPlaceQuery(`${row.name} ${row.address || ''}`);
-                }}
+                onClick={() => selectOutlet(row)}
               >
                 <strong>{row.name}</strong>
                 <span className="block">
@@ -141,12 +179,31 @@ export function AdminCreateOrderDialog({ onClose, onSaved }) {
             >
               ← Ganti outlet
             </button>
-            <div className="rounded-xl border p-3">
+            <div className="rounded-xl border border-border-glass p-3 bg-surface">
               <strong>{outlet.name}</strong>
               <p>{outlet.address || 'Alamat belum tersedia'}</p>
             </div>
+            {verifiedMasterPlace && (
+              <article className="rounded-xl border border-blue-200 bg-blue-50/50 p-3 space-y-2">
+                <strong className="text-sm text-on-surface">
+                  Titik Google master terverifikasi
+                </strong>
+                <p className="text-xs text-on-surface-variant">
+                  {verifiedMasterPlace.name} · {verifiedMasterPlace.address} (
+                  {verifiedMasterPlace.latitude.toFixed(6)},{' '}
+                  {verifiedMasterPlace.longitude.toFixed(6)})
+                </p>
+                <button
+                  type="button"
+                  className="app-button app-button-primary"
+                  onClick={() => setPlace(verifiedMasterPlace)}
+                >
+                  Langsung gunakan titik master ini
+                </button>
+              </article>
+            )}
             <label className="app-field">
-              Cari toko atau alamat di Google
+              Cari toko atau alamat lain di Google
               <input
                 value={placeQuery}
                 onChange={(e) => setPlaceQuery(e.target.value)}
@@ -154,12 +211,12 @@ export function AdminCreateOrderDialog({ onClose, onSaved }) {
               />
             </label>
             <button
-              className="app-button app-button-primary"
+              className="app-button"
               type="button"
               disabled={busy || placeQuery.trim().length < 3}
-              onClick={search}
+              onClick={() => loadPlaces(outlet, placeQuery)}
             >
-              {busy ? 'Mencari…' : 'Cari titik Google'}
+              {busy ? 'Mencari…' : 'Cari ulang titik Google'}
             </button>
             {places?.length === 0 && (
               <p role="status">

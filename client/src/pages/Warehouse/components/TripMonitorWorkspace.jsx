@@ -63,6 +63,9 @@ export function TripMonitorWorkspace({
                   issue.routeId === route.id &&
                   (issue.history || []).some((entry) => entry.action === 'LOCATION_DISCREPANCY')
               ).length;
+              const pendingReturns = (route.stops || []).filter(
+                (stop) => stop.rejectedCartons > 0 && !stop.returnInspection
+              ).length;
               const gpsDead = deliveryGpsUnavailable(route);
               return (
                 <button
@@ -107,6 +110,11 @@ export function TripMonitorWorkspace({
                   {gpsDead && (
                     <span className="admin-trip-alert">
                       FLAG ADMIN: Pembaruan GPS belum diterima
+                    </span>
+                  )}
+                  {pendingReturns > 0 && (
+                    <span className="admin-trip-alert">
+                      {pendingReturns} toko memiliki retur menunggu pemeriksaan gudang
                     </span>
                   )}
                   {locationReviews > 0 && (

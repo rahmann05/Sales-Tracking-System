@@ -4,10 +4,16 @@ import { initDatabaseConnection, prisma } from './src/config/prisma.js';
 import { initSocket } from './src/config/socket.js';
 import { configureSocketAdapter } from './src/config/socket-adapter.js';
 import { initScheduler } from './src/utils/scheduler.js';
+import {
+  ensureAutoInvoiceCodingDefault,
+  ensureDefaultTaxOff,
+} from './src/modules/config/services/business-code.service.js';
 
 const PORT = config.port;
 
 const dbState = await initDatabaseConnection();
+await ensureAutoInvoiceCodingDefault().catch(() => {});
+await ensureDefaultTaxOff().catch(() => {});
 if (dbState.fallbackUsed) {
   console.warn(
     `[Database] Remote primary (${dbState.primaryTarget}) tidak terjangkau; beralih otomatis ke PostgreSQL lokal (${dbState.target}).`

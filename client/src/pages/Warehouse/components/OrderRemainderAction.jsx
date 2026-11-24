@@ -48,6 +48,15 @@ export function OrderRemainderAction({ order, onChanged }) {
           tersimpan; alasan pembatalan masuk riwayat.
         </p>
         <fieldset disabled={busy} className="space-y-3">
+          <button
+            type="button"
+            className="admin-button"
+            onClick={() =>
+              setQuantities(Object.fromEntries(lines.map((i) => [i.id, String(i.unpacked)])))
+            }
+          >
+            Isi semua sisa belum dipacking
+          </button>
           {lines.map((i) => (
             <label className="block" key={i.id}>
               {i.product?.name} · Maksimal {i.unpacked}

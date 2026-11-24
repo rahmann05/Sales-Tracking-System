@@ -133,32 +133,52 @@ export const PendingOrderCard = ({ order, onDecision }) => {
         {/* Items Breakdown */}
         <OrderApprovalBasis order={order} />
         <OrderItemsTable items={order.items} totalAmount={order.totalAmount} />
-        <div className="px-4 pb-3 text-sm space-y-1">
-          <p>
-            Termin:{' '}
-            {order.termOfPaymentDays == null ? 'Belum tercatat' : `${order.termOfPaymentDays} hari`}
-          </p>
-          <p>
-            Pajak:{' '}
-            {order.taxAmount == null
-              ? 'Belum tercatat'
-              : `Rp ${order.taxAmount.toLocaleString('id-ID')} (${order.taxRatePercent}%${order.taxIncluded == null ? '' : order.taxIncluded ? ', termasuk harga' : ', ditambahkan'})`}
-          </p>
-          {order.fulfillmentStatus && (
-            <p>
-              Pemenuhan:{' '}
-              {{
-                OPEN: 'Belum terpenuhi',
-                PARTIAL: 'Terpenuhi sebagian',
-                FULFILLED: 'Terpenuhi',
-                CLOSED_WITH_CANCELLATION: 'Ditutup dengan pembatalan',
-              }[order.fulfillmentStatus] || order.fulfillmentStatus}{' '}
-              · Janji kirim:{' '}
-              {order.promisedAt
-                ? new Date(order.promisedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
-                : 'Belum ditetapkan'}
-            </p>
-          )}
+        <div className="px-4 pb-3">
+          <div className="poc-credit-check">
+            <div>
+              <span className="poc-credit-label">Termin</span>
+              <span className="poc-credit-value">
+                {order.termOfPaymentDays == null
+                  ? 'Belum tercatat'
+                  : `${order.termOfPaymentDays} hari`}
+              </span>
+            </div>
+            <div>
+              <span className="poc-credit-label">Pajak</span>
+              <span className="poc-credit-value">
+                {order.taxAmount == null
+                  ? 'Belum tercatat'
+                  : Number(order.taxRatePercent || 0) === 0 && Number(order.taxAmount || 0) === 0
+                    ? 'Nonaktif (0%)'
+                    : `Rp ${order.taxAmount.toLocaleString('id-ID')} (${order.taxRatePercent}%${order.taxIncluded == null ? '' : order.taxIncluded ? ', termasuk harga' : ', ditambahkan'})`}
+              </span>
+            </div>
+            {order.fulfillmentStatus && (
+              <>
+                <div>
+                  <span className="poc-credit-label">Pemenuhan</span>
+                  <span className="poc-credit-value">
+                    {{
+                      OPEN: 'Belum terpenuhi',
+                      PARTIAL: 'Terpenuhi sebagian',
+                      FULFILLED: 'Terpenuhi',
+                      CLOSED_WITH_CANCELLATION: 'Ditutup dengan pembatalan',
+                    }[order.fulfillmentStatus] || order.fulfillmentStatus}
+                  </span>
+                </div>
+                <div>
+                  <span className="poc-credit-label">Janji kirim</span>
+                  <span className="poc-credit-value">
+                    {order.promisedAt
+                      ? new Date(order.promisedAt).toLocaleString('id-ID', {
+                          timeZone: 'Asia/Jakarta',
+                        })
+                      : 'Belum ditetapkan'}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Approval Buttons */}
@@ -205,17 +225,35 @@ export const PendingOrderCard = ({ order, onDecision }) => {
               <p>Keputusan tidak tersedia: periksa izin atau minta Admin mengalihkan pemeriksa.</p>
             )}
             {needsOverride && (
-              <label className="block text-sm">
-                Alasan pengambilalihan Admin
-                <textarea
-                  className="form-input block w-full"
-                  minLength={5}
-                  maxLength={2000}
-                  value={overrideReason}
-                  onChange={(event) => setOverrideReason(event.target.value)}
-                  disabled={isSubmitting}
-                />
-              </label>
+              <div className="space-y-1.5">
+                <div className="logistics-preset-chips">
+                  {[
+                    'Pemeriksa utama sedang bertugas lain',
+                    'Percepatan jadwal packing gudang hari ini',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className="logistics-preset-chip"
+                      disabled={isSubmitting}
+                      onClick={() => setOverrideReason(preset)}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+                <label className="block text-sm">
+                  Alasan pengambilalihan Admin
+                  <textarea
+                    className="form-input block w-full"
+                    minLength={5}
+                    maxLength={2000}
+                    value={overrideReason}
+                    onChange={(event) => setOverrideReason(event.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </label>
+              </div>
             )}
             {error && (
               <p role="alert" className="text-red-600">
@@ -257,6 +295,23 @@ export const PendingOrderCard = ({ order, onDecision }) => {
             </div>
           ) : (
             <div className="poc-reject-form">
+              <div className="logistics-preset-chips mb-1.5">
+                {[
+                  'Permintaan pembatalan dari pelanggan',
+                  'Syarat pembayaran / tempo belum sesuai',
+                  'Pengajuan order ganda / koreksi ulang',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className="logistics-preset-chip"
+                    disabled={isSubmitting}
+                    onClick={() => setRejectReason(preset)}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
               <label className="poc-reject-label" htmlFor={`reject-${order.id}`}>
                 Alasan penolakan order:
               </label>

@@ -62,13 +62,22 @@ export const DriverStopCard = ({
   const outletName = stop.outlet?.name || 'Toko';
 
   return (
-    <div
-      className={`driver-stop-document operational-card bg-surface border border-b-[3.5px] rounded-2xl shadow-xs overflow-hidden transition-all ${
-        isCompleted
-          ? 'border-border-glass border-b-neutral-300 dark:border-b-neutral-700 opacity-80'
-          : 'border-primary/30 border-b-primary/60 hover:shadow-sm'
-      }`}
-    >
+    <div className="driver-stop-document operational-card bg-surface border rounded-xl overflow-hidden transition-all">
+      <div className="driver-stop-steps" aria-label="Tahap penyelesaian tujuan">
+        {[
+          [1, 'Tiba di toko', hasArrived || isCompleted, !hasArrived && !isCompleted],
+          [2, 'Bukti & serah terima', isCompleted, hasArrived && !isCompleted],
+          [3, 'Selesai', isCompleted, false],
+        ].map(([num, stepTitle, done, current]) => (
+          <div
+            key={num}
+            className={`driver-stop-step ${done ? 'is-done' : current ? 'is-current' : ''}`}
+          >
+            <span className="driver-stop-step-dot">{num}</span>
+            <span>{stepTitle}</span>
+          </div>
+        ))}
+      </div>
       {/* Header */}
       <div className="flex items-center gap-3 p-4">
         <div className="flex flex-col items-center gap-1">
@@ -128,7 +137,9 @@ export const DriverStopCard = ({
                 className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs text-on-surface-variant"
               >
                 <LuFileText className="shrink-0" />
-                <span className="font-semibold text-on-surface break-words">{inv.invoiceNumber}</span>
+                <span className="font-semibold text-on-surface break-words">
+                  {inv.invoiceNumber}
+                </span>
                 <span>
                   {stop.allocatedInvoices?.find((i) => i.invoiceId === inv.id)?.cartons ??
                     inv.totalCartons}{' '}

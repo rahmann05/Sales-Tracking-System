@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { clustersApi, outletsApi, collectPages } from '../../../services/api';
+import { outletIssues, knownPoint } from '../../../../../shared/outlet-validation.mjs';
+import { outletOperationalPoint } from '../../../../../shared/outlet-location.mjs';
 
 /**
  * useRjpManagement Hook
@@ -78,6 +80,9 @@ export const useRjpManagement = () => {
           type: o.type || 'MODERN_TRADE',
           latitude: o.latitude == null ? null : Number(o.latitude),
           longitude: o.longitude == null ? null : Number(o.longitude),
+          validationStatus: o.validationStatus || 'UNVALIDATED',
+          issues: outletIssues(o),
+          hasOperationalPoint: knownPoint(outletOperationalPoint(o)),
         }))
       );
     } catch (err) {
@@ -88,8 +93,13 @@ export const useRjpManagement = () => {
   }, []);
   useEffect(() => {
     load();
+    const onChanged = () => load();
+    if (typeof window !== 'undefined')
+      window.addEventListener('operational-data-changed', onChanged);
     return () => {
       revision.current++;
+      if (typeof window !== 'undefined')
+        window.removeEventListener('operational-data-changed', onChanged);
     };
   }, [load]);
 

@@ -8,22 +8,22 @@ export const RouteReferenceCard = ({ route, index, isActive, onClick, outlets })
       type="button"
       aria-pressed={isActive}
       onClick={onClick}
-      className={`w-full text-left p-3 border rounded-md cursor-pointer transition ${
+      className={`w-full min-h-[44px] text-left p-3.5 border rounded-xl cursor-pointer transition ${
         isActive
-          ? 'border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900'
-          : 'border-gray-200 hover:border-blue-300'
+          ? 'border-[#1b66ca] bg-[#f0f6ff] ring-1 ring-[#1b66ca]'
+          : 'border-slate-200 bg-white hover:border-[#7fb0f0]'
       }`}
     >
       <div className="flex justify-between items-center mb-1">
-        <span className="font-bold text-sm">Rute {index + 1}</span>
+        <span className="font-bold text-sm text-[#01144c]">Rute {index + 1}</span>
         {isActive && (
-          <span className="text-[10px] bg-neutral-900 text-white px-2 py-0.5 rounded-full">
+          <span className="text-[11px] font-semibold bg-[#1b66ca] text-white px-2.5 py-0.5 rounded-full">
             Aktif
           </span>
         )}
       </div>
-      <div className="text-xs text-gray-600">Mulai: {startOutlet?.name || 'Belum ditentukan'}</div>
-      <div className="text-xs text-gray-500">Estimasi antartitik: {route.totalDistanceKm} km</div>
+      <div className="text-xs text-slate-700">Mulai: {startOutlet?.name || 'Belum ditentukan'}</div>
+      <div className="text-xs text-slate-500">Estimasi antartitik: {route.totalDistanceKm} km</div>
     </button>
   );
 };

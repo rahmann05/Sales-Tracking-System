@@ -1,5 +1,6 @@
 import { wibDateKey, wibDayRange } from '../../../../../shared/visit-metrics.mjs';
 import { workingDays } from '../../../../../shared/working-calendar.mjs';
+import { selectFallbackClusterOutlets } from '../../../../../shared/pjp-planning.mjs';
 import { prisma } from '../../../config/prisma.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 import { effectivePolicy } from '../../config/services/policy-resolver.service.js';
@@ -98,6 +99,7 @@ export const ensureSalesPjpForDate = async (tx, userId, now = new Date(), manual
   });
   const template = templates.find((t) => t.weekType !== 'ALL') || templates[0];
   let outletIds;
+  let reportSales = sales;
   if (template)
     outletIds = template.stops
       .filter(
@@ -108,38 +110,49 @@ export const ensureSalesPjpForDate = async (tx, userId, now = new Date(), manual
       )
       .map((s) => s.outletId);
   else {
-    if (
-      !fallback ||
-      !sales.clusterId ||
-      !(await tx.cluster.findFirst({
-        where: {
-          id: sales.clusterId,
-          deletedAt: null,
-          ...(sales.supervisorId ? { supervisorId: sales.supervisorId } : {}),
+    if (!fallback) return null;
+    const candidateClusters = await tx.cluster.findMany({
+      where: {
+        deletedAt: null,
+        ...(sales.supervisorId ? { supervisorId: sales.supervisorId } : {}),
+        OR: [{ assignedSalesId: userId }, ...(sales.clusterId ? [{ id: sales.clusterId }] : [])],
+      },
+      select: {
+        id: true,
+        name: true,
+        region: true,
+        routes: {
+          where: { isActive: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+          select: { outletOrder: true },
         },
-        select: { id: true },
-      }))
-    )
-      return null;
-    const activeRoute = await tx.clusterRoute.findFirst({
-      where: { clusterId: sales.clusterId, isActive: true },
-      orderBy: { updatedAt: 'desc' },
+        outlets: {
+          where: { deletedAt: null },
+          orderBy: { name: 'asc' },
+          select: { id: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
     });
-    const outlets = await tx.outlet.findMany({
-      where: { clusterId: sales.clusterId, deletedAt: null },
-      orderBy: { name: 'asc' },
-    });
-    const validIds = new Set(outlets.map((o) => o.id));
-    outletIds = activeRoute
-      ? (activeRoute.outletOrder || [])
-          .map((o) => (typeof o === 'string' ? o : o.id))
-          .filter((id) => validIds.has(id))
-      : outlets.map((o) => o.id);
+    const resolved = selectFallbackClusterOutlets(candidateClusters, sales.clusterId, key);
+    outletIds = resolved.outletIds;
+    if (!sales.clusterId && resolved.primaryCluster) {
+      reportSales = {
+        ...sales,
+        clusterId: resolved.primaryCluster.id,
+        cluster: {
+          id: resolved.primaryCluster.id,
+          name: resolved.primaryCluster.name,
+          region: resolved.primaryCluster.region,
+        },
+      };
+    }
   }
   if (!outletIds.length) return null;
   return tx.pjp.create({
     data: {
-      ...captureReportAssignment(sales, 'PJP_PLAN', now),
+      ...captureReportAssignment(reportSales, 'PJP_PLAN', now),
       code: await resolveBusinessCode('PJP', manualCode, { db: tx, date: now }),
       userId,
       date: wibDayRange(now).gte,

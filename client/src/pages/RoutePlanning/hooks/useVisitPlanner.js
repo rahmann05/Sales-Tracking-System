@@ -4,11 +4,17 @@ import { useApp } from '../../../context/AppContext';
 import { pjpApi } from '../../../services/api';
 import { useFormDraft } from '../../../shared/hooks/useFormDraft';
 import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
-const initial = (user, maxDays = 62) => ({
+import {
+  allowedVisitIntervals,
+  buildClusterDraftRules,
+  pickDefaultSupervisorId,
+} from '../../../../../shared/pjp-planning.mjs';
+const initial = (user, maxDays = 62, supervisorId = '') => ({
   requestId: crypto.randomUUID(),
   name: 'Rencana kunjungan',
-  supervisorId: user.role === 'SUPERVISOR' ? user.id : '',
+  supervisorId: user.role === 'SUPERVISOR' ? user.id : supervisorId,
   startsOn: wibDateKey(),
   endsOn: new Date(Date.parse(wibDateKey()) + (Math.min(28, maxDays) - 1) * 86400000)
     .toISOString()
@@ -29,7 +35,9 @@ export function useVisitPlanner() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
-    [review, setReview] = useState(null);
+    [review, setReview] = useState(null),
+    [focusSalesId, setFocusSalesId] = useState(''),
+    [focusClusterId, setFocusClusterId] = useState('');
   const planPolicy = source.planningPolicies?.[draft.value.supervisorId]?.values || settings,
     maxPlanDays = Number(planPolicy.PJP_MAX_PLAN_DAYS) || 62;
   const baseline = useRef(draft.restored ? '' : JSON.stringify(draft.value)),
@@ -46,6 +54,89 @@ export function useVisitPlanner() {
       setSource(s.data);
       setTeam({ supervisors: s.data.supervisors || [] });
       setPlans(p.data);
+      const params =
+        typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const handoffSpv = params?.get('plannerSpv') || '';
+      const handoffSales = params?.get('plannerSales') || '';
+      const handoffCluster = params?.get('plannerCluster') || '';
+      if (handoffSpv || handoffSales || handoffCluster) {
+        setWorkspaceValues(
+          { plannerSpv: null, plannerSales: null, plannerCluster: null },
+          { replace: true }
+        );
+        const supervisors = s.data.supervisors || [];
+        const salesList = s.data.sales || [];
+        const targetSpv =
+          user.role === 'SUPERVISOR'
+            ? user.id
+            : supervisors.some((v) => v.id === handoffSpv)
+              ? handoffSpv
+              : salesList.find((v) => v.id === handoffSales)?.supervisorId ||
+                pickDefaultSupervisorId(user, supervisors, salesList);
+        const targetPolicy = s.data.planningPolicies?.[targetSpv]?.values || settings;
+        const targetMaxDays = Number(targetPolicy.PJP_MAX_PLAN_DAYS) || maxPlanDays;
+        let nextDraft =
+          draft.value.status === 'DRAFT' && draft.value.supervisorId === targetSpv
+            ? { ...draft.value }
+            : initial(user, targetMaxDays, targetSpv);
+        const targetSales =
+          salesList.find((v) => v.id === handoffSales && v.supervisorId === targetSpv) || null;
+        if (targetSales) setFocusSalesId(targetSales.id);
+        setFocusClusterId(handoffCluster || '');
+        if (targetSales) {
+          const allShops = (s.data.outlets || []).filter(
+            (o) => o.cluster?.supervisorId === targetSpv
+          );
+          const clusterOutlets = handoffCluster
+            ? allShops.filter((o) => o.clusterId === handoffCluster)
+            : allShops;
+          const addedRules = buildClusterDraftRules({
+            person: targetSales,
+            shops: clusterOutlets.length ? clusterOutlets : allShops,
+            existingOutletIds: nextDraft.rules
+              .filter((r) => r.userId === targetSales.id)
+              .map((r) => r.outletId),
+            startsOn: nextDraft.startsOn,
+            workingDays: s.data.workingDays,
+            allowedIntervals: allowedVisitIntervals(targetPolicy),
+            defaultInterval: Number(targetPolicy.PJP_DEFAULT_INTERVAL || 1),
+          });
+          if (addedRules.length) {
+            nextDraft = { ...nextDraft, rules: [...nextDraft.rules, ...addedRules] };
+            setMessage(
+              `${addedRules.length} outlet dari cluster ditambahkan ke draf jadwal ${targetSales.name}. Periksa tanggal acuan, simpan draf, lalu terbitkan.`
+            );
+          } else {
+            setMessage(`Planner siap untuk ${targetSales.name}.`);
+          }
+        } else if (targetSpv) {
+          setMessage(
+            'Tim cluster dibuka di Planner. Pilih Sales atau tambahkan outlet ke aturan kunjungan.'
+          );
+        }
+        draft.setValue(nextDraft);
+        setReview(null);
+      } else if (
+        !draft.restored &&
+        !draft.value.id &&
+        !draft.value.supervisorId &&
+        !draft.value.rules.length
+      ) {
+        const autoSpv = pickDefaultSupervisorId(user, s.data.supervisors || [], s.data.sales || []);
+        if (autoSpv) {
+          const max = Number(s.data.planningPolicies?.[autoSpv]?.values?.PJP_MAX_PLAN_DAYS) || 62;
+          const end = new Date(Date.parse(draft.value.startsOn) + (max - 1) * 86400000)
+            .toISOString()
+            .slice(0, 10);
+          const next = {
+            ...draft.value,
+            supervisorId: autoSpv,
+            endsOn: draft.value.endsOn > end ? end : draft.value.endsOn,
+          };
+          baseline.current = JSON.stringify(next);
+          draft.setValue(next);
+        }
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -84,11 +175,13 @@ export function useVisitPlanner() {
     setBusy(true);
     setError('');
     try {
+      const autoSpv = pickDefaultSupervisorId(user, team.supervisors, source.sales);
       const next = id
         ? (await pjpApi.getPlan(id)).data
         : initial(
             user,
-            Number(source.planningPolicies?.[user.id]?.values.PJP_MAX_PLAN_DAYS) || maxPlanDays
+            Number(source.planningPolicies?.[autoSpv]?.values.PJP_MAX_PLAN_DAYS) || maxPlanDays,
+            autoSpv
           );
       draft.setValue(next);
       baseline.current = JSON.stringify(next);
@@ -234,6 +327,8 @@ export function useVisitPlanner() {
     message,
     review,
     dirty,
+    focusSalesId,
+    focusClusterId,
     field,
     change,
     changeTeam,

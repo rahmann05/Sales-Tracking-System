@@ -112,13 +112,121 @@
   font-size: 12px;
 }
 .planning-steps button[aria-pressed='true'] {
-  border-color: #0869cf;
-  color: #0869cf;
-  background: #f0f6fd;
+  border-color: #1b66ca;
+  color: #1b66ca;
+  background: #f0f6ff;
+  font-weight: 600;
 }
 .planning-steps button[aria-pressed='true'] > span {
-  background: #0869cf;
+  background: #1b66ca;
   color: white;
+}
+.cluster-scope-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cluster-pill {
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #d5dfec;
+  background: #ffffff;
+  color: #475569;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.cluster-pill:hover {
+  border-color: #93c5fd;
+  color: #1b66ca;
+}
+.cluster-pill[aria-pressed='true'] {
+  background: #1b66ca;
+  border-color: #1b66ca;
+  color: #ffffff;
+}
+.cluster-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(1, 20, 76, 0.15);
+}
+.cluster-dir-title,
+.cluster-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cluster-trade-tag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155 !important;
+  font-size: 11px !important;
+  font-weight: 600;
+}
+.cluster-inline-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  background: #f0f6ff;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #01144c;
+}
+.planner-focus-pill {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f0f6ff;
+  border: 1px solid #bfdbfe;
+  color: #1b66ca !important;
+  width: fit-content;
+}
+.cluster-outlet-flag {
+  color: #b45309 !important;
+  font-weight: 600;
+}
+.cluster-outlet-open-btn {
+  min-height: 34px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  flex-shrink: 0;
+  align-self: center;
+}
+.planner-gps-warning {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.planner-gps-warning span {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.planner-gps-warning .admin-button {
+  min-height: 28px;
+  padding: 2px 10px;
+  font-size: 11.5px;
 }
 .visit-planner,
 .cluster-workspace {

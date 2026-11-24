@@ -35,10 +35,11 @@ export function AdminRoutesWorkspace({
   fetchRoutes,
   handleDelete,
 }) {
-  const { setActiveTab } = useApp();
+  const { user, setActiveTab } = useApp();
   const featurePolicy = useFeaturePolicy('DELIVERY');
   const [selectedId, setSelectedId] = useWorkspaceState('deliveryRoute', ''),
-    [search, setSearch] = useState('');
+    [search, setSearch] = useState(''),
+    [statusFilter, setStatusFilter] = useState('ALL');
   const [packingIds] = useWorkspaceState('routePacking', '');
   const [detail, setDetail] = useState(null),
     [detailError, setDetailError] = useState('');
@@ -63,11 +64,27 @@ export function AdminRoutesWorkspace({
   }, [selectedId, routes]);
   const selected =
     routes.find((route) => route.id === selectedId) || (detail?.id === selectedId ? detail : null);
-  const visible = routes.filter((route) =>
-    `${route.code} ${route.vehicle?.code || ''} ${route.driver?.name || ''} ${(route.stops || []).map((s) => s.outlet?.name || '').join(' ')}`
-      .toLowerCase()
-      .includes(search.trim().toLowerCase())
+  const matchesStatus = (route, filterKey) => {
+    if (filterKey === 'ALL') return true;
+    if (filterKey === 'RETURN_CLOSE')
+      return Boolean(route.returnedAt || route.closedAt || route.cancelledAt);
+    return route.status === filterKey && !route.returnedAt && !route.closedAt && !route.cancelledAt;
+  };
+  const visible = routes.filter(
+    (route) =>
+      matchesStatus(route, statusFilter) &&
+      `${route.code} ${route.vehicle?.code || ''} ${route.driver?.name || ''} ${(route.stops || []).map((s) => s.outlet?.name || '').join(' ')}`
+        .toLowerCase()
+        .includes(search.trim().toLowerCase())
   );
+  const stepStage = (route) => {
+    if (!route) return 1;
+    if (route.returnedAt || route.closedAt || ['COMPLETED', 'PARTIAL'].includes(route.status))
+      return 4;
+    if (route.departedAt || route.status === 'IN_TRANSIT') return 3;
+    if (route.status === 'READY' || route.preparation?.PICK || route.preparation?.CHECK) return 2;
+    return 1;
+  };
   return (
     <div className="workspace-page admin-routes-workspace">
       <header className="admin-page-heading">
@@ -162,7 +179,27 @@ export function AdminRoutesWorkspace({
           onCancel={() => setWorkspaceValues({ deliveryPlan: '', routePacking: '' })}
         />
       ) : selected ? (
-        <section className="admin-route-document">
+        <section className="admin-route-document space-y-4">
+          <div className="logistics-flow-strip" aria-label="Tahapan perjalanan ini">
+            {[
+              [1, 'Rencana rute', 'Muatan & armada'],
+              [2, 'Persiapan gudang', 'PICK / CHECK / LOAD'],
+              [3, 'Pengantaran supir', 'Kunjungan toko'],
+              [4, 'Kembali & retur', 'Terima retur & tutup'],
+            ].map(([num, label, hint]) => (
+              <div
+                key={num}
+                className={`logistics-flow-step ${stepStage(selected) >= num ? 'is-active' : ''}`}
+                style={{ cursor: 'default' }}
+              >
+                <span className="logistics-flow-num">{num}</span>
+                <span className="logistics-flow-step-text">
+                  <span>{label}</span>
+                  <small>{hint}</small>
+                </span>
+              </div>
+            ))}
+          </div>
           <fieldset disabled={!!error}>
             <WarehouseRouteSummary route={selected} onDelete={handleDelete} />
             <div className="admin-panel p-5 mt-4">
@@ -170,10 +207,16 @@ export function AdminRoutesWorkspace({
                 <h2 className="font-semibold">Tindakan perjalanan</h2>
                 <button
                   type="button"
-                  className="admin-button"
-                  onClick={() => setActiveTab(TAB_IDS.DELIVERY_OPERATIONS)}
+                  className="admin-button primary"
+                  onClick={() => {
+                    setWorkspaceValues(
+                      { deliveryRoute: selected.id },
+                      { tab: TAB_IDS.DELIVERY_MONITOR }
+                    );
+                    setActiveTab(TAB_IDS.DELIVERY_MONITOR);
+                  }}
                 >
-                  Buka di Pantau &amp; Jalankan
+                  Pantau live &amp; pemeriksaan retur
                 </button>
               </div>
               <RouteOperationsActions key={selected.id} route={selected} onChanged={fetchRoutes} />
@@ -182,6 +225,74 @@ export function AdminRoutesWorkspace({
         </section>
       ) : (
         <>
+          <nav className="logistics-flow-strip" aria-label="Alur packing hingga pemantauan">
+            {user?.permissions?.can_manage_packing_list !== false && (
+              <button
+                type="button"
+                className="logistics-flow-step"
+                onClick={() => setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST)}
+              >
+                <span className="logistics-flow-num">1</span>
+                <span className="logistics-flow-step-text">
+                  <span>Muatan / packing list</span>
+                  <small>Pilih dokumen siap</small>
+                </span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="logistics-flow-step"
+              aria-current="step"
+              onClick={() => setStatusFilter('ALL')}
+            >
+              <span className="logistics-flow-num">2</span>
+              <span className="logistics-flow-step-text">
+                <span>Rute &amp; persiapan</span>
+                <small>{routes.length} rute di halaman ini</small>
+              </span>
+            </button>
+            {user?.permissions?.can_monitor_delivery !== false && (
+              <button
+                type="button"
+                className="logistics-flow-step"
+                onClick={() => setActiveTab(TAB_IDS.DELIVERY_MONITOR)}
+              >
+                <span className="logistics-flow-num">3</span>
+                <span className="logistics-flow-step-text">
+                  <span>Monitor &amp; retur</span>
+                  <small>Lacak posisi &amp; retur</small>
+                </span>
+              </button>
+            )}
+          </nav>
+          <div className="logistics-kpi-strip" role="group" aria-label="Filter status rute">
+            {[
+              ['ALL', 'Semua rute', routes.length],
+              ['DRAFT', 'Persiapan gudang', routes.filter((r) => matchesStatus(r, 'DRAFT')).length],
+              ['READY', 'Siap berangkat', routes.filter((r) => matchesStatus(r, 'READY')).length],
+              [
+                'IN_TRANSIT',
+                'Sedang dikirim',
+                routes.filter((r) => matchesStatus(r, 'IN_TRANSIT')).length,
+              ],
+              [
+                'RETURN_CLOSE',
+                'Kembali / selesai',
+                routes.filter((r) => matchesStatus(r, 'RETURN_CLOSE')).length,
+              ],
+            ].map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className="logistics-kpi-card"
+                aria-pressed={statusFilter === key}
+                onClick={() => setStatusFilter(key)}
+              >
+                <span>{label}</span>
+                <strong>{count}</strong>
+              </button>
+            ))}
+          </div>
           <div className="admin-toolbar">
             <label className="admin-search">
               <LuSearch aria-hidden="true" />
@@ -239,7 +350,9 @@ export function AdminRoutesWorkspace({
                                 {idx + 1}. {s.outlet?.name || 'Toko'}
                               </strong>
                               {!hasStopPoint(s) && (
-                                <small className="block text-amber-700">Titik lokasi belum lengkap</small>
+                                <small className="block text-amber-700">
+                                  Titik lokasi belum lengkap
+                                </small>
                               )}
                             </div>
                           ))}

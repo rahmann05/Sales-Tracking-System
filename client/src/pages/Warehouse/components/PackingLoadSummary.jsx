@@ -5,21 +5,29 @@ export function PackingLoadSummary({ packing }) {
   const totals = loadLogistics(packing);
   return (
     <section className="space-y-4">
-      <h3 className="font-semibold">
-        Muatan untuk {totals.outletCount} toko · {totals.destinationCount} tujuan
-      </h3>
-      <p>
-        {totals.totalCartons} karton · {packing.invoices?.length || 0} faktur ·{' '}
-        {totals.weightComplete
-          ? `${totals.knownWeightKg} kg`
-          : `${totals.knownWeightKg} kg diketahui; berat ${totals.unknownWeightDestinations} tujuan belum tersedia`}
-      </p>
-      <p>
-        Saran kendaraan Admin:{' '}
-        {packing.suggestedVehicleSnapshot?.code ||
-          'Tidak disertakan; kepala gudang menentukan kendaraan'}
-        {packing.suggestedVehicleSnapshot ? ' · belum merupakan penugasan' : ''}
-      </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-semibold">
+          Muatan untuk {totals.outletCount} toko · {totals.destinationCount} tujuan
+        </h3>
+        <span className="admin-footnote">
+          Saran kendaraan Admin:{' '}
+          {packing.suggestedVehicleSnapshot?.code ||
+            'Tidak disertakan; kepala gudang menentukan kendaraan'}
+          {packing.suggestedVehicleSnapshot ? ' · belum merupakan penugasan' : ''}
+        </span>
+      </div>
+      <div className="admin-inline-metrics">
+        <span>
+          <strong>{totals.totalCartons}</strong> karton
+        </span>
+        <span>
+          <strong>{packing.invoices?.length || 0}</strong> faktur
+        </span>
+        <span>
+          <strong>{totals.knownWeightKg}</strong> kg
+          {totals.weightComplete ? '' : ` (${totals.unknownWeightDestinations} tujuan belum diisi)`}
+        </span>
+      </div>
       <div className="admin-table-scroll">
         <table className="admin-data-table packing-load-table">
           <caption>Faktur, order dan tujuan pada packing list</caption>
@@ -80,15 +88,18 @@ export function PackingLoadSummary({ packing }) {
           </tbody>
         </table>
       </div>
-      <details>
-        <summary className="min-h-11 cursor-pointer">
-          Rekap total produk menurut SKU dan satuan
-        </summary>
-        {totals.products.map((item, index) => (
-          <p key={index}>
-            {item.sku} · {item.name} · {item.quantity} {item.unit}
-          </p>
-        ))}
+      <details className="packing-disclosure">
+        <summary>Rekap total produk menurut SKU dan satuan</summary>
+        <div className="packing-disclosure-body">
+          {totals.products.map((item, index) => (
+            <p key={index} className="text-xs text-on-surface-variant">
+              <span className="font-mono text-on-surface">{item.sku || '—'}</span> · {item.name} ·{' '}
+              <strong className="text-on-surface">
+                {item.quantity} {item.unit}
+              </strong>
+            </p>
+          ))}
+        </div>
       </details>
     </section>
   );

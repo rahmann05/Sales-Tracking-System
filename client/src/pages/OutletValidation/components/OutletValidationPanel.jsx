@@ -2,7 +2,7 @@ import { workspaceChoice } from '../../../../../shared/workspace-presentation.mj
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFeaturePolicy } from '../../../shared/hooks/useFeaturePolicy';
 import { useApp } from '../../../context/AppContext';
-import { outletValidationApi } from '../../../services/api';
+import { clustersApi, outletValidationApi } from '../../../services/api';
 import { confirmWorkspaceNavigation } from '../../../shared/utils/confirmWorkspaceNavigation';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
@@ -19,22 +19,27 @@ import { ValidationOutletPicker } from './ValidationOutletPicker';
 import { OutletValidationJobs } from './OutletValidationJobs';
 export function OutletValidationPanel() {
   const feature = useFeaturePolicy('OUTLET_REVIEW'),
-    { user, settings } = useApp();
+    { user, settings, clusters: appClusters } = useApp();
   const [stage, setStage] = useWorkspaceState(
       'outletReviewStage',
       workspaceChoice('OUTLET_REVIEW_DEFAULT_STAGE', settings.OUTLET_REVIEW_DEFAULT_STAGE)
     ),
     [search, setSearch] = useWorkspaceState('outletReviewSearch', ''),
     [selected, setSelected] = useWorkspaceState('outletReview', ''),
-    [issue, setIssue] = useWorkspaceState('outletReviewIssue', 'ALL');
+    [issue, setIssue] = useWorkspaceState('outletReviewIssue', 'ALL'),
+    [clusterFilter, setClusterFilter] = useWorkspaceState('outletReviewCluster', 'ALL'),
+    [workspaceTab, setWorkspaceTab] = useWorkspaceState('outletValidationTab', 'QUEUE');
   const [page, setPage] = useState(1),
     [rows, setRows] = useState([]),
     [pagination, setPagination] = useState({ total: 0, totalPages: 1 }),
+    [summary, setSummary] = useState(null),
+    [fallbackClusters, setFallbackClusters] = useState([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     [detail, setDetail] = useState(null),
-    [picker, setPicker] = useState(false),
-    [workspaceTab, setWorkspaceTab] = useState('QUEUE');
+    [picker, setPicker] = useState(false);
+  const clusters =
+    Array.isArray(appClusters) && appClusters.length > 0 ? appClusters : fallbackClusters;
   const debounced = useDebounce(search, 250),
     version = useRef(0);
   const load = useCallback(async () => {
@@ -46,17 +51,22 @@ export function OutletValidationPanel() {
         const r = await outletValidationApi.review(selected);
         if (v === version.current) setDetail(r.data);
       } else {
-        const r = await outletValidationApi.reviews({
-          status: 'ALL',
-          stage,
-          search: debounced,
-          page,
-          issue,
-          limit: settings.WORKSPACE_PAGE_SIZE || 25,
-        });
+        const [r, s] = await Promise.all([
+          outletValidationApi.reviews({
+            status: 'ALL',
+            stage,
+            search: debounced,
+            page,
+            issue,
+            clusterId: clusterFilter !== 'ALL' ? clusterFilter : undefined,
+            limit: settings.WORKSPACE_PAGE_SIZE || 25,
+          }),
+          outletValidationApi.getSummary().catch(() => ({ data: null })),
+        ]);
         if (v === version.current) {
           setRows(r.data);
           setPagination(r.pagination);
+          if (s?.data) setSummary(s.data);
         }
       }
     } catch (e) {
@@ -64,13 +74,31 @@ export function OutletValidationPanel() {
     } finally {
       if (v === version.current) setLoading(false);
     }
-  }, [selected, stage, debounced, page, issue, settings.WORKSPACE_PAGE_SIZE]);
+  }, [selected, stage, debounced, page, issue, clusterFilter, settings.WORKSPACE_PAGE_SIZE]);
   useEffect(() => {
     load();
+    const onChanged = () => load();
+    if (typeof window !== 'undefined')
+      window.addEventListener('operational-data-changed', onChanged);
     return () => {
       version.current++;
+      if (typeof window !== 'undefined')
+        window.removeEventListener('operational-data-changed', onChanged);
     };
   }, [load]);
+  useEffect(() => {
+    if (Array.isArray(appClusters) && appClusters.length > 0) return;
+    let live = true;
+    clustersApi
+      .getAll()
+      .then((r) => {
+        if (live) setFallbackClusters(r.data || []);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [appClusters]);
   const select = (id) => {
     if (confirmWorkspaceNavigation()) {
       setDetail(null);
@@ -151,11 +179,39 @@ export function OutletValidationPanel() {
               title={feature.reason}
               onClick={() => setPicker(true)}
             >
-              + Pilih outlet
+              + Pilih outlet untuk divalidasi
             </button>
           </div>
           {workspaceTab === 'QUEUE' && (
             <>
+              {summary && (
+                <div className="ov-summary-strip" role="region" aria-label="Ringkasan status kasus">
+                  <button
+                    type="button"
+                    aria-pressed={stage === 'OPEN'}
+                    onClick={() => filter(setStage, 'OPEN')}
+                  >
+                    <span>Belum diperiksa</span>
+                    <strong>{summary.OPEN ?? 0}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={stage === 'WAITING_FIELD'}
+                    onClick={() => filter(setStage, 'WAITING_FIELD')}
+                  >
+                    <span>Tugas lapangan aktif</span>
+                    <strong>{summary.WAITING_FIELD ?? 0}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={stage === 'COMPLETED'}
+                    onClick={() => filter(setStage, 'COMPLETED')}
+                  >
+                    <span>Selesai diverifikasi</span>
+                    <strong>{summary.COMPLETED ?? 0}</strong>
+                  </button>
+                </div>
+              )}
               <nav className="ov-stage-tabs" aria-label="Tahap pemeriksaan">
                 {[
                   'ALL',
@@ -192,6 +248,20 @@ export function OutletValidationPanel() {
                     />
                   </label>
                   <label className="app-field">
+                    Wilayah cluster
+                    <select
+                      value={clusterFilter}
+                      onChange={(e) => filter(setClusterFilter, e.target.value)}
+                    >
+                      <option value="ALL">Semua wilayah</option>
+                      {clusters.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="app-field">
                     Masalah data
                     <select value={issue} onChange={(e) => filter(setIssue, e.target.value)}>
                       <option value="ALL">Semua masalah</option>
@@ -206,14 +276,19 @@ export function OutletValidationPanel() {
                     Perbarui
                   </button>
                 </div>
-                <div className="ov-table-wrap">
+                <div
+                  className="ov-table-wrap"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Daftar kasus validasi outlet"
+                >
                   <table className="ov-table ov-queue">
-                    <caption>
+                    <caption role="status" aria-atomic="true">
                       {loading ? 'Memuat antrean…' : `${pagination.total} kasus sesuai filter`}
                     </caption>
                     <thead>
                       <tr>
-                        <th>Outlet</th>
+                        <th>Outlet &amp; wilayah</th>
                         <th>Masalah data</th>
                         <th>Hasil Google</th>
                         <th>Tindakan berikutnya</th>
@@ -224,10 +299,13 @@ export function OutletValidationPanel() {
                     <tbody>
                       {rows.map((r) => (
                         <tr key={r.id}>
-                          <td data-label="Outlet">
+                          <td data-label="Outlet &amp; wilayah">
                             <strong>{r.outlet.name}</strong>
                             <small>
                               {r.outlet.outletCode || 'Tanpa kode'} · {r.outlet.cluster?.name}
+                              {r.outlet.cluster?.assignedSales?.name
+                                ? ` · ${r.outlet.cluster.assignedSales.name}`
+                                : ''}
                             </small>
                             <small>{r.outlet.address}</small>
                           </td>
@@ -258,7 +336,11 @@ export function OutletValidationPanel() {
                             <small>{r.dueAt ? stamp(r.dueAt) : 'Tanpa tenggat kasus'}</small>
                           </td>
                           <td data-label="">
-                            <button type="button" className="app-button" onClick={() => select(r.id)}>
+                            <button
+                              type="button"
+                              className="app-button app-button-primary"
+                              onClick={() => select(r.id)}
+                            >
                               Tinjau →
                             </button>
                           </td>
@@ -315,6 +397,7 @@ export function OutletValidationPanel() {
           onSaved={async (reviews) => {
             setPicker(false);
             if (reviews[0]) select(reviews[0].id);
+            else setWorkspaceTab('JOBS');
             await load();
           }}
         />

@@ -101,6 +101,9 @@ export async function getOutletReviews(query, actor) {
       id: { in: candidates.filter((o) => outletIssues(o).includes(issue)).map((o) => o.id) },
     };
   }
+  if (query.clusterId && query.clusterId !== 'ALL') {
+    where.outlet = { ...where.outlet, clusterId: String(query.clusterId) };
+  }
   if (query.ownerId) where.ownerId = String(query.ownerId);
   if (query.search?.trim())
     where.outlet = {
@@ -114,7 +117,13 @@ export async function getOutletReviews(query, actor) {
   const [data, total] = await Promise.all([
     prisma.outletReview.findMany({
       where,
-      include: { outlet: { include: { cluster: true } } },
+      include: {
+        outlet: {
+          include: {
+            cluster: { include: { assignedSales: { select: { id: true, name: true } } } },
+          },
+        },
+      },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,

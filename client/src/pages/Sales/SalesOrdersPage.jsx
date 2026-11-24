@@ -65,6 +65,47 @@ export function SalesOrdersPage() {
         </div>
       </header>
       {outside && <OutsidePjpOrderDialog onClose={() => setOutside(false)} onSaved={reload} />}
+      <div className="logistics-kpi-strip" role="group" aria-label="Ringkasan status order">
+        {[
+          ['ALL', 'ALL', 'Semua order', orders.length],
+          [
+            'PENDING_APPROVAL',
+            'ALL',
+            'Menunggu keputusan',
+            orders.filter((o) => o.status === 'PENDING_APPROVAL').length,
+          ],
+          [
+            'APPROVED',
+            'ALL',
+            'Disetujui / diproses',
+            orders.filter((o) => o.status === 'APPROVED').length,
+          ],
+          [
+            'ALL',
+            'FULFILLED',
+            'Terpenuhi penuh',
+            orders.filter((o) => o.fulfillmentStatus === 'FULFILLED').length,
+          ],
+        ].map(([nextStatus, nextFulfillment, label, count]) => {
+          const active = status === nextStatus && fulfillment === nextFulfillment;
+          return (
+            <button
+              key={label}
+              type="button"
+              className="logistics-kpi-card"
+              aria-pressed={active}
+              onClick={() => {
+                setStatus(nextStatus);
+                setFulfillment(nextFulfillment);
+                setPage('1', { replace: true });
+              }}
+            >
+              <span>{label}</span>
+              <strong>{count}</strong>
+            </button>
+          );
+        })}
+      </div>
       <div className="sales-toolbar">
         <label className="sales-search">
           Cari order atau pelanggan

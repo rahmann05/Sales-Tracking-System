@@ -1,4 +1,7 @@
 import React from 'react';
+import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import { PackingLoadSummary } from './PackingLoadSummary';
 import { InvoiceReconciliationPanel } from './InvoiceReconciliationPanel';
 import {
@@ -12,6 +15,7 @@ import {
   LuClock,
   LuChevronDown,
   LuChevronUp,
+  LuTruck,
 } from 'react-icons/lu';
 export function PackingListCard({
   admin,
@@ -34,6 +38,7 @@ export function PackingListCard({
   settings,
   toggleExpand,
 }) {
+  const { user, setActiveTab } = useApp();
   const showDetail = inDetailView || isExpanded;
   const actionLabels = {
     CREATE: 'Dokumen dibuat',
@@ -144,7 +149,11 @@ export function PackingListCard({
                 Catatan
               </span>
             </span>
-            {isExpanded ? <LuChevronUp className="text-sm" /> : <LuChevronDown className="text-sm" />}
+            {isExpanded ? (
+              <LuChevronUp className="text-sm" />
+            ) : (
+              <LuChevronDown className="text-sm" />
+            )}
           </button>
         )}
 
@@ -336,10 +345,44 @@ export function PackingListCard({
               </button>
             )}
 
+            {isReleased &&
+              Number(pl.remainingCartons ?? pl.totalCartons ?? 0) > 0 &&
+              user?.permissions?.can_manage_delivery_routes !== false && (
+                <button
+                  type="button"
+                  disabled={Boolean(busyAction)}
+                  onClick={() => {
+                    setWorkspaceValues(
+                      { routePacking: pl.id, deliveryPlan: '1', deliveryRoute: '' },
+                      { tab: TAB_IDS.DELIVERY_ROUTES }
+                    );
+                    setActiveTab(TAB_IDS.DELIVERY_ROUTES);
+                  }}
+                  className="px-4 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary/90 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <LuTruck className="text-xs" />
+                  <span>Susun Perjalanan Pengiriman</span>
+                </button>
+              )}
+
             {isReleased && isAllocated && (
-              <span className="text-[11px] text-on-surface-variant font-medium italic">
-                Sudah dialokasikan ke rute pengiriman
-              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkspaceValues(
+                    {
+                      deliveryRoute: pl.deliveryStops?.[0]?.deliveryRouteId || '',
+                      deliveryPlan: '',
+                    },
+                    { tab: TAB_IDS.DELIVERY_ROUTES }
+                  );
+                  setActiveTab(TAB_IDS.DELIVERY_ROUTES);
+                }}
+                className="px-3 py-1.5 rounded-lg border border-border-glass hover:bg-surface-container text-xs font-semibold text-primary flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <LuTruck className="text-xs" />
+                <span>Buka Rute Pengiriman</span>
+              </button>
             )}
           </div>
         )}

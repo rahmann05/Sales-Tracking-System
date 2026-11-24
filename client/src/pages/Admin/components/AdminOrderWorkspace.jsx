@@ -99,6 +99,15 @@ export function AdminOrderWorkspace({
                 Buat order Admin
               </button>
             )}
+            {user?.role === 'ADMIN' && user.permissions?.can_manage_packing_list !== false && (
+              <button
+                className="admin-button"
+                type="button"
+                onClick={() => setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST)}
+              >
+                Buka Packing List
+              </button>
+            )}
             <button
               className="admin-button"
               type="button"
@@ -110,6 +119,61 @@ export function AdminOrderWorkspace({
             </button>
           </div>
         </header>
+      )}
+      {!ordersOnly && user?.role === 'ADMIN' && (
+        <nav className="logistics-flow-strip" aria-label="Alur order hingga retur">
+          <button
+            type="button"
+            className="logistics-flow-step"
+            aria-current="step"
+            onClick={() => setSection('orders')}
+          >
+            <span className="logistics-flow-num">1</span>
+            <span className="logistics-flow-step-text">
+              <span>Order &amp; persetujuan</span>
+              <small>{pendingOrders.length} menunggu</small>
+            </span>
+          </button>
+          {user.permissions?.can_manage_packing_list !== false && (
+            <button
+              type="button"
+              className="logistics-flow-step"
+              onClick={() => setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST)}
+            >
+              <span className="logistics-flow-num">2</span>
+              <span className="logistics-flow-step-text">
+                <span>Packing &amp; faktur</span>
+                <small>{approvedOrders.length} siap dipacking</small>
+              </span>
+            </button>
+          )}
+          {user.permissions?.can_manage_delivery_routes !== false && (
+            <button
+              type="button"
+              className="logistics-flow-step"
+              onClick={() => setActiveTab(TAB_IDS.DELIVERY_ROUTES)}
+            >
+              <span className="logistics-flow-num">3</span>
+              <span className="logistics-flow-step-text">
+                <span>Rute pengiriman</span>
+                <small>Alokasi armada</small>
+              </span>
+            </button>
+          )}
+          {user.permissions?.can_monitor_delivery !== false && (
+            <button
+              type="button"
+              className="logistics-flow-step"
+              onClick={() => setActiveTab(TAB_IDS.DELIVERY_MONITOR)}
+            >
+              <span className="logistics-flow-num">4</span>
+              <span className="logistics-flow-step-text">
+                <span>Monitor &amp; retur</span>
+                <small>Lacak &amp; terima retur</small>
+              </span>
+            </button>
+          )}
+        </nav>
       )}
       {detailError && (
         <p role="alert" className="admin-feedback error">
@@ -142,16 +206,27 @@ export function AdminOrderWorkspace({
       )}
       {section === 'orders' && (
         <>
-          <div className="admin-inline-metrics">
-            <span>
-              <strong>{orders.length}</strong> total order
-            </span>
-            <span>
-              <strong>{pendingOrders.length}</strong> menunggu keputusan
-            </span>
-            <span>
-              <strong>{approvedOrders.length}</strong> disetujui
-            </span>
+          <div className="logistics-kpi-strip" role="group" aria-label="Filter status order">
+            {[
+              ['ALL', 'Total order', orders.length],
+              ['PENDING', 'Menunggu keputusan', pendingOrders.length],
+              ['APPROVED', 'Disetujui', approvedOrders.length],
+              ['REJECTED', 'Ditolak', orders.filter((o) => o.status === 'REJECTED').length],
+            ].map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className="logistics-kpi-card"
+                aria-pressed={orderFilter === key}
+                onClick={() => {
+                  setOrderFilter(key);
+                  setPage(1);
+                }}
+              >
+                <span>{label}</span>
+                <strong>{count}</strong>
+              </button>
+            ))}
           </div>
           <div className="admin-toolbar">
             <label className="admin-search">
@@ -244,24 +319,84 @@ export function AdminOrderWorkspace({
                 </div>
                 {user.role === 'ADMIN' &&
                   selected.status === 'APPROVED' &&
-                  user.permissions?.can_manage_packing_list !== false && (
-                    <div className="work-step-intro">
-                      <strong>Langkah berikutnya: siapkan dokumen muatan</strong>
+                  (selected.fulfillmentStatus === 'FULFILLED' ? (
+                    <div className="work-step-intro flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <strong>Order telah terpenuhi seluruhnya</strong>
+                        <span className="text-xs text-on-surface-variant">
+                          Pantau riwayat pengiriman atau faktur pada monitor logistik.
+                        </span>
+                      </div>
                       <button
                         type="button"
-                        className="admin-button primary"
-                        onClick={() => {
-                          setWorkspaceValues(
-                            { packingOrder: selected.id },
-                            { tab: TAB_IDS.DELIVERY_PACKING_LIST }
-                          );
-                          setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST);
-                        }}
+                        className="admin-button"
+                        onClick={() => setActiveTab(TAB_IDS.DELIVERY_MONITOR)}
                       >
-                        Siapkan pengiriman
+                        Monitor pengiriman
                       </button>
                     </div>
-                  )}
+                  ) : (
+                    user.permissions?.can_manage_packing_list !== false && (
+                      <div className="work-step-intro flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <strong>Langkah berikutnya: siapkan dokumen muatan</strong>
+                          <span className="text-xs text-on-surface-variant">
+                            {(selected.fulfillmentLines || []).some((l) => l.unpacked > 0)
+                              ? 'Masih ada barang yang belum dibuatkan packing list.'
+                              : 'Tinjau packing list atau lanjutkan pengiriman.'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="admin-button primary"
+                          onClick={() => {
+                            setWorkspaceValues(
+                              { packingOrder: selected.id },
+                              { tab: TAB_IDS.DELIVERY_PACKING_LIST }
+                            );
+                            setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST);
+                          }}
+                        >
+                          Siapkan pengiriman
+                        </button>
+                      </div>
+                    )
+                  ))}
+                {user.role === 'ADMIN' && selected.outletId && (
+                  <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
+                    {user.permissions?.can_manage_outlets !== false && (
+                      <button
+                        type="button"
+                        className="admin-button"
+                        onClick={() => {
+                          setWorkspaceValues(
+                            { outletId: selected.outletId },
+                            { tab: TAB_IDS.OUTLET_MANAGEMENT }
+                          );
+                          setActiveTab(TAB_IDS.OUTLET_MANAGEMENT);
+                        }}
+                      >
+                        Profil master outlet
+                      </button>
+                    )}
+                    {!selected.deliveryPoint?.latitude &&
+                      user.permissions?.can_validate_outlet !== false && (
+                        <button
+                          type="button"
+                          className="admin-button"
+                          onClick={() => {
+                            setWorkspaceValues(
+                              { validationTab: 'cases', validationPick: selected.outletId },
+                              { tab: TAB_IDS.OUTLET_VALIDATION }
+                            );
+                            setActiveTab(TAB_IDS.OUTLET_VALIDATION);
+                          }}
+                        >
+                          Validasi titik outlet
+                        </button>
+                      )}
+                  </div>
+                )}
                 <PendingOrderCard key={selected.id} order={selected} onDecision={handleDecision} />
                 <details>
                   <summary className="min-h-11 cursor-pointer">Masalah / keluhan order</summary>

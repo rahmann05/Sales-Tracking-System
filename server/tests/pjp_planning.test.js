@@ -6,6 +6,9 @@ import {
   buildPlanCalendar,
   validPlanDate,
   ruleSalesAt,
+  pickDefaultSupervisorId,
+  buildClusterDraftRules,
+  selectFallbackClusterOutlets,
 } from '../../shared/pjp-planning.mjs';
 import { parseSpreadsheetCsv } from '../../client/src/services/spreadsheetImportService.js';
 import { mapSalesPjpStops } from '../../client/src/context/hooks/mapSalesPjpStops.js';
@@ -193,4 +196,108 @@ test('Sales sees published interval and outlet territory rather than a guessed l
       .callFrequency,
     null
   );
+});
+test('pickDefaultSupervisorId selects SPV team automatically for Admin and own id for Supervisor', () => {
+  const spvs = [
+    { id: 'spv-empty', name: 'SPV Kosong' },
+    { id: 'spv-active', name: 'SPV Aktif' },
+  ];
+  const teamSales = [{ id: 's1', supervisorId: 'spv-active' }];
+  assert.equal(
+    pickDefaultSupervisorId({ role: 'ADMIN', id: 'adm' }, spvs, teamSales),
+    'spv-active'
+  );
+  assert.equal(pickDefaultSupervisorId({ role: 'ADMIN', id: 'adm' }, spvs, []), 'spv-empty');
+  assert.equal(
+    pickDefaultSupervisorId({ role: 'SUPERVISOR', id: 'spv-self' }, spvs, teamSales),
+    'spv-self'
+  );
+});
+test('buildClusterDraftRules pulls outlets from assignedClusters respecting route order and weekdays', () => {
+  const person = {
+    id: 'sales-1',
+    supervisorId: 'spv-1',
+    clusterId: null,
+    assignedClusters: [
+      {
+        id: 'c-selasa',
+        name: 'Cahya - Selasa',
+        routes: [{ outletOrder: ['o2', 'o1'] }],
+      },
+    ],
+  };
+  const teamOutlets = [
+    {
+      id: 'o1',
+      clusterId: 'c-selasa',
+      itineraryCode: 'F2',
+      cluster: { id: 'c-selasa', name: 'Cahya - Selasa', assignedSalesId: 'sales-1' },
+    },
+    {
+      id: 'o2',
+      clusterId: 'c-selasa',
+      itineraryCode: 'F4',
+      cluster: { id: 'c-selasa', name: 'Cahya - Selasa', assignedSalesId: 'sales-1' },
+    },
+    {
+      id: 'o3',
+      clusterId: 'c-other',
+      itineraryCode: 'F1',
+      cluster: { id: 'c-other', name: 'Lainnya', assignedSalesId: 'sales-2' },
+    },
+  ];
+  const draftRules = buildClusterDraftRules({
+    person,
+    shops: teamOutlets,
+    existingOutletIds: [],
+    startsOn: '2026-11-23', // Senin
+    workingDays: [1, 2, 3, 4, 5, 6],
+    allowedIntervals: [1, 2, 4],
+    defaultInterval: 1,
+  });
+  assert.deepEqual(
+    draftRules.map((r) => [r.outletId, r.anchorDate, r.intervalWeeks]),
+    [
+      ['o2', '2026-11-24', 4],
+      ['o1', '2026-11-24', 2],
+    ]
+  );
+});
+test('selectFallbackClusterOutlets resolves multi-cluster assignedSalesId outlets even without user.clusterId', () => {
+  const clusters = [
+    {
+      id: 'c-senin',
+      name: 'Cahya - Senin',
+      region: 'Bandung',
+      routes: [{ outletOrder: ['o2', 'o1'] }],
+      outlets: [{ id: 'o1' }, { id: 'o2' }],
+    },
+    {
+      id: 'c-selasa',
+      name: 'Cahya - Selasa',
+      region: 'Bandung',
+      routes: [],
+      outlets: [{ id: 'o3' }],
+    },
+  ];
+  const monday = selectFallbackClusterOutlets(clusters, null, '2026-11-23');
+  assert.equal(monday.primaryCluster.id, 'c-senin');
+  assert.deepEqual(monday.outletIds, ['o2', 'o1']);
+  const tuesday = selectFallbackClusterOutlets(clusters, 'c-senin', '2026-11-24');
+  assert.equal(tuesday.primaryCluster.id, 'c-selasa');
+  assert.deepEqual(tuesday.outletIds, ['o3']);
+  const nonWeekday = selectFallbackClusterOutlets(
+    [
+      {
+        id: 'c-gen',
+        name: 'Bandung Timur',
+        region: 'Bandung',
+        routes: [{ outletOrder: ['o10'] }],
+        outlets: [{ id: 'o10' }, { id: 'o11' }],
+      },
+    ],
+    null,
+    '2026-11-24'
+  );
+  assert.deepEqual(nonWeekday.outletIds, ['o10', 'o11']);
 });

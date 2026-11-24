@@ -84,40 +84,64 @@ export function PackingLoadOrderPicker({ allowPending, onSelectMany }) {
           Order pending memerlukan alasan pengecualian Admin sebelum dokumen disimpan.
         </p>
       )}
-      <div className="work-step-intro">
-        <strong>
-          {selected.length} order ·{' '}
-          {new Set(selected.map((order) => order.outletId || order.pjpStop?.outletId)).size} toko
-          dipilih
-        </strong>
-        <div className="flex flex-wrap gap-2">
-          {selected.map((order) => (
-            <button
-              type="button"
-              className="admin-button"
-              key={order.id}
-              onClick={() => toggle(order)}
-            >
-              Hapus {order.code}
-            </button>
-          ))}
-          {selected.length > 1 && (
-            <button type="button" className="admin-button" onClick={() => setSelected([])}>
-              Hapus semua
-            </button>
-          )}
+      <div className="packing-picker-bar">
+        <div className="packing-picker-meta">
+          <strong>
+            {selected.length} order ·{' '}
+            {new Set(selected.map((order) => order.outletId || order.pjpStop?.outletId)).size} toko
+            dipilih
+          </strong>
+          <span className="admin-footnote">
+            Pilihan tetap tersimpan saat mencari atau berpindah halaman; maksimal 30 order.
+          </span>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {result.data.length > 0 && (
+              <button
+                type="button"
+                className="admin-button"
+                disabled={loading}
+                onClick={() =>
+                  setSelected((current) => {
+                    const seen = new Set(current.map((row) => row.id));
+                    const next = [...current];
+                    for (const row of result.data) {
+                      if (!seen.has(row.id) && next.length < 30) {
+                        seen.add(row.id);
+                        next.push(row);
+                      }
+                    }
+                    return next;
+                  })
+                }
+              >
+                Pilih semua di halaman ini
+              </button>
+            )}
+            {selected.map((order) => (
+              <button
+                type="button"
+                className="admin-button"
+                key={order.id}
+                onClick={() => toggle(order)}
+              >
+                Hapus {order.code}
+              </button>
+            ))}
+            {selected.length > 1 && (
+              <button type="button" className="admin-button" onClick={() => setSelected([])}>
+                Hapus semua
+              </button>
+            )}
+          </div>
         </div>
         <button
           type="button"
-          className="admin-button primary"
+          className="admin-button primary shrink-0"
           disabled={loading || !selected.length}
           onClick={() => onSelectMany(selected)}
         >
           Susun packing list dari pilihan
         </button>
-        <p className="admin-footnote">
-          Pilihan tetap tersimpan saat mencari atau berpindah halaman; maksimal 30 order.
-        </p>
       </div>
       {error && (
         <p role="alert" className="admin-feedback error">
@@ -133,22 +157,25 @@ export function PackingLoadOrderPicker({ allowPending, onSelectMany }) {
               <th>Order / toko</th>
               <th>Barang belum dibuatkan dokumen</th>
               <th>Sales / janji kirim</th>
+              <th>Aksi cepat</th>
             </tr>
           </thead>
           <tbody>
             {result.data.map((order) => (
               <tr key={order.id}>
                 <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`Pilih order ${order.code}`}
-                    checked={selected.some((row) => row.id === order.id)}
-                    disabled={
-                      loading ||
-                      (selected.length >= 30 && !selected.some((row) => row.id === order.id))
-                    }
-                    onChange={() => toggle(order)}
-                  />
+                  <label className="packing-check-hit">
+                    <input
+                      type="checkbox"
+                      aria-label={`Pilih order ${order.code}`}
+                      checked={selected.some((row) => row.id === order.id)}
+                      disabled={
+                        loading ||
+                        (selected.length >= 30 && !selected.some((row) => row.id === order.id))
+                      }
+                      onChange={() => toggle(order)}
+                    />
+                  </label>
                 </td>
                 <td>
                   <strong>
@@ -179,6 +206,16 @@ export function PackingLoadOrderPicker({ allowPending, onSelectMany }) {
                         })} WIB`
                       : 'Tanpa janji kirim khusus'}
                   </small>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="admin-button"
+                    disabled={loading}
+                    onClick={() => onSelectMany([order])}
+                  >
+                    Susun langsung
+                  </button>
                 </td>
               </tr>
             ))}

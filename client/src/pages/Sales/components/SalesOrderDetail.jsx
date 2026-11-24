@@ -3,6 +3,22 @@ import React from 'react';
 import { unitDescription } from '../../../../../shared/product-units.mjs';
 import { orderStatusLabel, fulfillmentLabel, stampWib } from '../salesPresentation';
 export function SalesOrderDetail({ order: o }) {
+  const lines = o.fulfillmentLines || [];
+  const totalOrdered = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+  const totalPrepared = lines.reduce((sum, line) => sum + Number(line.prepared || 0), 0);
+  const totalAccepted = lines.reduce((sum, line) => sum + Number(line.accepted || 0), 0);
+  const approvedDone = o.status === 'APPROVED';
+  const packingDone = totalPrepared > 0 || ['PARTIAL', 'FULFILLED'].includes(o.fulfillmentStatus);
+  const deliveryDone =
+    o.fulfillmentStatus === 'FULFILLED' || (totalOrdered > 0 && totalAccepted >= totalOrdered);
+  const stages = [
+    ['1', 'Pengajuan', true],
+    ['2', o.status === 'REJECTED' ? 'Ditolak' : 'Persetujuan', approvedDone],
+    ['3', 'Packing & kirim', packingDone],
+    ['4', 'Diterima toko', deliveryDone],
+  ];
+  const pct =
+    totalOrdered > 0 ? Math.min(100, Math.round((totalAccepted / totalOrdered) * 100)) : 0;
   return (
     <div className="sales-visit-detail">
       <div>
@@ -12,6 +28,23 @@ export function SalesOrderDetail({ order: o }) {
         {o.history?.find((h) => h.contextReason)?.contextReason && (
           <p>Alasan: {o.history.find((h) => h.contextReason).contextReason}</p>
         )}
+      </div>
+      <div className="logistics-flow-strip" aria-label="Tahapan order">
+        {stages.map(([num, label, done]) => (
+          <div
+            key={num}
+            className={`logistics-flow-step ${done ? 'is-active' : ''}`}
+            style={{ cursor: 'default' }}
+          >
+            <span className="logistics-flow-num">{num}</span>
+            <span className="logistics-flow-step-text">
+              <span>{label}</span>
+              <small>
+                {done ? 'Selesai' : o.status === 'REJECTED' && num === '2' ? 'Ditolak' : 'Menunggu'}
+              </small>
+            </span>
+          </div>
+        ))}
       </div>
       <dl>
         <div>
@@ -68,30 +101,56 @@ export function SalesOrderDetail({ order: o }) {
         </div>
       </section>
       {o.status !== 'REJECTED' && (
-        <section>
-          <h4>Perjalanan pemenuhan</h4>
-          {(o.fulfillmentLines || []).map((i) => (
-            <article key={i.id} className="sales-fulfillment-line">
-              <strong>{i.productName || i.product?.name}</strong>
-              <p className="sales-note">Satuan: {unitDescription(i)}</p>
-              <dl>
-                {[
-                  ['Dipesan', i.quantity],
-                  ['Dalam packing', i.prepared],
-                  ['Diterima pelanggan', i.accepted],
-                  ['Dibatalkan', i.cancelled],
-                  ['Sisa kewajiban', i.remaining],
-                  ['Belum dipacking', i.unpacked],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value ?? '—'}</dd>
-                  </div>
-                ))}
-              </dl>
-            </article>
-          ))}
-          {!o.fulfillmentLines?.length && (
+        <section className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4>Perjalanan pemenuhan</h4>
+            {totalOrdered > 0 && (
+              <span className="text-xs font-semibold text-on-surface-variant">
+                Terkirim {totalAccepted} / {totalOrdered} ({pct}%)
+              </span>
+            )}
+          </div>
+          {totalOrdered > 0 && (
+            <progress
+              className="packing-capacity-bar"
+              value={pct}
+              max={100}
+              aria-label="Persentase penerimaan order"
+            />
+          )}
+          {lines.length ? (
+            <div className="admin-table-scroll border border-border-glass rounded-xl">
+              <table className="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Produk</th>
+                    <th>Pesan</th>
+                    <th>Packing</th>
+                    <th>Terima</th>
+                    <th>Batal</th>
+                    <th>Sisa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((i) => (
+                    <tr key={i.id}>
+                      <td>
+                        <strong>{i.productName || i.product?.name}</strong>
+                        <small>{unitDescription(i)}</small>
+                      </td>
+                      <td className="admin-numeric">{i.quantity ?? '—'}</td>
+                      <td className="admin-numeric">{i.prepared ?? 0}</td>
+                      <td className="admin-numeric">{i.accepted ?? 0}</td>
+                      <td className="admin-numeric">{i.cancelled ?? 0}</td>
+                      <td className="admin-numeric">
+                        <strong>{i.remaining ?? '—'}</strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
             <p className="sales-note">Rincian pemenuhan belum tersedia.</p>
           )}
         </section>

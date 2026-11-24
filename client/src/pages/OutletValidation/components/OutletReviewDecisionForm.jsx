@@ -1,4 +1,14 @@
 import React from 'react';
+const QUICK_REASONS = {
+  DIGITAL_KEEP: 'Identitas nama, alamat, dan titik koordinat sesuai hasil verifikasi Google.',
+  ADMIN_DIGITAL_KEEP:
+    'Kandidat Google dipilih setelah membandingkan peta, alamat, dan pembeda usaha secara langsung.',
+  FIELD_KEEP: 'Data master dan koordinat outlet sesuai bukti foto & GPS lapangan dari Sales.',
+  INTERNAL_KEEP:
+    'Data identitas dan alamat terkonfirmasi berdasarkan catatan dan konfirmasi internal.',
+  CANCEL: 'Kasus ditutup tanpa perubahan data master atau penjadwalan lanjutan.',
+};
+
 export function OutletReviewDecisionForm({
   review,
   user,
@@ -18,6 +28,7 @@ export function OutletReviewDecisionForm({
   const selected = run?.providerContent?.candidates?.find(
     (c) => c.placeId === run?.result?.selectedPlaceId
   );
+  const quickReason = QUICK_REASONS[decision];
   return (
     <form className="ov-section app-form" onSubmit={onSubmit}>
       <h3>Selesaikan pemeriksaan</h3>
@@ -29,19 +40,26 @@ export function OutletReviewDecisionForm({
               ? 'Aktif. Anda dapat menerima kandidat yang belum memenuhi syarat standar setelah meninjau peta dan perbedaannya. Identitas/cabang yang belum terpecahkan tetap harus diperjelas melalui data internal atau Sales.'
               : 'Tidak tersedia. Periksa izin keputusan dan parameter pertimbangan Admin.'}
           </p>
-          <p className="ov-muted">
-            Batas Admin: nama minimal {adminReadiness.policy.OUTLET_REVIEW_ADMIN_NAME_PERCENT}% atau
-            alamat minimal {adminReadiness.policy.OUTLET_REVIEW_ADMIN_ADDRESS_PERCENT}%, atau
-            telepon cocok. Kandidat berskor ambigu{' '}
-            {adminReadiness.policy.OUTLET_REVIEW_ADMIN_ALLOW_AMBIGUOUS
-              ? 'hanya diizinkan jika ada pembeda identitas unik'
-              : 'tidak diizinkan'}
-            ; konflik data{' '}
-            {adminReadiness.policy.OUTLET_REVIEW_ADMIN_ALLOW_CONFLICTS
-              ? 'diizinkan dengan alasan'
-              : 'tidak diizinkan'}
-            .
-          </p>
+          <details className="ov-admin-policy-details">
+            <summary>Lihat ketentuan batas pertimbangan Admin</summary>
+            <p className="ov-muted">
+              Batas Admin: nama minimal {adminReadiness.policy.OUTLET_REVIEW_ADMIN_NAME_PERCENT}%
+              atau alamat minimal {adminReadiness.policy.OUTLET_REVIEW_ADMIN_ADDRESS_PERCENT}%, atau
+              telepon cocok. Kandidat berskor ambigu{' '}
+              {adminReadiness.policy.OUTLET_REVIEW_ADMIN_ALLOW_AMBIGUOUS
+                ? 'hanya diizinkan jika ada pembeda identitas unik'
+                : 'tidak diizinkan'}
+              ; konflik data{' '}
+              {adminReadiness.policy.OUTLET_REVIEW_ADMIN_ALLOW_CONFLICTS
+                ? 'diizinkan dengan alasan'
+                : 'tidak diizinkan'}
+              .
+            </p>
+            <p className="ov-muted">
+              Atur melalui Parameter → Outlet &amp; registrasi → Validasi outlet · pertimbangan
+              Admin.
+            </p>
+          </details>
           {adminReadiness.available && !adminReadiness.canConfirm && (
             <ul>
               {adminReadiness.issues.map((i) => (
@@ -61,9 +79,6 @@ export function OutletReviewDecisionForm({
               Gunakan pertimbangan Admin
             </button>
           )}
-          <p className="ov-muted">
-            Atur melalui Parameter → Outlet &amp; registrasi → Validasi outlet · pertimbangan Admin.
-          </p>
         </div>
       )}
       <label className="app-field">
@@ -127,6 +142,16 @@ export function OutletReviewDecisionForm({
       )}
       <label className="app-field">
         {adminMode ? 'Alasan Admin menerima kandidat ini' : 'Alasan keputusan'}
+        {quickReason && (
+          <button
+            type="button"
+            className="outlet-pill"
+            disabled={busy}
+            onClick={() => draft.field('reason')(quickReason)}
+          >
+            Pakai alasan standar
+          </button>
+        )}
         <textarea
           value={d.reason}
           onChange={(e) => draft.field('reason')(e.target.value)}

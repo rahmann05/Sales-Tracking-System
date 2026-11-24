@@ -14,7 +14,16 @@ export async function clusterTeamOptions(actor) {
         deletedAt: null,
         ...(actor.role === 'SUPERVISOR' ? { supervisorId: actor.id } : {}),
       },
-      select: { id: true, name: true, supervisorId: true },
+      select: {
+        id: true,
+        name: true,
+        supervisorId: true,
+        assignedClusters: {
+          where: { deletedAt: null },
+          select: { id: true, name: true, region: true },
+          orderBy: { name: 'asc' },
+        },
+      },
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
@@ -23,7 +32,15 @@ export async function clusterTeamOptions(actor) {
         deletedAt: null,
         ...(actor.role === 'SUPERVISOR' ? { id: actor.id } : {}),
       },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        _count: {
+          select: {
+            teamMembers: { where: { role: 'SALES', deletedAt: null } },
+          },
+        },
+      },
       orderBy: { name: 'asc' },
     }),
   ]);

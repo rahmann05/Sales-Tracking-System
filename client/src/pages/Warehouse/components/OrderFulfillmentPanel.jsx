@@ -91,6 +91,54 @@ export function OrderFulfillmentPanel({ orders: provided, onSelect, onChanged, r
           {error}
         </p>
       )}
+      <div className="logistics-kpi-strip" role="group" aria-label="Filter pemenuhan order">
+        {[
+          [
+            'ALL',
+            'Order terbuka',
+            orders.filter(
+              (o) =>
+                o.status !== 'REJECTED' &&
+                !['FULFILLED', 'CLOSED_WITH_CANCELLATION'].includes(o.fulfillmentStatus)
+            ).length,
+          ],
+          [
+            'PENDING_APPROVAL',
+            'Menunggu keputusan',
+            orders.filter((o) => o.status === 'PENDING_APPROVAL').length,
+          ],
+          [
+            'PARTIAL',
+            'Diterima sebagian',
+            orders.filter((o) => o.fulfillmentStatus === 'PARTIAL').length,
+          ],
+          [
+            'LATE',
+            'Lewat janji kirim',
+            orders.filter(
+              (o) =>
+                o.status !== 'REJECTED' &&
+                !['FULFILLED', 'CLOSED_WITH_CANCELLATION'].includes(o.fulfillmentStatus) &&
+                o.promisedAt &&
+                new Date(o.promisedAt) < new Date()
+            ).length,
+          ],
+        ].map(([key, label, count]) => (
+          <button
+            key={key}
+            type="button"
+            className="logistics-kpi-card"
+            aria-pressed={status === key}
+            onClick={() => {
+              setStatus(key);
+              setPage(1);
+            }}
+          >
+            <span>{label}</span>
+            <strong>{count}</strong>
+          </button>
+        ))}
+      </div>
       <div className="flex flex-wrap gap-3">
         <label>
           Cari order / pelanggan

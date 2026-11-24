@@ -57,11 +57,16 @@ export function ClusterOutletsModal({ cluster, onClose, onSaved }) {
     setBusy(true);
     setError('');
     try {
-      if (!review) {
-        setReview((await clustersApi.impact({ clusterId: cluster.id, outletIds: selected })).data);
-        return;
+      let activeReview = review;
+      if (!activeReview) {
+        activeReview = (await clustersApi.impact({ clusterId: cluster.id, outletIds: selected }))
+          .data;
+        if (activeReview.requiresConfirmation) {
+          setReview(activeReview);
+          return;
+        }
       }
-      await clustersApi.updateOutlets(cluster.id, selected, review.token);
+      await clustersApi.updateOutlets(cluster.id, selected, activeReview.token);
       onClose();
       await onSaved();
       window.dispatchEvent(new CustomEvent('operational-data-changed'));
@@ -161,7 +166,11 @@ export function ClusterOutletsModal({ cluster, onClose, onSaved }) {
             onClick={save}
             disabled={busy || loading || !outlets.length}
           >
-            {busy ? 'Memproses…' : review ? 'Simpan anggota outlet' : 'Tinjau perpindahan outlet'}
+            {busy
+              ? 'Memproses…'
+              : review
+                ? 'Konfirmasi perpindahan outlet'
+                : 'Simpan anggota outlet'}
           </button>
         </div>
       </div>

@@ -45,6 +45,8 @@ export function DriverFieldView() {
     next = nextDeliveryStop(stops),
     selected = stops.find((s) => s.id === selectedStopId) || next || stops[0],
     progress = routeProgress(trip || {});
+  const totalRejectedCartons = stops.reduce((sum, s) => sum + Number(s.rejectedCartons || 0), 0);
+  const rejectedStopsCount = stops.filter((s) => Number(s.rejectedCartons || 0) > 0).length;
   const visitGroups = deliveryVisitGroups(stops);
   const visit = visitGroups.find((group) => group.stops.some((stop) => stop.id === selected?.id));
   const selectedVisitIndex = visitGroups.findIndex((group) =>
@@ -211,6 +213,13 @@ export function DriverFieldView() {
                   ? 'Langkah berikutnya: konfirmasi keberangkatan'
                   : 'Langkah berikutnya: konfirmasi kembali ke gudang'}
               </h2>
+              {['COMPLETED', 'PARTIAL'].includes(trip.status) && totalRejectedCartons > 0 && (
+                <p role="status" className="admin-feedback error">
+                  Barang retur dibawa kembali: <strong>{totalRejectedCartons} karton</strong> dari{' '}
+                  <strong>{rejectedStopsCount}</strong> toko wajib diserahkan ke Kepala Gudang saat
+                  tiba untuk pemeriksaan retur.
+                </p>
+              )}
               <fieldset disabled={!!error}>
                 <RouteOperationsActions key={trip.id} route={trip} driver onChanged={refresh} />
               </fieldset>

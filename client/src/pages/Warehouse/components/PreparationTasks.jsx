@@ -17,11 +17,23 @@ const prepInstructionPresets = [
   'Penyesuaian penugasan petugas pemeriksa gudang',
 ];
 const stamp = (v) => `${new Date(v).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`;
+const defaultDueWib = () =>
+  new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+    .format(new Date(Date.now() + 2 * 3600000))
+    .replace(' ', 'T');
 export function PreparationTasks({ route, people, onChanged, canManage }) {
   const { user } = useApp();
   const [stage, setStage] = useState('PICK'),
     [owner, setOwner] = useState(''),
-    [due, setDue] = useState(''),
+    [due, setDue] = useState(defaultDueWib),
     [note, setNote] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');

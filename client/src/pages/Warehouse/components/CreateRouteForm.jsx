@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { LuArrowUp, LuArrowDown, LuX, LuSearch } from 'react-icons/lu';
 import { deliveryApi, vehiclesApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
 import { useFeaturePolicy } from '../../../shared/hooks/useFeaturePolicy';
 import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
@@ -72,7 +73,7 @@ const capacityReasonPresets = [
 
 export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] }) {
   const operation = useOperationRequest('delivery-route');
-  const { settings } = useApp(),
+  const { settings, user, setActiveTab } = useApp(),
     feature = useFeaturePolicy('DELIVERY'),
     depots = parseDeliveryDepots(settings.DELIVERY_DEPOT_LOCATIONS || DEFAULT_DELIVERY_DEPOTS);
   const [code, setCode] = useState(''),
@@ -132,14 +133,16 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
           page++;
         }
         if (!active) return;
+        const driverList = d.data || [];
         setVehicles(v.data || []);
-        setDrivers(d.data || []);
+        setDrivers(driverList);
         setPackings(documents);
         const selectedDocs = documents.filter(
           (pl) => initialPackingIds.includes(pl.id) && pl.remainingCartons > 0 && ready(pl)
         );
         const selected = selectedDocs.flatMap(entriesFor);
         const suggested = selectedDocs.length === 1 ? selectedDocs[0].suggestedVehicleId || '' : '';
+        const defaultDriver = !driverId && driverList.length === 1 ? driverList[0].id : driverId;
         initial.current = JSON.stringify([
           code,
           date,
@@ -148,7 +151,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
           departure,
           returnId,
           suggested,
-          driverId,
+          defaultDriver,
           notes,
           selected,
           capacityReason,
@@ -156,6 +159,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
         ]);
         setEntries(selected);
         setVehicleId(suggested);
+        if (defaultDriver !== driverId) setDriverId(defaultDriver);
         if (selectedDocs.some(isVehicleLoad) && selectedDocs.length > 1)
           setError(
             'Satu muatan kendaraan harus dijadwalkan sendiri. Hapus packing list lain dari pilihan.'
@@ -194,8 +198,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
   const selectedDocs = packings.filter((pl) =>
       entries.some((entry) => entry.packingListId === pl.id)
     ),
-    suggestedVehicleId =
-      selectedDocs.find((pl) => pl.suggestedVehicleId)?.suggestedVehicleId || '',
+    suggestedVehicleId = selectedDocs.find((pl) => pl.suggestedVehicleId)?.suggestedVehicleId || '',
     suggestedVehicle = vehicles.find((row) => row.id === suggestedVehicleId),
     changedSuggestion = selectedDocs.some(
       (pl) => pl.suggestedVehicleId && pl.suggestedVehicleId !== vehicleId
@@ -365,13 +368,31 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
                 </div>
               ))}
               {!loading && !available.length && (
-                <p className="admin-empty">
-                  {query
-                    ? 'Tidak ada muatan yang cocok. Ubah pencarian.'
-                    : entries.length
-                      ? 'Seluruh muatan yang tersedia sudah dipilih.'
-                      : 'Belum ada dokumen muatan yang menunggu dijadwalkan. Admin perlu menyerahkan dokumen lengkap terlebih dahulu.'}
-                </p>
+                <div className="admin-empty space-y-2">
+                  <p>
+                    {query
+                      ? 'Tidak ada muatan yang cocok. Ubah pencarian.'
+                      : entries.length
+                        ? 'Seluruh muatan yang tersedia sudah dipilih.'
+                        : 'Belum ada dokumen muatan yang menunggu dijadwalkan. Admin perlu menyerahkan dokumen lengkap terlebih dahulu.'}
+                  </p>
+                  {!query && !entries.length && (
+                    <button
+                      type="button"
+                      className="admin-button"
+                      onClick={() => {
+                        if (
+                          window.dispatchEvent(
+                            new CustomEvent('app:before-navigate', { cancelable: true })
+                          )
+                        )
+                          setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST);
+                      }}
+                    >
+                      Buka Packing List
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </section>
@@ -687,10 +708,30 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
             </p>
           ) : (
             !vehicle?.photoUrl && (
-              <p role="status" className="admin-feedback error">
-                Foto kendaraan belum tersedia. Lengkapi foto asli melalui Kendaraan &amp; servis
-                sebelum menyimpan perjalanan.
-              </p>
+              <div role="status" className="admin-feedback error space-y-2">
+                <p>
+                  Foto kendaraan belum tersedia. Lengkapi foto asli melalui Kendaraan &amp; servis
+                  sebelum menyimpan perjalanan.
+                </p>
+                <button
+                  type="button"
+                  className="admin-button"
+                  onClick={() => {
+                    if (
+                      window.dispatchEvent(
+                        new CustomEvent('app:before-navigate', { cancelable: true })
+                      )
+                    )
+                      setActiveTab(
+                        user?.role === 'KEPALA_GUDANG'
+                          ? TAB_IDS.WAREHOUSE_VEHICLES
+                          : TAB_IDS.ADMIN_VEHICLES
+                      );
+                  }}
+                >
+                  Buka Kendaraan &amp; servis
+                </button>
+              </div>
             )
           )}
           {!driverId && (

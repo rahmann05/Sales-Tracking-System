@@ -1,5 +1,8 @@
 import React from 'react';
 import { LuTrash2 } from 'react-icons/lu';
+import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import { deliveryRouteLabel, deliveryStopLabel } from '../deliveryLabels';
 import { orderedStops, stopDestinationOutlet } from '../../../../../shared/driver-workspace.mjs';
 import { outletOperationalPoint } from '../../../../../shared/outlet-location.mjs';
@@ -29,6 +32,7 @@ const resolveCoords = (stop) => {
     : null;
 };
 export function WarehouseRouteSummary({ route, onDelete }) {
+  const { user, setActiveTab } = useApp();
   return (
     <section className="admin-panel logistics-document">
       <div className="admin-panel-heading">
@@ -108,9 +112,27 @@ export function WarehouseRouteSummary({ route, onDelete }) {
               return (
                 <tr key={s.id}>
                   <td>
-                    <strong>
-                      {i + 1}. {s.outlet?.name}
-                    </strong>
+                    {user?.role === 'ADMIN' && s.outletId ? (
+                      <button
+                        type="button"
+                        className="admin-table-link"
+                        onClick={() => {
+                          setWorkspaceValues(
+                            { outletId: s.outletId },
+                            { tab: TAB_IDS.OUTLET_MANAGEMENT }
+                          );
+                          setActiveTab(TAB_IDS.OUTLET_MANAGEMENT);
+                        }}
+                      >
+                        <strong>
+                          {i + 1}. {s.outlet?.name}
+                        </strong>
+                      </button>
+                    ) : (
+                      <strong>
+                        {i + 1}. {s.outlet?.name}
+                      </strong>
+                    )}
                     <span className="block admin-footnote">{s.outlet?.address}</span>
                   </td>
                   <td>
@@ -133,7 +155,25 @@ export function WarehouseRouteSummary({ route, onDelete }) {
                       <span className="admin-footnote">Titik belum tersedia</span>
                     )}
                   </td>
-                  <td>{s.packingList?.code || 'Dokumen belum tersedia'}</td>
+                  <td>
+                    {s.packingListId ? (
+                      <button
+                        type="button"
+                        className="admin-table-link"
+                        onClick={() => {
+                          setWorkspaceValues(
+                            { packingDetail: s.packingListId },
+                            { tab: TAB_IDS.DELIVERY_PACKING_LIST }
+                          );
+                          setActiveTab(TAB_IDS.DELIVERY_PACKING_LIST);
+                        }}
+                      >
+                        <strong>{s.packingList?.code || 'Buka dokumen'}</strong>
+                      </button>
+                    ) : (
+                      'Dokumen belum tersedia'
+                    )}
+                  </td>
                   <td>{s.allocatedCartons ?? 0} karton</td>
                   <td>{deliveryStopLabel(s.status)}</td>
                 </tr>

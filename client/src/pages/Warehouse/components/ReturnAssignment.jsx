@@ -25,7 +25,11 @@ const formatWibInput = (iso) => {
 
 export function ReturnAssignment({ stop, task, people, canManage = true, onChanged }) {
   const [ownerId, setOwnerId] = useState(task?.ownerId || ''),
-    [due, setDue] = useState(() => formatWibInput(task?.dueAt)),
+    [due, setDue] = useState(
+      () =>
+        formatWibInput(task?.dueAt) ||
+        formatWibInput(new Date(Date.now() + 4 * 3600000).toISOString())
+    ),
     [reason, setReason] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -54,11 +58,12 @@ export function ReturnAssignment({ stop, task, people, canManage = true, onChang
   return (
     <details className="admin-trip-history">
       <summary>
-        Alihkan pemeriksaan barang kembali (opsional) · {task?.ownerName || 'Tim gudang'}
+        Delegasikan pemeriksa retur khusus (opsional) ·{' '}
+        {task?.ownerName || 'Siap diperiksa tim gudang'}
       </summary>
       <p>
-        Tim gudang dapat langsung memeriksa barang. Pilih petugas khusus hanya bila perlu membagi
-        pekerjaan.
+        Tim gudang dapat langsung memeriksa barang di panel pemeriksaan retur di bawah tanpa perlu
+        mengisi formulir delegasi ini.
       </p>
       <form className="app-form" onSubmit={save}>
         <label className="app-field">

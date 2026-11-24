@@ -77,6 +77,23 @@ export const updateCluster = async (id, data, actor) => {
         where: { id: assignedSalesId, clusterId: null },
         data: { clusterId: id },
       });
+    if (
+      assignedSalesId !== undefined &&
+      previous?.assignedSalesId &&
+      previous.assignedSalesId !== (assignedSalesId || null)
+    ) {
+      const remainingCluster = await tx.cluster.findFirst({
+        where: { assignedSalesId: previous.assignedSalesId, deletedAt: null, id: { not: id } },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (remainingCluster) {
+        await tx.user.updateMany({
+          where: { id: previous.assignedSalesId, clusterId: null },
+          data: { clusterId: remainingCluster.id },
+        });
+      }
+    }
     return result;
   });
   invalidateClusterCache(id);

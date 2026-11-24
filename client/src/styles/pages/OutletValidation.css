@@ -315,10 +315,138 @@
 }
 .ov-filters {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(180px, 240px) auto;
+  grid-template-columns: minmax(190px, 1.3fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
   align-items: end;
-  gap: 16px;
+  gap: 14px;
   margin-bottom: 18px;
+}
+.ov-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ov-summary-strip button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  font: inherit;
+  cursor: pointer;
+  color: #475569;
+  min-height: 52px;
+}
+.ov-summary-strip button:hover {
+  border-color: #93c5fd;
+}
+.ov-summary-strip button[aria-pressed='true'] {
+  background: #f0f6ff;
+  border-color: #1b66ca;
+  color: #1b66ca;
+}
+.ov-summary-strip strong {
+  font-size: 20px;
+  font-weight: 700;
+  color: #01144c;
+  font-variant-numeric: tabular-nums;
+}
+.ov-flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ov-flow-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+.ov-flow-steps li > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ov-flow-steps li > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.ov-flow-steps li strong {
+  font-size: 13px;
+  color: #01144c;
+}
+.ov-flow-steps li small {
+  font-size: 11.5px;
+  color: #64748b;
+}
+.ov-flow-steps li[data-state='active'] {
+  border-color: #1b66ca;
+  background: #f0f6ff;
+}
+.ov-flow-steps li[data-state='active'] > span {
+  background: #1b66ca;
+  color: #ffffff;
+}
+.ov-flow-steps li[data-state='done'] {
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+}
+.ov-flow-steps li[data-state='done'] > span {
+  background: #0f766e;
+  color: #ffffff;
+}
+.ov-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ov-inline-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #fed7aa;
+  background: #fffbeb;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #92400e;
+}
+.ov-admin-policy-details {
+  margin-top: 6px;
+}
+.ov-admin-policy-details summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1b66ca;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.ov-picker-filters {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.3fr) repeat(2, minmax(130px, 1fr));
+  gap: 10px;
+}
+.ov-picker-flags {
+  color: #b45309 !important;
+  font-weight: 500;
 }
 .ov-table-wrap {
   overflow: auto;
@@ -573,7 +701,10 @@
 }
 @media (max-width: 767px) {
   .ov-form-grid,
-  .ov-filters {
+  .ov-filters,
+  .ov-summary-strip,
+  .ov-flow-steps,
+  .ov-picker-filters {
     grid-template-columns: 1fr;
   }
   .ov-filters .app-button {

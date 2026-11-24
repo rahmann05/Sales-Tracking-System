@@ -301,7 +301,7 @@ export function classifyUiOperation({ tag, event, handler = '', file, submitHand
     return 'NAVIGATION_FILTER';
   if (/\bonChange\(/.test(text)) return 'LOCAL_INPUT';
   if (
-    /(?:\{\(\) => \{\}\}|handleUnlockGooglePlace|stop\.current\s*=\s*true|hoveredRef\.current\s*=|applySuggestions|importTemplates|copyNext|\{capture\}|\{gps\}|field\('photo')/.test(
+    /(?:\{\(\) => \{\}\}|handleUnlockGooglePlace|stop\.current\s*=\s*true|hoveredRef\.current\s*=|applySuggestions|importTemplates|importClusterOutlets|copyNext|\{capture\}|\{gps\}|field\('photo')/.test(
       text
     )
   )
@@ -356,7 +356,7 @@ export function classifyUiOperation({ tag, event, handler = '', file, submitHand
   )
     return 'NAVIGATION_FILTER';
   if (
-    /(?:onCapture|handleCapture|handleRetake|onRetake|onSignature|onEvidence|saveGps|draft\.edit|draft\.field|draft\.setValue|\.setOutletName|\.setCustomerName|\.setPhone|handleAddressChange|onQtyChange|updateProductQty|moveStop|addPackingList|removePackingList|addPacking\(|removeOrder\(|addOutlet\(|updateField|bulk\(|\{add\}|update\(items|update\(\[|onInherit|onReset|handleApplyTemplate|handleCloneChange|editor\.inherit|editor\.discard|current\??\.click\(|onNativeFileInput|handleNativeFileInput)/.test(
+    /(?:onCapture|handleCapture|handleRetake|onRetake|onSignature|onEvidence|saveGps|draft\.edit|draft\.field|draft\.setValue|\.field\(|prefillProposal|clearBatch|onClearBatch|onToggleBatch|selectBulkOutlets|clearSelectedOutlets|\.setOutletName|\.setCustomerName|\.setPhone|handleAddressChange|onQtyChange|updateProductQty|moveStop|addPackingList|removePackingList|addPacking\(|removeOrder\(|addOutlet\(|updateField|bulk\(|\{add\}|update\(items|update\(\[|onInherit|onReset|handleApplyTemplate|handleCloneChange|editor\.inherit|editor\.discard|current\??\.click\(|onNativeFileInput|handleNativeFileInput)/.test(
       text
     )
   )

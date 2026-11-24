@@ -95,7 +95,7 @@ export function useInputOrderState({ stop, onSubmitOrder, adminPlaceId }) {
     pending?.pricing ||
     orderPricing(
       orderItems.map((i) => ({ unitPrice: i.product.price, quantity: i.qty })),
-      Number(settings.TAX_RATE_PERCENT ?? 11),
+      Number(settings.TAX_RATE_PERCENT ?? 0),
       settings.ORDER_PRICES_INCLUDE_TAX !== false,
       settings.ORDER_TAX_ROUNDING_MODE || 'NEAREST'
     );

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { deliveryApi, vehiclesApi, outletsApi } from '../../../services/api';
 import { useApp } from '../../../context/AppContext';
+import { TAB_IDS } from '../../../constants/navigation';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import { useFeaturePolicy } from '../../../shared/hooks/useFeaturePolicy';
 import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
 import { useOperationRequest } from '../../../shared/hooks/useOperationRequest';
@@ -8,6 +10,28 @@ import { BusinessCodeInput } from '../../../shared/components/common/BusinessCod
 import { InvoiceLinesEditor } from './InvoiceLinesEditor';
 import { loadLogistics, capacityGuidance } from '../../../../../shared/packing-load.mjs';
 import { shipmentInvoiceRequired } from '../../../../../shared/shipment-document.mjs';
+import { manualCodeRequired } from '../../../../../shared/coding.mjs';
+import {
+  orderPricing,
+  hasCompleteTaxTerms,
+  resolveTaxIncluded,
+} from '../../../../../shared/order-pricing.mjs';
+
+function computeInvoiceValue(invoice) {
+  if (
+    invoice?.items?.length &&
+    invoice.items.every((i) => Number.isFinite(i.unitPrice) && i.unitPrice >= 0) &&
+    hasCompleteTaxTerms(invoice.taxRatePercent, invoice.taxIncluded)
+  ) {
+    return orderPricing(
+      invoice.items,
+      invoice.taxRatePercent,
+      resolveTaxIncluded(invoice.taxRatePercent, invoice.taxIncluded),
+      invoice.taxRoundingMode || 'NEAREST'
+    ).totalValue;
+  }
+  return null;
+}
 
 const packingOverridePresets = [
   'Order mendesak sesuai arahan Supervisor / Admin',
@@ -92,13 +116,15 @@ function initialLoad(doc, orders) {
         unit: line.unit || 'unit',
         unitPrice: line.unitPrice,
       }));
+    const defaultCartons = lines.length > 0 ? 1 : 0;
+    destination.totalCartons += defaultCartons;
     items.push(...lines);
     invoices.push({
       tempId: crypto.randomUUID(),
       invoiceNumber: '',
       destinationId: destination.id,
       sourceOrderIds: [order.id],
-      totalCartons: 0,
+      totalCartons: defaultCartons,
       totalAmount: '',
       items: lines.map((line) => ({
         lineId: line.lineId,
@@ -114,7 +140,7 @@ function initialLoad(doc, orders) {
 }
 
 export function PackingLoadForm({ document: doc, order, orders, onSaved, onCancel }) {
-  const { settings } = useApp(),
+  const { settings, setActiveTab } = useApp(),
     feature = useFeaturePolicy('PACKING'),
     operation = useOperationRequest('packing-load');
   const [load, setLoad] = useState(() => initialLoad(doc, orders || (order ? [order] : [])));
@@ -212,7 +238,10 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
       releaseIssues.push(`${dest.outlet.name}: faktur wajib dilampirkan.`);
     if (destInvoices.some((inv) => Number(inv.totalCartons) <= 0))
       releaseIssues.push(`${dest.outlet.name}: karton tiap faktur harus > 0.`);
-    if (destInvoices.some((inv) => !String(inv.invoiceNumber || '').trim()))
+    if (
+      manualCodeRequired('INVOICE', settings) &&
+      destInvoices.some((inv) => !String(inv.invoiceNumber || '').trim())
+    )
       releaseIssues.push(`${dest.outlet.name}: nomor faktur masih kosong.`);
   }
   const setInvoice = (index, invoice) =>
@@ -303,7 +332,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
           totalCartons: 0,
           totalAmount: '',
           items: [],
-          taxRatePercent: Number(settings.TAX_RATE_PERCENT ?? 11),
+          taxRatePercent: Number(settings.TAX_RATE_PERCENT ?? 0),
           taxIncluded: settings.ORDER_PRICES_INCLUDE_TAX !== false,
           taxRoundingMode: 'NEAREST',
         },
@@ -428,9 +457,9 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
   return (
     <form onSubmit={save} className="admin-panel p-5 space-y-5">
       <div className="work-step-intro">
-        <strong>Satu packing list untuk satu muatan kendaraan</strong>Pilih barang per order,
-        lampirkan faktur untuk toko masing-masing, lalu periksa total muatan. Kepala gudang
-        menentukan kendaraan akhir dan urutan pengiriman.
+        <strong>Satu packing list untuk satu muatan kendaraan</strong>Periksa jumlah barang yang
+        dibawa dan isi jumlah karton/koli fisik per toko. Nomor serta nilai faktur terbentuk
+        otomatis dari order.
       </div>
       {error && (
         <p ref={errorRef} tabIndex={-1} role="alert" className="admin-feedback error">
@@ -445,380 +474,585 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
               Pilih order atau tambahkan tujuan untuk mulai menyusun muatan.
             </p>
           )}
-          {destinations.map((destination, index) => (
-            <section key={destination.id} className="work-target-card space-y-4">
-              <header>
-                <h3 className="font-semibold">
-                  {index + 1}. {destination.outlet.name}
-                </h3>
-                <p>{destination.outlet.address}</p>
-                <p className="admin-footnote">
-                  {destination.sourceOrderIds.length} order · {destination.totalCartons} karton
-                </p>
-                {destination.point ? (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${destination.point.latitude},${destination.point.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="admin-table-link"
-                  >
-                    {destination.point.latitude.toFixed(6)},{' '}
-                    {destination.point.longitude.toFixed(6)} · Google Maps
-                  </a>
-                ) : (
-                  <p className="text-amber-700">
-                    Titik belum tersedia. Lengkapi titik order/toko sebelum diserahkan.
-                  </p>
-                )}
-              </header>
-              {destination.sourceOrderIds.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {destination.sourceOrderIds.map((id) => (
+          {destinations.map((destination, index) => {
+            const destInvoices = load.invoices
+              .map((inv, idx) => ({ inv, idx }))
+              .filter(({ inv }) => inv.destinationId === destination.id);
+            const orderLinked = destination.sourceOrderIds.length > 0;
+            const manualInvoiceCode = manualCodeRequired('INVOICE', settings);
+            const streamlinedInvoice =
+              orderLinked && !manualInvoiceCode && destInvoices.length === 1;
+            return (
+              <section key={destination.id} className="work-target-card space-y-4">
+                <header className="packing-target-head">
+                  <div className="packing-target-title">
+                    <span className="app-sequence">{index + 1}</span>
+                    <div>
+                      <h3 className="font-semibold text-base">{destination.outlet.name}</h3>
+                      <p className="text-xs text-on-surface-variant">
+                        {destination.outlet.address}
+                      </p>
+                      <div className="packing-target-meta">
+                        <span>{destination.sourceOrderIds.length} order</span>
+                        <span>·</span>
+                        <span>{destination.totalCartons} karton</span>
+                        {destination.point ? (
+                          <>
+                            <span>·</span>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${destination.point.latitude},${destination.point.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="admin-table-link"
+                            >
+                              {destination.point.latitude.toFixed(6)},{' '}
+                              {destination.point.longitude.toFixed(6)} · Google Maps
+                            </a>
+                          </>
+                        ) : (
+                          <>
+                            <span className="admin-status admin-status-pending">
+                              Titik belum tersedia — lengkapi sebelum diserahkan
+                            </span>
+                            {destination.outletId && (
+                              <button
+                                type="button"
+                                className="admin-button"
+                                onClick={() => {
+                                  if (
+                                    window.dispatchEvent(
+                                      new CustomEvent('app:before-navigate', { cancelable: true })
+                                    )
+                                  ) {
+                                    setWorkspaceValues(
+                                      { outletId: destination.outletId },
+                                      { tab: TAB_IDS.OUTLET_MANAGEMENT }
+                                    );
+                                    setActiveTab(TAB_IDS.OUTLET_MANAGEMENT);
+                                  }
+                                }}
+                              >
+                                Lengkapi di Master Outlet
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {destination.sourceOrderIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {destination.sourceOrderIds.map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className="admin-button"
+                          onClick={() => removeOrder(id)}
+                        >
+                          Keluarkan order{' '}
+                          {load.items.find((item) => item.sourceOrderId === id)?.sourceOrderCode ||
+                            id.slice(0, 8)}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
                     <button
-                      key={id}
                       type="button"
                       className="admin-button"
-                      onClick={() => removeOrder(id)}
+                      onClick={() =>
+                        setLoad((current) => ({
+                          ...current,
+                          destinations: current.destinations.filter((d) => d.id !== destination.id),
+                          items: current.items.filter((it) => it.destinationId !== destination.id),
+                          invoices: current.invoices.filter(
+                            (inv) => inv.destinationId !== destination.id
+                          ),
+                        }))
+                      }
                     >
-                      Keluarkan order{' '}
-                      {load.items.find((item) => item.sourceOrderId === id)?.sourceOrderCode ||
-                        id.slice(0, 8)}
+                      Hapus tujuan manual ini
                     </button>
-                  ))}
+                  )}
+                </header>
+                <div className="admin-table-scroll">
+                  <table className="admin-data-table">
+                    <caption>
+                      Barang untuk tujuan ini; kuantitas produk berbeda dari karton. Isi 0 untuk
+                      produk order yang belum dibawa.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th>Order / produk</th>
+                        <th>Dibawa</th>
+                        <th>Satuan</th>
+                        {!destination.sourceOrderIds.length && <th>Aksi</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {load.items
+                        .filter((item) => item.destinationId === destination.id)
+                        .map((item) => (
+                          <tr key={item.lineId}>
+                            <td>
+                              {item.sourceOrderCode && (
+                                <small className="packing-order-code">{item.sourceOrderCode}</small>
+                              )}
+                              {item.sourceOrderId ? (
+                                <strong>{item.name}</strong>
+                              ) : (
+                                <label className="app-field">
+                                  Nama produk
+                                  <input
+                                    className="form-input"
+                                    required
+                                    value={item.name}
+                                    onChange={(e) =>
+                                      setLoad((current) => ({
+                                        ...current,
+                                        items: current.items.map((row) =>
+                                          row.lineId === item.lineId
+                                            ? { ...row, name: e.target.value }
+                                            : row
+                                        ),
+                                      }))
+                                    }
+                                  />
+                                </label>
+                              )}
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  className="form-input w-24 text-right"
+                                  aria-label={`Jumlah dibawa ${item.name}`}
+                                  type="number"
+                                  min={item.sourceOrderId ? 0 : 1}
+                                  max={item.maxQuantity}
+                                  required
+                                  step="1"
+                                  value={item.quantity}
+                                  onChange={(e) => setQuantity(item.lineId, Number(e.target.value))}
+                                />
+                                {item.maxQuantity != null && (
+                                  <small className="admin-footnote whitespace-nowrap">
+                                    Maks. {item.maxQuantity}
+                                  </small>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              {item.sourceOrderId ? (
+                                item.unit
+                              ) : (
+                                <label className="app-field">
+                                  Satuan
+                                  <input
+                                    className="form-input w-24"
+                                    required
+                                    value={item.unit}
+                                    onChange={(e) =>
+                                      setLoad((current) => ({
+                                        ...current,
+                                        items: current.items.map((row) =>
+                                          row.lineId === item.lineId
+                                            ? { ...row, unit: e.target.value }
+                                            : row
+                                        ),
+                                      }))
+                                    }
+                                  />
+                                </label>
+                              )}
+                            </td>
+                            {!destination.sourceOrderIds.length && (
+                              <td>
+                                <button
+                                  type="button"
+                                  className="admin-button"
+                                  onClick={() =>
+                                    setLoad((current) => ({
+                                      ...current,
+                                      items: current.items.filter(
+                                        (row) => row.lineId !== item.lineId
+                                      ),
+                                    }))
+                                  }
+                                >
+                                  Hapus
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
+                {!destination.sourceOrderIds.length && (
                   <button
                     type="button"
                     className="admin-button"
                     onClick={() =>
                       setLoad((current) => ({
                         ...current,
-                        destinations: current.destinations.filter((d) => d.id !== destination.id),
-                        items: current.items.filter((it) => it.destinationId !== destination.id),
-                        invoices: current.invoices.filter(
-                          (inv) => inv.destinationId !== destination.id
-                        ),
+                        items: [
+                          ...current.items,
+                          {
+                            lineId: crypto.randomUUID(),
+                            destinationId: destination.id,
+                            name: '',
+                            sku: '',
+                            quantity: 1,
+                            unit: 'unit',
+                          },
+                        ],
                       }))
                     }
                   >
-                    Hapus tujuan manual ini
+                    Tambah produk untuk toko ini
                   </button>
-                </div>
-              )}
-              <div className="admin-table-scroll">
-                <table className="admin-data-table">
-                  <caption>
-                    Barang untuk tujuan ini; kuantitas produk berbeda dari karton. Isi 0 untuk
-                    produk order yang belum dibawa.
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th>Order / produk</th>
-                      <th>Dibawa</th>
-                      <th>Satuan</th>
-                      {!destination.sourceOrderIds.length && <th>Aksi</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {load.items
-                      .filter((item) => item.destinationId === destination.id)
-                      .map((item) => (
-                        <tr key={item.lineId}>
-                          <td>
-                            {item.sourceOrderCode && <small>{item.sourceOrderCode}</small>}
-                            {item.sourceOrderId ? (
-                              <strong>{item.name}</strong>
-                            ) : (
-                              <label>
-                                Nama produk
-                                <input
-                                  className="form-input"
-                                  required
-                                  value={item.name}
-                                  onChange={(e) =>
-                                    setLoad((current) => ({
-                                      ...current,
-                                      items: current.items.map((row) =>
-                                        row.lineId === item.lineId
-                                          ? { ...row, name: e.target.value }
-                                          : row
-                                      ),
-                                    }))
-                                  }
-                                />
-                              </label>
-                            )}
-                          </td>
-                          <td>
+                )}
+                {streamlinedInvoice ? (
+                  (() => {
+                    const { inv: singleInvoice, idx: singleIdx } = destInvoices[0];
+                    const autoVal = computeInvoiceValue(singleInvoice);
+                    const orderCode =
+                      singleInvoice.sourceOrderIds
+                        .map(
+                          (id) =>
+                            load.items.find((item) => item.sourceOrderId === id)?.sourceOrderCode ||
+                            id.slice(0, 8)
+                        )
+                        .join(', ') || '-';
+                    return (
+                      <div className="space-y-3">
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          <label className="app-field">
+                            Jumlah karton / koli fisik
                             <input
-                              className="form-input w-24"
-                              aria-label={`Jumlah dibawa ${item.name}`}
+                              className="form-input block w-full"
+                              aria-label={`Jumlah karton ${destination.outlet.name}`}
                               type="number"
-                              min={item.sourceOrderId ? 0 : 1}
-                              max={item.maxQuantity}
-                              required
+                              min="0"
                               step="1"
-                              value={item.quantity}
-                              onChange={(e) => setQuantity(item.lineId, Number(e.target.value))}
+                              required
+                              value={singleInvoice.totalCartons}
+                              onChange={(e) =>
+                                setInvoice(singleIdx, {
+                                  ...singleInvoice,
+                                  totalCartons: Number(e.target.value),
+                                })
+                              }
                             />
-                            {item.maxQuantity != null && <small>Maks. {item.maxQuantity}</small>}
-                          </td>
-                          <td>
-                            {item.sourceOrderId ? (
-                              item.unit
-                            ) : (
-                              <label>
-                                Satuan
+                            <div className="logistics-preset-chips pt-1">
+                              {[1, 2, 5, 10].map((val) => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  className="logistics-preset-chip"
+                                  onClick={() =>
+                                    setInvoice(singleIdx, { ...singleInvoice, totalCartons: val })
+                                  }
+                                >
+                                  {val} krt
+                                </button>
+                              ))}
+                            </div>
+                          </label>
+                          <label className="app-field">
+                            Perkiraan berat tujuan ini (kg, opsional)
+                            <input
+                              className="form-input block w-full"
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={destination.totalWeight ?? ''}
+                              placeholder="Belum diketahui"
+                              onChange={(e) =>
+                                setLoad((current) => ({
+                                  ...current,
+                                  destinations: current.destinations.map((row) =>
+                                    row.id === destination.id
+                                      ? {
+                                          ...row,
+                                          totalWeight:
+                                            e.target.value === '' ? null : Number(e.target.value),
+                                        }
+                                      : row
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                        </div>
+                        <div className="packing-auto-invoice-card">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <strong className="text-xs text-on-surface">
+                              Faktur otomatis dari Order {orderCode}
+                            </strong>
+                            <span className="admin-status admin-status-released">Otomatis</span>
+                          </div>
+                          <p className="text-xs text-on-surface-variant">
+                            Nomor faktur:{' '}
+                            <span className="font-medium text-on-surface">
+                              {singleInvoice.invoiceNumber || 'Ditetapkan otomatis saat disimpan'}
+                            </span>{' '}
+                            · Nilai faktur otomatis:{' '}
+                            <strong className="text-on-surface">
+                              {autoVal != null
+                                ? `Rp ${autoVal.toLocaleString('id-ID')}`
+                                : 'Mengikuti harga order'}
+                            </strong>
+                          </p>
+                        </div>
+                        <details className="packing-disclosure">
+                          <summary>
+                            Opsi lanjutan faktur (pecah faktur / rincian barang &amp; pajak)
+                          </summary>
+                          <div className="packing-disclosure-body">
+                            <InvoiceLinesEditor
+                              invoice={singleInvoice}
+                              items={load.items.filter(
+                                (item) => item.destinationId === destination.id
+                              )}
+                              orderLinked={orderLinked}
+                              onChange={(updated) => setInvoice(singleIdx, updated)}
+                            />
+                            <div>
+                              <button
+                                type="button"
+                                className="admin-button"
+                                onClick={() => addInvoice(destination)}
+                              >
+                                Tambah faktur pecahan
+                              </button>
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-3 items-center justify-between">
+                        <h4 className="font-semibold">Faktur untuk {destination.outlet.name}</h4>
+                        <button
+                          type="button"
+                          className="admin-button"
+                          onClick={() => addInvoice(destination)}
+                        >
+                          Tambah faktur
+                        </button>
+                      </div>
+                      {destInvoices.map(({ inv: invoice, idx: i }, pos) => {
+                        const autoVal = computeInvoiceValue(invoice);
+                        const hasCustomAmount =
+                          invoice.totalAmount !== '' && invoice.totalAmount != null;
+                        return (
+                          <section
+                            key={invoice.tempId || i}
+                            className="border rounded-xl p-4 space-y-3"
+                          >
+                            <p className="admin-footnote">
+                              Order:{' '}
+                              {invoice.sourceOrderIds
+                                .map(
+                                  (id) =>
+                                    load.items.find((item) => item.sourceOrderId === id)
+                                      ?.sourceOrderCode || id.slice(0, 8)
+                                )
+                                .join(', ') || 'Pilih barang dari order pada rincian faktur'}
+                            </p>
+                            <div className="grid sm:grid-cols-2 gap-3">
+                              <div>
+                                {manualInvoiceCode || Boolean(invoice.invoiceNumber) ? (
+                                  <BusinessCodeInput
+                                    entity="INVOICE"
+                                    value={invoice.invoiceNumber}
+                                    existing={Boolean(
+                                      doc?.invoices.some(
+                                        (row) => row.invoiceNumber === invoice.invoiceNumber
+                                      )
+                                    )}
+                                    onChange={(invoiceNumber) =>
+                                      setInvoice(i, { ...invoice, invoiceNumber })
+                                    }
+                                  />
+                                ) : (
+                                  <div className="app-field text-sm space-y-1">
+                                    <span>Nomor faktur</span>
+                                    <p className="text-xs text-on-surface-variant">
+                                      Ditetapkan otomatis saat disimpan
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              <label className="app-field">
+                                Karton pada faktur
                                 <input
-                                  className="form-input w-24"
+                                  className="form-input block w-full"
+                                  aria-label={`Karton faktur ${pos + 1}`}
+                                  type="number"
+                                  min="0"
+                                  step="1"
                                   required
-                                  value={item.unit}
+                                  value={invoice.totalCartons}
                                   onChange={(e) =>
-                                    setLoad((current) => ({
-                                      ...current,
-                                      items: current.items.map((row) =>
-                                        row.lineId === item.lineId
-                                          ? { ...row, unit: e.target.value }
-                                          : row
-                                      ),
-                                    }))
+                                    setInvoice(i, {
+                                      ...invoice,
+                                      totalCartons: Number(e.target.value),
+                                    })
                                   }
                                 />
                               </label>
-                            )}
-                          </td>
-                          {!destination.sourceOrderIds.length && (
-                            <td>
+                              {!orderLinked || hasCustomAmount ? (
+                                <label className="app-field">
+                                  Nominal faktur Rp (opsional)
+                                  <input
+                                    className="form-input block w-full"
+                                    type="number"
+                                    min="0"
+                                    value={invoice.totalAmount}
+                                    onChange={(e) =>
+                                      setInvoice(i, { ...invoice, totalAmount: e.target.value })
+                                    }
+                                  />
+                                </label>
+                              ) : (
+                                <div className="text-xs text-on-surface-variant self-end pb-2">
+                                  Nilai faktur otomatis:{' '}
+                                  <strong className="text-on-surface">
+                                    {autoVal != null
+                                      ? `Rp ${autoVal.toLocaleString('id-ID')}`
+                                      : 'Mengikuti harga order'}
+                                  </strong>
+                                </div>
+                              )}
+                            </div>
+                            <details className="packing-disclosure">
+                              <summary>Rincian barang dan pajak faktur</summary>
+                              <div className="packing-disclosure-body">
+                                <InvoiceLinesEditor
+                                  invoice={invoice}
+                                  items={load.items.filter(
+                                    (item) => item.destinationId === destination.id
+                                  )}
+                                  orderLinked={orderLinked}
+                                  onChange={(updated) => setInvoice(i, updated)}
+                                />
+                              </div>
+                            </details>
+                            {(!required || destInvoices.length > 1) && (
                               <button
                                 type="button"
                                 className="admin-button"
                                 onClick={() =>
                                   setLoad((current) => ({
                                     ...current,
-                                    items: current.items.filter(
-                                      (row) => row.lineId !== item.lineId
+                                    invoices: current.invoices.filter((row, n) =>
+                                      invoice.tempId ? row.tempId !== invoice.tempId : n !== i
                                     ),
                                   }))
                                 }
                               >
-                                Hapus
+                                Hapus faktur ini
                               </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-              {!destination.sourceOrderIds.length && (
-                <button
-                  type="button"
-                  className="admin-button"
-                  onClick={() =>
-                    setLoad((current) => ({
-                      ...current,
-                      items: [
-                        ...current.items,
-                        {
-                          lineId: crypto.randomUUID(),
-                          destinationId: destination.id,
-                          name: '',
-                          sku: '',
-                          quantity: 1,
-                          unit: 'unit',
-                        },
-                      ],
-                    }))
-                  }
-                >
-                  Tambah produk untuk toko ini
-                </button>
-              )}
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-3 items-center justify-between">
-                  <h4 className="font-semibold">Faktur untuk {destination.outlet.name}</h4>
-                  <button
-                    type="button"
-                    className="admin-button"
-                    onClick={() => addInvoice(destination)}
-                  >
-                    Tambah faktur
-                  </button>
-                </div>
-                {load.invoices.map((invoice, i) =>
-                  invoice.destinationId !== destination.id ? null : (
-                    <section
-                      key={invoice.tempId || i}
-                      className="border rounded-xl p-4 space-y-3"
-                    >
-                      <p className="admin-footnote">
-                        Order:{' '}
-                        {invoice.sourceOrderIds
-                          .map(
-                            (id) =>
-                              load.items.find((item) => item.sourceOrderId === id)
-                                ?.sourceOrderCode || id.slice(0, 8)
-                          )
-                          .join(', ') || 'Pilih barang dari order pada rincian faktur'}
-                      </p>
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <div>
-                          <BusinessCodeInput
-                            entity="INVOICE"
-                            value={invoice.invoiceNumber}
-                            existing={Boolean(
-                              doc?.invoices.some(
-                                (row) => row.invoiceNumber === invoice.invoiceNumber
-                              )
                             )}
-                            onChange={(invoiceNumber) =>
-                              setInvoice(i, { ...invoice, invoiceNumber })
-                            }
-                          />
-                        </div>
-                        <label>
-                          Karton pada faktur
-                          <input
-                            className="form-input block w-full"
-                            aria-label={`Karton faktur ${i + 1}`}
-                            type="number"
-                            min="0"
-                            step="1"
-                            required
-                            value={invoice.totalCartons}
-                            onChange={(e) =>
-                              setInvoice(i, { ...invoice, totalCartons: Number(e.target.value) })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Nominal faktur Rp (opsional)
-                          <input
-                            className="form-input block w-full"
-                            type="number"
-                            min="0"
-                            value={invoice.totalAmount}
-                            onChange={(e) =>
-                              setInvoice(i, { ...invoice, totalAmount: e.target.value })
-                            }
-                          />
-                        </label>
-                      </div>
-                      <details>
-                        <summary className="min-h-11 cursor-pointer">
-                          Rincian barang dan pajak faktur
-                        </summary>
-                        <InvoiceLinesEditor
-                          invoice={invoice}
-                          items={load.items.filter((item) => item.destinationId === destination.id)}
-                          orderLinked={destination.sourceOrderIds.length > 0}
-                          onChange={(updated) => setInvoice(i, updated)}
+                          </section>
+                        );
+                      })}
+                      {!destInvoices.length && (
+                        <p className="admin-footnote">
+                          {required
+                            ? 'Faktur diperlukan sebelum diserahkan.'
+                            : 'Faktur opsional sesuai pengaturan.'}
+                        </p>
+                      )}
+                    </div>
+                    {!destInvoices.length && (
+                      <label className="app-field">
+                        Karton tujuan ini
+                        <input
+                          className="form-input block w-full"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={destination.totalCartons}
+                          onChange={(e) =>
+                            setLoad((current) => ({
+                              ...current,
+                              destinations: current.destinations.map((row) =>
+                                row.id === destination.id
+                                  ? { ...row, totalCartons: Number(e.target.value) }
+                                  : row
+                              ),
+                            }))
+                          }
                         />
-                      </details>
-                      <button
-                        type="button"
-                        className="admin-button"
-                        onClick={() =>
+                      </label>
+                    )}
+                    <label className="app-field">
+                      Perkiraan berat tujuan ini (kg, opsional)
+                      <input
+                        className="form-input block w-full"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={destination.totalWeight ?? ''}
+                        placeholder="Belum diketahui"
+                        onChange={(e) =>
                           setLoad((current) => ({
                             ...current,
-                            invoices: current.invoices.filter((row, n) =>
-                              invoice.tempId ? row.tempId !== invoice.tempId : n !== i
+                            destinations: current.destinations.map((row) =>
+                              row.id === destination.id
+                                ? {
+                                    ...row,
+                                    totalWeight:
+                                      e.target.value === '' ? null : Number(e.target.value),
+                                  }
+                                : row
                             ),
                           }))
                         }
-                      >
-                        Hapus faktur ini
-                      </button>
-                    </section>
-                  )
+                      />
+                    </label>
+                  </>
                 )}
-                {!load.invoices.some((invoice) => invoice.destinationId === destination.id) && (
-                  <p className="admin-footnote">
-                    {required
-                      ? 'Faktur diperlukan sebelum diserahkan.'
-                      : 'Faktur opsional sesuai pengaturan.'}
-                  </p>
-                )}
-              </div>
-              {!load.invoices.some((invoice) => invoice.destinationId === destination.id) && (
-                <label>
-                  Karton tujuan ini
-                  <input
-                    className="form-input block"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={destination.totalCartons}
-                    onChange={(e) =>
-                      setLoad((current) => ({
-                        ...current,
-                        destinations: current.destinations.map((row) =>
-                          row.id === destination.id
-                            ? { ...row, totalCartons: Number(e.target.value) }
-                            : row
-                        ),
-                      }))
-                    }
-                  />
-                </label>
-              )}
-              <label>
-                Perkiraan berat tujuan ini (kg, opsional)
-                <input
-                  className="form-input block"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={destination.totalWeight ?? ''}
-                  placeholder="Belum diketahui"
-                  onChange={(e) =>
-                    setLoad((current) => ({
-                      ...current,
-                      destinations: current.destinations.map((row) =>
-                        row.id === destination.id
-                          ? {
-                              ...row,
-                              totalWeight: e.target.value === '' ? null : Number(e.target.value),
-                            }
-                          : row
-                      ),
-                    }))
-                  }
-                />
-              </label>
-            </section>
-          ))}
+              </section>
+            );
+          })}
           {!doc &&
             !load.items.some((item) => item.sourceOrderId) &&
             settings.PACKING_SOURCE_MODE !== 'ORDER' && (
-              <details>
-                <summary className="min-h-11 cursor-pointer">
-                  Tambah tujuan manual tanpa order
-                </summary>
-                <label>
-                  Cari toko
-                  <input
-                    className="form-input block w-full"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </label>
-                {searchError && <p role="alert">{searchError}</p>}
-                {outlets.map((outlet) => (
-                  <button
-                    key={outlet.id}
-                    type="button"
-                    className="admin-button m-1"
-                    onClick={() => addOutlet(outlet)}
-                  >
-                    {outlet.name}
-                  </button>
-                ))}
+              <details className="packing-disclosure">
+                <summary>Tambah tujuan manual tanpa order</summary>
+                <div className="packing-disclosure-body">
+                  <label className="app-field">
+                    Cari toko
+                    <input
+                      className="form-input block w-full"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </label>
+                  {searchError && <p role="alert">{searchError}</p>}
+                  <div className="flex flex-wrap gap-2">
+                    {outlets.map((outlet) => (
+                      <button
+                        key={outlet.id}
+                        type="button"
+                        className="admin-button"
+                        onClick={() => addOutlet(outlet)}
+                      >
+                        {outlet.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </details>
             )}
         </div>
-        <aside className="work-route-summary space-y-4">
+        <aside className="work-route-summary">
           <h2 className="text-lg font-semibold">Rekap muatan</h2>
           <BusinessCodeInput
             entity="PACKING_LIST"
@@ -826,26 +1060,37 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
             onChange={setCode}
             existing={Boolean(doc)}
           />
-          <p>
-            <strong>{totals.totalCartons} karton</strong> · {totals.outletCount} toko ·{' '}
-            {load.invoices.length} faktur
-          </p>
-          <p>
+          <div className="packing-summary-kpis">
+            <div>
+              <span>Karton</span>
+              <strong>{totals.totalCartons}</strong>
+            </div>
+            <div>
+              <span>Toko</span>
+              <strong>{totals.outletCount}</strong>
+            </div>
+            <div>
+              <span>Faktur</span>
+              <strong>{load.invoices.length}</strong>
+            </div>
+          </div>
+          <p className="admin-footnote">
             {totals.weightComplete
-              ? `${totals.knownWeightKg} kg`
+              ? `Total berat perkiraan: ${totals.knownWeightKg} kg`
               : `${totals.knownWeightKg} kg diketahui · berat ${totals.unknownWeightDestinations} tujuan belum diisi`}
           </p>
-          <details>
-            <summary className="min-h-11 cursor-pointer">
-              Total produk menurut SKU dan satuan
-            </summary>
-            {totals.products.map((item, index) => (
-              <p key={index}>
-                {item.name} · {item.quantity} {item.unit}
-              </p>
-            ))}
+          <details className="packing-disclosure">
+            <summary>Total produk menurut SKU dan satuan</summary>
+            <div className="packing-disclosure-body">
+              {totals.products.map((item, index) => (
+                <p key={index} className="text-xs text-on-surface-variant">
+                  {item.name} · <strong className="text-on-surface">{item.quantity}</strong>{' '}
+                  {item.unit}
+                </p>
+              ))}
+            </div>
           </details>
-          <label>
+          <label className="app-field">
             Saran kendaraan untuk kepala gudang (opsional)
             <select
               className="form-input block w-full"
@@ -863,21 +1108,32 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
             </select>
           </label>
           {vehicleError && (
-            <p role="alert">
+            <p role="alert" className="admin-feedback error">
               Daftar kendaraan belum tersedia: {vehicleError}. Saran boleh dikosongkan.
             </p>
           )}
           {vehicle && (
-            <div className="space-y-2">
-              <p>
+            <div className="space-y-2 text-xs">
+              <p className="text-on-surface-variant">
                 Patokan: {capacity.cartonCapacity ?? 'belum diketahui'} karton ·{' '}
                 {capacity.weightCapacityKg ?? 'belum diketahui'} kg
               </p>
               {capacity.cartonPercent != null && (
-                <p>{Math.round(capacity.cartonPercent)}% patokan karton</p>
+                <>
+                  <div className="flex items-center justify-between text-on-surface">
+                    <span>Terisi (karton)</span>
+                    <strong>{Math.round(capacity.cartonPercent)}%</strong>
+                  </div>
+                  <progress
+                    className="packing-capacity-bar"
+                    value={Math.min(100, Math.round(capacity.cartonPercent))}
+                    max={100}
+                    aria-label="Persentase perkiraan kapasitas karton kendaraan"
+                  />
+                </>
               )}
               {(capacity.overCartons || capacity.overWeight) && (
-                <p className="text-amber-700">
+                <p className="text-amber-700 font-medium">
                   Perkiraan melampaui patokan. Kepala gudang dapat memilih kendaraan lain atau
                   menyetujui dengan alasan.
                 </p>
@@ -916,53 +1172,60 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
               />
             </div>
           )}
-          <details>
-            <summary className="min-h-11 cursor-pointer">Catatan untuk gudang</summary>
-            <label>
-              Catatan untuk gudang
-              <textarea
-                className="form-input block w-full"
-                value={notes}
-                maxLength={2000}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </label>
-          </details>
-          {!settings.PACKING_AUTO_RELEASE && releaseIssues.length > 0 && destinations.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-900 space-y-1">
-              <strong className="block">Syarat sebelum diserahkan ke gudang:</strong>
-              <ul className="list-disc pl-4 space-y-0.5">
-                {releaseIssues.map((issue) => (
-                  <li key={issue}>{issue}</li>
-                ))}
-              </ul>
+          <details className="packing-disclosure">
+            <summary>Catatan untuk gudang</summary>
+            <div className="packing-disclosure-body">
+              <label className="app-field">
+                Catatan untuk gudang
+                <textarea
+                  className="form-input block w-full"
+                  value={notes}
+                  maxLength={2000}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </label>
             </div>
-          )}
-          <button
-            type="submit"
-            value="DRAFT"
-            className="admin-button"
-            disabled={!destinations.length || (!doc && !feature.canStart)}
-          >
-            {busy
-              ? 'Menyimpan…'
-              : settings.PACKING_AUTO_RELEASE
-                ? 'Simpan dokumen'
-                : 'Simpan draft'}
-          </button>
-          {!settings.PACKING_AUTO_RELEASE && (
+          </details>
+          {!settings.PACKING_AUTO_RELEASE &&
+            releaseIssues.length > 0 &&
+            destinations.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-900 space-y-1">
+                <strong className="block">Syarat sebelum diserahkan ke gudang:</strong>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {releaseIssues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          <div className="packing-form-actions">
+            {!settings.PACKING_AUTO_RELEASE && (
+              <button
+                type="submit"
+                value="RELEASE"
+                className="admin-button primary"
+                disabled={!destinations.length || (!doc && !feature.canStart)}
+              >
+                Serahkan ke gudang
+              </button>
+            )}
             <button
               type="submit"
-              value="RELEASE"
-              className="admin-button primary"
+              value="DRAFT"
+              formNoValidate
+              className="admin-button"
               disabled={!destinations.length || (!doc && !feature.canStart)}
             >
-              Serahkan ke gudang
+              {busy
+                ? 'Menyimpan…'
+                : settings.PACKING_AUTO_RELEASE
+                  ? 'Simpan dokumen'
+                  : 'Simpan draft'}
             </button>
-          )}
-          <button type="button" className="admin-button" onClick={cancel}>
-            Batal
-          </button>
+            <button type="button" className="admin-button" onClick={cancel}>
+              Batal
+            </button>
+          </div>
           <p className="admin-footnote">
             Berikutnya: kepala gudang meninjau kendaraan, muatan dan urutan toko. Saran Admin belum
             merupakan penugasan kendaraan.

@@ -211,3 +211,190 @@ export function buildPlanCalendar(
     },
   };
 }
+
+const WEEKDAY_MAP = {
+  minggu: 0,
+  senin: 1,
+  selasa: 2,
+  rabu: 3,
+  kamis: 4,
+  jumat: 5,
+  "jum'at": 5,
+  sabtu: 6,
+};
+
+/**
+ * Extract Indonesian weekday index (0..6) from cluster titles like "Cahya - Senin".
+ * Returns null when the cluster name is not bound to a specific day.
+ */
+export function clusterWeekdayNumber(clusterName = '') {
+  const match = String(clusterName || '').match(
+    /(?:^|[^a-z])(minggu|senin|selasa|rabu|kamis|jum'?at|sabtu)(?=$|[^a-z])/i
+  );
+  return match ? (WEEKDAY_MAP[match[1].toLowerCase()] ?? null) : null;
+}
+
+/**
+ * Choose default Supervisor team for the planner so Admin immediately sees active Sales.
+ */
+export function pickDefaultSupervisorId(user, supervisors = [], sales = []) {
+  if (user?.role === 'SUPERVISOR') return user.id || '';
+  return (
+    supervisors.find((spv) => sales.some((s) => s.supervisorId === spv.id))?.id ||
+    supervisors[0]?.id ||
+    ''
+  );
+}
+
+/**
+ * Resolve the nearest valid working anchor date >= startsOn (optionally matching preferredDayOfWeek).
+ */
+export function firstWorkingAnchorDate(
+  startsOn,
+  workingDays = [1, 2, 3, 4, 5, 6],
+  preferredDayOfWeek = null
+) {
+  if (!validPlanDate(startsOn)) return startsOn;
+  const startMs = Date.parse(`${startsOn}T00:00:00Z`);
+  const startDay = new Date(startMs).getUTCDay();
+  const validDays = Array.isArray(workingDays) ? workingDays : [];
+  if (preferredDayOfWeek != null && (!validDays.length || validDays.includes(preferredDayOfWeek))) {
+    const offset = (preferredDayOfWeek - startDay + 7) % 7;
+    return new Date(startMs + offset * DAY).toISOString().slice(0, 10);
+  }
+  if (validDays.length && !validDays.includes(startDay)) {
+    for (let offset = 1; offset < 7; offset++) {
+      if (validDays.includes((startDay + offset) % 7))
+        return new Date(startMs + offset * DAY).toISOString().slice(0, 10);
+    }
+  }
+  return startsOn;
+}
+
+/**
+ * Build draft PJP rules directly from active clusters assigned to a Sales representative,
+ * ordering outlets by active ClusterRoute.outletOrder and preserving frequency/working-day rules.
+ */
+export function buildClusterDraftRules({
+  person,
+  shops = [],
+  existingOutletIds = [],
+  startsOn,
+  workingDays = [1, 2, 3, 4, 5, 6],
+  allowedIntervals = [1, 2, 4],
+  defaultInterval = 1,
+}) {
+  if (!person || !validPlanDate(startsOn)) return [];
+  const existing = new Set(existingOutletIds);
+  const clusterOrder = [];
+  const routeOrderByCluster = new Map();
+  const registerCluster = (c) => {
+    if (!c?.id) return;
+    if (!clusterOrder.includes(c.id)) clusterOrder.push(c.id);
+    const routeOrder = c.routes?.[0]?.outletOrder;
+    if (Array.isArray(routeOrder) && !routeOrderByCluster.has(c.id)) {
+      routeOrderByCluster.set(
+        c.id,
+        routeOrder.map((o) => (typeof o === 'string' ? o : o?.id)).filter(Boolean)
+      );
+    }
+  };
+  for (const c of person.assignedClusters || []) registerCluster(c);
+  if (person.cluster?.id || person.clusterId) {
+    registerCluster({ id: person.cluster?.id || person.clusterId, ...person.cluster });
+  }
+  const assignedIds = new Set(clusterOrder);
+  const matching = shops.filter(
+    (o) =>
+      !existing.has(o.id) &&
+      (o.cluster?.assignedSalesId === person.id || assignedIds.has(o.clusterId))
+  );
+  const grouped = new Map();
+  for (const outlet of matching) {
+    const cid = outlet.clusterId || '__none__';
+    if (!grouped.has(cid)) grouped.set(cid, []);
+    grouped.get(cid).push(outlet);
+  }
+  const orderedOutlets = [];
+  const consumedClusters = new Set();
+  const pushClusterGroup = (cid) => {
+    if (consumedClusters.has(cid)) return;
+    consumedClusters.add(cid);
+    const list = grouped.get(cid) || [];
+    const routeOrder = routeOrderByCluster.get(cid);
+    if (!routeOrder?.length) {
+      orderedOutlets.push(...list);
+      return;
+    }
+    const rank = new Map(routeOrder.map((id, idx) => [id, idx]));
+    orderedOutlets.push(
+      ...[...list].sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity))
+    );
+  };
+  for (const cid of clusterOrder) pushClusterGroup(cid);
+  for (const cid of grouped.keys()) pushClusterGroup(cid);
+
+  return orderedOutlets.map((o) => {
+    const preferredDay = clusterWeekdayNumber(o.cluster?.name);
+    const anchorDate = firstWorkingAnchorDate(startsOn, workingDays, preferredDay);
+    const rawInterval = frequencyWeeks(o.itineraryCode) || defaultInterval;
+    const intervalWeeks = allowedIntervals.includes(rawInterval)
+      ? rawInterval
+      : allowedIntervals[0] || defaultInterval;
+    return {
+      userId: person.id,
+      outletId: o.id,
+      anchorDate,
+      intervalWeeks,
+      reason: '',
+    };
+  });
+}
+
+/**
+ * Resolve fallback PJP outlets across a Sales rep's active Cluster.assignedSalesId clusters
+ * (plus primary clusterId), respecting weekday-named clusters and active ClusterRoute sequences.
+ */
+export function selectFallbackClusterOutlets(clusters = [], primaryClusterId = null, dateKey = '') {
+  if (!clusters.length) return { primaryCluster: null, outletIds: [] };
+  const ordered = [
+    ...clusters.filter((c) => c.id === primaryClusterId),
+    ...clusters.filter((c) => c.id !== primaryClusterId),
+  ];
+  const dayOfWeek = validPlanDate(dateKey) ? new Date(`${dateKey}T12:00:00Z`).getUTCDay() : null;
+  const hasWeekdayClusters = ordered.some((c) => clusterWeekdayNumber(c.name) !== null);
+  const selectedClusters =
+    hasWeekdayClusters && dayOfWeek !== null
+      ? ordered.filter((c) => {
+          const wd = clusterWeekdayNumber(c.name);
+          return wd === null || wd === dayOfWeek;
+        })
+      : ordered;
+  const outletIds = [];
+  const seen = new Set();
+  for (const cluster of selectedClusters) {
+    const outlets = cluster.outlets || [];
+    const validIds = new Set(outlets.map((o) => o.id));
+    const activeRoute = cluster.routes?.[0] || null;
+    const routeIds = activeRoute
+      ? (activeRoute.outletOrder || [])
+          .map((o) => (typeof o === 'string' ? o : o?.id))
+          .filter((id) => validIds.has(id))
+      : [];
+    const routeSet = new Set(routeIds);
+    const clusterIds =
+      activeRoute && routeIds.length
+        ? [...routeIds, ...outlets.map((o) => o.id).filter((id) => !routeSet.has(id))]
+        : outlets.map((o) => o.id);
+    for (const id of clusterIds) {
+      if (!seen.has(id)) {
+        seen.add(id);
+        outletIds.push(id);
+      }
+    }
+  }
+  return {
+    primaryCluster: selectedClusters[0] || ordered[0] || null,
+    outletIds,
+  };
+}

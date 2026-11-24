@@ -1,4 +1,4 @@
-import { orderPricing } from './order-pricing.mjs';
+import { orderPricing, hasCompleteTaxTerms, resolveTaxIncluded } from './order-pricing.mjs';
 import { acceptedQuantity, terminalStop } from './delivery-operations.mjs';
 
 export function invoiceMappingErrors(packing) {
@@ -96,13 +96,13 @@ export function invoiceReconciliation(packing) {
     const priced =
       mapped.length > 0 &&
       mapped.every((i) => Number.isFinite(i.unitPrice) && i.unitPrice >= 0) &&
-      Number.isFinite(invoice.taxRatePercent) &&
-      typeof invoice.taxIncluded === 'boolean';
+      hasCompleteTaxTerms(invoice.taxRatePercent, invoice.taxIncluded);
+    const effectiveTaxIncluded = resolveTaxIncluded(invoice.taxRatePercent, invoice.taxIncluded);
     const expectedValue = priced
       ? orderPricing(
           mapped,
           invoice.taxRatePercent,
-          invoice.taxIncluded,
+          effectiveTaxIncluded,
           invoice.taxRoundingMode || 'NEAREST'
         ).totalValue
       : null;
@@ -121,7 +121,7 @@ export function invoiceReconciliation(packing) {
               quantity: acceptedItems.find((a) => a.lineId === i.lineId)?.quantity || 0,
             })),
             invoice.taxRatePercent,
-            invoice.taxIncluded,
+            effectiveTaxIncluded,
             invoice.taxRoundingMode || 'NEAREST'
           ).totalValue
         : null;

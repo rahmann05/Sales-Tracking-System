@@ -225,7 +225,7 @@ export function useLegacyPackingDraft({
         totalCartons: 1,
         totalAmount: '',
         items: [],
-        taxRatePercent: order?.taxRatePercent ?? Number(settings.TAX_RATE_PERCENT ?? 11),
+        taxRatePercent: order?.taxRatePercent ?? Number(settings.TAX_RATE_PERCENT ?? 0),
         taxIncluded: order?.taxIncluded ?? settings.ORDER_PRICES_INCLUDE_TAX !== false,
         taxRoundingMode:
           order?.policySnapshot?.values?.ORDER_TAX_ROUNDING_MODE ||

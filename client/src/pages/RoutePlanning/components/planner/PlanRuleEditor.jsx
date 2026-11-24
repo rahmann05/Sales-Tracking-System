@@ -1,20 +1,52 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../../../context/AppContext';
-import { frequencyWeeks, allowedVisitIntervals } from '../../../../../../shared/pjp-planning.mjs';
+import { TAB_IDS } from '../../../../constants/navigation';
+import { setWorkspaceValues } from '../../../../shared/utils/workspaceNavigation';
+import { outletOperationalPoint } from '../../../../../../shared/outlet-location.mjs';
+import { knownPoint } from '../../../../../../shared/outlet-validation.mjs';
+import {
+  frequencyWeeks,
+  allowedVisitIntervals,
+  firstWorkingAnchorDate,
+  buildClusterDraftRules,
+} from '../../../../../../shared/pjp-planning.mjs';
 import { PlanSubstituteEditor } from './PlanSubstituteEditor';
 export function PlanRuleEditor({ planner: p }) {
-  const { settings } = useApp(),
+  const { user, settings, setActiveTab } = useApp(),
     policy = p.source.planningPolicies?.[p.value.supervisorId]?.values || settings,
     intervals = allowedVisitIntervals(policy),
     defaultInterval = Number(policy.PJP_DEFAULT_INTERVAL || 1);
+  const canOpenOutlet =
+    ['ADMIN', 'SUPERVISOR'].includes(user?.role) &&
+    (user?.permissions?.can_manage_outlets !== false ||
+      Boolean(user?.permissions?.can_validate_outlet));
+  const openOutletLocation = (outletId) => {
+    if (!outletId) return;
+    if (typeof window !== 'undefined' && window.location?.href) {
+      setWorkspaceValues({ outletId }, { tab: TAB_IDS.OUTLET_MANAGEMENT });
+    }
+    setActiveTab?.(TAB_IDS.OUTLET_MANAGEMENT);
+  };
   const [salesId, setSalesId] = useState(''),
     [query, setQuery] = useState('');
+  useEffect(() => {
+    if (p.focusSalesId) setSalesId(p.focusSalesId);
+  }, [p.focusSalesId]);
   const people = p.source.sales.filter((s) => s.supervisorId === p.value.supervisorId),
     person = people.find((s) => s.id === salesId) || people[0];
   const shops = p.source.outlets.filter((o) => o.cluster?.supervisorId === p.value.supervisorId),
     rules = p.value.rules
       .map((r, index) => ({ ...r, index }))
       .filter((r) => r.userId === person?.id);
+  const clusterDraftCandidates = buildClusterDraftRules({
+    person,
+    shops,
+    existingOutletIds: rules.map((r) => r.outletId),
+    startsOn: p.value.startsOn,
+    workingDays: p.source.workingDays,
+    allowedIntervals: intervals,
+    defaultInterval,
+  });
   const eligible = shops.filter(
     (o) =>
       !rules.some((r) => r.outletId === o.id) &&
@@ -37,12 +69,16 @@ export function PlanRuleEditor({ planner: p }) {
         {
           userId: person.id,
           outletId: id,
-          anchorDate: v.startsOn,
+          anchorDate: firstWorkingAnchorDate(v.startsOn, p.source.workingDays),
           intervalWeeks: frequencyWeeks(o.itineraryCode) || defaultInterval,
           reason: '',
         },
       ],
     }));
+  };
+  const importClusterOutlets = () => {
+    if (!person || !clusterDraftCandidates.length) return;
+    p.change((v) => ({ ...v, rules: [...v.rules, ...clusterDraftCandidates] }));
   };
   const importTemplates = () => {
     if (!person) return;
@@ -89,28 +125,56 @@ export function PlanRuleEditor({ planner: p }) {
         </label>
         {!people.length && (
           <p className="app-empty">
-            Pilih tim yang memiliki Sales aktif. Penugasan Sales dikelola melalui Tim.
+            {!p.value.supervisorId
+              ? 'Pilih Tim Supervisor di atas untuk menampilkan daftar Sales.'
+              : 'Tim ini belum memiliki Sales aktif. Penugasan Sales dikelola melalui Tim.'}
           </p>
         )}
         <div className="planner-sales-summary">
           <strong>{person?.name || 'Belum ada Sales'}</strong>
           <span>
             {person?.assignedClusters?.map((c) => c.name).join(' · ') ||
+              person?.cluster?.name ||
               'Belum memiliki wilayah khusus'}{' '}
             · {rules.length} outlet terencana
           </span>
+          {p.focusClusterId && person?.assignedClusters?.find((c) => c.id === p.focusClusterId) && (
+            <span className="planner-focus-pill">
+              Fokus dari cluster:{' '}
+              <strong>
+                {person.assignedClusters.find((c) => c.id === p.focusClusterId)?.name}
+              </strong>
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          className="admin-button"
-          disabled={!person || p.busy || p.value.status !== 'DRAFT' || !p.canStart}
-          onClick={importTemplates}
-        >
-          Ambil sebagai draft dari template lama
-        </button>
+        <div className="app-actions">
+          <button
+            type="button"
+            className="admin-button"
+            disabled={
+              !person ||
+              p.busy ||
+              p.value.status !== 'DRAFT' ||
+              !p.canStart ||
+              !clusterDraftCandidates.length
+            }
+            onClick={importClusterOutlets}
+          >
+            Ambil outlet dari cluster Sales
+            {clusterDraftCandidates.length ? ` (${clusterDraftCandidates.length})` : ''}
+          </button>
+          <button
+            type="button"
+            className="admin-button"
+            disabled={!person || p.busy || p.value.status !== 'DRAFT' || !p.canStart}
+            onClick={importTemplates}
+          >
+            Ambil sebagai draft dari template lama
+          </button>
+        </div>
         <p className="admin-footnote">
-          Template lama hanya menjadi saran. Periksa kembali tanggal acuan dan interval sebelum
-          diterbitkan.
+          Tarik outlet langsung dari cluster Sales atau gunakan template lama sebagai saran. Periksa
+          kembali tanggal acuan dan interval sebelum diterbitkan.
         </p>
         <fieldset disabled={p.busy || p.loading || p.value.status !== 'DRAFT' || !p.canStart}>
           <label className="app-field">
@@ -145,6 +209,20 @@ export function PlanRuleEditor({ planner: p }) {
                       <p>
                         {o?.outletCode} · {o?.cluster?.name || 'Periksa penugasan wilayah'}
                       </p>
+                      {o && !knownPoint(outletOperationalPoint(o)) && (
+                        <div className="planner-gps-warning">
+                          <span>Titik GPS belum tersedia</span>
+                          {canOpenOutlet && (
+                            <button
+                              type="button"
+                              className="admin-button"
+                              onClick={() => openOutletLocation(o.id)}
+                            >
+                              Cek lokasi
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"

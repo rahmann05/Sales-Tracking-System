@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { orderPricing, priceOverrideError } from '../../shared/order-pricing.mjs';
+import { CONFIG_DEFAULTS } from '../../shared/config.mjs';
+import {
+  orderPricing,
+  priceOverrideError,
+  hasCompleteTaxTerms,
+} from '../../shared/order-pricing.mjs';
 import { mapInvoiceCommercial } from '../src/modules/delivery/services/invoice-mapping.service.js';
 import {
   invoiceReconciliation,
@@ -58,4 +63,44 @@ test('rounding modes agree in order and invoice and survive policy changes', () 
   assert.equal(orderPricing([{ unitPrice: 100, quantity: 1 }], 11, false, 'UP').taxAmount, 11);
   assert.throws(() => orderPricing(items, 11, false, 'INVALID'));
   assert.equal(orderPricing(items, 11, true, 'UP').totalValue, 101);
+  const autoInvoice = mapInvoiceCommercial(
+    { id: 'inv-auto', items, taxRoundingMode: 'UP', totalAmount: undefined },
+    [{ lineId: 'i', sourceOrderItemId: 'oi' }],
+    order
+  );
+  assert.equal(autoInvoice.totalAmount, 113);
+  const autoPacking = {
+    items: [{ lineId: 'i', quantity: 1 }],
+    invoices: [autoInvoice],
+    deliveryStops: [],
+  };
+  assert.equal(invoiceReconciliation(autoPacking).status, 'IN_PROGRESS');
+  assert.equal(invoiceReconciliation(autoPacking).invoices[0].difference, 0);
+});
+test('tax is OFF (0%) by default and zero-tax orders auto-complete invoice pricing without taxIncluded', () => {
+  assert.equal(CONFIG_DEFAULTS.TAX_RATE_PERCENT, 0);
+  assert.equal(hasCompleteTaxTerms(0, null), true);
+  assert.equal(hasCompleteTaxTerms(0, undefined), true);
+  assert.equal(hasCompleteTaxTerms(11, null), false);
+
+  const items = [{ lineId: 'i', unitPrice: 24000, quantity: 8 }];
+  const zeroOrder = {
+    items: [{ id: 'oi', unitPrice: 24000, subtotal: 192000 }],
+    taxIncluded: null,
+    taxRatePercent: 0,
+    totalValue: 192000,
+    taxAmount: 0,
+    policySnapshot: { values: { ORDER_TAX_ROUNDING_MODE: 'NEAREST' } },
+  };
+  const inv = mapInvoiceCommercial(
+    { id: 'inv-zero', items, totalAmount: undefined },
+    [{ lineId: 'i', sourceOrderItemId: 'oi' }],
+    zeroOrder
+  );
+  assert.equal(inv.totalAmount, 192000);
+  assert.equal(inv.taxRatePercent, 0);
+  assert.equal(inv.taxIncluded, true);
+  const pkg = { items: [{ lineId: 'i', quantity: 8 }], invoices: [inv], deliveryStops: [] };
+  assert.equal(invoiceReconciliation(pkg).status, 'IN_PROGRESS');
+  assert.equal(invoiceReconciliation(pkg).invoices[0].difference, 0);
 });

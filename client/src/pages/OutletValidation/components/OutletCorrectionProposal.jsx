@@ -3,7 +3,14 @@ import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useFormDraft } from '../../../shared/hooks/useFormDraft';
 import { useUnsavedNavigation } from '../../../shared/hooks/useUnsavedNavigation';
-export function OutletCorrectionProposal({ review: r, disabled, act, digital }) {
+export function OutletCorrectionProposal({
+  review: r,
+  disabled,
+  act,
+  digital,
+  candidate = null,
+  fieldEvidence = null,
+}) {
   const { user } = useApp(),
     o = r.outlet,
     p = r.proposal;
@@ -18,6 +25,17 @@ export function OutletCorrectionProposal({ review: r, disabled, act, digital }) 
     d = draft.value;
   useUnsavedNavigation(draft.dirty, disabled);
   const field = (key, value) => draft.field(key)(value);
+  const prefillProposal = (source, label) => {
+    if (!source) return;
+    draft.setValue((prev) => ({
+      ...prev,
+      name: source.name || prev.name,
+      address: source.address || prev.address,
+      latitude: source.latitude != null ? source.latitude : prev.latitude,
+      longitude: source.longitude != null ? source.longitude : prev.longitude,
+      reference: prev.reference || label,
+    }));
+  };
   const submit = (e) => {
     e.preventDefault();
     const changes = Object.fromEntries(
@@ -105,6 +123,40 @@ export function OutletCorrectionProposal({ review: r, disabled, act, digital }) 
               Isi sumber internal yang mengonfirmasi data, misalnya dokumen pelanggan atau
               konfirmasi langsung. Google tetap ditampilkan sebagai referensi penyedia.
             </p>
+            {(fieldEvidence || candidate) && (
+              <div className="ov-chip-row">
+                {fieldEvidence && (
+                  <button
+                    type="button"
+                    className="outlet-pill"
+                    disabled={disabled}
+                    onClick={() =>
+                      prefillProposal(
+                        fieldEvidence,
+                        `Bukti lapangan Sales (${fieldEvidence.outcome || 'FOUND'}) pada lokasi outlet`
+                      )
+                    }
+                  >
+                    Salin bukti lapangan Sales
+                  </button>
+                )}
+                {candidate && (
+                  <button
+                    type="button"
+                    className="outlet-pill"
+                    disabled={disabled}
+                    onClick={() =>
+                      prefillProposal(
+                        candidate,
+                        `Konfirmasi internal sesuai kandidat Google: ${candidate.name || candidate.placeId}`
+                      )
+                    }
+                  >
+                    Salin kandidat Google yang ditinjau
+                  </button>
+                )}
+              </div>
+            )}
             <div className="ov-form-grid">
               {[
                 ['name', 'Nama'],

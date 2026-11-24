@@ -198,7 +198,7 @@ export const createOrder = async (
       outlet,
       await getDynamicConfig('DEFAULT_TERM_OF_PAYMENT_DAYS', 30)
     );
-    const taxRatePercent = await getDynamicConfig('TAX_RATE_PERCENT', 11);
+    const taxRatePercent = await getDynamicConfig('TAX_RATE_PERCENT', 0);
     const taxIncluded = await getDynamicConfig('ORDER_PRICES_INCLUDE_TAX', true);
     const { totalValue, taxAmount } = orderPricing(
       orderItemsData,

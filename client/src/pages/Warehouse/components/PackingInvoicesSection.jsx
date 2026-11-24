@@ -69,9 +69,6 @@ export function PackingInvoicesSection({
               className="p-3 rounded-xl bg-surface-container/30 border border-border-glass grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end"
             >
               <div className="sm:col-span-5">
-                <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
-                  Nomor Faktur *
-                </label>
                 <BusinessCodeInput
                   entity="INVOICE"
                   value={inv.invoiceNumber}
@@ -96,27 +93,27 @@ export function PackingInvoicesSection({
               <div className="sm:col-span-3">
                 <label className="block text-[10px] font-bold text-on-surface-variant mb-1">
                   Karton Faktur *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  step="1"
-                  value={inv.totalCartons}
-                  onChange={(e) =>
-                    setInvoices(
-                      invoices.map((v, i) =>
-                        i === index
-                          ? {
-                              ...v,
-                              totalCartons: Number(e.target.value),
-                            }
-                          : v
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="1"
+                    value={inv.totalCartons}
+                    onChange={(e) =>
+                      setInvoices(
+                        invoices.map((v, i) =>
+                          i === index
+                            ? {
+                                ...v,
+                                totalCartons: Number(e.target.value),
+                              }
+                            : v
+                        )
                       )
-                    )
-                  }
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs font-bold text-on-surface text-right"
-                />
+                    }
+                    className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-surface border border-border-glass text-xs font-bold text-on-surface text-right"
+                  />
+                </label>
               </div>
 
               <div className="sm:col-span-3">
@@ -154,14 +151,19 @@ export function PackingInvoicesSection({
                   <LuTrash2 className="text-sm" />
                 </button>
               </div>
-              <InvoiceLinesEditor
-                invoice={inv}
-                items={items}
-                orderLinked={orderLinked}
-                onChange={(updated) =>
-                  setInvoices(invoices.map((v, i) => (i === index ? updated : v)))
-                }
-              />
+              <details className="sm:col-span-12">
+                <summary className="min-h-11 cursor-pointer text-xs font-semibold">
+                  Rincian barang dan pajak faktur
+                </summary>
+                <InvoiceLinesEditor
+                  invoice={inv}
+                  items={items}
+                  orderLinked={orderLinked}
+                  onChange={(updated) =>
+                    setInvoices(invoices.map((v, i) => (i === index ? updated : v)))
+                  }
+                />
+              </details>
             </div>
           ))}
         </div>

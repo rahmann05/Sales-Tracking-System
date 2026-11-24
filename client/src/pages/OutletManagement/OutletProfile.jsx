@@ -5,9 +5,9 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TAB_IDS } from '../../constants/navigation';
 import { useWorkspaceState } from '../../shared/hooks/useWorkspaceState';
+import { setWorkspaceValues } from '../../shared/utils/workspaceNavigation';
 import { OutletMiniMapPreview } from '../OutletValidation/components/OutletMiniMapPreview';
 import { OutletCoordinateForm } from '../OutletValidation/components/OutletCoordinateForm';
-import { OutletReviewRequest } from './OutletReviewRequest';
 import { OutletActivationDialog } from './OutletActivationDialog';
 import { confirmWorkspaceNavigation } from '../../shared/utils/confirmWorkspaceNavigation';
 import { OutletHistory } from './OutletHistory';
@@ -23,16 +23,41 @@ export function OutletProfile({
   const { user, setActiveTab } = useApp(),
     [tab, setTab] = useState('IDENTITY'),
     [correction, setCorrection] = useState(false),
-    [request, setRequest] = useState(false),
     [activation, setActivation] = useState(false),
     [, selectReview] = useWorkspaceState('outletReview', '');
   const canReview = ['ADMIN', 'SUPERVISOR'].includes(user.role)
       ? user.permissions?.can_validate_outlet !== false
       : Boolean(user.permissions?.can_validate_outlet),
-    review = o.reviews?.[0];
-  const openReview = (review) => {
-    selectReview(review.id);
+    canAccessRjp =
+      ['ADMIN', 'SUPERVISOR'].includes(user.role) && user.permissions?.can_access_rjp !== false,
+    canManageRjp =
+      ['ADMIN', 'SUPERVISOR'].includes(user.role) && user.permissions?.can_manage_rjp !== false,
+    review = o.reviews?.[0],
+    unassignedCluster = !o.clusterId || o.cluster?.name === 'Belum Ditugaskan';
+  const openReview = (target) => {
+    selectReview(target.id);
     setActiveTab(TAB_IDS.OUTLET_VALIDATION);
+  };
+  const openClusterWorkspace = () => {
+    setWorkspaceValues(
+      { rjpView: 'MASTER_CLUSTER', clusterId: unassignedCluster ? '' : o.clusterId },
+      { tab: TAB_IDS.ROUTE_PLANNING }
+    );
+    setActiveTab(TAB_IDS.ROUTE_PLANNING);
+  };
+  const openPlannerForOutlet = () => {
+    if (!o.cluster?.supervisorId) return;
+    setWorkspaceValues(
+      {
+        rjpView: 'SPV_ROLLING',
+        clusterId: o.clusterId,
+        plannerSpv: o.cluster.supervisorId,
+        plannerSales: o.cluster.assignedSales?.id || '',
+        plannerCluster: o.clusterId,
+      },
+      { tab: TAB_IDS.ROUTE_PLANNING }
+    );
+    setActiveTab(TAB_IDS.ROUTE_PLANNING);
   };
   return (
     <div className="outlet-profile-body">
@@ -83,6 +108,8 @@ export function OutletProfile({
             </dd>
             <dt>Wilayah</dt>
             <dd>{o.cluster?.name || 'Belum tersedia'}</dd>
+            <dt>Supervisor tim</dt>
+            <dd>{o.cluster?.supervisor?.name || 'Belum ditugaskan'}</dd>
             <dt>Sales wilayah</dt>
             <dd>{o.cluster?.assignedSales?.name || 'Belum ditugaskan'}</dd>
             <dt>Sumber data</dt>
@@ -157,17 +184,9 @@ export function OutletProfile({
                   Koreksi lokasi
                 </button>
               )}
-              {canReview && (
-                <button
-                  type="button"
-                  className="app-button"
-                  onClick={() =>
-                    review && review.status !== 'COMPLETED' ? openReview(review) : setRequest(true)
-                  }
-                >
-                  {review && review.status !== 'COMPLETED'
-                    ? 'Buka kasus pemeriksaan'
-                    : 'Ajukan pemeriksaan opsional'}
+              {canReview && review && !['COMPLETED', 'CANCELLED'].includes(review.status) && (
+                <button type="button" className="app-button" onClick={() => openReview(review)}>
+                  Buka kasus pemeriksaan
                 </button>
               )}
             </div>
@@ -210,25 +229,41 @@ export function OutletProfile({
               . Tinjau melalui planner.
             </p>
           )}
-          <p className="outlet-muted">
-            Outlet aktif baru masuk jadwal setelah Supervisor menyusun dan menerbitkan PJP.
-          </p>
-          <button
-            type="button"
-            className="app-button"
-            onClick={() => setActiveTab(TAB_IDS.ROUTE_PLANNING)}
-          >
-            Buka wilayah & PJP
-          </button>
-          {canEdit && (
-            <button
-              type="button"
-              className={`app-button ${o.deletedAt ? '' : 'outlet-danger'}`}
-              onClick={() => setActivation(true)}
-            >
-              {o.deletedAt ? 'Aktifkan kembali' : 'Nonaktifkan outlet'}
-            </button>
+          {unassignedCluster && (
+            <div className="outlet-warning">
+              <strong>Outlet masih berada di penampung “Belum Ditugaskan”</strong>
+              <span>
+                Tempatkan outlet ke cluster wilayah tim agar dapat dijadwalkan ke kunjungan Sales.
+              </span>
+            </div>
           )}
+          <div className="app-actions">
+            {canAccessRjp && (
+              <button type="button" className="app-button" onClick={openClusterWorkspace}>
+                {unassignedCluster
+                  ? 'Tempatkan ke wilayah cluster'
+                  : `Buka cluster (${o.cluster?.name})`}
+              </button>
+            )}
+            {canManageRjp && !unassignedCluster && o.cluster?.supervisorId && (
+              <button
+                type="button"
+                className="app-button app-button-primary"
+                onClick={openPlannerForOutlet}
+              >
+                Susun di Planner PJP
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className={`app-button ${o.deletedAt ? '' : 'outlet-danger'}`}
+                onClick={() => setActivation(true)}
+              >
+                {o.deletedAt ? 'Aktifkan kembali' : 'Nonaktifkan outlet'}
+              </button>
+            )}
+          </div>
         </>
       )}
       {tab === 'HISTORY' && (
@@ -236,19 +271,6 @@ export function OutletProfile({
           <OutletChangeQueue outletId={o.id} canManage={canManage} />
           <OutletHistory outlet={o} />
         </>
-      )}
-      {request && (
-        <OutletReviewRequest
-          outlets={[o]}
-          onClose={() => {
-            setRequest(false);
-            onRefresh();
-          }}
-          onSaved={(r) => {
-            setRequest(false);
-            openReview(r[0]);
-          }}
-        />
       )}
       {activation && (
         <OutletActivationDialog outlet={o} onClose={() => setActivation(false)} onSaved={onSaved} />

@@ -21,6 +21,11 @@ export const mapServerOrder = (o = {}) => ({
   policySnapshot: o.policySnapshot || null,
   code: o.code || null,
   dailyStopId: o.pjpStopId,
+  outletId:
+    o.outletId || o.pjpStop?.outletId || o.pjpStop?.outlet?.id || o.customerSnapshot?.id || null,
+  outletCode: o.customerSnapshot?.outletCode || o.pjpStop?.outlet?.outletCode || null,
+  outletAddress: o.customerSnapshot?.address || o.pjpStop?.outlet?.address || '',
+  deliveryPoint: o.customerSnapshot?.deliveryPoint || null,
   outletName: o.customerSnapshot?.name || o.pjpStop?.outlet?.name || o.outletName || '',
   salesName: o.createdByUser?.name || o.salesName || '',
   createdAt: o.createdAt

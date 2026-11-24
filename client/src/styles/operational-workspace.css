@@ -396,3 +396,310 @@
     display: block;
   }
 }
+.packing-picker-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.packing-picker-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 280px;
+}
+.packing-check-hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.packing-check-hit input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #1b66ca;
+}
+.packing-target-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf0f4;
+}
+.packing-target-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+.packing-target-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--admin-muted, #536477);
+}
+.packing-order-code {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #f5f9ff;
+  color: #01144c;
+  font-size: 11px;
+  font-weight: 600;
+}
+.packing-auto-invoice-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+.packing-disclosure {
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.packing-disclosure > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+}
+.packing-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.packing-disclosure > summary::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #1b66ca;
+  border-bottom: 2px solid #1b66ca;
+  transform: rotate(-45deg);
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+.packing-disclosure[open] > summary {
+  border-bottom: 1px solid #edf0f4;
+}
+.packing-disclosure[open] > summary::before {
+  transform: rotate(45deg);
+}
+.packing-disclosure-body {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.packing-summary-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.packing-summary-kpis > div {
+  padding: 10px;
+  border: 1px solid #e2e6ec;
+  border-radius: 10px;
+  background: #f9fafc;
+  display: grid;
+  gap: 2px;
+}
+.packing-summary-kpis span {
+  font-size: 11px;
+  color: var(--admin-muted, #536477);
+}
+.packing-summary-kpis strong {
+  font-size: 18px;
+  color: #01144c;
+  font-variant-numeric: tabular-nums;
+}
+.packing-capacity-bar {
+  width: 100%;
+  height: 8px;
+  accent-color: #1b66ca;
+}
+.packing-form-actions {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #edf0f4;
+}
+.packing-form-actions .admin-button {
+  width: 100%;
+  justify-content: center;
+}
+:is(.admin-packing-editor, .visit-planner) :is(input, select, textarea):user-invalid {
+  border-color: #d93025;
+}
+
+/* Unified Logistics Pipeline, KPI Filter Strip, and Preset Chips */
+.logistics-flow-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+}
+.logistics-flow-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1px solid #edf0f4;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.logistics-flow-step:hover:not(:disabled) {
+  border-color: #bfdbfe;
+  background: #f0f7ff;
+  color: #01144c;
+}
+.logistics-flow-step[aria-current='step'],
+.logistics-flow-step.is-active {
+  background: #edf4fe;
+  border-color: #1b66ca;
+  color: #01144c;
+}
+.logistics-flow-num {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.logistics-flow-step[aria-current='step'] .logistics-flow-num,
+.logistics-flow-step.is-active .logistics-flow-num {
+  background: #1b66ca;
+  color: #ffffff;
+}
+.logistics-flow-step-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.logistics-flow-step-text small {
+  font-size: 11px;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.logistics-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.logistics-kpi-card {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1e293b;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+.logistics-kpi-card:hover:not(:disabled) {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+.logistics-kpi-card[aria-pressed='true'],
+.logistics-kpi-card.is-active {
+  border-color: #1b66ca;
+  background: #f0f6ff;
+  box-shadow: inset 0 0 0 1px #1b66ca;
+}
+.logistics-kpi-card span {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+}
+.logistics-kpi-card strong {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #01144c;
+  font-variant-numeric: tabular-nums;
+}
+
+.logistics-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.logistics-preset-chip {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+.logistics-preset-chip:hover:not(:disabled) {
+  background: #f0f6ff;
+  border-color: #93c5fd;
+  color: #01144c;
+}
+
+.table-scroll-region {
+  overflow-x: auto;
+  max-width: 100%;
+  container-type: inline-size;
+}
+
+@media (max-width: 767px) {
+  .logistics-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .logistics-flow-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

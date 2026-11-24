@@ -217,6 +217,7 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
       setAction('');
       setNote('');
       window.dispatchEvent(new Event('delivery:changed'));
+      window.dispatchEvent(new CustomEvent('operational-data-changed'));
       await onChanged();
     } catch (e) {
       setError(e.message);
@@ -292,7 +293,7 @@ export function RouteOperationsActions({ route, onChanged, driver = false }) {
                   <strong>{route.totalCartons} karton</strong>
                 </p>
                 {route.stops.map((stop) => (
-                  <details key={stop.id} open>
+                  <details key={stop.id} open={route.stops.length <= 3}>
                     <summary className="min-h-11 cursor-pointer">
                       {stop.outlet?.name} · {stop.allocatedCartons} karton
                     </summary>

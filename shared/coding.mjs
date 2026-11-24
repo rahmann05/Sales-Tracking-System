@@ -108,7 +108,8 @@ export const CODE_ENTITIES = [
     model: 'invoice',
     field: 'invoiceNumber',
     prefix: 'INV',
-    mode: 'MANUAL',
+    mode: 'INCREMENT',
+    reset: 'DAILY',
   },
   {
     key: 'DELIVERY_ROUTE',
