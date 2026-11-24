@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
 import { reconciliationFingerprint } from '../../../shared/invoice-reconciliation.mjs';
-import { at, offsetDate } from '../seeds/context.js';
 import { makeEvidencePng, makeSignaturePng } from './completions.js';
-import { ensure, id, note, operationalPolicy, workingDaysBack } from './context.js';
+import { at, ensure, id, note, offsetDate, operationalPolicy, workingDaysBack } from './context.js';
 
 function makePackingItems(order, destinationId = null) {
   return order.items.map((item) => ({

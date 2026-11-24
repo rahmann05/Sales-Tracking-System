@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { assertDemoDatabase, seedDate } from './seeds/context.js';
+import { assertDemoDatabase, seedDate } from './belfoods/context.js';
 import { seedBelfoods } from './belfoods/seed.js';
 const prisma = new PrismaClient();
 try {

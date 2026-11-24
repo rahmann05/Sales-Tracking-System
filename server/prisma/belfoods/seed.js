@@ -1,5 +1,4 @@
-import { at } from '../seeds/context.js';
-import { email, ensure, id, note, people } from './context.js';
+import { at, email, ensure, id, note, people } from './context.js';
 import { seedMaster } from './master.js';
 import { seedSales } from './sales.js';
 import { seedWarehouse } from './warehouse.js';

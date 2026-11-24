@@ -2,13 +2,14 @@ import bcrypt from 'bcryptjs';
 import { CONFIG_PARAMS } from '../../../shared/config.mjs';
 import { OUTLET_DIGITAL_VERSION } from '../../../shared/outlet-validation.mjs';
 import { BUILT_IN_ROLES } from '../../src/modules/roles/roles.constants.js';
-import { at, offsetDate } from '../seeds/context.js';
 import {
+  at,
   CLUSTER_DEFS,
   email,
   haversineKm,
   id,
   note,
+  offsetDate,
   operationalPolicy,
   people,
   sourceData,

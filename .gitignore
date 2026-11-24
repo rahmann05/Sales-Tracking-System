@@ -33,14 +33,13 @@ build/
 *.sln
 *.sw?
 
-# Documentation / Specs
+# Documentation / Specs & Local Reference Assets
 Backend_Spec_Absensi_PJP_Express.md
 PANDUAN_IMPLEMENTASI_ABSENSI_DAN_PJP.md
 FRONTEND_ARCHITECTURE.md
 Analisis/
 KUNJUNGAN_TOKO_BELFOODS_CONVERTED.json
 docs/
-.gitignore
 IMPORT CUSTOMER PVMI CIMAHI.xlsx
 IMPORT NIK.xlsx
 DAILY CALL PVMI 21082026.xlsx
@@ -49,13 +48,18 @@ scripts/
 .claude/
 skills-lock.json
 SEEDING.md
+dokumen perancangan/
 
-# Local database backups
+# Verification & Check Scripts (local/internal checks)
+checks/
+server/checks/
+client/checks/
+
+# Local backups, scratch & runtime output
 .backups/
 .vercel
 .env*
 storage/
 tmp/
 output/
-dokumen perancangan/
 DEMO/dist-client/

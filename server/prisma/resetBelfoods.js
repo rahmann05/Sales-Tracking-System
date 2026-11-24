@@ -6,8 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { seedDate } from './seeds/context.js';
-import { sourceData } from './belfoods/context.js';
+import { seedDate, sourceData } from './belfoods/context.js';
 import { seedBelfoods } from './belfoods/seed.js';
 import { verifyBelfoods, models, snapshot, digest } from './belfoods/verify.js';
 const db = new PrismaClient(),

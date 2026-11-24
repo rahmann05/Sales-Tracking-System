@@ -13,15 +13,15 @@ Sistem operasional distribusi terpadu berbasis web untuk mengelola perencanaan k
 - **Perencanaan & Sinkronisasi PJP**
   - Dukungan jadwal mingguan (`PjpPlan`) terbitan Supervisor serta pembentukan daftar kunjungan harian otomatis (`ensureSalesPjpForDate`) dari jadwal cluster dan rute aktif.
 - **Presensi & Eksekusi Kunjungan Lapangan**
-  - Check-In / Check-Out outlet dengan validasi geofence dinamis, durasi minimum, penegakan urutan stop, kunjungan di luar PJP (*Off-PJP*), pelaporan toko tutup (*Closed Store*), serta alur pengajuan & persetujuan *Unlock Request*.
+  - Check-In / Check-Out outlet dengan validasi geofence dinamis, durasi minimum, penegakan urutan stop, kunjungan di luar PJP (_Off-PJP_), pelaporan toko tutup (_Closed Store_), serta alur pengajuan & persetujuan _Unlock Request_.
 - **Registrasi Outlet Baru (NOO) & Validasi Master Outlet**
-  - Pengajuan NOO lengkap dengan lampiran dokumen pajak (KTP/NPWP), foto fisik toko, deteksi duplikat, persetujuan bertingkat (*Sales → Supervisor → Admin*), finalisasi menjadi Outlet aktif, dan antrean validasi koordinat Google Places.
+  - Pengajuan NOO lengkap dengan lampiran dokumen pajak (KTP/NPWP), foto fisik toko, deteksi duplikat, persetujuan bertingkat (_Sales → Supervisor → Admin_), finalisasi menjadi Outlet aktif, dan antrean validasi koordinat Google Places.
 - **Siklus Order, Gudang & Pengiriman Supir**
-  - Katalog produk dan penetapan harga, pembuatan order lapangan, persetujuan berjenjang, penyusunan & rilis *Packing List* serta *Invoice*, penugasan rute pengiriman Supir, pencatatan absensi tujuan/bukti serah terima/retur barang, hingga penutupan trip & rekonsiliasi faktur.
+  - Katalog produk dan penetapan harga, pembuatan order lapangan, persetujuan berjenjang, penyusunan & rilis _Packing List_ serta _Invoice_, penugasan rute pengiriman Supir, pencatatan absensi tujuan/bukti serah terima/retur barang, hingga penutupan trip & rekonsiliasi faktur.
 - **Armada & Pemeliharaan Kendaraan**
-  - Pemantauan kapasitas muatan, ledger kilometer rencana vs aktual (*odometer*), pencatatan servis multi-item beserta foto struk bengkel, dan pengingat jadwal servis berkala.
+  - Pemantauan kapasitas muatan, ledger kilometer rencana vs aktual (_odometer_), pencatatan servis multi-item beserta foto struk bengkel, dan pengingat jadwal servis berkala.
 - **Pelaporan Manajerial, Audit & Notifikasi Real-Time**
-  - Laporan *Daily Call*, *Weekly (WTD)*, *Monthly (MTD)*, *Absensi Janggal*, dan *Registrasi Outlet* lengkap dengan ekspor 5 format (**DOCX, XLSX, CSV, TXT, PDF**), antrean *Attention Center*, histori audit, serta siaran notifikasi & pelacakan GPS langsung melalui Socket.IO + SSE.
+  - Laporan _Daily Call_, _Weekly (WTD)_, _Monthly (MTD)_, _Absensi Janggal_, dan _Registrasi Outlet_ lengkap dengan ekspor 5 format (**DOCX, XLSX, CSV, TXT, PDF**), antrean _Attention Center_, histori audit, serta siaran notifikasi & pelacakan GPS langsung melalui Socket.IO + SSE.
 
 ---
 
@@ -39,8 +39,7 @@ SINAR ANUGRAH/
 │   │   ├── shared/                 # Komponen UI reusable (NativeDialog, GuardedDialog, ToastRegion, DataTable)
 │   │   ├── styles/                 # Design token Light Mode (#0869cf) & CSS ter-layer
 │   │   └── utils/                  # Generator ekspor DOCX/XLSX/CSV/TXT/PDF & helper frontend
-│   ├── scripts/
-│   │   └── audit-components.mjs    # Verifikasi arsitektur komponen React (AST)
+│   ├── checks/                     # Verifikasi arsitektur komponen React (AST, gitignored)
 │   └── vite.config.js
 │
 ├── server/                         # Backend Express REST API + Prisma ORM + Socket.IO
@@ -51,14 +50,14 @@ SINAR ANUGRAH/
 │   │   ├── seed.js                 # Seeder awal sistem
 │   │   ├── deployReleaseMigrations.mjs
 │   │   └── migrateEvidenceToDisk.mjs
-│   ├── scripts/                    # Skrip audit source, kontrak UI, ekspor & workflow
-│   ├── src/
+│   ├── checks/                     # Skrip audit, kontrak UI & integrasi (gitignored)
+│   ├── src/                        # Modul API modular, middleware & utilitas server
 │   │   ├── config/                 # env, database failover (online/offline), prisma, socket, adapter
 │   │   ├── middlewares/            # Autentikasi, otorisasi, domain-permission, validasi Zod, error handler
 │   │   ├── modules/                # Modul bisnis modular (auth, absensi, pjp, orders, outlets, delivery, dll.)
 │   │   ├── routes/                 # Agregasi API v1, health/readiness, evidence disk streaming
 │   │   └── utils/                  # Scheduler, money serializer, evidence disk storage, gps, response
-│   ├── tests/                      # Unit tests (node:test), integration tests & policy verifier
+│   ├── tests/                      # Unit tests (node:test) & helper fixture
 │   └── .env.example
 │
 ├── shared/                         # Single Source of Truth lintas frontend-backend (*.mjs)
@@ -80,30 +79,34 @@ SINAR ANUGRAH/
 
 ## Tech Stack
 
-| Lapisan | Teknologi |
-| :--- | :--- |
-| **Frontend** | React 18, Vite 7, Tailwind CSS v4, Leaflet / React-Leaflet, `@react-google-maps/api` |
-| **Backend** | Node.js (ESM), Express 4, Zod, Socket.IO, `node-cron`, `express-rate-limit`, Helmet |
-| **Database & ORM** | PostgreSQL 15+, Prisma ORM 5 (`@prisma/client`), `pg`, `@socket.io/postgres-adapter` |
-| **Ekspor Dokumen** | `exceljs` (XLSX), `docx` (DOCX), `jspdf` + `jspdf-autotable` (PDF), CSV & TXT terstandar |
-| **Pengujian & Mutu** | `node --test`, Esbuild harness, Babel AST verifier, Prettier |
+| Lapisan              | Teknologi                                                                                |
+| :------------------- | :--------------------------------------------------------------------------------------- |
+| **Frontend**         | React 18, Vite 7, Tailwind CSS v4, Leaflet / React-Leaflet, `@react-google-maps/api`     |
+| **Backend**          | Node.js (ESM), Express 4, Zod, Socket.IO, `node-cron`, `express-rate-limit`, Helmet      |
+| **Database & ORM**   | PostgreSQL 15+, Prisma ORM 5 (`@prisma/client`), `pg`, `@socket.io/postgres-adapter`     |
+| **Ekspor Dokumen**   | `exceljs` (XLSX), `docx` (DOCX), `jspdf` + `jspdf-autotable` (PDF), CSV & TXT terstandar |
+| **Pengujian & Mutu** | `node --test`, Esbuild harness, Babel AST verifier, Prettier                             |
 
 ---
 
 ## Prasyarat & Instalasi
 
 ### Prasyarat
+
 - **Node.js** `>= 20.19` atau `>= 22.12` (teruji pada Node.js `v24.x`)
 - **PostgreSQL** `15+` aktif di lokal maupun server database target
 
 ### Langkah Setup
+
 1. **Install seluruh dependensi monorepo (`root`, `server`, `client`):**
+
    ```bash
    npm run install:all
    ```
 
 2. **Konfigurasi Environment Backend:**
    Salin `server/.env.example` menjadi `server/.env` dan sesuaikan kredensial serta secret minimal 32 karakter untuk mode produksi:
+
    ```bash
    cp server/.env.example server/.env
    ```
@@ -120,14 +123,18 @@ SINAR ANUGRAH/
 ## Menjalankan Aplikasi
 
 ### 1. Mode Development Reguler
+
 Menjalankan backend (`http://localhost:5000`) dan frontend Vite (`http://localhost:5173`) secara bersamaan:
+
 ```bash
 npm run dev
 ```
 
 ### 2. Mode Database Lokal & Failover Otomatis Saat Offline
+
 Backend dilengkapi modul resolusi database pada `server/src/config/database.js`:
-- **`DB_MODE=auto`** *(default)*: Jika `DATABASE_URL` menunjuk ke database remote (mis. Supabase), server mengecek jangkauan TCP saat startup (`DB_FALLBACK_TIMEOUT_MS`, default `2500` ms). Saat koneksi internet/remote tidak tersedia, backend **otomatis beralih ke PostgreSQL lokal** menggunakan `LOCAL_DATABASE_URL` atau `DATABASE_URL` lokal di `server/.env`.
+
+- **`DB_MODE=auto`** _(default)_: Jika `DATABASE_URL` menunjuk ke database remote (mis. Supabase), server mengecek jangkauan TCP saat startup (`DB_FALLBACK_TIMEOUT_MS`, default `2500` ms). Saat koneksi internet/remote tidak tersedia, backend **otomatis beralih ke PostgreSQL lokal** menggunakan `LOCAL_DATABASE_URL` atau `DATABASE_URL` lokal di `server/.env`.
 - **Mode Lokal Eksplisit (tanpa probe remote):**
   ```bash
   npm run dev:local --prefix server
@@ -137,10 +144,13 @@ Backend dilengkapi modul resolusi database pada `server/src/config/database.js`:
 - Status koneksi aktif (`databaseMode` dan `databaseTarget` tanpa kredensial) dapat dipantau melalui endpoint `GET /api/v1/health/ready` dan `GET /api/v1/health/monitoring`.
 
 ### 3. Mode Demo Uji Alur Lintas Peran (`DEMO/`)
+
 Untuk menguji alur end-to-end antar peran (membuat cluster lalu langsung mengecek jadwal sebagai Sales, mengajukan NOO lalu menyetujui sebagai Supervisor/Admin, Order → Gudang → Supir) **tanpa hambatan constraint lapangan saat uji di komputer lokal**:
+
 ```bash
 node DEMO/start-demo.mjs
 ```
+
 - **Frontend Demo:** `http://127.0.0.1:5174/` (klik pil **`MODE DEMO`** di pojok kanan bawah).
 - **Backend Demo:** `http://127.0.0.1:5050/api/demo/status`.
 - Menyediakan fitur pindah akun instan 5 peran dengan JWT asli, tombol **Sync PJP** 1-klik, pelonggaran preset `SystemConfig` reversibel (`_DEMO_POLICY_BACKUP`), serta guardrail keras menolak startup di `NODE_ENV=production` maupun database remote. Detail lengkap tersedia di [`DEMO/README.md`](./DEMO/README.md).
@@ -181,15 +191,15 @@ node --test DEMO/tests/demo-mode.test.mjs
 npm run build --prefix client
 
 # Pemeriksaan statis & arsitektur (offline)
-node server/scripts/verify-source.mjs
-node client/scripts/audit-components.mjs
-node server/tests/verify-policy-coverage.mjs
-node server/tests/verify-operation-surfaces.mjs
-node server/tests/verify-ui-semantics.mjs
-node server/scripts/verify-ui-contracts.mjs
-node server/scripts/verify-dialog-guard.mjs
-node server/scripts/verify-all-document-exports.mjs
-node server/scripts/verify-frontend-exports.mjs
+npm run verify:source --prefix server
+npm run verify:architecture --prefix client
+npm run verify:policy --prefix server
+npm run verify:operation-surfaces --prefix server
+node server/checks/verify-ui-semantics.mjs
+npm run verify:ui --prefix server
+node server/checks/verify-dialog-guard.mjs
+npm run verify:all-exports --prefix server
+npm run verify:frontend-exports --prefix server
 ```
 
-Skrip pengujian integrasi terhadap PostgreSQL aktif tersedia pada `server/package.json` (`verify:operational`, `verify:packing`, `verify:order-integrity`, `verify:delivery-control`, `verify:pjp-planning`, dan suite `server/tests/*.integration.mjs`).
+Skrip pengujian integrasi terhadap PostgreSQL aktif tersedia pada `server/package.json` (`verify:operational`, `verify:packing`, `verify:order-integrity`, `verify:delivery-control`, `verify:pjp-planning`, dan suite `server/checks/*.integration.mjs`).

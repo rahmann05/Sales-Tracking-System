@@ -6,6 +6,8 @@ storage/
 Analisis/
 docs/
 dokumen perancangan/
+server/checks/
+client/checks/
 server/prisma/migrations/
 server/prisma/migrations_staging/
 package-lock.json

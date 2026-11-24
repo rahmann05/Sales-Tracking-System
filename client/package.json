@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "dev:admin-preview": "vite --config vite.admin-preview.config.js",
     "build:admin-preview": "vite build --config vite.admin-preview.config.js",
-    "verify:architecture": "node scripts/audit-components.mjs"
+    "verify:architecture": "node checks/audit-components.mjs"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",

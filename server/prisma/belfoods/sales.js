@@ -1,13 +1,14 @@
 import { createHash } from 'node:crypto';
 import { DEFAULT_AUDIT_ITEMS } from '../../../shared/supervision-checklist.mjs';
 import { OUTLET_DIGITAL_VERSION } from '../../../shared/outlet-validation.mjs';
-import { at, offsetDate } from '../seeds/context.js';
 import { makeEvidencePng } from './completions.js';
 import {
   activeWorkingDay,
+  at,
   ensure,
   id,
   note,
+  offsetDate,
   operationalPolicy,
   workingDaysBack,
 } from './context.js';
