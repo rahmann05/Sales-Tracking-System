@@ -26,7 +26,7 @@ try {
     'Specify --database=sales_tracking_system explicitly'
   );
   assert.ok(dry || args.includes('--reset'), 'Specify --reset or --dry-run explicitly');
-  assert.equal(sourceData().outlets.length, 20);
+  assert.equal(sourceData().outlets.length, 443);
   const tables = await db.$queryRaw`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
   const auxiliary = ['socket_io_attachments'];
   assert.deepEqual(
@@ -122,7 +122,7 @@ try {
         );
         if (dry) throw new Error('BELFOODS_DRY_RUN_ROLLBACK');
       },
-      { timeout: 120000, maxWait: 10000 }
+      { timeout: 240000, maxWait: 15000 }
     );
   } catch (error) {
     if (!dry || error.message !== 'BELFOODS_DRY_RUN_ROLLBACK') throw error;

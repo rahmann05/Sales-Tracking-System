@@ -48,6 +48,7 @@ scripts/
 .agents/
 .claude/
 skills-lock.json
+SEEDING.md
 
 # Local database backups
 .backups/
