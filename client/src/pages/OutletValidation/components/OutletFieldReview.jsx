@@ -40,6 +40,7 @@ export function OutletFieldReview({ review: r, disabled, act, readOnly = false, 
     ? reviewer
     : defaultReviewer;
   const effectiveReviewerName = reviewerList.find((p) => p.id === effectiveReviewer)?.name || '';
+  const manualPjpEnabled = settings?.CODE_PJP_MODE === 'MANUAL';
   const assign = (e) => {
     e.preventDefault();
     act(() =>
@@ -48,7 +49,7 @@ export function OutletFieldReview({ review: r, disabled, act, readOnly = false, 
         ownerId: effectiveOwner,
         reviewerId: effectiveReviewer,
         instructions,
-        ...(manualCode ? { manualPjpCode: manualCode } : {}),
+        ...(manualPjpEnabled && manualCode.trim() ? { manualPjpCode: manualCode.trim() } : {}),
         ...(due ? { dueAt: new Date(due).toISOString() } : {}),
       })
     );
@@ -134,13 +135,17 @@ export function OutletFieldReview({ review: r, disabled, act, readOnly = false, 
                   Pemeriksa hasil foto/GPS:{' '}
                   <strong>{effectiveReviewerName || 'Pilih pemeriksa di opsi lanjutan'}</strong> ·
                   SLA default {settings.OUTLET_FIELD_SLA_HOURS ?? 48} jam
+                  {!manualPjpEnabled &&
+                    ' · Penomoran & jadwal PJP dibuat otomatis saat tugas dikirim'}
                 </p>
                 <details
                   className="packing-disclosure"
-                  open={!effectiveReviewer || settings?.CODE_PJP_MODE === 'MANUAL'}
+                  open={!effectiveReviewer || manualPjpEnabled}
                 >
                   <summary>
-                    Opsi lanjutan (delegasi pemeriksa bukti, tenggat khusus, kode manual)
+                    {manualPjpEnabled
+                      ? 'Opsi lanjutan (delegasi pemeriksa bukti, tenggat khusus, kode PJP manual)'
+                      : 'Opsi lanjutan (delegasi pemeriksa bukti & tenggat khusus)'}
                   </summary>
                   <div className="packing-disclosure-body">
                     <label className="app-field">
@@ -172,20 +177,22 @@ export function OutletFieldReview({ review: r, disabled, act, readOnly = false, 
                         kalender.
                       </small>
                     </label>
-                    <label className="app-field">
-                      Kode PJP manual (bila diperlukan)
-                      <input
-                        maxLength={128}
-                        value={manualCode}
-                        disabled={disabled}
-                        onChange={(e) => draft.field('manualCode')(e.target.value)}
-                      />
-                      <small>
-                        Hanya diperlukan bila belum ada PJP hari ini dan penomoran PJP diatur
-                        manual. Untuk mode sampai selesai, siapkan PJP berkode manual pada setiap
-                        hari berikutnya.
-                      </small>
-                    </label>
+                    {manualPjpEnabled && (
+                      <label className="app-field">
+                        Kode PJP manual (bila diperlukan)
+                        <input
+                          maxLength={128}
+                          value={manualCode}
+                          disabled={disabled}
+                          onChange={(e) => draft.field('manualCode')(e.target.value)}
+                        />
+                        <small>
+                          Diperlukan bila belum ada PJP hari ini karena penomoran PJP sedang diatur
+                          manual. Untuk mode sampai selesai, siapkan PJP berkode manual pada setiap
+                          hari berikutnya.
+                        </small>
+                      </label>
+                    )}
                   </div>
                 </details>
                 <button

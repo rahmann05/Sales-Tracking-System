@@ -195,7 +195,7 @@
   font-size: 13px;
   line-height: 1.5;
 }
-:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui) select {
+:where(:is(.admin-ui, .supervisor-ui, .sales-ui, .warehouse-ui, .driver-ui) select) {
   appearance: auto;
   padding: 8px 30px 8px 10px;
 }
@@ -555,33 +555,38 @@
   align-items: center;
   gap: 5px;
   white-space: nowrap;
-  padding: 4px 7px;
-  border-radius: 5px;
-  background: #eef1f5;
-  color: #738093;
-  font-size: 10px;
-  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
 }
 .admin-status-pending,
 .admin-status-pending_approval,
 .admin-status-draft {
-  background: #fff4df;
-  color: #99752e;
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
 }
 .admin-status-approved,
 .admin-status-released,
 .admin-status-delivered {
-  background: #eaf7f0;
-  color: #3d8665;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
 }
 .admin-status-rejected,
 .admin-status-failed {
-  background: #fff0ee;
-  color: #b96558;
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
 }
 .admin-status-route {
-  background: #ebf3fe;
-  color: #2c60a3;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
 }
 .admin-pagination {
   display: flex;
@@ -699,17 +704,21 @@
   font-size: 12px;
   line-height: 1.6;
   margin-bottom: 16px;
+  background: #ffffff;
+  color: #334155;
   border: 1px solid #e2e6ec;
 }
 .admin-feedback.error {
-  color: #a55844;
-  background: #fff4ee;
-  border-color: #f3dccd;
+  color: #7f1d1d;
+  background: #ffffff;
+  border-color: #e2e6ec;
+  border-left: 3px solid #dc2626;
 }
 .admin-feedback.success {
-  color: #3b8063;
-  background: #edf8f2;
-  border-color: #d6eadf;
+  color: #14532d;
+  background: #ffffff;
+  border-color: #e2e6ec;
+  border-left: 3px solid #15803d;
 }
 .admin-footnote {
   font-size: 11px;

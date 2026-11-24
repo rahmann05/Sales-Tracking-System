@@ -15,12 +15,21 @@ export const PackingListManager = () => {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [form, setForm] = useState(null);
   const [printDoc, setPrintDoc] = useState(null);
   const [expandedId, setExpandedId] = useWorkspaceState('packingDetail', '');
+  const expandedIdRef = useRef(expandedId);
+  expandedIdRef.current = expandedId;
   const [detailError, setDetailError] = useState('');
-  const hasItemsRef = useRef(false);
-  hasItemsRef.current = Boolean(result.items?.length);
+  useEffect(() => {
+    if (!search) {
+      setDebouncedSearch('');
+      return;
+    }
+    const timer = setTimeout(() => setDebouncedSearch(search), 200);
+    return () => clearTimeout(timer);
+  }, [search]);
   useEffect(() => {
     if (!expandedId) return;
     let active = true;
@@ -56,39 +65,40 @@ export const PackingListManager = () => {
 
   const refresh = useCallback(async () => {
     const requestId = ++flight.current;
-    if (!hasItemsRef.current) setLoading(true);
+    setLoading(true);
     setError('');
     try {
-      const r = await deliveryApi.getPackingLists({
-        page,
-        limit: 20,
-        search,
-        status,
-        remainingOnly: admin || queueScope === 'all' ? undefined : true,
-      });
-      let selected = null;
-      if (expandedId) {
-        try {
-          selected = (await deliveryApi.getPackingListById(expandedId)).data;
-        } catch (detailErr) {
-          if ([403, 404].includes(detailErr.status)) {
-            if (requestId === flight.current) setExpandedId('', { replace: true });
-          } else {
-            throw detailErr;
-          }
-        }
+      const activeDetailId = expandedIdRef.current;
+      const [listRes, detailRes] = await Promise.all([
+        deliveryApi.getPackingLists({
+          page,
+          limit: 20,
+          search: debouncedSearch,
+          status,
+          remainingOnly: admin || queueScope === 'all' ? undefined : true,
+        }),
+        activeDetailId
+          ? deliveryApi.getPackingListById(activeDetailId).catch((detailErr) => {
+              if ([403, 404].includes(detailErr.status)) {
+                if (requestId === flight.current) setExpandedId('', { replace: true });
+                return null;
+              }
+              throw detailErr;
+            })
+          : Promise.resolve(null),
+      ]);
+      if (requestId === flight.current) {
+        setResult({ ...listRes.data, selected: detailRes?.data || null });
       }
-      if (requestId === flight.current) setResult({ ...r.data, selected });
     } catch (e) {
       if (requestId === flight.current) setError(e.message || 'Gagal memuat daftar packing list');
     } finally {
       if (requestId === flight.current) setLoading(false);
     }
-  }, [page, search, status, expandedId, admin, queueScope, setExpandedId]);
+  }, [page, debouncedSearch, status, admin, queueScope, setExpandedId]);
   useEffect(() => {
-    const timer = setTimeout(refresh, 250);
+    refresh();
     return () => {
-      clearTimeout(timer);
       flight.current++;
     };
   }, [refresh]);

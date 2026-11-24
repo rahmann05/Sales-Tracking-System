@@ -81,15 +81,23 @@ export const DailyCallFilterBar = ({
 
         {/* 2. Salesman Selector */}
         <div className="relative">
-          <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+          <label
+            htmlFor="daily-call-salesman-filter"
+            className="block text-[11px] font-bold text-on-surface-variant mb-1"
+          >
             Pilih Salesman
           </label>
           <div className="relative flex items-center">
-            <LuUser className="absolute left-3 text-on-surface-variant text-sm pointer-events-none" />
+            <LuUser
+              aria-hidden="true"
+              className="absolute left-3 text-on-surface-variant text-sm pointer-events-none z-10"
+            />
             <select
+              id="daily-call-salesman-filter"
+              name="salesmanId"
               value={salesmanId}
               onChange={(e) => onChangeSalesman(e.target.value)}
-              className="w-full pl-9 pr-3 h-10 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full pl-9 pr-8 h-10 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             >
               <option value="">Semua Salesman (Tim)</option>
               {salesTeam.map((sales) => (

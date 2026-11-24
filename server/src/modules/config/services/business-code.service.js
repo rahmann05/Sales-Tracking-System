@@ -146,3 +146,29 @@ export async function ensureDefaultTaxOff(db = prisma) {
   invalidatePolicyCache();
   return true;
 }
+
+export async function ensureAutoPjpCodingDefault(db = prisma) {
+  const current = await db.systemConfig.findUnique({ where: { key: 'CODE_PJP_MODE' } });
+  if (!current || current.value !== 'MANUAL') return false;
+  const audited = await db.auditEvent.findFirst({
+    where: { entityType: 'SYSTEM_CONFIG', entityId: 'CODE_PJP_MODE' },
+    select: { id: true },
+  });
+  if (audited) return false;
+  await db.systemConfig.update({
+    where: { key: 'CODE_PJP_MODE' },
+    data: { value: 'INCREMENT' },
+  });
+  const resetRow = await db.systemConfig.findUnique({ where: { key: 'CODE_PJP_RESET' } });
+  if (!resetRow) {
+    await db.systemConfig.create({ data: { key: 'CODE_PJP_RESET', value: 'DAILY' } });
+  } else if (resetRow.value === 'NONE') {
+    await db.systemConfig.update({
+      where: { key: 'CODE_PJP_RESET' },
+      data: { value: 'DAILY' },
+    });
+  }
+  invalidateConfigCache();
+  invalidatePolicyCache();
+  return true;
+}

@@ -142,32 +142,28 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
 
       {/* 7. Call Indicators (Plan / Actual / EC) */}
       <td data-label="Call Status" className="whitespace-nowrap text-center py-2.5 px-2">
-        <div className="inline-flex items-center justify-center gap-1 bg-surface-container/60 p-1 rounded-lg border border-border-glass whitespace-nowrap">
+        <div className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white divide-x divide-slate-200 overflow-hidden font-mono text-[11px] font-semibold whitespace-nowrap">
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-              row.planCall === 'Y'
-                ? 'bg-blue-500/15 text-blue-600'
-                : 'bg-slate-200/50 text-slate-500 dark:bg-slate-800'
+            className={`px-2 py-0.5 ${
+              row.planCall === 'Y' ? 'text-slate-900 bg-slate-50' : 'text-slate-400 bg-white'
             }`}
             title="Plan Call"
           >
             P:{row.planCall}
           </span>
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-              isActual ? 'bg-emerald-500/15 text-emerald-600' : 'bg-rose-500/15 text-rose-600'
-            }`}
+            className={`px-2 py-0.5 ${isActual ? 'text-emerald-700 bg-white' : 'text-red-700 bg-white'}`}
             title="Actual Call"
           >
             A:{row.actualCall}
           </span>
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+            className={`px-2 py-0.5 ${
               isEc
-                ? 'bg-purple-500/15 text-purple-600 font-black'
+                ? 'text-primary bg-blue-50/70 font-bold'
                 : isActual
-                  ? 'bg-amber-500/15 text-amber-600'
-                  : 'bg-slate-200/50 text-slate-400 dark:bg-slate-800'
+                  ? 'text-amber-700 bg-white'
+                  : 'text-slate-400 bg-white'
             }`}
             title="Effective Call"
           >
@@ -180,10 +176,10 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       <td data-label="Order (Rp)" className="whitespace-nowrap md:text-right text-left py-2.5 px-2">
         {row.orderAmount > 0 ? (
           <div>
-            <div className="font-bold text-emerald-600 font-mono text-xs whitespace-nowrap">
+            <div className="font-bold text-slate-900 font-mono text-xs whitespace-nowrap">
               Rp {row.orderAmount.toLocaleString('id-ID')}
             </div>
-            <div className="text-[10px] text-purple-600 font-semibold whitespace-nowrap">
+            <div className="text-[10px] text-slate-500 font-semibold whitespace-nowrap">
               {row.skuSold} SKU Terjual
             </div>
           </div>
@@ -232,12 +228,12 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
       <td data-label="Deviasi GPS" className="whitespace-nowrap text-center py-2.5 px-2">
         {isActual ? (
           <span
-            className={`inline-flex px-2 py-0.5 rounded-full font-mono text-[10px] font-bold whitespace-nowrap ${
+            className={`inline-flex px-2 py-0.5 rounded-md border font-mono text-[10px] font-semibold whitespace-nowrap ${
               row.distanceWarning === 'WARNING'
-                ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                ? 'bg-red-50/70 text-red-700 border-red-200'
                 : row.deviationMeters == null
-                  ? 'bg-surface-container text-on-surface-variant'
-                  : 'bg-emerald-500/10 text-emerald-600'
+                  ? 'bg-slate-50 text-slate-500 border-slate-200'
+                  : 'bg-emerald-50/60 text-emerald-700 border-emerald-200'
             }`}
           >
             {row.deviationMeters == null

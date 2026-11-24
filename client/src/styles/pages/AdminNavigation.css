@@ -85,34 +85,11 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: #eaf2ff;
-  color: #1769d1;
+  border-radius: 10px;
+  border: 1px solid #d7e6fb;
+  background: var(--admin-accent-soft, #edf4fe);
+  color: var(--primary, #1b66ca);
   font-size: 21px;
-}
-.admin-icon-delivery {
-  background: #e9f4f1;
-  color: #27765d;
-}
-.admin-icon-outlets {
-  background: #fff2e9;
-  color: #ab672f;
-}
-.admin-icon-sales {
-  background: #f0edfc;
-  color: #7960ba;
-}
-.admin-icon-attention {
-  background: #fff5df;
-  color: #97661f;
-}
-.admin-icon-reports {
-  background: #eaf1f8;
-  color: #486d93;
-}
-.admin-icon-system {
-  background: #eff0f3;
-  color: #626a78;
 }
 .admin-module-arrow {
   position: absolute;

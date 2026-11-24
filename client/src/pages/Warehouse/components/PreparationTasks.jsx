@@ -78,17 +78,21 @@ export function PreparationTasks({ route, people, onChanged, canManage }) {
           return (
             <div
               key={key}
-              className={`rounded-xl border p-2.5 text-sm ${
+              className={`rounded-lg border p-3 text-sm ${
                 done
-                  ? 'border-emerald-200 bg-emerald-50/40'
+                  ? 'border-slate-200 border-l-[3px] border-l-emerald-600 bg-white'
                   : isActive
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border-glass'
+                    ? 'border-slate-200 border-l-[3px] border-l-primary bg-white'
+                    : 'border-slate-200 bg-slate-50/60'
               }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong>{stages[key]}</strong>
-                <span className="text-xs font-semibold">
+                <strong className="text-slate-900">{stages[key]}</strong>
+                <span
+                  className={`text-xs font-semibold ${
+                    done ? 'text-emerald-700' : isActive ? 'text-primary' : 'text-slate-500'
+                  }`}
+                >
                   {done ? 'Selesai' : isActive ? 'Tahap aktif' : 'Menunggu'}
                 </span>
               </div>

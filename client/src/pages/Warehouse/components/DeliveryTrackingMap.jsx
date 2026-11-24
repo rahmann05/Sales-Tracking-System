@@ -63,15 +63,15 @@ export function DeliveryTrackingMap({ routes, issues = [], selectedId, onSelect 
       {gpsOffRoutes.length > 0 && (
         <div
           role="alert"
-          className="p-3 rounded-xl border border-red-500/40 bg-red-500/10 text-red-700 text-xs space-y-1"
+          className="px-3.5 py-2.5 rounded-lg border border-slate-200 border-l-[3px] border-l-red-600 bg-white text-slate-700 text-xs space-y-1"
         >
-          <strong className="block font-bold">
+          <strong className="block font-semibold text-red-700">
             FLAG ADMIN — POSISI GPS ARMADA TIDAK TERKINI ({gpsOffRoutes.length} trip)
           </strong>
           {gpsOffRoutes.map((r) => (
             <p key={r.id}>
               •{' '}
-              <strong>
+              <strong className="text-slate-900">
                 {r.vehicle?.code || r.code} ({r.code} · {r.driver?.name || 'Supir'})
               </strong>
               : Posisi langsung armada belum dapat dikonfirmasi. Periksa izin lokasi, koneksi, dan
@@ -87,9 +87,9 @@ export function DeliveryTrackingMap({ routes, issues = [], selectedId, onSelect 
       {selectedRoute && !selectedRoute.departedAt && (
         <div
           role="status"
-          className="p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-800 text-xs"
+          className="px-3.5 py-2.5 rounded-lg border border-slate-200 border-l-[3px] border-l-amber-600 bg-white text-slate-700 text-xs"
         >
-          <strong>
+          <strong className="text-slate-900">
             Keterangan Peta Armada ({selectedRoute.vehicle?.code || selectedRoute.code}):
           </strong>{' '}
           Titik armada memang belum tersedia di peta karena trip belum dikirim / belum berangkat (
@@ -105,9 +105,9 @@ export function DeliveryTrackingMap({ routes, issues = [], selectedId, onSelect 
       {selectedRoute && selectedRoute.returnedAt && (
         <div
           role="status"
-          className="p-3 rounded-xl border border-border-glass bg-surface-variant/40 text-xs"
+          className="px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50/70 text-slate-700 text-xs"
         >
-          <strong>
+          <strong className="text-slate-900">
             Keterangan Peta Armada ({selectedRoute.vehicle?.code || selectedRoute.code}):
           </strong>{' '}
           Armada sudah kembali ke gudang pada {stamp(selectedRoute.returnedAt)} WIB.

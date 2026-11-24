@@ -154,7 +154,7 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
                 selectedStop === stop.id
                   ? { outline: '2px solid var(--color-primary, #1b66ca)', outlineOffset: 4 }
                   : needsReturn
-                    ? { borderColor: '#fbbf24', backgroundColor: '#fffbeb' }
+                    ? { borderLeft: '3px solid #d97706', backgroundColor: '#ffffff' }
                     : undefined
               }
             >

@@ -6,6 +6,7 @@ import { configureSocketAdapter } from './src/config/socket-adapter.js';
 import { initScheduler } from './src/utils/scheduler.js';
 import {
   ensureAutoInvoiceCodingDefault,
+  ensureAutoPjpCodingDefault,
   ensureDefaultTaxOff,
 } from './src/modules/config/services/business-code.service.js';
 
@@ -13,6 +14,7 @@ const PORT = config.port;
 
 const dbState = await initDatabaseConnection();
 await ensureAutoInvoiceCodingDefault().catch(() => {});
+await ensureAutoPjpCodingDefault().catch(() => {});
 await ensureDefaultTaxOff().catch(() => {});
 if (dbState.fallbackUsed) {
   console.warn(

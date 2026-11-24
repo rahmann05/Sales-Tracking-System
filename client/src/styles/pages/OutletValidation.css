@@ -557,15 +557,33 @@
   border-radius: 12px;
   margin-top: 18px;
 }
+.ov-candidate-footer {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-glass, #e2e8f0);
+}
+.ov-candidate-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .ov-attribution {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   align-items: center;
-  margin-top: 12px;
   font-size: 12px;
 }
-.ov-attribution img {
-  object-fit: contain;
+.ov-google-logo {
+  display: block;
+  flex-shrink: 0;
+}
+.ov-candidate-footer .ov-notice {
+  margin: 0;
 }
 .ov-form-grid {
   display: grid;

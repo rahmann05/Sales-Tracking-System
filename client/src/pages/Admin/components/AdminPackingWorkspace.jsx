@@ -238,11 +238,12 @@ export function AdminPackingWorkspace(props) {
               </button>
             )}
           </nav>
-          <div className="logistics-kpi-strip" role="group" aria-label="Ringkasan packing list">
+          <div className="logistics-kpi-strip" role="group" aria-label="Filter status packing list">
             {[
               ['', 'Semua dokumen', metrics.total, status === ''],
               ['DRAFT', 'Draft admin', metrics.draftCount, status === 'DRAFT'],
               ['RELEASED', 'Dikirim ke gudang', metrics.releasedCount, status === 'RELEASED'],
+              ['INCOMPLETE', 'Perlu dilengkapi', metrics.incompleteCount, status === 'INCOMPLETE'],
             ].map(([nextStatus, label, count, pressed]) => (
               <button
                 key={label}
@@ -258,17 +259,6 @@ export function AdminPackingWorkspace(props) {
                 <strong>{count}</strong>
               </button>
             ))}
-            <button
-              type="button"
-              className="logistics-kpi-card"
-              onClick={() => {
-                setStatus('DRAFT');
-                setPage(1);
-              }}
-            >
-              <span>Perlu dilengkapi</span>
-              <strong>{metrics.incompleteCount}</strong>
-            </button>
           </div>
           <div className="admin-toolbar">
             <label className="admin-search">
@@ -284,20 +274,19 @@ export function AdminPackingWorkspace(props) {
                 }}
               />
             </label>
-            <label className="admin-select-label">
-              Status
-              <select
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value);
+            {(status || search) && (
+              <button
+                type="button"
+                className="admin-button"
+                onClick={() => {
+                  setStatus('');
+                  setSearch('');
                   setPage(1);
                 }}
               >
-                <option value="">Semua status</option>
-                <option value="DRAFT">Draft admin</option>
-                <option value="RELEASED">Dikirim ke gudang</option>
-              </select>
-            </label>
+                Reset filter
+              </button>
+            )}
           </div>
           <section className="admin-panel">
             <AdminPackingTable items={result.items} loading={loading} onSelect={toggleExpand} />
