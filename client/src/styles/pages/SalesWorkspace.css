@@ -145,6 +145,42 @@
   color: #697280;
   line-height: 1.6;
 }
+.sales-lock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fffaf0;
+  border: 1px solid #f1e0bd;
+  border-radius: 10px;
+}
+.sales-lock h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5f4a1c;
+}
+.sales-lock h3 svg {
+  flex-shrink: 0;
+  color: #9a7b2f;
+}
+.sales-lock p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #697280;
+}
+.sales-lock .app-button {
+  align-self: flex-start;
+}
+@media (max-width: 640px) {
+  .sales-lock .app-button {
+    align-self: stretch;
+  }
+}
 .sales-active-visit {
   display: flex;
   gap: 18px;

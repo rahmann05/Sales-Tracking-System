@@ -288,10 +288,9 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
         </p>
       )}
       {/* 3. Confirmation Button */}
-      {requireEvidence && !policy.photoOut && (
+      {requireEvidence && !policy.photoOut && settings.SALES_REQUIRE_GPS && (
         <p className="text-xs text-on-surface-variant">
-          Foto opsional.
-          {settings.SALES_REQUIRE_GPS ? ' Tunggu GPS aktif sebelum mengirim absensi.' : ''}
+          Tunggu GPS aktif sebelum mengirim absensi.
         </p>
       )}
       {(capturedPhoto || !(requireEvidence && policy.photoOut)) && (

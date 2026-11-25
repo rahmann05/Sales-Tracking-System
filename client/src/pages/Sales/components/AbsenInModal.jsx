@@ -136,13 +136,14 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
         </p>
       )}
       {/* 3. Confirmation Button */}
-      {!(requireEvidence && policy.photoIn) && (
-        <p className="text-xs text-on-surface-variant">
-          {requireEvidence
-            ? `Foto opsional.${settings.SALES_REQUIRE_GPS ? ' Tunggu GPS aktif sebelum mengirim absensi.' : ''}`
-            : 'Kegiatan tanpa presensi wajib; foto dan GPS tidak diperlukan.'}
-        </p>
-      )}
+      {!(requireEvidence && policy.photoIn) &&
+        (requireEvidence ? settings.SALES_REQUIRE_GPS : true) && (
+          <p className="text-xs text-on-surface-variant">
+            {requireEvidence
+              ? 'Tunggu GPS aktif sebelum mengirim absensi.'
+              : 'Kegiatan tanpa presensi wajib; foto dan GPS tidak diperlukan.'}
+          </p>
+        )}
       {(capturedPhoto || !(requireEvidence && policy.photoIn)) && (
         <button
           type="button"

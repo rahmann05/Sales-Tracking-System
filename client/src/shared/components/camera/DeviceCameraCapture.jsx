@@ -211,8 +211,7 @@ export const DeviceCameraCapture = ({
         <CapturedPhotoPreview capturedPhoto={capturedPhoto} onRetake={handleRetakePhoto} />
       ) : !inputPolicy.live ? (
         <div className="rounded-xl border border-border-glass p-4 text-sm">
-          Gunakan kamera perangkat di bawah.{' '}
-          {photoRequired ? 'Foto wajib dilampirkan.' : 'Foto opsional.'}
+          Gunakan kamera perangkat di bawah. {photoRequired ? 'Foto wajib dilampirkan.' : ''}
         </div>
       ) : photoRequired || cameraRequested ? (
         <div className="relative rounded-2xl overflow-hidden aspect-video min-h-[220px] md:min-h-0 bg-slate-950 border border-border-glass shadow-inner flex items-center justify-center">
@@ -242,7 +241,7 @@ export const DeviceCameraCapture = ({
         </div>
       ) : (
         <div className="rounded-xl border border-border-glass p-4 space-y-2">
-          <p className="text-sm">Foto opsional. Anda dapat melanjutkan tanpa membuka kamera.</p>
+          <p className="text-sm">Anda dapat melanjutkan tanpa membuka kamera.</p>
           <button
             type="button"
             className="config-button min-h-11"
