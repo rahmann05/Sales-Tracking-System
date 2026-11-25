@@ -22,6 +22,11 @@ const mapShift = (record) =>
         policyValues: record.policySnapshot?.values,
       }
     : emptyShift;
+const pickShift = (rows) =>
+  mapShift(
+    rows.find((r) => r.kind === 'SHIFT' && !r.checkOutAt && r.checklist?.state !== 'FINISHED') ||
+      rows.filter((r) => r.kind === 'SHIFT').at(-1)
+  );
 export function useShiftAttendance(user) {
   const [shiftAttendance, setShiftAttendance] = useState(emptyShift);
   const [shiftBusy, setBusy] = useState(false);
@@ -34,14 +39,7 @@ export function useShiftAttendance(user) {
     const load = async () => {
       try {
         const res = await staffAttendanceApi.getToday();
-        if (active)
-          setShiftAttendance(
-            mapShift(
-              res.data.find(
-                (r) => r.kind === 'SHIFT' && !r.checkOutAt && r.checklist?.state !== 'FINISHED'
-              ) || res.data.filter((r) => r.kind === 'SHIFT').at(-1)
-            )
-          );
+        if (active) setShiftAttendance(pickShift(res.data));
       } catch (error) {
         if (active) setError(error.message);
       }
@@ -62,6 +60,12 @@ export function useShiftAttendance(user) {
       return true;
     } catch (error) {
       setError(error.message);
+      // The server may have rolled the shift over (new day); show its real state, not a stale one.
+      try {
+        setShiftAttendance(pickShift((await staffAttendanceApi.getToday()).data));
+      } catch {
+        /* keep the previous state; the periodic refresh retries */
+      }
       return false;
     } finally {
       setBusy(false);

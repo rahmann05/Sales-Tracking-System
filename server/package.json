@@ -61,6 +61,7 @@
     "verify:vehicle-policy": "node checks/vehicle-service-policy.integration.mjs",
     "verify:notification-outbox": "node checks/notification-outbox.integration.mjs",
     "verify:destination-policy": "node checks/destination-policy.integration.mjs",
+    "verify:shift-day-close": "node checks/shift-day-close.integration.mjs",
     "verify:shift-corrections": "node checks/shift-correction.integration.mjs",
     "verify:supervision-checklist": "node checks/supervision-checklist.integration.mjs",
     "verify:order-price-policy": "node checks/order-price-policy.integration.mjs",

@@ -14,6 +14,7 @@ import {
 } from '../config/services/approval-readiness.service.js';
 import { canDomainAction } from '../../../../shared/domain-permissions.mjs';
 import { assertDomainAction } from '../../middlewares/domain-permission.middleware.js';
+import { closeAllStaleShifts } from '../staff-attendance/shift-day-close.service.js';
 export async function scanMissingOut(db = prisma) {
   const stops = await db.pjpStop.findMany({
     where: { status: 'PENDING', attendances: { some: { type: 'IN' }, none: { type: 'OUT' } } },
@@ -29,6 +30,7 @@ export async function scanMissingOut(db = prisma) {
     )
       await flagVisit(db, stop, stop.pjp.userId, 'TIME_LIMIT');
   }
+  if (db === prisma) await closeAllStaleShifts();
   const shifts = await db.staffActivity.findMany({ where: { kind: 'SHIFT', checkOutAt: null } });
   for (const row of shifts) {
     if (db === prisma)

@@ -31,6 +31,16 @@ export function attendanceMap(evidence = {}) {
     ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
     : null;
 }
+// Shift closed automatically at day rollover: no check-out was ever made.
+export function attendanceNoCheckout(row) {
+  return (
+    row.kind === 'SHIFT' &&
+    !row.checkOutAt &&
+    row.checklist?.state === 'FINISHED' &&
+    row.checklist?.source === 'AUTO_DAY_CLOSE' &&
+    row.checklist?.noCheckout === true
+  );
+}
 export function attendanceStatus(row) {
   const t = shiftTimeView(row);
   if (row.kind !== 'SHIFT')
@@ -55,6 +65,8 @@ export function attendanceStatus(row) {
       : mode === 'IN_OUT'
         ? 'Belum absen keluar'
         : 'Belum diakhiri';
+  if (attendanceNoCheckout(row))
+    return `Tidak checkout · ${punctuality} · Ditutup otomatis saat pergantian hari${t.corrected ? ' · Ada koreksi diterima' : ''}`;
   return `${punctuality} · ${closure}${t.corrected ? ' · Ada koreksi diterima' : ''}`;
 }
 export function attendanceStages(row) {

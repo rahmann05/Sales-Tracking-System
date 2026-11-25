@@ -13,6 +13,7 @@ import {
 } from '../../../../shared/shift-policy.mjs';
 import { flagShiftRange } from './shift-range.service.js';
 import { gpsEvidence } from '../../utils/gps-evidence.js';
+import { closeStaleShiftsForUser } from './shift-day-close.service.js';
 
 async function shiftEvidence(action, dateKey, values, data) {
   await assertEvidenceImages({ photoUrl: data.photoUrl }, { values });
@@ -191,5 +192,14 @@ async function perform(db, userId, action, data) {
   return db.staffActivity.findUnique({ where: { id: existing.id } });
 }
 
-export const recordShift = (userId, action, data = {}) =>
-  withUserTransaction(userId, (db) => perform(db, userId, action, data));
+export const recordShift = async (userId, action, data = {}) => {
+  // A shift forgotten on an earlier day is closed as "tidak checkout" first, so it can
+  // neither block today's check-in nor receive a fake check-out time.
+  const autoClosed = await closeStaleShiftsForUser(userId);
+  if (action === 'SHIFT_OUT' && autoClosed.length)
+    throw new AppError(
+      'Shift hari sebelumnya sudah ditutup otomatis sebagai tidak checkout. Mulai shift hari ini.',
+      409
+    );
+  return withUserTransaction(userId, (db) => perform(db, userId, action, data));
+};

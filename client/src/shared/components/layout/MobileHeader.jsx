@@ -5,7 +5,7 @@ import {
   roleParentTab,
 } from '../../../constants/roleNavigation';
 import React from 'react';
-import { LuLogOut, LuArrowLeft } from 'react-icons/lu';
+import { LuLogOut, LuMenu } from 'react-icons/lu';
 import { useApp } from '../../../context/AppContext';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { Avatar } from '../common/Avatar';
@@ -35,11 +35,11 @@ export const MobileHeader = ({ onLogout }) => {
           <button
             type="button"
             onClick={() => setActiveTab(TAB_IDS.ROLE_WORKSPACE)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+            className="mobile-menu-button"
             title="Kembali ke Menu Utama"
+            aria-label="Kembali ke Menu Utama"
           >
-            <LuArrowLeft className="text-xs" />
-            <span>Menu</span>
+            <LuMenu aria-hidden="true" />
           </button>
         ) : (
           <div className="mobile-brand-icon overflow-hidden bg-white">

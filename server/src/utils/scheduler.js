@@ -6,7 +6,7 @@ import { scanMissingOut } from '../modules/attention/operational-exceptions.serv
 import cron from 'node-cron';
 import { generateDailyPjps } from '../modules/pjp/pjp.service.js';
 import { runAttentionEscalation } from '../modules/attention/attention-escalation.service.js';
-import { schedulerMonitor, nextDailyPjp } from './scheduler-health.js';
+import { schedulerMonitor, nextDailyPjp, dailyRolloverDue } from './scheduler-health.js';
 import { dispatchNotifications } from '../modules/notifications/services/notification-delivery.service.js';
 import { purgeExpiredLocations } from '../modules/users/services/location-retention.service.js';
 import { runValidationJobs } from '../modules/outlets/services/outlet-validation-job.service.js';
@@ -181,7 +181,7 @@ export const initScheduler = () => {
     Date.now() + 5 * 60000,
     5 * 60000
   );
-  schedulerMonitor.register('PJP', 'Pembuatan PJP harian · 03.00 WIB', nextDailyPjp(), 15 * 60000);
+  schedulerMonitor.register('PJP', 'Pembuatan PJP harian · 00.05 WIB', nextDailyPjp(), 15 * 60000);
   cron.schedule(
     '*/5 * * * *',
     async () => {
@@ -203,9 +203,9 @@ export const initScheduler = () => {
     },
     { timezone: 'Asia/Jakarta' }
   );
-  // Run daily at 03:00 AM (0 3 * * *)
+  // Run daily just after midnight WIB (00:05), and once at startup if that time was missed.
   cron.schedule(
-    '0 3 * * *',
+    '5 0 * * *',
     async () => {
       console.log('[Scheduler]: Starting daily PJP generation job...');
       try {
@@ -219,5 +219,10 @@ export const initScheduler = () => {
     { timezone: 'Asia/Jakarta' }
   );
 
-  console.log('[Scheduler]: Daily PJP cron job initialized (Scheduled for 03:00 AM daily).');
+  if (dailyRolloverDue())
+    schedulerMonitor
+      .run('PJP', generateDailyPjps, nextDailyPjp)
+      .then((result) => result && console.log('[Scheduler]: PJP catch-up:', result.message))
+      .catch((error) => console.error('[Scheduler]: PJP catch-up failed:', error.message));
+  console.log('[Scheduler]: Daily PJP cron job initialized (Scheduled for 00:05 WIB daily).');
 };

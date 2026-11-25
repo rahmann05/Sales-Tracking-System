@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { syncHealth, mapNotification } from '../../shared/monitoring.mjs';
-import { createSchedulerMonitor, nextDailyPjp } from '../src/utils/scheduler-health.js';
+import {
+  createSchedulerMonitor,
+  nextDailyPjp,
+  dailyRolloverDue,
+} from '../src/utils/scheduler-health.js';
 import { notifyFollowUp } from '../src/modules/staff-attendance/follow-up-notification.service.js';
 
 test('monitoring distinguishes offline, failed, never loaded and expired data', () => {
@@ -83,15 +87,18 @@ test('scheduler prevents overlapping work and identifies a stalled running job',
   await pending;
   assert.equal(monitor.snapshot()[0].status, 'OK');
 });
-test('daily PJP schedule uses 03:00 WIB independently of server timezone', () => {
+test('daily PJP schedule uses 00:05 WIB independently of server timezone and catches up after restart', () => {
   assert.equal(
-    new Date(nextDailyPjp(Date.parse('2026-10-08T19:00:00Z'))).toISOString(),
-    '2026-10-08T20:00:00.000Z'
+    new Date(nextDailyPjp(Date.parse('2026-10-08T16:00:00Z'))).toISOString(),
+    '2026-10-08T17:05:00.000Z'
   );
   assert.equal(
-    new Date(nextDailyPjp(Date.parse('2026-10-08T20:00:00Z'))).toISOString(),
-    '2026-10-09T20:00:00.000Z'
+    new Date(nextDailyPjp(Date.parse('2026-10-08T17:05:00Z'))).toISOString(),
+    '2026-10-09T17:05:00.000Z'
   );
+  assert.equal(dailyRolloverDue(Date.parse('2026-11-25T17:00:00Z')), false);
+  assert.equal(dailyRolloverDue(Date.parse('2026-11-25T17:47:00Z')), true);
+  assert.equal(dailyRolloverDue(Date.parse('2026-11-26T05:00:00Z')), true);
 });
 test('follow-up review notification uses the current supervisor and falls back to Admin when unassigned', async () => {
   let supervisorId = 'spv',

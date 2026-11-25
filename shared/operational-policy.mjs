@@ -436,11 +436,11 @@ export const OPERATIONAL_CONFIG_GROUPS = [
         'menit',
         'Nol mematikan flag jadwal. Driver yang masih menjalankan trip tetap dapat melanjutkan pekerjaan.'
       ),
-      select('SHIFT_IN_PHOTO', 'Foto masuk shift', 'OPTIONAL', ['REQUIRED', 'OPTIONAL']),
+      select('SHIFT_IN_PHOTO', 'Foto masuk shift', 'REQUIRED', ['REQUIRED', 'OPTIONAL']),
       select(
         'SHIFT_OUT_PHOTO',
         'Foto keluar shift',
-        'OPTIONAL',
+        'REQUIRED',
         ['REQUIRED', 'OPTIONAL'],
         'Hanya berlaku pada mode masuk–keluar.'
       ),

@@ -164,6 +164,8 @@ test('own attendance API retains old active visits and hides old finished logica
     ];
   prisma.staffActivity.findMany = async (query) => {
     assert.equal(query.where.userId, 'spv');
+    // The route first looks for shifts forgotten on an earlier day (none in this fixture).
+    if (query.where.kind === 'SHIFT') return [];
     assert.ok(
       query.where.OR.some(
         (branch) => branch.kind?.in?.includes('VISIT') && branch.checkOutAt === null

@@ -10,6 +10,7 @@ import { prisma } from '../../config/prisma.js';
 import { wibDateKey } from '../../../../shared/visit-metrics.mjs';
 import { staffActionSchema, followUpCompletionSchema } from './staff-attendance.schema.js';
 import { recordShift } from './shift.service.js';
+import { closeStaleShiftsForUser } from './shift-day-close.service.js';
 import { recordSupervisorVisit } from './supervisor-visit.service.js';
 import { correctShiftTime, pendingShiftCorrections } from './shift-correction.service.js';
 import { shiftDateKey } from '../../../../shared/shift-policy.mjs';
@@ -97,6 +98,7 @@ router.post('/follow-ups/:id/review', authorize('ADMIN', 'SUPERVISOR'), async (r
 });
 router.get('/', async (req, res, next) => {
   try {
+    await closeStaleShiftsForUser(req.user.id);
     const day = wibDateKey(),
       shiftDay = shiftDateKey(Date.now(), await getDynamicConfig('SHIFT_DAY_CUTOFF_TIME', '00:00'));
     const rows = await prisma.staffActivity.findMany({

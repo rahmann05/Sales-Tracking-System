@@ -10,6 +10,10 @@ export function ShiftEvidenceDialog({ action, dateKey, values, busy, error, onCl
     needsReason = rules.handling === 'REASON';
   const onLocation = useCallback((gps) => setCapture((current) => ({ ...current, gps })), []);
   const blocked = rules.handling === 'BLOCK';
+  // Only mandatory evidence is spelled out; optional evidence needs no label.
+  const requirements = [rules.photoRequired && 'Foto', rules.gpsRequired && 'GPS']
+    .filter(Boolean)
+    .join(' dan ');
   const ready =
     !blocked &&
     (!rules.photoRequired || capture?.photoUrl) &&
@@ -67,24 +71,27 @@ export function ShiftEvidenceDialog({ action, dateKey, values, busy, error, onCl
               buttonLabel="Ambil foto shift"
             />
           )}
-        <p className="text-sm">
-          Foto {rules.photoRequired ? 'wajib' : 'opsional'} · GPS{' '}
-          {rules.gpsRequired ? 'wajib' : 'opsional'}.{' '}
-          {values.SHIFT_ATTENDANCE_MODE !== 'IN_OUT' && action === 'SHIFT_OUT'
-            ? 'Penyelesaian kegiatan tidak membuat bukti OUT.'
-            : ''}
-        </p>
-        <label className="grid gap-2 text-sm">
-          Alasan / catatan {needsReason ? '(wajib)' : '(opsional)'}
-          <textarea
-            className="form-input"
-            maxLength={4000}
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            disabled={busy || blocked}
-          />
-        </label>
+        {requirements && (
+          <p className="text-sm">
+            {requirements} wajib.
+            {values.SHIFT_ATTENDANCE_MODE !== 'IN_OUT' && action === 'SHIFT_OUT'
+              ? ' Penyelesaian kegiatan tidak membuat bukti OUT.'
+              : ''}
+          </p>
+        )}
+        {needsReason && (
+          <label className="grid gap-2 text-sm">
+            Alasan (wajib)
+            <textarea
+              className="form-input"
+              maxLength={4000}
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              disabled={busy || blocked}
+            />
+          </label>
+        )}
         {error && (
           <p role="alert" className="app-error">
             {error}

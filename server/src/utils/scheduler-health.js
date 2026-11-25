@@ -1,8 +1,17 @@
+// Daily PJP/shift rollover runs just after the WIB date changes so a new day never starts empty.
+export const DAILY_ROLLOVER_MINUTE = 5;
 export function nextDailyPjp(now = Date.now()) {
   const wib = new Date(now + 7 * 3600000);
-  let next = Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate(), 3) - 7 * 3600000;
+  let next =
+    Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate(), 0, DAILY_ROLLOVER_MINUTE) -
+    7 * 3600000;
   if (next <= now) next += 86400000;
   return next;
+}
+// A restart after the rollover time must still prepare today's agenda (generation is idempotent).
+export function dailyRolloverDue(now = Date.now()) {
+  const wib = new Date(now + 7 * 3600000);
+  return wib.getUTCHours() * 60 + wib.getUTCMinutes() >= DAILY_ROLLOVER_MINUTE;
 }
 export function createSchedulerMonitor(clock = Date.now) {
   const jobs = new Map();

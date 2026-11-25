@@ -71,6 +71,9 @@
   font-weight: 600;
   color: #26374d;
 }
+.staff-attendance-status.is-no-checkout {
+  color: #9a3412;
+}
 .staff-attendance-secondary {
   display: block;
   margin-top: 3px;

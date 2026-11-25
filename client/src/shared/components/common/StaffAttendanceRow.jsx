@@ -2,6 +2,7 @@ import React from 'react';
 import { shiftTimeView } from '../../../../../shared/shift-policy.mjs';
 import {
   attendanceKind,
+  attendanceNoCheckout,
   attendanceStatus,
 } from '../../../../../shared/staff-attendance-report.mjs';
 
@@ -31,7 +32,11 @@ export function StaffAttendanceRow({ row: r, pendingOnly, onDetails }) {
       <td className="staff-attendance-time">{time(t.actualIn)}</td>
       <td className="staff-attendance-time">{time(t.actualOut)}</td>
       <td>
-        <span className="staff-attendance-status">{status}</span>
+        <span
+          className={`staff-attendance-status${attendanceNoCheckout(r) ? ' is-no-checkout' : ''}`}
+        >
+          {status}
+        </span>
         {notes.length > 0 && (
           <span className="staff-attendance-secondary">{notes.join(' · ')}</span>
         )}
