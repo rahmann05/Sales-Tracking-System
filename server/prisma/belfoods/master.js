@@ -74,16 +74,10 @@ export async function seedMaster(db, date) {
       updatedAt: baseStamp,
     },
   });
-  await db.division.upsert({
-    where: { code: 'MIX' },
-    update: {},
-    create: {
-      id: id('division-MIX'),
-      code: 'MIX',
-      name: 'DIVISI MIX',
-      isActive: true,
-      createdAt: baseStamp,
-      updatedAt: baseStamp,
+  await db.division.deleteMany({
+    where: {
+      OR: [{ code: 'MIX' }, { name: { equals: 'DIVISI MIX', mode: 'insensitive' } }],
+      customerRegistrations: { none: {} },
     },
   });
 
@@ -322,10 +316,16 @@ export async function seedMaster(db, date) {
         revisionHistory: [
           {
             action: 'SUBMITTED',
-            actorId: spec.salesman.id,
-            actorName: spec.salesman.name,
+            actor: {
+              id: spec.salesman.id,
+              name: spec.salesman.name,
+              role: 'SALES',
+            },
             at: at(offsetDate(date, -3), '14:00').toISOString(),
-            note: 'Pengajuan pelanggan baru Belfoods Bandung Raya.',
+            reason: 'Pengajuan pelanggan baru Belfoods Bandung Raya.',
+            rejectionNote: null,
+            before: {},
+            after: {},
           },
         ],
         createdAt: at(offsetDate(date, -3), '14:00'),

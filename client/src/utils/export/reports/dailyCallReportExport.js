@@ -7,6 +7,7 @@ import {
   formatReportBasisNotes,
   safeStr,
 } from '../core/formatters';
+import { normalizeCompanyName, supervisorSignatories } from '../core/documentIdentity';
 
 function resolveDailySummary(reportData = {}, dateInput) {
   const s = reportData.summary || {};
@@ -38,9 +39,10 @@ function resolveDailySummary(reportData = {}, dateInput) {
   };
 }
 
-function buildDailyCallBlueprint(input = {}, dateArg) {
+export function buildDailyCallBlueprint(input = {}, dateArg, salesmanNameArg) {
   const reportData = input?.reportData ? input.reportData : input;
   const dateInput = input?.date || dateArg;
+  const salesmanName = input?.salesmanName || salesmanNameArg || 'Semua Salesman';
   const info = resolveDailySummary(reportData, dateInput);
 
   const sections = [];
@@ -126,12 +128,13 @@ function buildDailyCallBlueprint(input = {}, dateArg) {
     filename: `Laporan_Kunjungan_Harian_${info.dateStr}`,
     sheetName: 'DAILY_CALL',
     orientation: 'landscape',
-    companyName: reportData?.meta?.company || 'CV. SINAR ANUGRAH',
+    companyName: normalizeCompanyName(reportData?.meta?.company),
     title: 'LAPORAN KUNJUNGAN HARIAN SALES (DAILY CALL REPORT)',
     subtitle: `Tanggal Operasional: ${formatDateId(info.dateStr)}`,
     docNumber: `DCR-${info.dateStr.replace(/-/g, '')}`,
     metaItems: [
       { label: 'Tanggal Kunjungan', value: formatDateId(info.dateStr) },
+      { label: 'Filter Salesman', value: safeStr(salesmanName, 'Semua Salesman') },
       { label: 'Total Rencana (Plan)', value: `${formatNumber(info.totalPlan)} Outlet` },
       {
         label: 'Realisasi (Actual Call)',
@@ -160,11 +163,7 @@ function buildDailyCallBlueprint(input = {}, dateArg) {
         : [
             'Laporan kunjungan harian mencatat kehadiran masuk/keluar, realisasi PJP, dan nilai order disetujui.',
           ],
-    signatories: [
-      { role: 'Dilaporkan Oleh,', name: 'Koordinator Sales', title: 'Admin Penjualan' },
-      { role: 'Diperiksa Oleh,', name: 'Supervisor Area', title: 'Supervisor Lapangan' },
-      { role: 'Disetujui Oleh,', name: 'Manajer Penjualan', title: 'Pimpinan Operasional' },
-    ],
+    signatories: supervisorSignatories(),
   };
 }
 

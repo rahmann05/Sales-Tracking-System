@@ -1,5 +1,9 @@
 import { AppError } from '../../../utils/errors.js';
 import { matchesOutletChannel } from '../../../../../shared/outlet-trade.mjs';
+import {
+  validateIndonesianPhone,
+  validateIndonesianTaxNumber,
+} from '../../../../../shared/indonesia-identity.mjs';
 export function assertOutletTrade(input, previous = {}) {
   if (input.channel === undefined && input.subChannel === undefined) return;
   if (
@@ -14,11 +18,16 @@ export function assertOutletTrade(input, previous = {}) {
     );
 }
 export function assertOutletLegal(input, previous = {}) {
-  if (input.taxNumber === undefined && input.taxType === undefined) return;
-  const type = input.taxType || previous.taxType || 'NON_PKP';
-  const number = input.taxNumber === undefined ? previous.taxNumber : input.taxNumber;
-  if (type === 'NON_PKP' && number && !/^\d{16}$/.test(number))
-    throw new AppError('NIK harus berupa 16 digit angka atau dikosongkan.', 400);
+  if (input.taxNumber !== undefined || input.taxType !== undefined) {
+    const type = input.taxType || previous.taxType || 'NON_PKP';
+    const number = input.taxNumber === undefined ? previous.taxNumber : input.taxNumber;
+    const taxError = validateIndonesianTaxNumber(type, number);
+    if (taxError) throw new AppError(taxError, 400);
+  }
+  if (input.phone !== undefined) {
+    const phoneError = validateIndonesianPhone(input.phone);
+    if (phoneError) throw new AppError(phoneError, 400);
+  }
 }
 export function assertRequestReplay(existing, input, actor, creatorId) {
   if (

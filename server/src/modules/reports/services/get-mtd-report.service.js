@@ -69,7 +69,7 @@ export const getMtdReport = async (query = {}) => {
     }),
     loadReportRecords(mtdStart, mtdEnd, { includeOutlets: true, scope }),
     loadReportRecords(lmaStart, lmaEnd, { scope }),
-    getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
+    getDynamicConfig('COMPANY_NAME', 'CV. SINAR ANUGRAH'),
   ]);
 
   const calendarMetrics = calendarMonthMetrics(

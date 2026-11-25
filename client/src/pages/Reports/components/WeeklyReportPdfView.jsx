@@ -1,275 +1,43 @@
-import { reportMoney } from '../../../../../shared/report-visibility.mjs';
-import { printOperationalDocument } from '../../../services/operationalExportService';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
-import { formatTarget } from '../../../../../shared/sales-targets.mjs';
-import { calendarDayLabel } from '../../../../../shared/report-calendar.mjs';
-import { ReportBasisNote } from './ReportBasisNote';
-import { ReportPrintSignatures } from './ReportPrintSignatures';
-import { LuPrinter, LuX } from 'react-icons/lu';
-
-import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
-import { NativeDialog } from '../../../shared/components/common/NativeDialog';
+import { DocumentPdfPreview } from '../../../shared/components/document/DocumentPdfPreview';
 import {
+  buildWeeklyReportBlueprint,
+  exportWeeklyCsv,
   exportWeeklyDocx,
   exportWeeklyExcel,
-  exportWeeklyCsv,
-  exportWeeklyTxt,
   exportWeeklyPdf,
+  exportWeeklyTxt,
 } from '../../../utils/export/reports/weeklyReportExport';
 
 /**
- * WeeklyReportPdfView Component
- * Renders an official printable sheet for the Weekly Performance & Attendance Report (ND6).
+ * WeeklyReportPdfView
+ * Pratinjau laporan mingguan (WTD) berupa PDF sebenarnya (blueprint yang sama dengan ekspor
+ * Word / PDF / Excel / TXT / CSV).
  */
 export const WeeklyReportPdfView = ({ reportData, salesmanName, startDate, onClose }) => {
-  const { user, settings } = useApp(),
-    canExport = reportExportAllowed(user, settings);
-  if (!reportData) return null;
-
-  const { period = {}, summary = {}, daysSummary = [], salesmen = [] } = reportData;
-
-  const handlePrint = () => {
-    printOperationalDocument('REPORTS');
-  };
-
-  const startFormatted = period.startDate
-    ? new Date(period.startDate).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
-    : '';
-  const endFormatted = period.endDate
-    ? new Date(period.endDate).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
-    : '';
+  const { user, settings } = useApp();
+  const canExport = reportExportAllowed(user, settings);
+  const blueprint = useMemo(
+    () => (reportData ? buildWeeklyReportBlueprint(reportData, startDate, salesmanName) : null),
+    [reportData, startDate, salesmanName, user]
+  );
+  if (!blueprint) return null;
 
   return (
-    <NativeDialog
-      open
-      title="Pratinjau Cetak Laporan Mingguan"
+    <DocumentPdfPreview
+      title="Pratinjau Dokumen · Laporan Mingguan"
+      info={blueprint.docNumber}
+      domain="REPORTS"
+      disabled={!canExport}
+      blueprint={blueprint}
+      onExportDocx={() => exportWeeklyDocx(reportData, startDate, salesmanName)}
+      onExportExcel={() => exportWeeklyExcel(reportData, startDate, salesmanName)}
+      onExportCsv={() => exportWeeklyCsv(reportData, startDate, salesmanName)}
+      onExportTxt={() => exportWeeklyTxt(reportData, startDate, salesmanName)}
+      onExportPdf={() => exportWeeklyPdf(reportData, startDate, salesmanName)}
       onClose={onClose}
-      className="print-sheet-dialog"
-    >
-      {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-end gap-2 no-print bg-surface p-2 mb-3 rounded-2xl border border-border-glass">
-        <ExportFormatMenu
-          disabled={!canExport}
-          onExportDocx={() => exportWeeklyDocx(reportData, startDate, salesmanName)}
-          onExportExcel={() => exportWeeklyExcel(reportData, startDate, salesmanName)}
-          onExportCsv={() => exportWeeklyCsv(reportData, startDate, salesmanName)}
-          onExportTxt={() => exportWeeklyTxt(reportData, startDate, salesmanName)}
-          onExportPdf={() => exportWeeklyPdf(reportData, startDate, salesmanName)}
-        />
-        <button
-          type="button"
-          onClick={handlePrint}
-          disabled={!canExport}
-          className="px-3.5 py-2 bg-surface-container text-on-surface hover:bg-surface-container-high rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-        >
-          <LuPrinter className="text-sm" /> Cetak Printer
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-3.5 py-2 bg-surface-container text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-high transition-all cursor-pointer"
-        >
-          <LuX className="text-sm" /> Tutup
-        </button>
-      </div>
-
-      {/* Printable Sheet */}
-      <div
-        id="weekly-report-printable"
-        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full mx-auto shadow-2xl rounded-sm text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
-        style={{ fontFamily: "'Arial', sans-serif" }}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
-          <div>
-            <h1 className="text-base font-black tracking-tight text-gray-900 m-0 uppercase">
-              {reportData.meta?.company || 'Perusahaan'}
-            </h1>
-            <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
-              FMCG DISTRIBUTOR
-            </p>
-            <p className="text-[9px] text-gray-500 m-0 mt-0.5">Distribution Management System</p>
-          </div>
-
-          <div className="text-right">
-            <h2 className="text-sm font-black uppercase tracking-wider text-black m-0">
-              WEEKLY PERFORMANCE REPORT
-            </h2>
-            <p className="text-[10px] font-semibold text-gray-700 m-0 mt-0.5">
-              Rekapitulasi Kunjungan Mingguan
-            </p>
-            <p className="text-[9px] font-mono text-gray-500 m-0">
-              Periode: {startFormatted} s/d {endFormatted}
-            </p>
-          </div>
-        </div>
-
-        <ReportBasisNote basis={reportData.basis} collapsible={false} />
-        {/* Summary Box */}
-        <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
-          <div>
-            <span className="text-gray-500 font-semibold block">Salesman / Filter:</span>
-            <strong className="text-gray-900 text-[11px]">
-              {salesmanName || 'Semua Salesman (Tim)'}
-            </strong>
-          </div>
-          <div>
-            <span className="text-gray-500 font-semibold block">Total Call (Plan / Actual):</span>
-            <strong className="text-gray-900 text-[11px]">
-              {summary.totalActualCalls} / {summary.totalPlanCalls} Call (
-              {summary.callComplianceRate})
-            </strong>
-          </div>
-          <div>
-            <span className="text-gray-500 font-semibold block">Effective Call (EC):</span>
-            <strong className="text-gray-900 text-[11px]">
-              {summary.totalEffectiveCalls} Toko ({summary.effectiveCallRate})
-            </strong>
-          </div>
-          <div>
-            <span className="text-gray-500 font-semibold block">
-              Total Nilai order disetujui Mingguan:
-            </span>
-            <strong className="text-gray-900 text-[11px]">
-              {reportMoney(summary.totalOrderAmount)} ({summary.totalSkuSold} SKU)
-            </strong>
-          </div>
-        </div>
-
-        {/* Day-by-Day Matrix Table */}
-        <div className="border border-black mb-4 overflow-hidden">
-          <table className="w-full text-left border-collapse text-[9px]">
-            <thead>
-              <tr className="bg-gray-200 border-b border-black font-black uppercase text-gray-800">
-                <th className="p-1.5 border-r border-black" rowSpan="2">
-                  Salesman
-                </th>
-                <th className="p-1.5 border-r border-black" rowSpan="2">
-                  Klaster
-                </th>
-                <th
-                  className="p-1 border-r border-black text-center"
-                  colSpan={Math.max(1, daysSummary.length)}
-                >
-                  Realisasi Kunjungan Harian (Actual / Plan Call)
-                </th>
-                <th className="p-1 border-r border-black text-center" colSpan="4">
-                  Total Mingguan (WTD)
-                </th>
-              </tr>
-              <tr className="bg-gray-100 border-b border-black font-bold text-center text-[8.5px]">
-                {daysSummary.map((day) => (
-                  <th key={day.dateStr} className="p-1 border-r border-black">
-                    {day.dayName}
-                    <br />
-                    {day.formattedDate || day.dateStr}
-                    <br />
-                    {calendarDayLabel(day.isWorkingDay)}
-                  </th>
-                ))}
-                <th className="p-1 border-r border-black">Act / Plan</th>
-                <th className="p-1 border-r border-black">Call %</th>
-                <th className="p-1 border-r border-black">EC %</th>
-                <th className="p-1.5 text-right">Nilai order disetujui (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {salesmen.map((s, idx) => (
-                <tr
-                  key={s.salesmanId || idx}
-                  className={`border-b border-gray-300 ${
-                    idx % 2 === 1 ? 'bg-gray-50' : 'bg-white'
-                  }`}
-                >
-                  <td className="p-1.5 border-r border-gray-300 font-bold whitespace-nowrap">
-                    {s.salesmanName}
-                    <p className="font-normal text-[9px]">
-                      Target: {formatTarget(s.weeklyTotal?.target, s.target?.status)} ·{' '}
-                      {s.weeklyTotal?.targetAchievement}
-                    </p>
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-gray-600 whitespace-nowrap">
-                    {s.clusterName}
-                  </td>
-
-                  {/* Days */}
-                  {daysSummary.map((day) => {
-                    const d = s.days?.[day.dayName.toLowerCase()] || { plan: 0, actual: 0, ec: 0 };
-                    return (
-                      <td
-                        key={day.dateStr}
-                        className="p-1 border-r border-gray-300 text-center font-mono"
-                      >
-                        {d.plan > 0 || d.actual > 0 ? (
-                          <span>
-                            <strong className={d.actual > 0 ? 'text-gray-900' : 'text-gray-400'}>
-                              {d.actual}
-                            </strong>
-                            /{d.plan}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                    );
-                  })}
-
-                  {/* Weekly Totals */}
-                  <td className="p-1 border-r border-gray-300 text-center font-mono font-bold">
-                    {s.weeklyTotal?.actual} / {s.weeklyTotal?.plan}
-                  </td>
-                  <td className="p-1 border-r border-gray-300 text-center font-mono font-bold">
-                    {s.weeklyTotal?.callRate}
-                  </td>
-                  <td className="p-1 border-r border-gray-300 text-center font-mono font-bold text-purple-700">
-                    {s.weeklyTotal?.ecRate}
-                  </td>
-                  <td className="p-1.5 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
-                    {reportMoney(s.weeklyTotal?.omzet)}
-                  </td>
-                </tr>
-              ))}
-
-              {/* Total Row */}
-              <tr className="bg-gray-200 border-t-2 border-black font-black text-[9.5px]">
-                <td className="p-1.5 border-r border-black" colSpan="2">
-                  TOTAL TIM SALES
-                </td>
-                {daysSummary.map((ds, idx) => (
-                  <td key={idx} className="p-1 border-r border-black text-center font-mono">
-                    {ds.actualCalls}/{ds.planCalls}
-                  </td>
-                ))}
-                <td className="p-1 border-r border-black text-center font-mono">
-                  {summary.totalActualCalls}/{summary.totalPlanCalls}
-                </td>
-                <td className="p-1 border-r border-black text-center font-mono">
-                  {summary.callComplianceRate}
-                </td>
-                <td className="p-1 border-r border-black text-center font-mono text-purple-800">
-                  {summary.effectiveCallRate}
-                </td>
-                <td className="p-1.5 text-right font-mono text-gray-900 whitespace-nowrap">
-                  {reportMoney(summary.totalOrderAmount)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Signatures Section */}
-        <ReportPrintSignatures salesmanName={salesmanName} />
-      </div>
-    </NativeDialog>
+    />
   );
 };

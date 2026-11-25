@@ -778,7 +778,7 @@ export const CONFIG_DEFINITIONS = [
         label: 'Nama Perusahaan',
         description: 'Nama perusahaan yang tampil di header laporan dan notifikasi sistem.',
         type: 'text',
-        defaultValue: 'PT. SINAR ANUGRAH',
+        defaultValue: 'CV. SINAR ANUGRAH',
       },
     ],
   },

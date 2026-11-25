@@ -21,7 +21,10 @@ import {
 import { actorSnapshot } from '../../outlets/services/outlet-review-policy.service.js';
 import { allowedVisitIntervals } from '../../../../../shared/pjp-planning.mjs';
 import { registrationLocation } from '../../../../../shared/registration-policy.mjs';
-import { registrationFieldError } from '../../../../../shared/registration-fields.mjs';
+import {
+  DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS,
+  registrationFieldError,
+} from '../../../../../shared/registration-fields.mjs';
 
 /**
  * 1. Create Outlet Registration (Salesman)
@@ -41,7 +44,10 @@ export const createRegistration = async (data, currentUser) => {
     throw new AppError('Pendaftaran outlet baru dijeda oleh Admin', 409);
   const fieldError = registrationFieldError(
     data,
-    await getDynamicConfig('REGISTRATION_SUBMIT_REQUIRED_FIELDS', '')
+    await getDynamicConfig(
+      'REGISTRATION_SUBMIT_REQUIRED_FIELDS',
+      DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS
+    )
   );
   if (fieldError) throw new AppError(fieldError, 422);
   const allowed = allowedVisitIntervals({

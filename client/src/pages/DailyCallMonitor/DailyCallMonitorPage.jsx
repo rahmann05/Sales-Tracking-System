@@ -235,7 +235,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
               className="h-10 px-3.5 bg-primary hover:bg-primary/90 text-on-primary rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Buka Dokumen Cetak / Pratinjau Resmi"
             >
-              <LuPrinter /> <span>Cetak Printer</span>
+              <LuPrinter /> <span>Cetak</span>
             </button>
           </div>
         </div>

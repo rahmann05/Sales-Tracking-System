@@ -1,9 +1,11 @@
 import { mtdCsv } from '../../../../../shared/report-semantics.mjs';
 import { createDocumentExporters } from '../core/createDocumentExporters';
 import { formatCurrency, formatNumber, formatReportBasisNotes, safeStr } from '../core/formatters';
+import { normalizeCompanyName, supervisorSignatories } from '../core/documentIdentity';
 
-function buildMtdReportBlueprint(input = {}, monthArg, yearArg) {
+export function buildMtdReportBlueprint(input = {}, monthArg, yearArg, salesmanNameArg) {
   const reportData = input?.reportData ? input.reportData : input;
+  const salesmanName = input?.salesmanName || salesmanNameArg || 'Semua Salesman (Tim)';
   const p = reportData?.period || {};
   const s = reportData?.summary || {};
   const salesmen = Array.isArray(reportData?.salesmen) ? reportData.salesmen : [];
@@ -101,12 +103,13 @@ function buildMtdReportBlueprint(input = {}, monthArg, yearArg) {
     filename: `Laporan_MTD_${monthLabel}_${yearLabel}`,
     sheetName: 'LAPORAN_MTD',
     orientation: 'landscape',
-    companyName: reportData?.meta?.company || 'CV. SINAR ANUGRAH',
+    companyName: normalizeCompanyName(reportData?.meta?.company),
     title: 'LAPORAN PENCAPAIAN TARGET PENJUALAN BULANAN (MTD)',
     subtitle: `Evaluasi Target vs Realisasi, Perbandingan Bulan Lalu (LMA) & Kepatuhan Kunjungan — ${monthLabel} ${yearLabel}`,
     docNumber: `MTD-${yearLabel}-${String(p.month || '01').padStart(2, '0')}`,
     metaItems: [
       { label: 'Periode Evaluasi', value: `${monthLabel} ${yearLabel}` },
+      { label: 'Filter Salesman', value: safeStr(salesmanName, 'Semua Salesman (Tim)') },
       {
         label: 'Kalender Hari Kerja',
         value: p.calendarKnown
@@ -134,11 +137,7 @@ function buildMtdReportBlueprint(input = {}, monthArg, yearArg) {
         : [
             'Laporan Month-to-Date (MTD) menyajikan pencapaian nilai order disetujui terhadap target bulanan dan bulan lalu (LMA).',
           ],
-    signatories: [
-      { role: 'Disiapkan Oleh,', name: 'Admin Pelaporan', title: 'Sales Support & Data' },
-      { role: 'Diperiksa Oleh,', name: 'Supervisor Penjualan', title: 'Koordinator Lapangan' },
-      { role: 'Disetujui Oleh,', name: 'Manajer Operasional', title: 'Pimpinan Distribusi' },
-    ],
+    signatories: supervisorSignatories(),
   };
 }
 

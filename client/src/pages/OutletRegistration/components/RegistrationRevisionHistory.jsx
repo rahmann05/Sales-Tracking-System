@@ -1,5 +1,6 @@
 import React from 'react';
 import { stamp } from '../../OutletManagement/outletPresentation';
+
 const labels = {
   name: 'Nama',
   address: 'Alamat',
@@ -19,32 +20,46 @@ const labels = {
   mappingLocation: 'Patokan',
   photoId: 'Referensi foto',
 };
+
 export function RegistrationRevisionHistory({ history = [] }) {
-  if (!history.length) return null;
+  const items = Array.isArray(history) ? history.filter((h) => h && typeof h === 'object') : [];
+  if (!items.length) return null;
+
   return (
     <details className="outlet-disclosure">
-      <summary>Riwayat revisi ({history.length})</summary>
-      {history.map((h, i) => (
-        <article className="app-form" key={i}>
-          <strong>{h.reason}</strong>
-          <small>
-            {stamp(h.at)} · {h.actor.name}
-          </small>
-          <p>Catatan sebelumnya: {h.rejectionNote}</p>
-          <dl className="outlet-facts">
-            {Object.keys(h.after || {}).map((k) => (
-              <React.Fragment key={k}>
-                <dt>{labels[k] || k}</dt>
-                <dd>
-                  {typeof h.after[k] === 'object'
-                    ? 'Referensi diperbarui'
-                    : `${h.before[k] ?? 'Kosong'} → ${h.after[k] ?? 'Kosong'}`}
-                </dd>
-              </React.Fragment>
-            ))}
-          </dl>
-        </article>
-      ))}
+      <summary>Riwayat revisi ({items.length})</summary>
+      {items.map((h, i) => {
+        const title =
+          h.reason || h.note || (h.action === 'SUBMITTED' ? 'Pengajuan awal' : 'Revisi pengajuan');
+        const meta = [h.at ? stamp(h.at) : null, h.actor?.name || h.actorName || 'Pengguna']
+          .filter(Boolean)
+          .join(' · ');
+        const before = h.before && typeof h.before === 'object' ? h.before : {};
+        const after = h.after && typeof h.after === 'object' ? h.after : {};
+        const changedKeys = Object.keys(after);
+
+        return (
+          <article className="app-form" key={i}>
+            <strong>{title}</strong>
+            <small>{meta}</small>
+            {h.rejectionNote ? <p>Catatan sebelumnya: {h.rejectionNote}</p> : null}
+            {changedKeys.length > 0 ? (
+              <dl className="outlet-facts">
+                {changedKeys.map((k) => (
+                  <React.Fragment key={k}>
+                    <dt>{labels[k] || k}</dt>
+                    <dd>
+                      {after[k] !== null && typeof after[k] === 'object'
+                        ? 'Referensi diperbarui'
+                        : `${before[k] ?? 'Kosong'} → ${after[k] ?? 'Kosong'}`}
+                    </dd>
+                  </React.Fragment>
+                ))}
+              </dl>
+            ) : null}
+          </article>
+        );
+      })}
     </details>
   );
 }

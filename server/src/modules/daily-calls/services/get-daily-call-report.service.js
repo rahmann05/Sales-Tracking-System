@@ -63,7 +63,7 @@ export const getDailyCallReport = async (query = {}) => {
     getDynamicConfig('TRAVEL_GAP_MED_KM', 8),
     getDynamicConfig('TRAVEL_GAP_MED_MINUTES', 90),
     getDynamicConfig('MANUAL_SALES_REPORT_MODE', 'NOTES_ONLY'),
-    getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
+    getDynamicConfig('COMPANY_NAME', 'CV. SINAR ANUGRAH'),
     getDynamicConfig('DEFAULT_BRANCH', 'PADALARANG'),
     prisma.pjp.findMany({
       where: wherePjp,

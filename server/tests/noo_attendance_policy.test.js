@@ -272,7 +272,7 @@ test('reverse lookup uses configured server key and preserves actual coordinates
 });
 
 test('NOO attachment policy is enforced by server and can be disabled', async (t) => {
-  configs(t, {});
+  configs(t, { REGISTRATION_SUBMIT_REQUIRED_FIELDS: '' });
   await assert.rejects(createRegistration({ name: 'Toko' }, { id: 'sales' }), /Foto fisik/);
   await assert.rejects(
     createRegistration({ name: 'Toko', photoUrl: 'photo' }, { id: 'sales' }),
@@ -281,6 +281,7 @@ test('NOO attachment policy is enforced by server and can be disabled', async (t
   configs(t, {
     CUSTOMER_REG_REQUIRE_PHOTO: false,
     CUSTOMER_REG_REQUIRE_TAX_DOCUMENT: false,
+    REGISTRATION_SUBMIT_REQUIRED_FIELDS: '',
     CODE_NOO_MODE: 'MANUAL',
   });
   mock(t, prisma.customerRegistration, 'findFirst', async () => null);

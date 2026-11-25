@@ -35,7 +35,7 @@
 }
 
 .dashboard-map-hud {
-  @apply flex flex-col items-end gap-2.5 w-full max-w-[288px] pointer-events-none;
+  @apply flex flex-col items-end gap-2 w-full max-w-[272px] pointer-events-none;
 }
 
 .dashboard-map-hud > * {

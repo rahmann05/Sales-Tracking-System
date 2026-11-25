@@ -1,4 +1,5 @@
 import { createDocumentExporters } from '../core/createDocumentExporters';
+import { supervisorSignatories } from '../core/documentIdentity';
 import {
   attendanceKind,
   attendanceStages,
@@ -146,6 +147,7 @@ export function buildStaffAttendanceBlueprint(
         ? 'Foto tersimpan disertakan sebagai lampiran berlabel nama, tanggal dan ID catatan.'
         : 'CSV berisi status foto dan ID catatan; buka rincian di aplikasi untuk melihat gambar.',
     ],
+    signatories: supervisorSignatories(),
   };
 }
 export const staffAttendanceExporters = createDocumentExporters(buildStaffAttendanceBlueprint);

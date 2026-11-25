@@ -59,35 +59,3 @@ dialog::backdrop {
 .app-dialog.wide-modal-dialog {
   width: min(920px, calc(100vw - 24px));
 }
-
-.app-dialog.print-sheet-dialog {
-  width: min(1120px, calc(100vw - 24px));
-}
-
-@media print {
-  .app-dialog.print-sheet-dialog {
-    position: static !important;
-    display: block !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-  }
-
-  .app-dialog.print-sheet-dialog::backdrop,
-  .app-dialog.print-sheet-dialog > .app-dialog-heading,
-  .app-dialog.print-sheet-dialog .no-print {
-    display: none !important;
-  }
-
-  .app-dialog.print-sheet-dialog > .app-dialog-body {
-    display: block !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-  }
-}

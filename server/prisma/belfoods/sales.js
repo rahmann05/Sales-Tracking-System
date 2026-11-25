@@ -556,7 +556,7 @@ export async function seedSales(db, master, date) {
       dateKey: date,
       activityKey: 'SHIFT',
       kind: 'SHIFT',
-      outletName: 'Kantor & Gudang PT Sinar Anugrah Padalarang',
+      outletName: 'Kantor & Gudang CV. Sinar Anugrah Padalarang',
       checkInAt: at(date, '07:15'),
       notes: 'Presensi masuk operasional harian.',
       latitude: baseOutlet.latitude,

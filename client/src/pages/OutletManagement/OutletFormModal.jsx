@@ -12,6 +12,16 @@ import { subChannels } from './outletPresentation';
 import { matchesOutletChannel } from '../../../../shared/outlet-trade.mjs';
 import { useApp } from '../../context/AppContext';
 import { wibInputToIso } from '../../../../shared/assignment-schedules.mjs';
+import {
+  ID_NIK_HTML_PATTERN,
+  ID_NPWP_HTML_PATTERN,
+  ID_PHONE_HTML_PATTERN,
+  sanitizeNikInput,
+  sanitizeNpwpInput,
+  sanitizePhoneInput,
+  validateIndonesianPhone,
+  validateIndonesianTaxNumber,
+} from '../../../../shared/indonesia-identity.mjs';
 export function OutletFormModal({ outlet, clusters, onClose, onSaved, clusterError }) {
   const featurePolicy = useFeaturePolicy('OUTLET_MASTER');
   const { settings } = useApp();
@@ -68,6 +78,16 @@ export function OutletFormModal({ outlet, clusters, onClose, onSaved, clusterErr
     );
     if (missing) {
       setError(missing);
+      return;
+    }
+    const phoneErr = validateIndonesianPhone(form.phone);
+    if (phoneErr) {
+      setError(phoneErr);
+      return;
+    }
+    const taxErr = validateIndonesianTaxNumber(form.taxType, form.taxNumber);
+    if (taxErr) {
+      setError(taxErr);
       return;
     }
     setBusy(true);
@@ -176,19 +196,25 @@ export function OutletFormModal({ outlet, clusters, onClose, onSaved, clusterErr
             />
           </label>
           <div className="outlet-form-grid">
-            {[
-              ['ownerName', 'Nama pemilik'],
-              ['phone', 'Nomor telepon'],
-            ].map(([key, label]) => (
-              <label className="app-field" key={key}>
-                {label}
-                <input
-                  type={key === 'phone' ? 'tel' : 'text'}
-                  value={form[key]}
-                  onChange={(e) => update(key, e.target.value)}
-                />
-              </label>
-            ))}
+            <label className="app-field">
+              Nama pemilik
+              <input value={form.ownerName} onChange={(e) => update('ownerName', e.target.value)} />
+            </label>
+            <label className="app-field">
+              Nomor telepon
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                minLength={9}
+                maxLength={16}
+                pattern={ID_PHONE_HTML_PATTERN}
+                placeholder="081234567890"
+                title="Format telepon Indonesia (contoh: 081234567890, 022-4201234, atau +628123456789)"
+                value={form.phone}
+                onChange={(e) => update('phone', sanitizePhoneInput(e.target.value))}
+              />
+            </label>
           </div>
           <div className="outlet-form-grid">
             <label className="app-field">
@@ -303,27 +329,60 @@ export function OutletFormModal({ outlet, clusters, onClose, onSaved, clusterErr
           />
         </label>
         <details className="outlet-disclosure">
-          <summary>Identitas pajak / NIK · opsional</summary>
+          <summary>Identitas pajak / NIK</summary>
           <div className="app-form">
             <label className="app-field">
               Status pajak
-              <select value={form.taxType} onChange={(e) => update('taxType', e.target.value)}>
+              <select
+                value={form.taxType}
+                onChange={(e) => {
+                  const nextType = e.target.value;
+                  update('taxType', nextType);
+                  update(
+                    'taxNumber',
+                    nextType === 'PKP'
+                      ? sanitizeNpwpInput(form.taxNumber)
+                      : sanitizeNikInput(form.taxNumber)
+                  );
+                }}
+              >
                 <option value="NON_PKP">Non PKP</option>
                 <option value="PKP">PKP</option>
               </select>
             </label>
+            <label className="app-field">
+              {form.taxType === 'PKP' ? 'NPWP' : 'NIK pemilik (16 digit)'}
+              <input
+                inputMode={form.taxType === 'PKP' ? 'text' : 'numeric'}
+                minLength={form.taxType === 'PKP' ? 15 : 16}
+                maxLength={form.taxType === 'PKP' ? 20 : 16}
+                pattern={form.taxType === 'PKP' ? ID_NPWP_HTML_PATTERN : ID_NIK_HTML_PATTERN}
+                placeholder={
+                  form.taxType === 'PKP' ? '15–16 digit atau 01.234.567.8-901.000' : '16 digit NIK'
+                }
+                title={
+                  form.taxType === 'PKP'
+                    ? 'Nomor NPWP 15 atau 16 digit'
+                    : 'NIK harus tepat 16 digit angka'
+                }
+                value={form.taxNumber}
+                onChange={(e) =>
+                  update(
+                    'taxNumber',
+                    form.taxType === 'PKP'
+                      ? sanitizeNpwpInput(e.target.value)
+                      : sanitizeNikInput(e.target.value)
+                  )
+                }
+              />
+            </label>
             {[
-              ['taxNumber', form.taxType === 'PKP' ? 'NPWP' : 'NIK pemilik (16 digit)'],
               ['taxName', 'Nama sesuai dokumen'],
               ['taxAddress', 'Alamat sesuai dokumen'],
             ].map(([key, label]) => (
               <label key={key} className="app-field">
                 {label}
-                <input
-                  value={form[key]}
-                  maxLength={key === 'taxNumber' ? 30 : 1000}
-                  onChange={(e) => update(key, e.target.value)}
-                />
+                <input value={form[key]} maxLength={1000} onChange={(e) => update(key, e.target.value)} />
               </label>
             ))}
           </div>

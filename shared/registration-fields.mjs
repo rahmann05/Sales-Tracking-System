@@ -15,6 +15,8 @@ export const REGISTRATION_FIELDS = {
   outletKnownBy: 'Sumber pengenalan outlet',
   visitDays: 'Hari kunjungan yang direncanakan',
 };
+export const DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS =
+  'ownerName,phone,taxNumber,taxName,taxAddress,area,subAreaKecamatan,kelurahan,city,mappingLocation,visitDays';
 export const MASTER_OUTLET_FIELDS = {
   ownerName: 'Pemilik / penanggung jawab',
   phone: 'Nomor telepon',

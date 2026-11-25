@@ -1,10 +1,36 @@
 import { z } from 'zod';
+import {
+  validateIndonesianPhone,
+  validateIndonesianTaxNumber,
+} from '../../../../shared/indonesia-identity.mjs';
 
 export const locationEvidenceSchema = z.object({
   source: z.enum(['GPS', 'MANUAL', 'MAP', 'FIELD', 'IMPORT']),
   accuracyMeters: z.number().positive().max(100000).optional().nullable(),
   capturedAt: z.string().datetime().optional().nullable(),
 });
+
+const indonesianPhoneSchema = z
+  .string()
+  .optional()
+  .nullable()
+  .refine((value) => !value || !validateIndonesianPhone(value), {
+    message:
+      'Nomor telepon harus format Indonesia yang valid (9–14 digit, diawali 08, 02x, atau +62).',
+  });
+
+const addLegalRefinements = (schema) =>
+  schema.superRefine((body, ctx) => {
+    const taxError = validateIndonesianTaxNumber(body.taxType || 'NON_PKP', body.taxNumber);
+    if (taxError) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['taxNumber'],
+        message: taxError,
+      });
+    }
+  });
+
 const legal = {
   taxType: z.enum(['PKP', 'NON_PKP']).optional(),
   taxNumber: z.string().trim().max(30).optional().nullable(),
@@ -35,41 +61,45 @@ const trade = {
 };
 
 export const createOutletSchema = z.object({
-  body: z.object({
-    requestId: z.string().uuid().optional(),
-    duplicateReason: z.string().trim().min(10).max(1000).optional(),
-    locationEvidence: locationEvidenceSchema.optional(),
-    ...legal,
-    ...trade,
-    name: z.string().min(2, 'Nama outlet minimal 2 karakter'),
-    address: z.string().min(5, 'Alamat minimal 5 karakter'),
-    latitude: z.number().min(-90).max(90).nullable().optional(),
-    longitude: z.number().min(-180).max(180).nullable().optional(),
-    clusterId: z.string().trim().min(1).max(128),
-    outletCode: z.string().optional(),
-    ownerName: z.string().optional(),
-    phone: z.string().optional(),
-    radiusMeters: z.number().int().min(5).max(1000).optional(),
-  }),
+  body: addLegalRefinements(
+    z.object({
+      requestId: z.string().uuid().optional(),
+      duplicateReason: z.string().trim().min(10).max(1000).optional(),
+      locationEvidence: locationEvidenceSchema.optional(),
+      ...legal,
+      ...trade,
+      name: z.string().min(2, 'Nama outlet minimal 2 karakter'),
+      address: z.string().min(5, 'Alamat minimal 5 karakter'),
+      latitude: z.number().min(-90).max(90).nullable().optional(),
+      longitude: z.number().min(-180).max(180).nullable().optional(),
+      clusterId: z.string().trim().min(1).max(128),
+      outletCode: z.string().optional(),
+      ownerName: z.string().optional(),
+      phone: indonesianPhoneSchema,
+      radiusMeters: z.number().int().min(5).max(1000).optional(),
+    })
+  ),
 });
 
 export const updateOutletSchema = z.object({
-  body: z.object({
-    updatedAt: z.string().datetime(),
-    reason: z.string().trim().min(10).max(1000),
-    locationEvidence: locationEvidenceSchema.optional(),
-    ...legal,
-    ...trade,
-    name: z.string().min(2).optional(),
-    address: z.string().min(5).optional(),
-    latitude: z.number().min(-90).max(90).nullable().optional(),
-    longitude: z.number().min(-180).max(180).nullable().optional(),
-    clusterId: z.string().trim().min(1).max(128).optional(),
-    outletCode: z.string().optional(),
-    ownerName: z.string().optional(),
-    phone: z.string().optional(),
-    radiusMeters: z.number().int().min(5).max(1000).optional(),
-  }),
+  body: addLegalRefinements(
+    z.object({
+      updatedAt: z.string().datetime(),
+      reason: z.string().trim().min(10).max(1000),
+      locationEvidence: locationEvidenceSchema.optional(),
+      ...legal,
+      ...trade,
+      name: z.string().min(2).optional(),
+      address: z.string().min(5).optional(),
+      latitude: z.number().min(-90).max(90).nullable().optional(),
+      longitude: z.number().min(-180).max(180).nullable().optional(),
+      clusterId: z.string().trim().min(1).max(128).optional(),
+      outletCode: z.string().optional(),
+      ownerName: z.string().optional(),
+      phone: indonesianPhoneSchema,
+      radiusMeters: z.number().int().min(5).max(1000).optional(),
+    })
+  ),
   params: z.object({
     id: z.string().trim().min(1).max(128),
   }),

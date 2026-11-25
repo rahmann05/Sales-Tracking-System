@@ -52,7 +52,7 @@ export const ensure = (db, model, key, data) =>
 
 export const email = (key) => `${key}@sinaranugrah.com`;
 
-export const note = 'Operasional PT Sinar Anugrah Divisi Belfoods Bandung Raya.';
+export const note = 'Operasional CV. Sinar Anugrah Divisi Belfoods Bandung Raya.';
 
 export const people = [
   ['admin', 'Rina Hartati', 'ADMIN', 'ADM01', null],

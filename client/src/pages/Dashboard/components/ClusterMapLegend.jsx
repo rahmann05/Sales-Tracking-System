@@ -56,34 +56,47 @@ export const ClusterMapLegend = ({
     if (!isFiltered && !hasActiveRoute) return null;
   }
 
-  const headingTitle = isFiltered && activeSalesName
-    ? `Legend · ${activeSalesName}`
-    : isSalesRole
-      ? 'Klaster Saya'
-      : 'Legend Peta';
+  const headingTitle =
+    isFiltered && activeSalesName
+      ? `Legenda · ${activeSalesName}`
+      : isSalesRole
+        ? 'Klaster saya'
+        : 'Legenda peta';
+
+  const singleCluster = visibleClusters.length === 1 ? visibleClusters[0] : null;
+  const accentColor = singleCluster?.color || singleCluster?.colorHex || '#1b66ca';
 
   return (
     <details
       open
       className={`cluster-map-legend${inline ? ' cluster-map-legend--inline' : ''}`}
-      aria-label="Legend peta operasional"
+      aria-label="Legenda peta operasional"
     >
       <summary className="cluster-map-legend__summary">
-        <span className="cluster-map-legend__summary-left">
+        <span className="cluster-map-legend__title">{headingTitle}</span>
+        <span className="cluster-map-legend__summary-right">
+          <span className="cluster-map-legend__total">{totalOutletsCount} outlet</span>
           <LuChevronDown className="cluster-map-legend__chevron" aria-hidden="true" />
-          <span className="cluster-map-legend__title">{headingTitle}</span>
         </span>
-        <span className="cluster-map-legend__badge">{totalOutletsCount} Outlet</span>
       </summary>
 
       <div className="cluster-map-legend__body">
         {visibleClusters.length > 0 ? (
           <div className="cluster-map-legend__section">
-            <p className="cluster-map-legend__section-label">Cluster ({visibleClusters.length})</p>
+            <p className="cluster-map-legend__section-label">
+              {visibleClusters.length > 1 ? `Cluster (${visibleClusters.length})` : 'Cluster'}
+            </p>
             <ul className="cluster-map-legend__list" role="list">
               {visibleClusters.map((cluster) => {
-                const color = cluster.color || cluster.colorHex || '#2563eb';
+                const color = cluster.color || cluster.colorHex || '#1b66ca';
                 const label = (cluster.name || 'Cluster').replace(/^Klaster\s+/i, '');
+                const showSalesSublabel =
+                  Boolean(cluster.salesName) &&
+                  !(isFiltered && activeSalesName && cluster.salesName === activeSalesName);
+                const showCount =
+                  cluster.outletCount != null &&
+                  (visibleClusters.length > 1 || cluster.outletCount !== totalOutletsCount);
+
                 return (
                   <li
                     key={cluster.id || label}
@@ -95,11 +108,11 @@ export const ClusterMapLegend = ({
                     </span>
                     <span className="cluster-map-legend__label-group">
                       <span className="cluster-map-legend__label">{label}</span>
-                      {cluster.salesName ? (
+                      {showSalesSublabel ? (
                         <span className="cluster-map-legend__sublabel">{cluster.salesName}</span>
                       ) : null}
                     </span>
-                    {cluster.outletCount != null ? (
+                    {showCount ? (
                       <span className="cluster-map-legend__count">{cluster.outletCount}</span>
                     ) : null}
                   </li>
@@ -110,19 +123,19 @@ export const ClusterMapLegend = ({
         ) : null}
 
         <div className="cluster-map-legend__section">
-          <p className="cluster-map-legend__section-label">Titik &amp; Urutan</p>
+          <p className="cluster-map-legend__section-label">Penanda &amp; status</p>
           <ul className="cluster-map-legend__symbols" role="list">
             <li className="cluster-map-legend__symbol-item">
               <svg
                 className="cluster-map-legend__sample-pjp-svg"
                 viewBox="0 0 34 44"
-                width="16"
-                height="20"
+                width="14"
+                height="18"
                 aria-hidden="true"
               >
                 <path
                   d="M17 2C9.268 2 3 8.268 3 16c0 9.6 14 25 14 25s14-15.4 14-25C31 8.268 24.732 2 17 2z"
-                  fill="#2563eb"
+                  fill={accentColor}
                   stroke="#ffffff"
                   strokeWidth="2"
                 />
@@ -132,51 +145,54 @@ export const ClusterMapLegend = ({
                   textAnchor="middle"
                   fill="#ffffff"
                   fontSize="13"
-                  fontWeight="800"
+                  fontWeight="700"
                 >
                   1
                 </text>
               </svg>
-              <span>Urutan kunjungan PJP hari ini (1, 2, 3...)</span>
+              <span>Kunjungan PJP (1, 2, 3)</span>
             </li>
             <li className="cluster-map-legend__symbol-item">
               <span className="cluster-map-legend__sample-cluster" aria-hidden="true">
                 {hasClusterSequence ? '2' : ''}
               </span>
-              <span>
-                {hasClusterSequence
-                  ? 'Outlet lain dalam cluster (angka urutan cluster)'
-                  : 'Outlet lain dalam cluster'}
-              </span>
-            </li>
-            <li className="cluster-map-legend__status-row">
-              <span className="cluster-map-legend__status-chip">
-                <span className="cluster-map-legend__status-dot is-visited" aria-hidden="true" />
-                Selesai
-              </span>
-              <span className="cluster-map-legend__status-chip">
-                <span className="cluster-map-legend__status-dot is-arrived" aria-hidden="true" />
-                Di lokasi
-              </span>
-              <span className="cluster-map-legend__status-chip">
-                <span className="cluster-map-legend__status-dot is-skipped" aria-hidden="true" />
-                Tutup/lewati
-              </span>
+              <span>{hasClusterSequence ? 'Outlet cluster (urutan rute)' : 'Outlet cluster'}</span>
             </li>
           </ul>
+          <div className="cluster-map-legend__status-row">
+            <span className="cluster-map-legend__status-chip">
+              <span className="cluster-map-legend__status-dot is-visited" aria-hidden="true" />
+              Selesai
+            </span>
+            <span className="cluster-map-legend__status-chip">
+              <span className="cluster-map-legend__status-dot is-arrived" aria-hidden="true" />
+              Di lokasi
+            </span>
+            <span className="cluster-map-legend__status-chip">
+              <span className="cluster-map-legend__status-dot is-skipped" aria-hidden="true" />
+              Tutup / lewati
+            </span>
+          </div>
         </div>
 
         <div className="cluster-map-legend__section">
-          <p className="cluster-map-legend__section-label">Garis Rute</p>
+          <p className="cluster-map-legend__section-label">Jalur rute</p>
           <ul className="cluster-map-legend__symbols" role="list">
             <li className="cluster-map-legend__symbol-item">
-              <span className="cluster-map-legend__line-solid" aria-hidden="true" />
-              <span>Rute mengikuti jalan</span>
+              <span
+                className="cluster-map-legend__line-solid"
+                style={{ '--route-color': accentColor }}
+                aria-hidden="true"
+              />
+              <span>Mengikuti jalan</span>
             </li>
             <li className="cluster-map-legend__symbol-item">
               <span className="cluster-map-legend__line-dashed" aria-hidden="true" />
               <span>
-                Garis lurus (fallback{isFallbackRoute ? ' · sedang aktif' : ''})
+                Garis lurus (fallback)
+                {isFallbackRoute ? (
+                  <span className="cluster-map-legend__fallback-tag">Aktif</span>
+                ) : null}
               </span>
             </li>
           </ul>

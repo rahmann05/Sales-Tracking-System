@@ -1,5 +1,6 @@
 import { reportMoney } from '../../../../../shared/report-visibility.mjs';
 import { DataTable } from '../../../shared/components/common/DataTable';
+import { ReportTableScroller } from '../../../shared/components/common/ReportTableScroller';
 import { useApp } from '../../../context/AppContext';
 import {
   selectedReportItems,
@@ -40,14 +41,16 @@ export function MtdSalesTable({
     columns = new Set(selectedReportItems(settings, 'REPORT_MTD_COLUMNS'));
   const hidden = (column) => !columns.has(column),
     canExport = reportExportAllowed(user, settings);
+  const tableResetKey = `${filteredSalesmen.length}-${columns.size}-${month}-${year}-${isLoading}`;
+
   return (
     <div
-      className={`bg-surface border border-border-glass rounded-xl overflow-hidden ${settings.REPORT_TABLE_DENSITY === 'COMPACT' ? 'report-compact' : ''}`}
+      className={`bg-surface border border-border-glass rounded-xl overflow-clip ${settings.REPORT_TABLE_DENSITY === 'COMPACT' ? 'report-compact' : ''}`}
     >
       {/* Workspace Card Header */}
       <div className="p-4 sm:p-5 border-b border-border-glass bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-on-surface tracking-tight m-0 flex flex-wrap items-center gap-2">
+          <h3 className="text-[15px] font-semibold text-on-surface tracking-tight m-0 flex flex-wrap items-center gap-2">
             Matriks Pencapaian Month-to-Date (MTD)
             <span className="admin-status">
               {reportData.period?.monthName || ''} {year}
@@ -67,7 +70,7 @@ export function MtdSalesTable({
             className="h-9 w-9 bg-surface hover:bg-surface-container text-on-surface border border-border-glass rounded-lg text-xs font-semibold transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
             title="Refresh Data"
           >
-            <LuRefreshCw className={isLoading ? 'animate-spin' : ''} />
+            <LuRefreshCw className={isLoading ? 'animate-spin' : ''} aria-hidden="true" />
           </button>
 
           <ExportFormatMenu
@@ -86,7 +89,7 @@ export function MtdSalesTable({
             className="h-9 px-3 bg-primary hover:bg-primary/90 text-on-primary rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             title="Buka pratinjau cetak formulir resmi"
           >
-            <LuPrinter /> Cetak Printer
+            <LuPrinter aria-hidden="true" /> Cetak Printer
           </button>
         </div>
       </div>
@@ -95,13 +98,17 @@ export function MtdSalesTable({
       <div className="p-4 border-b border-border-glass bg-surface-container/25">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+            <label
+              htmlFor="mtd-month-filter"
+              className="block text-xs font-medium text-on-surface-variant mb-1.5"
+            >
               Bulan Periode
             </label>
             <select
+              id="mtd-month-filter"
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="w-full px-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full px-3 h-10 bg-surface rounded-lg text-[13px] font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             >
               {MONTH_OPTIONS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -112,13 +119,17 @@ export function MtdSalesTable({
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+            <label
+              htmlFor="mtd-year-filter"
+              className="block text-xs font-medium text-on-surface-variant mb-1.5"
+            >
               Tahun
             </label>
             <select
+              id="mtd-year-filter"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full px-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+              className="w-full px-3 h-10 bg-surface rounded-lg text-[13px] font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
             >
               {YEAR_OPTIONS.map((y) => (
                 <option key={y} value={y}>
@@ -129,15 +140,22 @@ export function MtdSalesTable({
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+            <label
+              htmlFor="mtd-salesman-filter"
+              className="block text-xs font-medium text-on-surface-variant mb-1.5"
+            >
               Pilih Salesman
             </label>
             <div className="relative flex items-center">
-              <LuUser className="absolute left-3 text-on-surface-variant text-sm" />
+              <LuUser
+                aria-hidden="true"
+                className="absolute left-3 text-on-surface-variant text-sm pointer-events-none z-10"
+              />
               <select
+                id="mtd-salesman-filter"
                 value={salesmanId}
                 onChange={(e) => setSalesmanId(e.target.value)}
-                className="w-full pl-9 pr-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                className="report-filter-with-icon w-full h-10 bg-surface rounded-lg text-[13px] font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="">Semua Salesman (Tim)</option>
                 {salesTeam.map((sales) => (
@@ -151,17 +169,24 @@ export function MtdSalesTable({
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1">
+            <label
+              htmlFor="mtd-salesman-search"
+              className="block text-xs font-medium text-on-surface-variant mb-1.5"
+            >
               Cari Salesman
             </label>
             <div className="relative flex items-center">
-              <LuSearch className="absolute left-3 text-on-surface-variant text-sm" />
+              <LuSearch
+                aria-hidden="true"
+                className="absolute left-3 text-on-surface-variant text-sm pointer-events-none z-10"
+              />
               <input
+                id="mtd-salesman-search"
                 type="text"
                 placeholder="Ketik nama salesman..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 h-9 bg-surface rounded-lg text-xs font-semibold text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
+                className="report-filter-with-icon w-full h-10 bg-surface rounded-lg text-[13px] font-medium text-on-surface border border-border-glass focus:ring-2 focus:ring-primary outline-none"
               />
             </div>
           </div>
@@ -169,42 +194,54 @@ export function MtdSalesTable({
       </div>
 
       {/* Workspace Body: Salesman MTD Breakdown Table */}
-      <div
-        tabIndex={0}
-        role="region"
-        aria-label="Matriks pencapaian bulanan per salesman"
-        className="report-table-region mobile-card-table-wrapper"
+      <ReportTableScroller
+        ariaLabel="Matriks pencapaian bulanan per salesman"
+        resetKey={tableResetKey}
       >
-        <DataTable className="w-full text-left text-xs mobile-card-table">
+        <DataTable
+          embedded
+          className="w-full text-left mobile-card-table report-matrix-table report-matrix-mtd"
+        >
           <thead>
-            <tr className="bg-surface-container border-b border-border-glass text-[11px] font-black text-on-surface-variant uppercase tracking-wider">
-              <th className="">Salesman</th>
-              <th hidden={hidden('cluster')}>Klaster</th>
-              <th hidden={hidden('target')} className="text-right">
+            <tr className="bg-surface-container border-b border-border-glass text-on-surface-variant">
+              <th className="matrix-col-salesman text-left">Salesman</th>
+              <th hidden={hidden('cluster')} className="matrix-col-cluster text-left">
+                Klaster
+              </th>
+              <th hidden={hidden('target')} className="matrix-col-num matrix-col-money text-right">
                 Target (Rp)
               </th>
-              <th hidden={hidden('revenue')} className="text-right">
+              <th hidden={hidden('revenue')} className="matrix-col-num matrix-col-money text-right">
                 MTD Actual (Rp)
               </th>
-              <th hidden={hidden('achievement')} className="text-center">
+              <th
+                hidden={hidden('achievement')}
+                className="matrix-col-num matrix-col-rate text-center"
+              >
                 % Achv
               </th>
-              <th hidden={hidden('lastMonth')} className="text-right">
+              <th
+                hidden={hidden('lastMonth')}
+                className="matrix-col-num matrix-col-money text-right"
+              >
                 LMA (Rp)
               </th>
-              <th hidden={hidden('comparison')} className="text-center">
+              <th
+                hidden={hidden('comparison')}
+                className="matrix-col-num matrix-col-total text-center"
+              >
                 % MTD/LMA
               </th>
-              <th hidden={hidden('calls')} className="text-center">
+              <th hidden={hidden('calls')} className="matrix-col-num matrix-col-total text-center">
                 MTD Call (A/P)
               </th>
-              <th hidden={hidden('callRate')} className="text-center">
+              <th hidden={hidden('callRate')} className="matrix-col-num matrix-col-rate text-center">
                 Call %
               </th>
-              <th hidden={hidden('ecRate')} className="text-center">
+              <th hidden={hidden('ecRate')} className="matrix-col-num matrix-col-rate text-center">
                 EC %
               </th>
-              <th hidden={hidden('sku')} className="text-center">
+              <th hidden={hidden('sku')} className="matrix-col-num matrix-col-rate text-center">
                 SKU Sold
               </th>
             </tr>
@@ -215,167 +252,190 @@ export function MtdSalesTable({
                 key={s.salesmanId}
                 className="hover:bg-surface-variant/20 transition-colors border-b border-border-glass/60"
               >
-                <th scope="row" data-label="Salesman" className="font-bold text-on-surface whitespace-nowrap">
+                <th
+                  scope="row"
+                  data-label="Salesman"
+                  className="matrix-col-salesman font-semibold text-on-surface"
+                >
                   {s.salesmanName}
                 </th>
                 <td
                   hidden={hidden('cluster')}
                   data-label="Klaster"
-                  className="text-on-surface-variant text-[11px] whitespace-nowrap"
+                  className="matrix-col-cluster text-on-surface-variant text-xs"
                 >
                   {s.clusterName}
                 </td>
                 <td
                   hidden={hidden('target')}
                   data-label="Target"
-                  className="text-right font-mono text-on-surface-variant whitespace-nowrap"
+                  className="matrix-col-num matrix-col-money text-right text-on-surface-variant"
                 >
-                  <div>{formatTarget(s.monthlyTarget, s.target?.status)}</div>
-                  {s.target?.status !== 'COMPARISON_ONLY' && (
-                    <SalesTargetEditor
-                      sales={s}
-                      kind="MONTH"
-                      period={`${reportData.period?.year}-${String(reportData.period?.month).padStart(2, '0')}`}
-                      onSaved={loadData}
-                    />
-                  )}
+                  <div className="space-y-1">
+                    <div>{formatTarget(s.monthlyTarget, s.target?.status)}</div>
+                    {s.target?.status !== 'COMPARISON_ONLY' ? (
+                      <SalesTargetEditor
+                        sales={s}
+                        kind="MONTH"
+                        period={`${reportData.period?.year}-${String(reportData.period?.month).padStart(2, '0')}`}
+                        onSaved={loadData}
+                      />
+                    ) : null}
+                  </div>
                 </td>
                 <td
                   hidden={hidden('revenue')}
                   data-label="MTD Actual"
-                  className="text-right font-mono font-black text-on-surface whitespace-nowrap"
+                  className="matrix-col-num matrix-col-money text-right font-semibold text-on-surface"
                 >
                   {reportMoney(s.mtdActualAmount)}
                 </td>
                 <td
                   hidden={hidden('achievement')}
                   data-label="% Achv"
-                  className="text-center font-mono font-bold text-purple-600"
+                  className="matrix-col-num matrix-col-rate text-center font-semibold text-primary"
                 >
-                  <span className="px-2 py-0.5 rounded-md bg-purple-500/10">
+                  <span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary">
                     {s.achievementRate}
                   </span>
                 </td>
                 <td
                   hidden={hidden('lastMonth')}
                   data-label="LMA"
-                  className="text-right font-mono text-on-surface-variant whitespace-nowrap"
+                  className="matrix-col-num matrix-col-money text-right text-on-surface-variant"
                 >
                   {reportMoney(s.lastMonthActual)}
                 </td>
                 <td
                   hidden={hidden('comparison')}
                   data-label="% MTD/LMA"
-                  className="text-center font-mono font-bold text-emerald-600"
+                  className="matrix-col-num matrix-col-total text-center font-semibold text-emerald-700"
                 >
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/10">{s.mtdToLmaRate}</span>
+                  <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
+                    {s.mtdToLmaRate}
+                  </span>
                 </td>
                 <td
                   hidden={hidden('calls')}
                   data-label="MTD Call"
-                  className="text-center font-mono whitespace-nowrap"
+                  className="matrix-col-num matrix-col-total text-center font-semibold text-on-surface"
                 >
                   {s.mtdActualCalls} / {s.mtdPlanCalls}
                 </td>
                 <td
                   hidden={hidden('callRate')}
                   data-label="Call %"
-                  className="text-center font-mono text-blue-600 font-bold"
+                  className="matrix-col-num matrix-col-rate text-center font-semibold text-primary"
                 >
                   {s.callComplianceRate}
                 </td>
                 <td
                   hidden={hidden('ecRate')}
                   data-label="EC %"
-                  className="text-center font-mono text-emerald-600 font-bold"
+                  className="matrix-col-num matrix-col-rate text-center font-semibold text-emerald-700"
                 >
                   {s.effectiveCallRate}
                 </td>
-                <td hidden={hidden('sku')} data-label="SKU Sold" className="text-center font-mono">
+                <td
+                  hidden={hidden('sku')}
+                  data-label="SKU Sold"
+                  className="matrix-col-num matrix-col-rate text-center text-on-surface"
+                >
                   {s.totalSkuSold} SKU
                 </td>
               </tr>
             ))}
 
-            {filteredSalesmen.length === 0 && (
+            {filteredSalesmen.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.size + 1}
-                  className="text-center text-on-surface-variant font-semibold"
+                  className="py-10 text-center text-sm text-on-surface-variant font-medium"
                 >
                   Tidak ada data MTD untuk filter yang dipilih.
                 </td>
               </tr>
-            )}
+            ) : null}
           </tbody>
 
           {/* Subtotal Footer */}
-          {filteredSalesmen.length > 0 && (
+          {filteredSalesmen.length > 0 ? (
             <tfoot>
-              <tr className="bg-surface-container border-t-2 border-border-glass font-black text-xs">
-                <td colSpan={columns.has('cluster') ? 2 : 1} className="mobile-full-width">
-                  TOTAL HASIL LAPORAN (sebelum pencarian nama)
+              <tr className="bg-surface-container border-t border-border-glass text-xs">
+                <td
+                  colSpan={columns.has('cluster') ? 2 : 1}
+                  className="mobile-full-width font-semibold text-on-surface"
+                >
+                  Total laporan (sebelum pencarian nama)
                 </td>
                 <td
                   hidden={hidden('target')}
                   data-label="Target"
-                  className="text-right font-mono whitespace-nowrap"
+                  className="matrix-col-num matrix-col-money text-right font-semibold text-on-surface"
                 >
                   {formatTarget(summary.monthlyTargetAmount)}
                 </td>
                 <td
                   hidden={hidden('revenue')}
                   data-label="MTD Omzet"
-                  className="text-right font-mono font-black text-on-surface whitespace-nowrap"
+                  className="matrix-col-num matrix-col-money text-right font-semibold text-on-surface"
                 >
                   {reportMoney(summary.mtdActualAmount)}
                 </td>
                 <td
                   hidden={hidden('achievement')}
                   data-label="Pencapaian"
-                  className="text-center font-mono text-purple-700"
+                  className="matrix-col-num matrix-col-rate text-center font-semibold text-primary"
                 >
                   {summary.overallAchievementRate}
                 </td>
                 <td
                   hidden={hidden('lastMonth')}
                   data-label="LMA"
-                  className="text-right font-mono whitespace-nowrap text-on-surface-variant"
+                  className="matrix-col-num matrix-col-money text-right text-on-surface-variant"
                 >
                   {reportMoney(summary.lastMonthActual)}
                 </td>
                 <td
                   hidden={hidden('comparison')}
                   data-label="Perbandingan"
-                  className="text-center font-mono text-emerald-700"
+                  className="matrix-col-num matrix-col-total text-center font-semibold text-emerald-700"
                 >
                   {summary.mtdToLmaRate}
                 </td>
-                <td hidden={hidden('calls')} data-label="Calls" className="text-center font-mono">
+                <td
+                  hidden={hidden('calls')}
+                  data-label="Calls"
+                  className="matrix-col-num matrix-col-total text-center font-semibold text-on-surface"
+                >
                   {summary.totalMtdActualCalls}/{summary.totalMtdPlanCalls}
                 </td>
                 <td
                   hidden={hidden('callRate')}
                   data-label="% Call"
-                  className="text-center font-mono text-blue-600"
+                  className="matrix-col-num matrix-col-rate text-center font-semibold text-primary"
                 >
                   {summary.mtdCallComplianceRate}
                 </td>
                 <td
                   hidden={hidden('ecRate')}
                   data-label="% EC"
-                  className="text-center font-mono text-emerald-600"
+                  className="matrix-col-num matrix-col-rate text-center font-semibold text-emerald-700"
                 >
                   {summary.mtdEffectiveCallRate}
                 </td>
-                <td hidden={hidden('sku')} data-label="SKU" className="text-center font-mono">
+                <td
+                  hidden={hidden('sku')}
+                  data-label="SKU"
+                  className="matrix-col-num matrix-col-rate text-center font-semibold text-on-surface"
+                >
                   {summary.totalMtdSkuSold} SKU
                 </td>
               </tr>
             </tfoot>
-          )}
+          ) : null}
         </DataTable>
-      </div>
+      </ReportTableScroller>
     </div>
   );
 }

@@ -120,7 +120,7 @@ function buildVehicleLoadBlueprint(data) {
   };
 }
 
-function buildPackingListBlueprint(data = {}) {
+export function buildPackingListBlueprint(data = {}) {
   if (data.loadPlanVersion === 2) return buildVehicleLoadBlueprint(data);
   const plNo = safeStr(data.packingListNumber || data.code, 'PL-DRAFT');
   const dateStr = formatDateId(data.date || data.deliveryDate || data.createdAt);
@@ -217,6 +217,7 @@ function buildPackingListBlueprint(data = {}) {
         label: 'Wilayah / Rute',
         value: safeStr(data.routeArea || data.clusterName || data.area, 'Rute Reguler'),
       },
+      { label: 'Tujuan Pengiriman', value: safeStr(data.outlet?.name, 'Belum ditentukan') },
       { label: 'Status Dokumen', value: safeStr(data.status, 'Belum tercatat') },
       { label: 'Total Item SKU', value: `${rawItems.length} SKU` },
       {
@@ -226,9 +227,11 @@ function buildPackingListBlueprint(data = {}) {
     ],
     sections,
     notes: [
+      data.notes ? `Catatan khusus: ${data.notes}` : '',
+      data.overrideReason ? `Alasan override Admin: ${data.overrideReason}` : '',
       'Muatan wajib dihitung dan diperiksa oleh Kepala Gudang dan Supir sebelum berangkat. Dokumen ini tidak menggantikan bukti pemeriksaan atau serah terima.',
       'Klaim selisih atau kerusakan barang wajib dicatat pada Berita Acara Serah Terima saat barang tiba di toko.',
-    ],
+    ].filter(Boolean),
     signatories: [
       {
         role: 'Disiapkan Oleh,',

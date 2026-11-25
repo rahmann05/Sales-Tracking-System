@@ -31,7 +31,14 @@ export const useMasterData = () => {
     try {
       if (!getAuthToken()) return [];
       const res = await divisionsApi.getAll();
-      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      const raw = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      const list = raw.filter(
+        (d) =>
+          String(d?.code || '').toUpperCase() !== 'MIX' &&
+          String(d?.name || '')
+            .trim()
+            .toUpperCase() !== 'DIVISI MIX'
+      );
       setDivisions(list);
       return list;
     } catch (err) {

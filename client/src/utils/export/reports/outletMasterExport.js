@@ -1,5 +1,6 @@
 import { createDocumentExporters } from '../core/createDocumentExporters';
 import { formatDateId, formatNumber, safeStr } from '../core/formatters';
+import { supervisorSignatories } from '../core/documentIdentity';
 
 function buildOutletMasterBlueprint(items = [], customFilename) {
   const list = Array.isArray(items) ? items : [];
@@ -103,11 +104,7 @@ function buildOutletMasterBlueprint(items = [], customFilename) {
     notes: [
       'Data mencakup atribut lengkap pengajuan pelanggan baru (NOO) untuk kebutuhan verifikasi lapangan dan sinkronisasi ND6.',
     ],
-    signatories: [
-      { role: 'Disiapkan Oleh,', name: 'Admin Master Data', title: 'Pengelola Data Pelanggan' },
-      { role: 'Diperiksa Oleh,', name: 'Supervisor Area', title: 'Koordinator Lapangan' },
-      { role: 'Disetujui Oleh,', name: 'Manajer Operasional', title: 'Pimpinan Distribusi' },
-    ],
+    signatories: supervisorSignatories(),
   };
 }
 

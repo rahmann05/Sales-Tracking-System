@@ -1,270 +1,43 @@
-import { reportMoney } from '../../../../../shared/report-visibility.mjs';
-import { printOperationalDocument } from '../../../services/operationalExportService';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
-import { formatTarget } from '../../../../../shared/sales-targets.mjs';
-import { ReportBasisNote } from './ReportBasisNote';
-import { ReportPrintSignatures } from './ReportPrintSignatures';
-import { LuPrinter, LuX } from 'react-icons/lu';
-
-import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
-import { NativeDialog } from '../../../shared/components/common/NativeDialog';
+import { DocumentPdfPreview } from '../../../shared/components/document/DocumentPdfPreview';
 import {
+  buildMtdReportBlueprint,
+  exportMtdCsv,
   exportMtdDocx,
   exportMtdExcel,
-  exportMtdCsv,
-  exportMtdTxt,
   exportMtdPdf,
+  exportMtdTxt,
 } from '../../../utils/export/reports/mtdReportExport';
 
 /**
- * MtdReportPdfView Component
- * Renders an official printable sheet for Month-to-Date (MTD) Sales, Target, and LMA Growth analysis.
+ * MtdReportPdfView
+ * Pratinjau laporan Month-to-Date (MTD) berupa PDF sebenarnya (blueprint yang sama dengan
+ * ekspor Word / PDF / Excel / TXT / CSV).
  */
 export const MtdReportPdfView = ({ reportData, salesmanName, year, month, onClose }) => {
-  const { user, settings } = useApp(),
-    canExport = reportExportAllowed(user, settings);
-  if (!reportData) return null;
-
-  const { period = {}, summary = {}, channelBreakdown = [], salesmen = [] } = reportData;
-
-  const handlePrint = () => {
-    printOperationalDocument('REPORTS');
-  };
+  const { user, settings } = useApp();
+  const canExport = reportExportAllowed(user, settings);
+  const blueprint = useMemo(
+    () => (reportData ? buildMtdReportBlueprint(reportData, month, year, salesmanName) : null),
+    [reportData, month, year, salesmanName, user]
+  );
+  if (!blueprint) return null;
 
   return (
-    <NativeDialog
-      open
-      title="Pratinjau Cetak Laporan MTD"
+    <DocumentPdfPreview
+      title="Pratinjau Dokumen · Laporan MTD"
+      info={blueprint.docNumber}
+      domain="REPORTS"
+      disabled={!canExport}
+      blueprint={blueprint}
+      onExportDocx={() => exportMtdDocx(reportData, month, year, salesmanName)}
+      onExportExcel={() => exportMtdExcel(reportData, month, year, salesmanName)}
+      onExportCsv={() => exportMtdCsv(reportData, month, year, salesmanName)}
+      onExportTxt={() => exportMtdTxt(reportData, month, year, salesmanName)}
+      onExportPdf={() => exportMtdPdf(reportData, month, year, salesmanName)}
       onClose={onClose}
-      className="print-sheet-dialog"
-    >
-      {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-end gap-2 no-print bg-surface p-2 mb-3 rounded-2xl border border-border-glass">
-        <ExportFormatMenu
-          disabled={!canExport}
-          onExportDocx={() => exportMtdDocx(reportData, month, year)}
-          onExportExcel={() => exportMtdExcel(reportData, month, year)}
-          onExportCsv={() => exportMtdCsv(reportData, month, year)}
-          onExportTxt={() => exportMtdTxt(reportData, month, year)}
-          onExportPdf={() => exportMtdPdf(reportData, month, year)}
-        />
-        <button
-          type="button"
-          onClick={handlePrint}
-          disabled={!canExport}
-          className="px-3.5 py-2 bg-surface-container text-on-surface hover:bg-surface-container-high rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-        >
-          <LuPrinter className="text-sm" /> Cetak Printer
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-3.5 py-2 bg-surface-container text-on-surface rounded-xl text-xs font-bold hover:bg-surface-container-high transition-all cursor-pointer"
-        >
-          <LuX className="text-sm" /> Tutup
-        </button>
-      </div>
-
-      {/* Printable Sheet */}
-      <div
-        id="mtd-report-printable"
-        className="bg-white text-black font-sans p-6 sm:p-8 max-w-[1050px] w-full mx-auto shadow-2xl rounded-sm text-[11px] leading-tight border border-gray-400 print:border-none print:shadow-none print:m-0 print:p-4 print:max-w-none print:w-full"
-        style={{ fontFamily: "'Arial', sans-serif" }}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
-          <div>
-            <h1 className="text-base font-black tracking-tight text-gray-900 m-0 uppercase">
-              {reportData.meta?.company || 'Perusahaan'}
-            </h1>
-            <p className="text-[10px] font-bold text-gray-700 tracking-wider m-0">
-              FMCG DISTRIBUTOR
-            </p>
-            <p className="text-[9px] text-gray-500 m-0 mt-0.5">Distribution Management System</p>
-          </div>
-
-          <div className="text-right">
-            <h2 className="text-sm font-black uppercase tracking-wider text-black m-0">
-              MONTH-TO-DATE (MTD) REPORT
-            </h2>
-            <p className="text-[10px] font-semibold text-gray-700 m-0 mt-0.5">
-              Pencapaian Target Periode & Rasio terhadap Bulan Lalu
-            </p>
-            <p className="text-[9px] font-mono text-gray-500 m-0">
-              Bulan: {period.monthName} {period.year} (Kalender:{' '}
-              {period.calendarKnown
-                ? `${period.workingDaysElapsed}/${period.totalWorkingDays} hari kerja - ${period.workingDaysRate}`
-                : 'belum ditetapkan'}
-              )
-            </p>
-          </div>
-        </div>
-
-        <ReportBasisNote basis={reportData.basis} collapsible={false} />
-        {/* Summary KPI Box */}
-        <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 border border-gray-300 rounded-sm mb-3 text-[10px]">
-          <div>
-            <span className="text-gray-500 font-semibold block">Salesman / Filter:</span>
-            <strong className="text-gray-900 text-[11px]">
-              {salesmanName || 'Semua Salesman (Tim)'}
-            </strong>
-          </div>
-          <div>
-            <span className="text-gray-500 font-semibold block">Realisasi vs Target MTD:</span>
-            <strong className="text-gray-900 text-[11px]">
-              {reportMoney(summary.mtdActualAmount)} / {formatTarget(summary.monthlyTargetAmount)}
-            </strong>
-            <span className="text-blue-700 font-bold block">
-              Pencapaian: {summary.overallAchievementRate}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-500 font-semibold block">Last Month Actual (LMA):</span>
-            <strong className="text-gray-900 text-[11px]">
-              {reportMoney(summary.lastMonthActual)}
-            </strong>
-            <span className="text-emerald-700 font-bold block">
-              % MTD to LMA: {summary.mtdToLmaRate}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-500 font-semibold block">Call Compliance & EC:</span>
-            <strong className="text-gray-900 text-[11px]">
-              Call: {summary.mtdCallComplianceRate} • EC: {summary.mtdEffectiveCallRate}
-            </strong>
-            <span className="text-purple-700 font-bold block">
-              Total SKU: {summary.totalMtdSkuSold}
-            </span>
-          </div>
-        </div>
-
-        {/* Channel Breakdown Snippet */}
-        {channelBreakdown.length > 0 && (
-          <div className="p-2.5 bg-gray-50 border border-gray-300 rounded-sm mb-3 text-[9.5px]">
-            <strong className="text-gray-900 uppercase tracking-wider block mb-1">
-              Kontribusi Penjualan per Saluran Distribusi (Channel Breakdown):
-            </strong>
-            <div className="grid grid-cols-3 gap-2">
-              {channelBreakdown.map((c) => (
-                <div
-                  key={c.channelKey}
-                  className="border border-gray-200 p-1.5 rounded-xs bg-white"
-                >
-                  <div className="font-bold text-gray-800">{c.channelName}</div>
-                  <div className="flex items-center justify-between text-gray-600 mt-0.5 font-mono">
-                    <span>Nilai order disetujui: {reportMoney(c.mtdOmzet)}</span>
-                    <strong className="text-purple-700">{c.contributionRate}</strong>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Salesman Table */}
-        <div className="border border-black mb-4 overflow-hidden">
-          <table className="w-full text-left border-collapse text-[9px]">
-            <thead>
-              <tr className="bg-gray-200 border-b border-black font-black uppercase text-gray-800">
-                <th className="p-1.5 border-r border-black">No</th>
-                <th className="p-1.5 border-r border-black">Salesman</th>
-                <th className="p-1.5 border-r border-black">Klaster</th>
-                <th className="p-1.5 border-r border-black text-right">Target (Rp)</th>
-                <th className="p-1.5 border-r border-black text-right">MTD Actual (Rp)</th>
-                <th className="p-1.5 border-r border-black text-center">% Achv</th>
-                <th className="p-1.5 border-r border-black text-right">LMA (Rp)</th>
-                <th className="p-1.5 border-r border-black text-center">% MTD/LMA</th>
-                <th className="p-1.5 border-r border-black text-center">MTD Call (A/P)</th>
-                <th className="p-1.5 border-r border-black text-center">Call %</th>
-                <th className="p-1.5 border-r border-black text-center">EC %</th>
-                <th className="p-1.5 text-center">SKU</th>
-              </tr>
-            </thead>
-            <tbody>
-              {salesmen.map((s, idx) => (
-                <tr
-                  key={s.salesmanId || idx}
-                  className={`border-b border-gray-300 ${
-                    idx % 2 === 1 ? 'bg-gray-50' : 'bg-white'
-                  }`}
-                >
-                  <td className="p-1.5 border-r border-gray-300 text-center font-mono font-bold">
-                    {idx + 1}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 font-bold whitespace-nowrap">
-                    {s.salesmanName}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-gray-600 whitespace-nowrap">
-                    {s.clusterName}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-right font-mono whitespace-nowrap">
-                    {formatTarget(s.monthlyTarget, s.target?.status)}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
-                    {reportMoney(s.mtdActualAmount)}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-center font-mono font-bold text-blue-700">
-                    {s.achievementRate}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-right font-mono whitespace-nowrap text-gray-600">
-                    {reportMoney(s.lastMonthActual)}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-center font-mono font-bold text-emerald-700">
-                    {s.mtdToLmaRate}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-center font-mono whitespace-nowrap">
-                    {s.mtdActualCalls}/{s.mtdPlanCalls}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-center font-mono">
-                    {s.callComplianceRate}
-                  </td>
-                  <td className="p-1.5 border-r border-gray-300 text-center font-mono font-bold text-purple-700">
-                    {s.effectiveCallRate}
-                  </td>
-                  <td className="p-1.5 text-center font-mono">{s.totalSkuSold}</td>
-                </tr>
-              ))}
-
-              {/* Total Row */}
-              <tr className="bg-gray-200 border-t-2 border-black font-black text-[9.5px]">
-                <td className="p-1.5 border-r border-black text-center" colSpan="3">
-                  TOTAL TIM DISTRIBUSI
-                </td>
-                <td className="p-1.5 border-r border-black text-right font-mono whitespace-nowrap">
-                  {formatTarget(summary.monthlyTargetAmount)}
-                </td>
-                <td className="p-1.5 border-r border-black text-right font-mono whitespace-nowrap">
-                  {reportMoney(summary.mtdActualAmount)}
-                </td>
-                <td className="p-1.5 border-r border-black text-center font-mono text-blue-800">
-                  {summary.overallAchievementRate}
-                </td>
-                <td className="p-1.5 border-r border-black text-right font-mono whitespace-nowrap">
-                  {reportMoney(summary.lastMonthActual)}
-                </td>
-                <td className="p-1.5 border-r border-black text-center font-mono text-emerald-800">
-                  {summary.mtdToLmaRate}
-                </td>
-                <td className="p-1.5 border-r border-black text-center font-mono">
-                  {summary.totalMtdActualCalls}/{summary.totalMtdPlanCalls}
-                </td>
-                <td className="p-1.5 border-r border-black text-center font-mono">
-                  {summary.mtdCallComplianceRate}
-                </td>
-                <td className="p-1.5 border-r border-black text-center font-mono text-purple-800">
-                  {summary.mtdEffectiveCallRate}
-                </td>
-                <td className="p-1.5 text-center font-mono">{summary.totalMtdSkuSold}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Signatures Section */}
-        <ReportPrintSignatures salesmanName={salesmanName} />
-      </div>
-    </NativeDialog>
+    />
   );
 };

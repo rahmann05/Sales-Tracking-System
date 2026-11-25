@@ -81,7 +81,7 @@ export function SalesTargetEditor({ sales, kind, period, onSaved }) {
     <>
       <button
         type="button"
-        className="app-button text-xs"
+        className="report-target-btn"
         disabled={Boolean(periodError)}
         title={periodError || 'Tetapkan atau revisi target periode'}
         onClick={() => setOpen(true)}

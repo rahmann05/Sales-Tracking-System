@@ -1,5 +1,6 @@
 import { createDocumentExporters } from '../core/createDocumentExporters';
 import { formatDateId, safeStr } from '../core/formatters';
+import { supervisorSignatories } from '../core/documentIdentity';
 
 function buildImportNikBlueprint(items = [], customFilename) {
   const list = Array.isArray(items) ? items : [];
@@ -59,10 +60,7 @@ function buildImportNikBlueprint(items = [], customFilename) {
     notes: [
       'Format 7 kolom mengikuti spesifikasi resmi IMPORT NIK untuk sinkronisasi administrasi perpajakan dan ERP.',
     ],
-    signatories: [
-      { role: 'Diverifikasi Oleh,', name: 'Admin Master Data', title: 'Administrasi Pelanggan' },
-      { role: 'Disetujui Oleh,', name: 'Supervisor / Manajer', title: 'Otorisasi Perpajakan' },
-    ],
+    signatories: supervisorSignatories(),
   };
 }
 

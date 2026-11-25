@@ -12,7 +12,14 @@ import {
   registrationLocation,
   registrationRevisionReadiness,
 } from '../../../../../shared/registration-policy.mjs';
-import { registrationFieldError } from '../../../../../shared/registration-fields.mjs';
+import {
+  DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS,
+  registrationFieldError,
+} from '../../../../../shared/registration-fields.mjs';
+import {
+  validateIndonesianPhone,
+  validateIndonesianTaxNumber,
+} from '../../../../../shared/indonesia-identity.mjs';
 // Manages registration drafts, explicit location capture, submission and revisions.
 export const useOutletRegistrationForm = (onSuccess) => {
   const { settings, settingsReady } = useApp();
@@ -302,11 +309,17 @@ export const useOutletRegistrationForm = (onSuccess) => {
     // Detailed Validation & Helpful Error Messages
     const validationErrors = [];
     const rules = formData.revisionId ? formData.revisionPolicyValues || {} : settings;
-    const fieldError = registrationFieldError(
-      formData,
-      rules.REGISTRATION_SUBMIT_REQUIRED_FIELDS || ''
-    );
+    const requiredSetting =
+      rules.REGISTRATION_SUBMIT_REQUIRED_FIELDS ?? DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS;
+    const fieldError = registrationFieldError(formData, requiredSetting);
     if (fieldError) validationErrors.push(fieldError);
+    const phoneError = validateIndonesianPhone(formData.phone);
+    if (phoneError) validationErrors.push(phoneError);
+    const taxError = validateIndonesianTaxNumber(
+      formData.taxType || 'NON_PKP',
+      formData.taxNumber
+    );
+    if (taxError) validationErrors.push(taxError);
     let point;
     try {
       point = registrationLocation(
@@ -341,7 +354,7 @@ export const useOutletRegistrationForm = (onSuccess) => {
       validationErrors.push(`Foto dokumen ${docName} wajib diambil langsung dari kamera.`);
     }
     if (
-      (rules.REGISTRATION_SUBMIT_REQUIRED_FIELDS || '').split(',').includes('visitDays') &&
+      requiredSetting.split(',').includes('visitDays') &&
       (!formData.visitDays || formData.visitDays.length === 0)
     ) {
       validationErrors.push('Pilih minimal satu hari rencana kunjungan (PJP).');

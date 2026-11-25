@@ -1,7 +1,11 @@
 import { documentImages, fitImage } from './documentImages';
+import { loadDocumentLogo, logoSize } from './documentLogo';
 import { jsPDF } from 'jspdf';
 import autoTablePkg from 'jspdf-autotable';
+import { normalizeCompanyName } from './documentIdentity';
 import { formatDateTimeId, safeStr } from './formatters';
+import { FOOTER_RESERVE, INK, MUTED, drawSignatures, underlinedText } from './pdfParts';
+import { drawPaperForm } from './formPdf';
 
 const runAutoTable =
   typeof autoTablePkg === 'function'
@@ -12,266 +16,296 @@ const runAutoTable =
         ? autoTablePkg.autoTable
         : (doc, opts) => doc.autoTable?.(opts);
 
-export async function buildDocumentPdf(blueprint) {
-  const orientation = blueprint.orientation === 'landscape' ? 'landscape' : 'portrait';
-  const doc = new jsPDF({
-    orientation,
-    unit: 'mm',
-    format: 'a4',
-    compress: true,
-  });
+const LINE = [0, 0, 0];
+const HEAD_FILL = [217, 217, 217];
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 12;
-  const compact = blueprint.compact === true;
-  let cursorY = 13;
+function drawLetterhead(doc, blueprint, logo, layout) {
+  const { pageWidth, margin } = layout;
+  const hasLogo = Boolean(logo);
+  const size = logoSize(logo, 14);
+  const textX = margin + (hasLogo ? size.width + 3 : 0);
+  let y = 14;
 
+  if (hasLogo) {
+    doc.addImage(logo.dataUrl, logo.type === 'jpg' ? 'JPEG' : 'PNG', margin, y - 5, size.width, size.height);
+  }
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.setTextColor(30, 58, 138);
-  doc.text(blueprint.companyName || 'CV. SINAR ANUGRAH', pageWidth / 2, cursorY, {
-    align: 'center',
-  });
-  cursorY += 4.5;
-
+  doc.setFontSize(14);
+  doc.setTextColor(...INK);
+  doc.text(normalizeCompanyName(blueprint.companyName).toUpperCase(), textX, y);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
+  doc.setTextColor(...MUTED);
   doc.text(
     blueprint.companySub || 'Distribusi & Operasional Penjualan FMCG',
-    pageWidth / 2,
-    cursorY,
-    { align: 'center' }
+    textX,
+    y + 5
   );
-  cursorY += 3;
 
-  doc.setDrawColor(30, 58, 138);
-  doc.setLineWidth(0.6);
-  doc.line(margin, cursorY, pageWidth - margin, cursorY);
-  cursorY += 5.5;
+  const right = pageWidth - margin;
+  if (blueprint.docNumber) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...INK);
+    doc.text(safeStr(blueprint.docNumber), right, y, { align: 'right' });
+  }
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...MUTED);
+  doc.text(`Dicetak: ${formatDateTimeId(new Date())}`, right, y + 5, { align: 'right' });
 
+  // Garis ganda: tebal di atas, tipis di bawah (seperti kop surat resmi).
+  y += Math.max(size.height - 5, 8) + 2;
+  doc.setDrawColor(...LINE);
+  doc.setLineWidth(0.8);
+  doc.line(margin, y, right, y);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y + 1.1, right, y + 1.1);
+  return y + 6;
+}
+
+function drawTitle(doc, blueprint, layout, startY) {
+  const { pageWidth, margin } = layout;
+  const centerX = pageWidth / 2;
+  let y = startY + 2;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(12);
+  doc.setTextColor(...INK);
   const titleLines = doc.splitTextToSize(
     safeStr(blueprint.title, 'DOKUMEN OPERASIONAL').toUpperCase(),
     pageWidth - margin * 2
   );
-  doc.text(titleLines, pageWidth / 2, cursorY, { align: 'center' });
-  cursorY += titleLines.length * 4.5;
+  underlinedText(doc, titleLines, centerX, y, 5);
+  y += titleLines.length * 5;
 
   if (blueprint.subtitle) {
-    doc.setFont('helvetica', 'italic');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
+    doc.setTextColor(...INK);
     const subtitleLines = doc.splitTextToSize(blueprint.subtitle, pageWidth - margin * 2);
-    doc.text(subtitleLines, pageWidth / 2, cursorY, { align: 'center' });
-    cursorY += subtitleLines.length * 4;
+    doc.text(subtitleLines, centerX, y, { align: 'center' });
+    y += subtitleLines.length * 3.8;
   }
+  return y + 3;
+}
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  const infoLine = [
-    blueprint.docNumber ? `No. Dokumen: ${blueprint.docNumber}` : '',
-    `Dicetak: ${formatDateTimeId(new Date())}`,
-  ]
-    .filter(Boolean)
-    .join('   |   ');
-  doc.text(infoLine, pageWidth / 2, cursorY, { align: 'center' });
-  cursorY += 4.5;
+function drawMeta(doc, items, layout, startY, compact) {
+  const { pageWidth, margin } = layout;
+  const body = [];
+  for (let i = 0; i < items.length; i += 2) {
+    const left = items[i];
+    const right = items[i + 1];
+    body.push([
+      safeStr(left.label, ''),
+      ':',
+      safeStr(left.value, '-'),
+      right ? safeStr(right.label, '') : '',
+      right ? ':' : '',
+      right ? safeStr(right.value, '-') : '',
+    ]);
+  }
+  const usable = pageWidth - margin * 2;
+  const label = usable * 0.17;
+  const colon = 3;
+  const value = (usable - (label + colon) * 2) / 2;
+  runAutoTable(doc, {
+    startY,
+    body,
+    theme: 'plain',
+    margin: { left: margin, right: margin, bottom: FOOTER_RESERVE },
+    styles: {
+      font: 'helvetica',
+      fontSize: 8.5,
+      cellPadding: { top: 0.6, bottom: 0.6, left: 0, right: 1 },
+      textColor: INK,
+      overflow: 'linebreak',
+    },
+    columnStyles: {
+      0: { cellWidth: label },
+      1: { cellWidth: colon, halign: 'center' },
+      2: { cellWidth: value, fontStyle: 'bold' },
+      3: { cellWidth: label },
+      4: { cellWidth: colon, halign: 'center' },
+      5: { cellWidth: value, fontStyle: 'bold' },
+    },
+  });
+  return (doc.lastAutoTable?.finalY || startY) + (compact ? 4 : 5);
+}
 
-  if (blueprint.metaItems?.length) {
-    const metaRows = [];
-    for (let i = 0; i < blueprint.metaItems.length; i += 2) {
-      const left = blueprint.metaItems[i];
-      const right = blueprint.metaItems[i + 1];
-      metaRows.push([
-        left ? safeStr(left.label, '') : '',
-        left ? safeStr(left.value, '-') : '',
-        right ? safeStr(right.label, '') : '',
-        right ? safeStr(right.value, '-') : '',
-      ]);
-    }
-    runAutoTable(doc, {
-      startY: cursorY,
-      body: metaRows,
-      theme: 'grid',
-      margin: { left: margin, right: margin },
-      styles: {
-        font: 'helvetica',
-        fontSize: 7.5,
-        cellPadding: 1.6,
-        textColor: [15, 23, 42],
-        lineColor: [203, 213, 225],
-        lineWidth: 0.15,
-      },
-      columnStyles: {
-        0: { fontStyle: 'bold', fillColor: [239, 246, 255], cellWidth: 34 },
-        2: { fontStyle: 'bold', fillColor: [239, 246, 255], cellWidth: 34 },
-      },
+function sectionColumnStyles(section, usableWidth) {
+  const headers = section.headers || [];
+  const styles = { 0: { halign: 'center' } };
+  const weights = section.columnWidths;
+  if (weights?.length === headers.length) {
+    const total = weights.reduce((sum, n) => sum + n, 0);
+    weights.forEach((weight, i) => {
+      styles[i] = { ...styles[i], cellWidth: (usableWidth * weight) / total };
     });
-    cursorY = (doc.lastAutoTable?.finalY || cursorY) + (compact ? 3 : 4);
   }
+  for (const i of section.rightAlignCols || []) styles[i] = { ...(styles[i] || {}), halign: 'right' };
+  for (const i of section.centerAlignCols || [])
+    styles[i] = { ...(styles[i] || {}), halign: 'center' };
+  return styles;
+}
 
-  for (const section of blueprint.sections || []) {
-    if (section.title) {
-      if (cursorY + 14 > pageHeight - 16) {
-        doc.addPage();
-        cursorY = 14;
-      }
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(30, 58, 138);
-      doc.text(section.title.toUpperCase(), margin, cursorY);
-      cursorY += 2;
-    }
-
-    const headers = section.headers || [];
-    const columnStyles = { 0: { halign: 'center' } };
-    const weights = section.columnWidths;
-    if (weights?.length === headers.length) {
-      const total = weights.reduce((sum, n) => sum + n, 0);
-      weights.forEach((weight, i) => {
-        columnStyles[i] = {
-          ...columnStyles[i],
-          cellWidth: ((pageWidth - margin * 2) * weight) / total,
-        };
-      });
-    }
-    for (const cIdx of section.rightAlignCols || []) {
-      columnStyles[cIdx] = { ...(columnStyles[cIdx] || {}), halign: 'right' };
-    }
-    for (const cIdx of section.centerAlignCols || []) {
-      columnStyles[cIdx] = { ...(columnStyles[cIdx] || {}), halign: 'center' };
-    }
-
-    runAutoTable(doc, {
-      startY: cursorY,
-      head: headers.length ? [headers] : [],
-      body: (section.rows || []).map((row) => row.map((v) => safeStr(v, '-'))),
-      theme: 'grid',
-      margin: { left: margin, right: margin },
-      styles: {
-        font: 'helvetica',
-        fontSize: headers.length > 12 ? 6.5 : 7.5,
-        cellPadding: headers.length > 12 || compact ? 1.2 : 1.8,
-        textColor: [15, 23, 42],
-        lineColor: [203, 213, 225],
-        lineWidth: 0.15,
-        valign: 'middle',
-      },
-      headStyles: {
-        fillColor: [30, 58, 138],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        halign: 'center',
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
-      },
-      columnStyles,
-    });
-    cursorY = (doc.lastAutoTable?.finalY || cursorY) + (compact ? 3 : 4);
-  }
-
-  for (const image of await documentImages(blueprint)) {
-    const size = fitImage(image, pageWidth - margin * 2, 85);
-    if (cursorY + size.height + 12 > pageHeight - 16) {
+function drawSection(doc, section, layout, startY, compact) {
+  const { pageWidth, pageHeight, margin } = layout;
+  let y = startY;
+  if (section.title) {
+    if (y + 14 > pageHeight - FOOTER_RESERVE) {
       doc.addPage();
-      cursorY = 14;
+      y = 14;
     }
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setTextColor(0);
-    doc.text(image.caption || 'Foto outlet', margin, cursorY);
-    cursorY += 5;
-    doc.addImage(
-      image.dataUrl,
-      image.type === 'jpg' ? 'JPEG' : 'PNG',
-      margin,
-      cursorY,
-      size.width,
-      size.height
-    );
-    cursorY += size.height + 5;
+    doc.setTextColor(...INK);
+    doc.text(section.title.toUpperCase(), margin, y);
+    y += 2;
   }
+  const headers = section.headers || [];
+  const dense = headers.length > 12 || compact;
+  runAutoTable(doc, {
+    startY: y,
+    head: headers.length ? [headers] : [],
+    body: (section.rows || []).map((row) => row.map((v) => safeStr(v, '-'))),
+    theme: 'grid',
+    margin: { left: margin, right: margin, top: 14, bottom: FOOTER_RESERVE },
+    rowPageBreak: 'avoid',
+    styles: {
+      font: 'helvetica',
+      fontSize: headers.length > 12 ? 6.5 : 7.5,
+      cellPadding: dense ? 1.2 : 1.8,
+      textColor: INK,
+      lineColor: LINE,
+      lineWidth: 0.15,
+      valign: 'middle',
+    },
+    headStyles: {
+      fillColor: HEAD_FILL,
+      textColor: INK,
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    columnStyles: sectionColumnStyles(section, pageWidth - margin * 2),
+  });
+  return (doc.lastAutoTable?.finalY || y) + (compact ? 3 : 4);
+}
 
-  if (blueprint.notes?.length) {
-    if (cursorY + 16 > pageHeight - 16) {
+function drawNotes(doc, notes, layout, startY) {
+  const { pageWidth, pageHeight, margin } = layout;
+  let y = startY;
+  if (y + 16 > pageHeight - FOOTER_RESERVE) {
+    doc.addPage();
+    y = 14;
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...INK);
+  doc.text('Dasar & Catatan Dokumen:', margin, y);
+  y += 3.8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...INK);
+  notes.forEach((note, index) => {
+    const lines = doc.splitTextToSize(`${index + 1}. ${note}`, pageWidth - margin * 2 - 4);
+    lines.forEach((line, lineIndex) => {
+      if (y + 4 > pageHeight - FOOTER_RESERVE) {
+        doc.addPage();
+        y = 14;
+      }
+      doc.text(line, margin + (lineIndex === 0 ? 0 : 4), y);
+      y += 3.3;
+    });
+  });
+  return y + 2;
+}
+
+function drawImages(doc, images, layout, startY) {
+  const { pageWidth, pageHeight, margin } = layout;
+  let y = startY;
+  for (const image of images) {
+    const size = fitImage(image, pageWidth - margin * 2, 85);
+    if (y + size.height + 12 > pageHeight - FOOTER_RESERVE) {
       doc.addPage();
-      cursorY = 14;
+      y = 14;
     }
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...INK);
+    doc.text(image.caption || 'Lampiran foto', margin, y);
+    y += 4;
+    doc.addImage(image.dataUrl, image.type === 'jpg' ? 'JPEG' : 'PNG', margin, y, size.width, size.height);
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.15);
+    doc.rect(margin, y, size.width, size.height);
+    y += size.height + 5;
+  }
+  return y;
+}
+
+function drawPageFooters(doc, blueprint, layout) {
+  const { pageWidth, pageHeight, margin } = layout;
+  const total = doc.internal.getNumberOfPages();
+  for (let page = 1; page <= total; page++) {
+    doc.setPage(page);
+    doc.setDrawColor(102, 102, 102);
+    doc.setLineWidth(0.15);
+    doc.line(margin, pageHeight - 11, pageWidth - margin, pageHeight - 11);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.setTextColor(15, 23, 42);
-    doc.text('Dasar & Catatan Dokumen:', margin, cursorY);
-    cursorY += 3.5;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7);
-    doc.setTextColor(71, 85, 105);
-    for (const note of blueprint.notes) {
-      const wrapped = doc.splitTextToSize(`• ${note}`, pageWidth - margin * 2);
-      for (const line of wrapped) {
-        if (cursorY + 4 > pageHeight - 16) {
-          doc.addPage();
-          cursorY = 14;
-        }
-        doc.text(line, margin, cursorY);
-        cursorY += 3.2;
-      }
-    }
-    cursorY += 2;
-  }
-
-  if (blueprint.signatories?.length) {
-    if (cursorY + 30 > pageHeight - 16) {
-      doc.addPage();
-      cursorY = 16;
-    }
-    const count = blueprint.signatories.length;
-    const blockWidth = (pageWidth - margin * 2) / count;
-    blueprint.signatories.forEach((sig, idx) => {
-      const centerX = margin + blockWidth * idx + blockWidth / 2;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(15, 23, 42);
-      doc.text(safeStr(sig.role, ''), centerX, cursorY + 4, { align: 'center' });
-
-      const sigLineHalf = Math.min(24, (blockWidth - 10) / 2);
-      doc.setDrawColor(148, 163, 184);
-      doc.setLineWidth(0.25);
-      doc.line(centerX - sigLineHalf, cursorY + 17, centerX + sigLineHalf, cursorY + 17);
-
-      const nameLines = doc.splitTextToSize(
-        `( ${safeStr(sig.name, '........................')} )`,
-        blockWidth - 6
-      );
-      doc.text(nameLines, centerX, cursorY + 21.5, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      const titleY = cursorY + 21.5 + nameLines.length * 3.5;
-      doc.text(safeStr(sig.title, ''), centerX, titleY, { align: 'center' });
-    });
-  }
-
-  const totalPages = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7);
-    doc.setTextColor(148, 163, 184);
+    doc.setTextColor(...MUTED);
     doc.text(
-      `${blueprint.companyName || 'CV. SINAR ANUGRAH'} — Sistem Distribusi & Operasional`,
+      `${normalizeCompanyName(blueprint.companyName)} — Sistem Distribusi & Operasional`,
       margin,
-      pageHeight - 6
+      pageHeight - 7
     );
-    doc.text(`Halaman ${i} dari ${totalPages}`, pageWidth - margin, pageHeight - 6, {
+    doc.text(`Halaman ${page} dari ${total}`, pageWidth - margin, pageHeight - 7, {
       align: 'right',
     });
   }
+}
+
+export async function buildDocumentPdf(blueprint) {
+  const orientation = blueprint.orientation === 'landscape' ? 'landscape' : 'portrait';
+  const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4', compress: true });
+  doc.setProperties({
+    title: safeStr(blueprint.title, 'Dokumen Operasional'),
+    author: normalizeCompanyName(blueprint.companyName),
+  });
+  const layout = {
+    pageWidth: doc.internal.pageSize.getWidth(),
+    pageHeight: doc.internal.pageSize.getHeight(),
+    margin: orientation === 'landscape' ? 12 : 15,
+  };
+  const compact = blueprint.compact === true;
+
+  const logo = await loadDocumentLogo();
+
+  // Dokumen berbentuk formulir kertas (mis. Form Registrasi Outlet): satu halaman formulir,
+  // lalu lampiran foto pada halaman berikutnya bila ada.
+  if (blueprint.form) {
+    drawPaperForm(doc, blueprint, logo, { ...layout, margin: 12 });
+    const attachments = await documentImages(blueprint);
+    if (attachments.length) {
+      doc.addPage();
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...INK);
+      doc.text('LAMPIRAN', layout.margin, 16);
+      drawImages(doc, attachments, layout, 22);
+    }
+    drawPageFooters(doc, blueprint, { ...layout, margin: 12 });
+    return doc.output('arraybuffer');
+  }
+
+  let y = drawLetterhead(doc, blueprint, logo, layout);
+  y = drawTitle(doc, blueprint, layout, y);
+  if (blueprint.metaItems?.length) y = drawMeta(doc, blueprint.metaItems, layout, y, compact);
+  for (const section of blueprint.sections || []) y = drawSection(doc, section, layout, y, compact);
+  y = drawImages(doc, await documentImages(blueprint), layout, y);
+  if (blueprint.notes?.length) y = drawNotes(doc, blueprint.notes, layout, y);
+  if (blueprint.signatories?.length) drawSignatures(doc, blueprint.signatories, layout, y);
+  drawPageFooters(doc, blueprint, layout);
 
   return doc.output('arraybuffer');
 }

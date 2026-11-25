@@ -5,6 +5,7 @@ import {
 } from '../../../../../shared/report-semantics.mjs';
 import { createDocumentExporters } from '../core/createDocumentExporters';
 import { formatCurrency, formatDateId, formatNumber, safeStr } from '../core/formatters';
+import { supervisorSignatories } from '../core/documentIdentity';
 
 function buildSuspiciousAttendanceBlueprint(input = {}, dateArg) {
   const rows = Array.isArray(input) ? input : Array.isArray(input?.rows) ? input.rows : [];
@@ -84,11 +85,7 @@ function buildSuspiciousAttendanceBlueprint(input = {}, dateArg) {
     notes: [
       'Indikasi anomali membantu pemeriksaan bukti kunjungan (durasi, titik geofence, dan jeda perjalanan); bukan kesimpulan pelanggaran otomatis.',
     ],
-    signatories: [
-      { role: 'Dievaluasi Oleh,', name: 'Supervisor Area', title: 'Atasan Langsung' },
-      { role: 'Diperiksa Oleh,', name: 'Admin Operasional', title: 'Pengendalian Internal' },
-      { role: 'Mengetahui,', name: 'Manajer Operasional', title: 'Pimpinan Distribusi' },
-    ],
+    signatories: supervisorSignatories(),
   };
 }
 

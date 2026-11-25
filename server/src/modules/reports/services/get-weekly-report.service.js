@@ -81,7 +81,7 @@ export const getWeeklyReport = async (query = {}) => {
       byDay: true,
       scope: { userId, clusterId, supervisorId },
     }),
-    getDynamicConfig('COMPANY_NAME', 'PT. SINAR ANUGRAH'),
+    getDynamicConfig('COMPANY_NAME', 'CV. SINAR ANUGRAH'),
   ]);
 
   for (const day of weekDays)

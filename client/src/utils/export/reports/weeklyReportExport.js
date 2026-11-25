@@ -7,6 +7,7 @@ import {
   formatReportBasisNotes,
   safeStr,
 } from '../core/formatters';
+import { normalizeCompanyName, supervisorSignatories } from '../core/documentIdentity';
 
 function resolveWeeklySalesmanRow(s, idx) {
   const wt = s.weeklyTotal || {};
@@ -40,7 +41,7 @@ function resolveWeeklySalesmanRow(s, idx) {
   ];
 }
 
-function buildWeeklyReportBlueprint(input = {}, startDateArg, salesmanNameArg) {
+export function buildWeeklyReportBlueprint(input = {}, startDateArg, salesmanNameArg) {
   const reportData = input?.reportData ? input.reportData : input;
   const startDate = input?.startDate || startDateArg || reportData?.period?.startDate || '';
   const salesmanName = input?.salesmanName || salesmanNameArg || 'Semua Salesman';
@@ -119,7 +120,7 @@ function buildWeeklyReportBlueprint(input = {}, startDateArg, salesmanNameArg) {
     filename: `Laporan_Mingguan_WTD_${dateCode}`,
     sheetName: 'LAPORAN_MINGGUAN',
     orientation: 'landscape',
-    companyName: reportData?.meta?.company || 'CV. SINAR ANUGRAH',
+    companyName: normalizeCompanyName(reportData?.meta?.company),
     title: 'LAPORAN ANALISIS PERFORMA PENJUALAN MINGGUAN (WTD)',
     subtitle: `Periode Kerja: ${formatDateId(p.startDate || dateCode)} s/d ${formatDateId(p.endDate || dateCode)}`,
     docNumber: `WTD-${dateCode.replace(/-/g, '')}`,
@@ -151,11 +152,7 @@ function buildWeeklyReportBlueprint(input = {}, startDateArg, salesmanNameArg) {
         : [
             'Laporan mingguan (WTD) menyajikan kepatuhan rute kunjungan (PJP), pencapaian Effective Call (EC), dan nilai order disetujui.',
           ],
-    signatories: [
-      { role: 'Dibuat Oleh,', name: 'Admin Pelaporan', title: 'Sales Support' },
-      { role: 'Diperiksa Oleh,', name: 'Supervisor Area', title: 'Koordinator Tim' },
-      { role: 'Disetujui Oleh,', name: 'Manajer Penjualan', title: 'Pimpinan Distribusi' },
-    ],
+    signatories: supervisorSignatories(),
   };
 }
 

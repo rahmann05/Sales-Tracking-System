@@ -4,7 +4,11 @@ import { DEFAULT_AUDIT_ITEMS } from './supervision-checklist.mjs';
 import { DEFAULT_EARLY_REASONS } from './visit-reasons.mjs';
 import { DEFAULT_SERVICE_CATALOG } from './reference-catalog.mjs';
 import { CAMERA_INPUT_LABELS } from './camera-input-policy.mjs';
-import { REGISTRATION_FIELDS, MASTER_OUTLET_FIELDS } from './registration-fields.mjs';
+import {
+  REGISTRATION_FIELDS,
+  MASTER_OUTLET_FIELDS,
+  DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS,
+} from './registration-fields.mjs';
 import { ROUTE_DECISION_MODES } from './route-change-workflow.mjs';
 import { REPORT_PRESENTATION } from './report-presentation.mjs';
 import { OUTLET_COMPARISON_DEFAULTS as comparison } from './outlet-evidence-policy.mjs';
@@ -738,11 +742,11 @@ export const OPERATIONAL_CONFIG_GROUPS = [
         key: 'REGISTRATION_SUBMIT_REQUIRED_FIELDS',
         label: 'Data tambahan wajib saat pengajuan',
         type: 'field-requirements',
-        defaultValue: '',
+        defaultValue: DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS,
         options: Object.keys(REGISTRATION_FIELDS),
         optionLabels: REGISTRATION_FIELDS,
         description:
-          'Kosong berarti seluruh data tambahan opsional. Nama, alamat dan konsistensi identitas tetap diperiksa sebagai identitas inti.',
+          'Data identitas pemilik, nomor telepon, NIK/NPWP, wilayah, patokan lokasi, dan hari kunjungan wajib diisi secara bawaan. Admin dapat menyesuaikan daftar ini bila diperlukan.',
       },
       {
         key: 'REGISTRATION_ACTIVATION_REQUIRED_FIELDS',

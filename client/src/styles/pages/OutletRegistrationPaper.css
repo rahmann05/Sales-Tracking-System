@@ -1,0 +1,555 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Formulir isian "FORM REGISTRASI OUTLET" bergaya kertas (awalan npf-).
+   Susunannya mengikuti formulir fisik: kotak bergaris hitam, isian bergaris titik-titik, dan
+   pilihan berupa kotak yang diberi tanda V. Di tengahnya disediakan ruang khusus untuk
+   pengecekan API (profil tempat, GPS) dan foto, dengan tata letak yang sama seperti sebelumnya.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.npf-stage {
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+  padding: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #d0d3d8;
+  border: 1px solid #b8bdc5;
+  border-radius: 8px;
+}
+.npf-sheet {
+  box-sizing: border-box;
+  width: min(860px, 100%);
+  margin: 0 auto;
+  padding: 18px 20px 22px;
+  background: #fff;
+  color: #000;
+  border: 1px solid #9aa0a6;
+  box-shadow:
+    0 1px 3px #0003,
+    0 8px 24px #00000018;
+  font: 12px/1.35 Arial, 'Liberation Sans', Helvetica, sans-serif;
+}
+.npf-stage[data-fit='false'] .npf-sheet {
+  width: 860px;
+  min-width: 860px;
+}
+.npf-sheet *,
+.npf-sheet *::before,
+.npf-sheet *::after {
+  box-sizing: border-box;
+}
+.npf-sheet :where(h2, h3, p, dl, dd, fieldset, legend) {
+  margin: 0;
+}
+.npf-sheet :where(fieldset) {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Kepala formulir */
+.npf-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+.npf-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.npf-brand img {
+  height: 44px;
+  width: auto;
+}
+.npf-brand b {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+.npf-brand small {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+}
+.npf-title {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+.npf-code {
+  justify-self: end;
+  width: 100%;
+  max-width: 260px;
+  font-size: 10.5px;
+}
+.npf-code .app-field {
+  display: grid;
+  gap: 2px;
+  font-size: 10.5px;
+}
+.npf-code input {
+  min-height: 24px;
+  padding: 2px 4px;
+  border: 1px solid #000;
+  border-radius: 0;
+  font-size: 11px;
+}
+.npf-meta {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  font-weight: 700;
+}
+.npf-meta-row {
+  display: grid;
+  grid-template-columns: 70px 12px minmax(0, 360px);
+  align-items: center;
+}
+
+/* Blok bergaris */
+.npf-block {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid #000;
+}
+.npf-block-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.npf-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: var(--npf-cols, minmax(0, 1fr));
+  align-items: start;
+  min-width: 0;
+}
+.npf-cols-identity {
+  --npf-cols: minmax(0, 1fr) 220px;
+}
+.npf-cols-tax {
+  --npf-cols: 86px minmax(0, 1.45fr) minmax(0, 1fr);
+}
+.npf-cols-channel {
+  --npf-cols: 86px minmax(0, 1fr) minmax(0, 1fr) 130px;
+}
+.npf-cols-payment {
+  --npf-cols: 86px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr);
+}
+.npf-cols-visit {
+  --npf-cols: 86px repeat(3, minmax(0, 1fr));
+}
+.npf-box {
+  display: grid;
+  gap: 3px;
+  align-content: start;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #000;
+}
+.npf-gutter {
+  padding-top: 3px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.npf-stack {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.npf-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.npf-static {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.npf-codebox {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border: 1px solid #000;
+}
+.npf-hint {
+  display: block;
+  margin-top: 1px;
+  font-size: 9.5px;
+  font-style: italic;
+  font-weight: 400;
+  text-transform: none;
+  color: #333;
+}
+.npf-req {
+  color: #b42318;
+  font-weight: 700;
+}
+.npf-error {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: none;
+  color: #b42318;
+}
+.npf-status {
+  font-size: 10.5px;
+  font-style: italic;
+  color: #333;
+}
+
+/* Isian bergaris titik-titik: "LABEL : ........" */
+.npf-field {
+  display: grid;
+  grid-template-columns: minmax(78px, 30%) 8px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 2px;
+  min-width: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.npf-field > :nth-child(-n + 2) {
+  padding-top: 4px;
+}
+.npf-box .npf-field {
+  grid-template-columns: minmax(64px, 38%) 8px minmax(0, 1fr);
+}
+.npf-sheet .npf-line {
+  display: block;
+  width: 100%;
+  min-height: 26px;
+  margin: 0;
+  padding: 3px 3px 2px;
+  border: 0;
+  border-bottom: 1px dotted #000;
+  border-radius: 0;
+  background: transparent;
+  color: #000;
+  font: 700 12px/1.3 Arial, 'Liberation Sans', Helvetica, sans-serif;
+  text-transform: none;
+  outline: none;
+  box-shadow: none;
+}
+.npf-sheet textarea.npf-line {
+  resize: vertical;
+}
+.npf-sheet .npf-line:focus {
+  background: #fffbe0;
+  border-bottom: 1px solid #000;
+}
+.npf-sheet .npf-line:disabled {
+  color: #777;
+  border-bottom-color: #aaa;
+}
+.npf-sheet .npf-line[aria-invalid='true'] {
+  border-bottom: 1px solid #b42318;
+}
+.npf-sheet .npf-line--short {
+  max-width: 76px;
+  text-align: center;
+}
+.npf-sheet select.npf-line {
+  padding-right: 18px;
+}
+
+/* Pilihan bertanda V */
+.npf-ticks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 22px;
+}
+.npf-tick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.npf-tick[data-spread='true'] {
+  justify-content: space-between;
+  width: 100%;
+}
+.npf-tick[data-strong='true'] {
+  font-weight: 700;
+}
+.npf-tick input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
+  border: 1.5px solid #000;
+  border-radius: 0;
+  background: #fff;
+  cursor: pointer;
+}
+.npf-tick input::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid #000;
+  border-width: 0 2.5px 2.5px 0;
+  transform: translate(0, -1px) rotate(45deg);
+  opacity: 0;
+}
+.npf-tick input:checked::after {
+  opacity: 1;
+}
+.npf-tick input:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+.npf-tick input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.npf-list {
+  display: grid;
+  gap: 1px;
+}
+.npf-footnote {
+  margin: 2px 0 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* Hasil pencarian tempat: daftar dengan ruang tersendiri (tidak menimpa isian di bawahnya) */
+.npf-place-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 6px;
+  border: 1px solid #000;
+  font-size: 10.5px;
+}
+.npf-place-results {
+  display: grid;
+  max-height: 168px;
+  overflow: auto;
+  border: 1px solid #000;
+}
+.npf-place-results > p {
+  padding: 3px 6px;
+  font-size: 10px;
+  font-style: italic;
+  background: #f2f2f2;
+}
+.npf-place-results > button {
+  display: grid;
+  gap: 1px;
+  padding: 4px 6px;
+  border: 0;
+  border-top: 1px solid #bbb;
+  background: #fff;
+  color: #000;
+  font: 11px/1.3 Arial, Helvetica, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.npf-place-results > button:hover {
+  background: #fffbe0;
+}
+.npf-place-results small {
+  color: #444;
+}
+
+/* Ruang pengecekan API dan foto: dua kolom seperti tata letak sebelumnya */
+.npf-gps-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 4px 8px;
+  border: 1px solid #000;
+  background: #f2f2f2;
+  font-size: 11px;
+}
+.npf-gps-bar > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.npf-api-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+.npf-api-box,
+.npf-photo-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 170px;
+  padding: 6px 8px;
+  border: 1px solid #000;
+}
+.npf-api-box > div:not(.npf-heading) {
+  flex: 1;
+  font-size: 11px;
+}
+.npf-photo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.npf-photo-preview {
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #111;
+}
+.npf-photo-preview img {
+  width: 100%;
+  height: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+.npf-sheet button.npf-photo-empty {
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1.5px dashed #000;
+  background: #fafafa;
+  color: #000;
+  font: 700 11px/1.3 Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+.npf-sheet button.npf-photo-empty:hover {
+  background: #fffbe0;
+}
+.npf-docphoto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding: 4px 8px;
+  border: 1px dashed #000;
+  font-size: 11px;
+}
+.npf-docphoto p {
+  font-size: 10px;
+  font-style: italic;
+}
+
+/* Mapping lokasi */
+.npf-mapping textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: #000;
+  font: 400 12px/1.4 Arial, 'Liberation Sans', Helvetica, sans-serif;
+  outline: none;
+  resize: vertical;
+}
+.npf-mapping textarea:focus {
+  background: #fffbe0;
+}
+
+/* Tombol dan bilah aksi */
+.npf-sheet button.npf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid #000;
+  border-radius: 0;
+  background: #fff;
+  color: #000;
+  font: 700 12px/1 Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+.npf-sheet button.npf-btn--mini {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 10.5px;
+}
+.npf-sheet button.npf-btn:hover:not(:disabled) {
+  background: #eee;
+}
+.npf-sheet button.npf-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.npf-sheet button.npf-btn--primary {
+  background: #000;
+  color: #fff;
+}
+.npf-sheet button.npf-btn--primary:hover:not(:disabled) {
+  background: #222;
+}
+.npf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1.5px solid #000;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.npf-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Layar sempit: kolom ditumpuk (kecuali mode "Zoom 100%", yang menjaga lebar kertas) */
+@media (max-width: 800px) {
+  .npf-stage[data-fit='true'] .npf-sheet {
+    padding: 12px;
+  }
+  .npf-stage[data-fit='true'] .npf-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .npf-stage[data-fit='true'] .npf-title {
+    text-align: left;
+  }
+  .npf-stage[data-fit='true'] .npf-code {
+    justify-self: stretch;
+    max-width: none;
+  }
+  .npf-stage[data-fit='true'] .npf-row,
+  .npf-stage[data-fit='true'] .npf-api-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .npf-stage[data-fit='true'] .npf-meta-row {
+    grid-template-columns: 62px 10px minmax(0, 1fr);
+  }
+}

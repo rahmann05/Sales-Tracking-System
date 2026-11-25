@@ -1,4 +1,7 @@
-import { RegistrationAdditionalFields } from './RegistrationAdditionalFields';
+import {
+  DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS,
+  requiredRegistrationFields,
+} from '../../../../../shared/registration-fields.mjs';
 import { useFeaturePolicy } from '../../../shared/hooks/useFeaturePolicy';
 import { RegistrationIdentitySection } from './RegistrationIdentitySection';
 import { RegistrationLocationSection } from './RegistrationLocationSection';
@@ -15,6 +18,7 @@ import { OutletCameraModal } from './OutletCameraModal';
 import { BusinessCodeInput } from '../../../shared/components/common/BusinessCodeInput';
 import { confirmAction } from '../../../services/notificationService';
 import { RegistrationDivisionBar } from './RegistrationDivisionBar';
+import '../../../styles/pages/OutletRegistrationPaper.css';
 import {
   LOCATION_OPTIONS,
   MT_SUB_CHANNELS,
@@ -25,7 +29,10 @@ import {
 
 /**
  * PhysicalDocumentForm Component
- * Render outlet registration in four task groups with explicit GPS and camera actions.
+ * Formulir isian NOO yang mengikuti formulir kertas "FORM REGISTRASI OUTLET": kotak bergaris,
+ * isian titik-titik, dan pilihan bertanda V. Ruang pengecekan API dan foto tetap tersedia.
+ * `fitToScreen` true: lembar menyesuaikan lebar layar (kolom ditumpuk di layar sempit);
+ * false: lembar tetap selebar kertas ("Zoom 100%") dan dapat digulir ke samping.
  */
 export const PhysicalDocumentForm = ({
   formData,
@@ -43,18 +50,27 @@ export const PhysicalDocumentForm = ({
   toggleDay,
   onReset,
   isSubmitting = false,
+  fitToScreen = true,
 }) => {
   const featurePolicy = useFeaturePolicy('REGISTRATION');
   const { clusters, divisions, settings: liveSettings } = useApp();
   const settings = formData.revisionId
     ? { ...liveSettings, ...formData.revisionPolicyValues }
     : liveSettings;
+  const requiredFields = requiredRegistrationFields(
+    formData.revisionPolicyValues?.REGISTRATION_SUBMIT_REQUIRED_FIELDS ??
+      settings.REGISTRATION_SUBMIT_REQUIRED_FIELDS ??
+      DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS
+  );
+
   const [isKtpCameraOpen, setIsKtpCameraOpen] = useState(false);
   const [isOutletCameraOpen, setIsOutletCameraOpen] = useState(false);
   const debounceTimerRef = useRef(null);
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
   useEffect(() => () => clearTimeout(debounceTimerRef.current), []);
+
   const handleNameChange = (e) => {
     const val = e.target.value;
     updateField('name', val);
@@ -80,183 +96,164 @@ export const PhysicalDocumentForm = ({
       setHasSearched(false);
     }
   };
+
   const cardTypeLabel = formData.taxType === 'PKP' ? 'NPWP' : 'KTP';
+
   return (
-    <div className="sales-registration-document bg-surface border-2 border-slate-700/80 rounded-2xl shadow-xl p-4 sm:p-7 max-w-5xl mx-auto space-y-4 text-on-surface">
-      <div className="sales-registration-intro">
-        <div>
-          <h2>Data calon pelanggan</h2>
-          <p className="sales-note">
-            Isi data berikut sesuai kondisi outlet. Pengajuan akan diperiksa sebelum menjadi
-            pelanggan aktif.
-          </p>
-        </div>
-        <nav className="sales-registration-nav" aria-label="Bagian formulir outlet">
-          {[
-            ['identity', 'Identitas'],
-            ['location', 'Lokasi & dokumen'],
-            ['plan', 'Wilayah & kunjungan'],
-            ['submit', 'Periksa & ajukan'],
-          ].map(([id, label]) => (
-            <button
-              type="button"
-              className="app-button"
-              key={id}
-              onClick={() =>
-                document
-                  .getElementById(`registration-${id}`)
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      {/* ─── Baris Divisi & Cabang Operasional ──────────────────────────────── */}
-      <RegistrationDivisionBar
-        divisions={divisions}
-        formData={formData}
-        updateField={updateField}
-      />
+    <>
+      <div className="npf-stage" data-fit={fitToScreen}>
+        <div className="npf-sheet">
+          <header className="npf-head">
+            <div className="npf-brand">
+              <img src="/logo-mark.png" alt="" />
+              <div>
+                <b>CV. SINAR ANUGRAH</b>
+                <small>FMCG DISTRIBUTOR</small>
+              </div>
+            </div>
+            <h2 className="npf-title">FORM REGISTRASI OUTLET</h2>
+            <div className="npf-code">
+              <BusinessCodeInput
+                entity="NOO"
+                value={formData.registrationCode || ''}
+                onChange={(value) => updateField('registrationCode', value)}
+                disabled={isSubmitting || Boolean(formData.revisionId)}
+              />
+            </div>
+          </header>
 
-      <BusinessCodeInput
-        entity="NOO"
-        value={formData.registrationCode || ''}
-        onChange={(value) => updateField('registrationCode', value)}
-        disabled={isSubmitting || Boolean(formData.revisionId)}
-      />
-      {/* ─── BOX 1: IDENTITAS OUTLET ─────────────────────────────────────────── */}
-      <section id="registration-identity" className="sales-registration-group">
-        <h3>1. Identitas outlet</h3>
-        <RegistrationIdentitySection
-          LOCATION_OPTIONS={LOCATION_OPTIONS}
-          formData={formData}
-          handleNameChange={handleNameChange}
-          handleSelectGooglePlace={handleSelectGooglePlace}
-          handleUnlockGooglePlace={handleUnlockGooglePlace}
-          hasSearched={hasSearched}
-          isDebouncing={isDebouncing}
-          isSearchingPlace={isSearchingPlace}
-          placeSearchError={placeSearchError}
-          placeSearchResults={placeSearchResults}
-          setHasSearched={setHasSearched}
-          settings={settings}
-          updateField={updateField}
-          verifiedPlace={verifiedPlace}
-        />
-
-        {/* ─── BOX 2: VALIDASI GOOGLE PLACE & TITIK GPS (DI BAWAH NAMA OUTLET) ─── */}
-      </section>
-      <section id="registration-location" className="sales-registration-group">
-        <h3>2. Lokasi & dokumen</h3>
-        <RegistrationLocationSection
-          formData={formData}
-          handleDetectGPS={handleDetectGPS}
-          isLocating={isLocating}
-          gpsError={gpsError}
-          setIsOutletCameraOpen={setIsOutletCameraOpen}
-          settings={settings}
-          verifiedPlace={verifiedPlace}
-        />
-
-        {/* ─── BOX 3: JENIS PAJAK & DOKUMEN KTP/NPWP ────────────────────────────── */}
-        <RegistrationTaxSection
-          cardTypeLabel={cardTypeLabel}
-          formData={formData}
-          setIsKtpCameraOpen={setIsKtpCameraOpen}
-          settings={settings}
-          updateField={updateField}
-        />
-
-        {/* ─── BOX 4: AREA & WILAYAH ────────────────────────────────────────────── */}
-      </section>
-      <section id="registration-plan" className="sales-registration-group">
-        <h3>3. Wilayah & rencana kunjungan</h3>
-        <RegistrationAdditionalFields
-          formData={formData}
-          updateField={updateField}
-          settings={settings}
-        />
-        <RegistrationTerritorySection
-          clusters={clusters}
-          formData={formData}
-          updateField={updateField}
-        />
-
-        {/* ─── BOX 5: CHANNEL & SUB CHANNEL ─────────────────────────────────────── */}
-        <RegistrationChannelSection
-          GT_SUB_CHANNELS={GT_SUB_CHANNELS}
-          MT_SUB_CHANNELS={MT_SUB_CHANNELS}
-          TIERS={TIERS}
-          formData={formData}
-          updateField={updateField}
-        />
-
-        {/* ─── BOX 6: PAYMENT TERMS ─────────────────────────────────────────────── */}
-        <RegistrationPaymentSection formData={formData} updateField={updateField} />
-
-        {/* ─── BOX 7: KUNJUNGAN (CALL PLAN PJP) ─────────────────────────────────── */}
-        <RegistrationVisitSection
-          DAYS_LIST={DAYS_LIST}
-          formData={formData}
-          toggleDay={toggleDay}
-          updateField={updateField}
-        />
-      </section>
-      <section id="registration-submit" className="sales-registration-group">
-        <h3>4. Periksa & ajukan</h3>
-        {/* ─── BOX 8: MAPPING PATOKAN FISIK ────────────────────────────────────── */}
-        <div className="border border-slate-700/80 rounded-xl overflow-hidden p-3.5 bg-surface space-y-2 text-xs">
-          <label htmlFor="registration-landmark" className="font-black block text-sm">
-            Patokan & petunjuk lokasi
-          </label>
-          <textarea
-            id="registration-landmark"
-            rows={3}
-            value={formData.mappingLocation}
-            onChange={(e) => updateField('mappingLocation', e.target.value)}
-            className="w-full min-h-[96px] p-3 text-xs bg-transparent border border-slate-400 rounded-lg focus:border-primary outline-none resize-y"
-            placeholder="Tuliskan deskripsi patokan fisik, ancer-ancer lokasi, ciri bangunan, atau petunjuk jalan menuju toko secara rinci..."
+          <RegistrationDivisionBar
+            divisions={divisions}
+            formData={formData}
+            updateField={updateField}
           />
-        </div>
 
-        {/* ─── Tombol Aksi Submit & Reset Terpadu di Dokumen ─────────────────────── */}
-        <div className="pt-2 border-t-2 border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-[11px] text-on-surface-variant font-bold">
-            * Pastikan seluruh data fisik outlet dan foto kamera telah sesuai sebelum mengajukan.
-          </span>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto sm:justify-end">
-            <button
-              type="button"
-              onClick={async () => {
-                if (
-                  await confirmAction('Kosongkan seluruh isian formulir ini?', {
-                    title: 'Reset Formulir',
-                    confirmLabel: 'Kosongkan',
-                    danger: true,
-                  })
-                )
-                  onReset();
-              }}
-              disabled={isSubmitting}
-              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl border-2 border-slate-500 hover:bg-surface-container font-bold text-xs transition-all cursor-pointer flex items-center"
-            >
-              Reset Formulir
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || (!formData.revisionId && !featurePolicy.canStart)}
-              title={!formData.revisionId ? featurePolicy.reason : undefined}
-              className="w-full sm:w-auto justify-center px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <LuSend className="text-sm" />
-              <span>{isSubmitting ? 'Mengirim Pengajuan...' : 'Ajukan Registrasi Outlet'}</span>
-            </button>
-          </div>
+          <RegistrationIdentitySection
+            LOCATION_OPTIONS={LOCATION_OPTIONS}
+            formData={formData}
+            handleNameChange={handleNameChange}
+            handleSelectGooglePlace={handleSelectGooglePlace}
+            handleUnlockGooglePlace={handleUnlockGooglePlace}
+            hasSearched={hasSearched}
+            isDebouncing={isDebouncing}
+            isSearchingPlace={isSearchingPlace}
+            placeSearchError={placeSearchError}
+            placeSearchResults={placeSearchResults}
+            requiredFields={requiredFields}
+            setHasSearched={setHasSearched}
+            settings={settings}
+            updateField={updateField}
+            verifiedPlace={verifiedPlace}
+          />
+
+          <RegistrationLocationSection
+            formData={formData}
+            handleDetectGPS={handleDetectGPS}
+            isLocating={isLocating}
+            gpsError={gpsError}
+            setIsOutletCameraOpen={setIsOutletCameraOpen}
+            settings={settings}
+            verifiedPlace={verifiedPlace}
+          />
+
+          <RegistrationTaxSection
+            cardTypeLabel={cardTypeLabel}
+            formData={formData}
+            requiredFields={requiredFields}
+            setIsKtpCameraOpen={setIsKtpCameraOpen}
+            settings={settings}
+            updateField={updateField}
+          />
+
+          <RegistrationTerritorySection
+            clusters={clusters}
+            formData={formData}
+            requiredFields={requiredFields}
+            updateField={updateField}
+          />
+
+          <RegistrationChannelSection
+            GT_SUB_CHANNELS={GT_SUB_CHANNELS}
+            MT_SUB_CHANNELS={MT_SUB_CHANNELS}
+            TIERS={TIERS}
+            formData={formData}
+            updateField={updateField}
+          />
+
+          <RegistrationPaymentSection
+            formData={formData}
+            requiredFields={requiredFields}
+            updateField={updateField}
+          />
+
+          <RegistrationVisitSection
+            DAYS_LIST={DAYS_LIST}
+            formData={formData}
+            requiredFields={requiredFields}
+            toggleDay={toggleDay}
+            updateField={updateField}
+          />
+
+          <p className="npf-footnote">* Beri tanda V pada kolom pilihan</p>
+
+          <section className="npf-block npf-mapping">
+            <label htmlFor="registration-landmark" className="npf-heading">
+              Mapping lokasi :
+              {requiredFields.includes('mappingLocation') ? (
+                <span className="npf-req" aria-hidden="true">
+                  {' '}
+                  *
+                </span>
+              ) : null}
+            </label>
+            <textarea
+              id="registration-landmark"
+              name="mappingLocation"
+              required={requiredFields.includes('mappingLocation')}
+              rows={6}
+              value={formData.mappingLocation || ''}
+              onChange={(e) => updateField('mappingLocation', e.target.value)}
+              placeholder="Ciri bangunan, sebelah kiri/kanan patokan jalan, atau petunjuk rute menuju toko…"
+            />
+          </section>
+
+          <footer id="registration-submit" className="npf-actions">
+            <span>
+              <span className="npf-req">*</span> Wajib dilengkapi sesuai standar dokumen NOO
+              sebelum diajukan.
+            </span>
+            <div>
+              <button
+                type="button"
+                className="npf-btn"
+                onClick={async () => {
+                  if (
+                    await confirmAction('Kosongkan seluruh isian formulir ini?', {
+                      title: 'Reset Formulir',
+                      confirmLabel: 'Kosongkan',
+                      danger: true,
+                    })
+                  )
+                    onReset();
+                }}
+                disabled={isSubmitting}
+              >
+                Reset
+              </button>
+              <button
+                type="submit"
+                className="npf-btn npf-btn--primary"
+                disabled={isSubmitting || (!formData.revisionId && !featurePolicy.canStart)}
+                title={!formData.revisionId ? featurePolicy.reason : undefined}
+              >
+                <LuSend aria-hidden="true" />
+                <span>{isSubmitting ? 'Mengirim…' : 'Ajukan Registrasi Outlet'}</span>
+              </button>
+            </div>
+          </footer>
         </div>
-      </section>
-      {/* ─── Hardware Camera Modals ───────────────────────────────────────────── */}
+      </div>
+
       <IdCardCameraModal
         policyValues={settings}
         isOpen={isKtpCameraOpen}
@@ -277,6 +274,6 @@ export const PhysicalDocumentForm = ({
         longitude={formData.longitude}
         division={formData.division}
       />
-    </div>
+    </>
   );
 };

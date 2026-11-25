@@ -15,10 +15,7 @@ export function BusinessCodeInput({
   const manual = manualCodeRequired(entity, settings);
   return (
     <label className="app-field block text-sm space-y-1">
-      <span>
-        {label}
-        {optional ? ' (opsional)' : ''}
-      </span>
+      <span>{label}</span>
       <input
         className="form-input w-full"
         type="text"

@@ -61,11 +61,15 @@ export function sanitizeFilename(name) {
 export function formatReportBasisNotes(basis) {
   if (!basis) return [];
   const notes = [
+    basis.restrictionNote ? `Pembatasan data: ${basis.restrictionNote}` : '',
     basis.note,
     basis.targetNote,
     basis.calendarNote,
     basis.archiveNote,
     basis.channelNote,
+    basis.formulaVersion
+      ? `Formula ${basis.formulaVersion} · ${basis.processPolicies?.length || 0} kelompok snapshot proses · ${basis.legacyPolicyRecords || 0} proses tanpa snapshot.`
+      : '',
     basis.policyNote,
   ].filter(Boolean);
   if (basis.unassignedCount > 0) {

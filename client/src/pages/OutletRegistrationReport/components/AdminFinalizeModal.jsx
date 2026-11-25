@@ -58,9 +58,7 @@ export function AdminFinalizeModal({ item, isProcessing, onClose, onConfirmFinal
         <p>
           <strong>{item.name}</strong> akan menjadi master outlet aktif.
         </p>
-        <p className="outlet-muted">
-          Pemeriksaan peta bersifat opsional. Aktivasi tidak menerbitkan jadwal PJP secara otomatis.
-        </p>
+        <p className="outlet-muted">Aktivasi tidak menerbitkan jadwal PJP secara otomatis.</p>
         <div aria-live="polite">
           {error && (
             <p className="app-error" role="alert">
@@ -93,7 +91,7 @@ export function AdminFinalizeModal({ item, isProcessing, onClose, onConfirmFinal
           </select>
         </label>
         <fieldset disabled={isProcessing} className="grid gap-3">
-          <legend>Koordinat fisik outlet {required ? '(wajib)' : '(opsional)'}</legend>
+          <legend>Koordinat fisik outlet{required ? ' (wajib)' : ''}</legend>
           <p className="outlet-muted">
             Lengkapi dari referensi yang telah diperiksa. Titik yang diubah di sini dicatat sebagai
             input manual, bukan GPS Sales atau hasil Google. Titik kosong tidak diganti dengan nol.

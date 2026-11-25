@@ -1,6 +1,12 @@
 import React from 'react';
 import { LuLock, LuCamera, LuRefreshCw, LuMapPin } from 'react-icons/lu';
 import { GooglePlaceDetailCard } from './GooglePlaceDetailCard';
+
+/**
+ * Ruang khusus pengecekan API (profil tempat Google, GPS) dan foto fisik outlet.
+ * Tata letaknya sama seperti sebelumnya: kiri hasil pengecekan, kanan foto; tempatnya selalu
+ * tersedia walau belum ada hasil.
+ */
 export function RegistrationLocationSection({
   formData,
   handleDetectGPS,
@@ -10,103 +16,105 @@ export function RegistrationLocationSection({
   settings,
   verifiedPlace,
 }) {
+  const requireLocation = settings.REGISTRATION_REQUIRE_LOCATION !== false;
+  const requirePhoto = settings.CUSTOMER_REG_REQUIRE_PHOTO !== false;
+  const hasCoords = formData.latitude != null && formData.longitude != null;
+
   return (
-    <div className="border border-slate-700/80 rounded-xl overflow-hidden divide-y divide-slate-700/60 bg-surface">
-      <div className="p-2.5 bg-surface-container-low flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2">
-          <LuMapPin className="text-primary shrink-0" />
-          <span className="font-black">Lokasi fisik & foto outlet</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 rounded text-[10px] font-black border border-emerald-500/30 flex items-center gap-1">
-            <LuLock className="text-[10px]" />{' '}
-            {formData.latitude != null && formData.longitude != null
-              ? 'Koordinat formulir tersedia'
-              : 'Lokasi belum tersedia'}
+    <section id="registration-location" className="npf-block">
+      <h3 className="npf-block-title">Pengecekan lokasi (API) &amp; foto outlet</h3>
+      <div className="npf-gps-bar">
+        <span>
+          <LuMapPin aria-hidden="true" />
+          <span>
+            GPS
+            {requireLocation ? (
+              <span className="npf-req" aria-hidden="true">
+                {' '}
+                *
+              </span>
+            ) : null}
+            :{' '}
+            <strong>
+              {hasCoords ? `${formData.latitude}, ${formData.longitude}` : 'Belum diambil'}
+            </strong>
           </span>
-          <button
-            type="button"
-            onClick={handleDetectGPS}
-            disabled={isLocating}
-            className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1"
-          >
-            <LuRefreshCw className={isLocating ? 'animate-spin' : ''} />
+          {hasCoords ? (
             <span>
-              {isLocating
-                ? 'Mendeteksi...'
-                : formData.latitude != null
-                  ? 'Ambil ulang GPS'
-                  : 'Ambil GPS outlet'}
+              <LuLock aria-hidden="true" /> Terkunci
             </span>
-          </button>
-        </div>
+          ) : null}
+        </span>
+        <button
+          type="button"
+          onClick={handleDetectGPS}
+          disabled={isLocating}
+          className="npf-btn npf-btn--mini"
+        >
+          <LuRefreshCw className={isLocating ? 'animate-spin' : ''} aria-hidden="true" />
+          <span>
+            {isLocating ? 'Mendeteksi…' : hasCoords ? 'Ambil ulang GPS' : 'Ambil GPS outlet'}
+          </span>
+        </button>
       </div>
 
-      <p className="p-3 text-sm">
-        {settings.REGISTRATION_REQUIRE_LOCATION === false
-          ? 'Titik lokasi opsional saat pengajuan.'
-          : 'Titik lokasi wajib saat pengajuan.'}{' '}
-        {settings.REGISTRATION_ACTIVATION_REQUIRE_LOCATION !== false
-          ? 'Lokasi harus dilengkapi sebelum aktivasi.'
-          : 'Aktivasi tanpa titik diizinkan; rute/radius belum tersedia sampai lokasi dilengkapi.'}
-      </p>
-      {gpsError && (
-        <p role="alert" className="app-error p-3">
+      {gpsError ? (
+        <p role="alert" className="npf-error">
           {gpsError}
         </p>
-      )}
-      <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-        {/* Sisi Kiri: Profil Google Place */}
-        <div>
-          <GooglePlaceDetailCard
-            place={verifiedPlace}
-            currentLat={formData.latitude}
-            currentLng={formData.longitude}
-            searchedQuery={formData.name}
-          />
+      ) : null}
+
+      <div className="npf-api-grid">
+        <div className="npf-api-box">
+          <span className="npf-heading">Hasil pengecekan API tempat</span>
+          <div>
+            <GooglePlaceDetailCard
+              place={verifiedPlace}
+              currentLat={formData.latitude}
+              currentLng={formData.longitude}
+              searchedQuery={formData.name}
+            />
+          </div>
         </div>
 
-        {/* Sisi Kanan: Foto Outlet Live Kamera */}
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="font-bold">Foto Fisik Outlet:</span>
-            <span className="text-[10px] text-amber-600 font-bold">
-              {settings.CUSTOMER_REG_REQUIRE_PHOTO ? '* Foto wajib' : 'Opsional'}
+        <div className="npf-photo-box">
+          <div className="npf-photo-head">
+            <span>
+              Foto fisik outlet
+              {requirePhoto ? (
+                <span className="npf-req" aria-hidden="true">
+                  {' '}
+                  *
+                </span>
+              ) : null}
             </span>
+            {formData.photoUrl ? (
+              <button
+                type="button"
+                className="npf-btn npf-btn--mini"
+                onClick={() => setIsOutletCameraOpen(true)}
+              >
+                <LuRefreshCw aria-hidden="true" /> Ulangi
+              </button>
+            ) : null}
           </div>
 
           {formData.photoUrl ? (
-            <div className="relative w-full h-36 rounded-xl overflow-hidden border border-slate-700/60 bg-black flex items-center justify-center">
-              <img
-                src={formData.photoUrl}
-                alt="Foto Outlet"
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute bottom-2 left-2 right-2 max-w-[calc(100%-1rem)] break-words bg-black/75 text-white font-mono text-[9px] px-2 py-0.5 rounded">
-                Koordinat formulir: {formData.latitude ?? '—'}, {formData.longitude ?? '—'}
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsOutletCameraOpen(true)}
-                className="absolute top-2 right-2 px-2 py-1 bg-black/80 hover:bg-neutral-800 text-white rounded text-[10px] font-bold flex items-center gap-1"
-              >
-                <LuRefreshCw /> Ambil Ulang
-              </button>
+            <div className="npf-photo-preview">
+              <img src={formData.photoUrl} alt="Foto fisik outlet" />
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setIsOutletCameraOpen(true)}
-              className="w-full py-6 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 flex flex-col items-center justify-center gap-2 text-primary font-black transition-all active:scale-98"
+              className="npf-photo-empty"
             >
-              <LuCamera className="text-2xl" />
-              <span>
-                Tambahkan foto toko ({settings.CUSTOMER_REG_REQUIRE_PHOTO ? 'wajib' : 'opsional'})
-              </span>
+              <LuCamera aria-hidden="true" />
+              <span>Ambil foto toko (kamera)</span>
             </button>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

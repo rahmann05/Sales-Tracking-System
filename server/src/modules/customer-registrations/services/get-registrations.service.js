@@ -3,6 +3,7 @@ import { teamSalesWhere } from '../../../utils/team-scope.js';
 import { prisma } from '../../../config/prisma.js';
 import { parsePagination, buildPaginatedResponse } from '../../../utils/pagination.js';
 import { ROLES } from '../../../utils/constants.js';
+import { normalizeRevisionHistory } from './customer-registrations.helpers.js';
 
 const REGISTRATION_LIST_SELECT = {
   id: true,
@@ -176,6 +177,7 @@ export const getRegistrations = async (query = {}, currentUser) => {
 
   const data = rawData.map((row) => ({
     ...row,
+    revisionHistory: normalizeRevisionHistory(row.revisionHistory),
     division: row.divisionName ?? null,
     hasPhoto: withFullMedia ? Boolean(row.photoUrl) : photoIdSet.has(row.id),
   }));

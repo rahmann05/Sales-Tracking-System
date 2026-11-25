@@ -1,5 +1,5 @@
 /* RouteProviderBadge Styles
-   Single Responsibility: Styling badge status sumber rute di atas peta. */
+   Single Responsibility: Calm editorial route source status card aligned with ClusterMapLegend. */
 
 .route-provider-badge {
   position: absolute;
@@ -8,60 +8,64 @@
   z-index: 30;
   display: flex;
   align-items: flex-start;
-  gap: 0.45rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.875rem;
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.3;
-  max-width: 20rem;
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.14),
-    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface, #ffffff);
+  border: 1px solid #e2e6ec;
+  border-radius: 10px;
+  color: var(--on-surface, #1d1d1f);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  max-width: 272px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 .route-provider-badge--inline {
   position: static;
   width: 100%;
-  max-width: 288px;
+  max-width: 272px;
 }
 
 .route-provider-badge__icon {
   flex-shrink: 0;
-  margin-top: 0.1rem;
+  margin-top: 2px;
   font-size: 14px;
+  color: #475569;
 }
 
 .route-provider-badge__text {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 2px;
   min-width: 0;
 }
 
 .route-provider-badge__reason {
-  font-size: 10px;
-  font-weight: 500;
-  opacity: 0.92;
-  line-height: 1.25;
+  font-size: 11px;
+  font-weight: 400;
+  color: #78350f;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
-.route-provider-badge--loading {
-  background: rgba(51, 65, 85, 0.92);
+.route-provider-badge--loading .route-provider-badge__icon {
+  color: #475569;
 }
 
-.route-provider-badge--osrm {
-  background: rgba(2, 132, 199, 0.94);
+.route-provider-badge--osrm .route-provider-badge__icon,
+.route-provider-badge--google-api .route-provider-badge__icon {
+  color: #15803d;
 }
 
 .route-provider-badge--fallback {
-  background: rgba(180, 83, 9, 0.95);
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
 }
 
-.route-provider-badge--google-api {
-  background: rgba(5, 150, 105, 0.94);
+.route-provider-badge--fallback .route-provider-badge__icon {
+  color: #b45309;
 }
 
 @media (max-width: 1023px) {

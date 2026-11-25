@@ -18,3 +18,36 @@ export function getDistanceInMeters(lat1, lon1, lat2, lon2) {
 
   return Math.round(R * c);
 }
+
+/**
+ * Normalize CustomerRegistration.revisionHistory entries across legacy/seeded and canonical shapes.
+ */
+export function normalizeRevisionHistory(history) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((entry) => entry && typeof entry === 'object')
+    .map((entry) => ({
+      ...entry,
+      actor: {
+        ...(entry.actor && typeof entry.actor === 'object' && !Array.isArray(entry.actor)
+          ? entry.actor
+          : {}),
+        id: entry.actor?.id ?? entry.actorId ?? null,
+        name: entry.actor?.name || entry.actorName || 'Pengguna tidak diketahui',
+        role: entry.actor?.role ?? null,
+      },
+      reason:
+        entry.reason ||
+        entry.note ||
+        (entry.action === 'SUBMITTED' ? 'Pengajuan awal' : 'Revisi pengajuan'),
+      rejectionNote: entry.rejectionNote ?? null,
+      before:
+        entry.before && typeof entry.before === 'object' && !Array.isArray(entry.before)
+          ? entry.before
+          : {},
+      after:
+        entry.after && typeof entry.after === 'object' && !Array.isArray(entry.after)
+          ? entry.after
+          : {},
+    }));
+}

@@ -4,7 +4,10 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { assertSalesAccess } from '../../../utils/team-scope.js';
 import { processValue } from '../../config/services/process-policy.service.js';
-import { registrationFieldError } from '../../../../../shared/registration-fields.mjs';
+import {
+  DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS,
+  registrationFieldError,
+} from '../../../../../shared/registration-fields.mjs';
 import { saveOutletPhoto } from '../customer-photo.service.js';
 import { createRegistrationSchema } from '../customer-registrations.schema.js';
 import { actorSnapshot } from '../../outlets/services/outlet-review-policy.service.js';
@@ -52,11 +55,15 @@ export async function reviseRegistration(id, raw, actor) {
     Object.fromEntries(keys.filter((k) => raw[k] !== undefined).map((k) => [k, raw[k]]))
   );
   const retry = (previous.revisionHistory || []).find((h) => h.requestId === requestId);
-  if (retry) return assertRequestReplay(previous, input, actor, retry.actor.id);
+  if (retry) return assertRequestReplay(previous, input, actor, retry.actor?.id ?? retry.actorId);
   await assertRevisionPolicy(previous);
   const fieldError = registrationFieldError(
     { ...previous, ...input },
-    await processValue(previous, 'REGISTRATION_SUBMIT_REQUIRED_FIELDS', '')
+    await processValue(
+      previous,
+      'REGISTRATION_SUBMIT_REQUIRED_FIELDS',
+      DEFAULT_REGISTRATION_SUBMIT_REQUIRED_FIELDS
+    )
   );
   if (fieldError) throw new AppError(fieldError, 422);
   if (previous.registrationStatus !== 'REJECTED')
@@ -100,7 +107,7 @@ export async function reviseRegistration(id, raw, actor) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('planning:territories'))`;
     const current = await tx.customerRegistration.findUnique({ where: { id } });
     const repeated = (current.revisionHistory || []).find((h) => h.requestId === requestId);
-    if (repeated) return assertRequestReplay(current, input, actor, repeated.actor.id);
+    if (repeated) return assertRequestReplay(current, input, actor, repeated.actor?.id ?? repeated.actorId);
     if (current.registrationStatus !== 'REJECTED' || current.updatedAt.toISOString() !== updatedAt)
       throw new AppError('Pengajuan sudah berubah. Muat ulang sebelum mengajukan revisi.', 409);
     await assertRevisionPolicy(current);

@@ -1,43 +1,60 @@
 import React from 'react';
 
+const isRemovedDivision = (div) =>
+  String(div?.code || '').toUpperCase() === 'MIX' ||
+  String(div?.name || '')
+    .trim()
+    .toUpperCase() === 'DIVISI MIX';
+
+/** Baris DIVISI dan CABANG di bawah judul formulir kertas. */
 export function RegistrationDivisionBar({ divisions = [], formData, updateField }) {
-  const currentDivision = formData.division || formData.divisionName || '';
+  const validDivisions = divisions.filter((div) => !isRemovedDivision(div));
+  const rawDivision = formData.division || formData.divisionName || '';
+  const currentDivision =
+    rawDivision.trim().toUpperCase() === 'DIVISI MIX'
+      ? validDivisions[0]?.name || 'BELFOODS'
+      : rawDivision || validDivisions[0]?.name || 'BELFOODS';
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold bg-surface-container-low p-2.5 rounded-xl border border-border-glass">
-      <div className="flex items-center gap-2">
-        <span className="w-20 text-on-surface-variant shrink-0">DIVISI :</span>
+    <div className="npf-meta">
+      <label className="npf-meta-row" htmlFor="reg-division">
+        <span>DIVISI</span>
+        <span aria-hidden="true">:</span>
         <select
-          aria-label="Divisi"
+          id="reg-division"
+          name="division"
+          className="npf-line"
           value={currentDivision}
           onChange={(e) => {
-            const selectedDiv = divisions.find((d) => d.name === e.target.value);
+            const selectedDiv = validDivisions.find((d) => d.name === e.target.value);
             updateField('division', e.target.value);
             updateField('divisionName', e.target.value);
             if (selectedDiv) updateField('divisionId', selectedDiv.id);
           }}
-          className="flex-1 min-w-0 px-2.5 py-1 bg-surface font-black text-xs rounded-lg border border-border-glass text-primary focus:border-primary outline-none cursor-pointer"
         >
-          {!divisions.some((div) => div.name === currentDivision) && (
-            <option value={currentDivision}>{currentDivision || 'Pilih divisi'}</option>
-          )}
-          {divisions.map((div) => (
+          {!validDivisions.some((div) => div.name === currentDivision) ? (
+            <option value={currentDivision}>{currentDivision || 'BELFOODS'}</option>
+          ) : null}
+          {validDivisions.map((div) => (
             <option key={div.id} value={div.name}>
               {div.name}
             </option>
           ))}
         </select>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="w-20 text-on-surface-variant shrink-0">CABANG :</span>
+      </label>
+      <label className="npf-meta-row" htmlFor="reg-branch">
+        <span>CABANG</span>
+        <span aria-hidden="true">:</span>
         <input
-          aria-label="Cabang"
+          id="reg-branch"
+          name="branch"
           type="text"
-          value={formData.branch}
+          className="npf-line"
+          value={formData.branch || ''}
           onChange={(e) => updateField('branch', e.target.value)}
-          className="flex-1 min-w-0 px-2.5 py-1 bg-surface font-bold text-xs rounded-lg border border-border-glass focus:border-primary outline-none"
           placeholder="PADALARANG"
         />
-      </div>
+      </label>
     </div>
   );
 }

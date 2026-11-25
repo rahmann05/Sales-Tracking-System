@@ -1,6 +1,7 @@
 import { useBrowserNavigation } from './hooks/useBrowserNavigation';
 import { useOperationalSettings } from './hooks/useOperationalSettings';
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import { setDocumentSigner } from '../utils/export/core/documentIdentity';
 
 import { useSalesActions } from '../pages/Sales/hooks/useSalesActions';
 import { useSupervisorActions } from '../pages/Supervisor/hooks/useSupervisorActions';
@@ -41,6 +42,10 @@ export const AppProvider = ({ children }) => {
     () => (sessionUser ? { ...sessionUser, settings } : null),
     [sessionUser, settings]
   );
+  // Nama akun login menjadi penandatangan Supervisor pada dokumen ekspor.
+  useEffect(() => {
+    setDocumentSigner(sessionUser?.name || sessionUser?.fullName || sessionUser?.username);
+  }, [sessionUser]);
   // 3. Live GPS tracking while logged in
 
   // 4. Global Tab Navigation State

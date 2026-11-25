@@ -1,4 +1,6 @@
 import { createDocumentExporters } from '../core/createDocumentExporters';
+import { supervisorSignatories } from '../core/documentIdentity';
+import { buildNooFormModel } from './nooFormModel';
 import { formatCurrency, formatDateId, safeStr, sanitizeFilename } from '../core/formatters';
 
 const LOCATION_LABELS = {
@@ -66,6 +68,8 @@ export function buildNooDocumentBlueprint(item = {}) {
     domain: 'OUTLET',
     filename: `Formulir_NOO_${custCode !== 'MENUNGGU FINALISASI' ? custCode : regNo}_${dateCode}`,
     sheetName: 'FORMULIR_NOO',
+    // PDF dan Word menggambar formulir kertas; Excel, TXT, dan CSV memakai tabel data di bawah.
+    form: buildNooFormModel(item),
     orientation: 'portrait',
     title: 'FORMULIR RESMI PENGAJUAN PELANGGAN BARU (NOO)',
     subtitle: 'Dokumen Registrasi, Verifikasi Lapangan & Master Data Outlet ND6',
@@ -162,25 +166,13 @@ export function buildNooDocumentBlueprint(item = {}) {
       : [],
     notes: [
       ...(!item.photoUrl ? ['Foto fisik outlet belum dilampirkan.'] : []),
-      'Pembayaran transfer resmi ditujukan ke rekening BANK BCA 7774628887 a.n. CV SINAR ANUGRAH.',
+      'Pembayaran transfer resmi ditujukan ke rekening BANK BCA 7774628887 a.n. CV. SINAR ANUGRAH.',
       'Dokumen ini mencerminkan data pengajuan dan status keputusan yang tercatat. Ekspor tidak merupakan persetujuan atau aktivasi outlet.',
     ],
+    // Formulir registrasi: Sales yang mengajukan, lalu Supervisor (akun login). Hanya Word dan PDF.
     signatories: [
-      {
-        role: 'Diajukan Oleh,',
-        name: safeStr(item.salesmanName || item.submittedBy?.name, 'Salesman'),
-        title: 'Salesman Pengaju',
-      },
-      {
-        role: 'Diverifikasi Oleh,',
-        name: safeStr(item.spvName || item.supervisorName, 'Supervisor Area'),
-        title: 'Supervisor Penjualan',
-      },
-      {
-        role: 'Disetujui & Difinalisasi,',
-        name: safeStr(item.adminName, 'Admin Master Data'),
-        title: 'Otorisasi Sistem ND6',
-      },
+      { role: 'Sales,', name: safeStr(item.salesmanName || item.submittedBy?.name, ''), title: '' },
+      ...supervisorSignatories(),
     ],
   };
 }
