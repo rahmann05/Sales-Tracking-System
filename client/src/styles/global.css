@@ -10,6 +10,7 @@
 @import './animations.css';
 @import './common/MobileResponsive.css';
 @import './common/Workspace.css';
+@import './common/Disclosure.css';
 @import './common/DataTable.css';
 @import './common/Editorial.css';
 @import './common/Toast.css';

@@ -20,6 +20,8 @@ import {
   capacityGuidance,
 } from '../../../../../shared/packing-load.mjs';
 import { packingBalance } from '../../../../../shared/packing.mjs';
+import { useCodeMissing } from '../../../shared/hooks/useCodeMissing';
+import { scheduleWindow } from '../../../../../shared/delivery-operations.mjs';
 const DestinationMap = lazy(() =>
   import('./PlanningDestinationMap').then((module) => ({ default: module.PlanningDestinationMap }))
 );
@@ -59,6 +61,33 @@ const ready = (pl) =>
   isVehicleLoad(pl)
     ? pl.destinations?.every((destination) => !!destination.point)
     : !pl.destinationConflict && !!pl.destinationPoint;
+const wibClock = (value) =>
+  new Date(value).toLocaleTimeString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+// Same rule the server applies when saving a trip, so a clash is visible before submitting.
+function clashWith(openRoutes, key, id, start, end) {
+  if (!id || !Number.isFinite(+start) || !Number.isFinite(+end) || end <= start) return null;
+  return (
+    openRoutes.find((route) => {
+      if (route[key] !== id) return false;
+      const window = scheduleWindow(route);
+      return (
+        (!route.returnedAt &&
+          (route.departedAt || ['IN_TRANSIT', 'COMPLETED', 'PARTIAL'].includes(route.status))) ||
+        (start < window.end && end > window.start)
+      );
+    }) || null
+  );
+}
+const clashText = (route) => {
+  const window = scheduleWindow(route);
+  return route.departedAt && !route.returnedAt
+    ? `sedang bertugas pada ${route.code}`
+    : `dipakai ${route.code} pukul ${wibClock(window.start)}–${wibClock(window.end)} WIB`;
+};
 const vehicleReasonPresets = [
   'Armada saran sedang dalam perbaikan / bertugas lain',
   'Menyesuaikan kapasitas muatan aktual perjalanan',
@@ -76,8 +105,9 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
   const { settings, user, setActiveTab } = useApp(),
     feature = useFeaturePolicy('DELIVERY'),
     depots = parseDeliveryDepots(settings.DELIVERY_DEPOT_LOCATIONS || DEFAULT_DELIVERY_DEPOTS);
-  const [code, setCode] = useState(''),
-    [date, setDate] = useState(wibDateKey),
+  const [code, setCode] = useState('');
+  const codeMissing = useCodeMissing('DELIVERY_ROUTE', code);
+  const [date, setDate] = useState(wibDateKey),
     [startTime, setStartTime] = useState('08:00'),
     [endTime, setEndTime] = useState('17:00'),
     [departure, setDeparture] = useState(depots[0].id),
@@ -87,6 +117,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
     [notes, setNotes] = useState(''),
     [capacityReason, setCapacityReason] = useState(''),
     [vehicleReason, setVehicleReason] = useState('');
+  const [openRoutes, setOpenRoutes] = useState([]);
   const [vehicles, setVehicles] = useState([]),
     [drivers, setDrivers] = useState([]),
     [packings, setPackings] = useState([]),
@@ -132,14 +163,36 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
           total = r.data.total;
           page++;
         }
+        const open = [];
+        for (let routePage = 1, routeTotal = Infinity; open.length < routeTotal; routePage++) {
+          const r = await deliveryApi.getDeliveryRoutes({
+            open: 'true',
+            page: routePage,
+            limit: 100,
+          });
+          const items = r.data?.items || [];
+          if (!items.length) break;
+          open.push(...items);
+          routeTotal = r.data.total;
+        }
         if (!active) return;
+        setOpenRoutes(open);
         const driverList = d.data || [];
         setVehicles(v.data || []);
         setDrivers(driverList);
         setPackings(documents);
-        const selectedDocs = documents.filter(
-          (pl) => initialPackingIds.includes(pl.id) && pl.remainingCartons > 0 && ready(pl)
-        );
+        // Rule DELIVERY_AUTO_SELECT_LOADS: loads handed over by Admin start selected. A vehicle
+        // load must travel alone, so ordinary loads win and otherwise only the first one is taken.
+        const readyDocs = documents.filter((pl) => pl.remainingCartons > 0 && ready(pl)),
+          ordinaryDocs = readyDocs.filter((pl) => !isVehicleLoad(pl)),
+          autoDocs = ordinaryDocs.length ? ordinaryDocs : readyDocs.slice(0, 1);
+        const selectedDocs = initialPackingIds.length
+          ? documents.filter(
+              (pl) => initialPackingIds.includes(pl.id) && pl.remainingCartons > 0 && ready(pl)
+            )
+          : settings.DELIVERY_AUTO_SELECT_LOADS === true
+            ? autoDocs
+            : [];
         const selected = selectedDocs.flatMap(entriesFor);
         const suggested = selectedDocs.length === 1 ? selectedDocs[0].suggestedVehicleId || '' : '';
         const defaultDriver = !driverId && driverList.length === 1 ? driverList[0].id : driverId;
@@ -164,7 +217,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
           setError(
             'Satu muatan kendaraan harus dijadwalkan sendiri. Hapus packing list lain dari pilihan.'
           );
-        else if (selectedDocs.length !== initialPackingIds.length)
+        else if (initialPackingIds.length && selectedDocs.length !== initialPackingIds.length)
           setError(
             'Sebagian dokumen terpilih sudah dijadwalkan atau titiknya perlu diperiksa. Periksa pilihan sebelum menyimpan.'
           );
@@ -179,6 +232,10 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
       active = false;
     };
   }, [ids]);
+  const planStart = new Date(`${date}T${startTime || '00:00'}:00+07:00`),
+    planEnd = new Date(`${date}T${endTime || '00:00'}:00+07:00`);
+  const vehicleClash = clashWith(openRoutes, 'vehicleId', vehicleId, planStart, planEnd),
+    driverClash = clashWith(openRoutes, 'driverId', driverId, planStart, planEnd);
   const cartons = entries.reduce((sum, entry) => sum + entry.totalCartons, 0),
     vehicle = vehicles.find((row) => row.id === vehicleId);
   const loadSummary = loadLogistics({
@@ -251,6 +308,18 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
     event.preventDefault();
     if (busy) return;
     setError('');
+    if (codeMissing) {
+      setError('Nomor perjalanan wajib diisi karena pengkodean manual aktif.');
+      return;
+    }
+    if (vehicleClash || driverClash) {
+      setError(
+        vehicleClash
+          ? `Kendaraan ${clashText(vehicleClash)}. Pilih kendaraan atau jam lain.`
+          : `Supir ${clashText(driverClash)}. Pilih supir atau jam lain.`
+      );
+      return;
+    }
     if (!vehicle?.photoUrl) {
       setError('Set foto kendaraan di Kendaraan & servis sebelum digunakan.');
       return;
@@ -511,10 +580,18 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
                     {v.code} · {v.name} · Patokan{' '}
                     {v.maxCartons > 0 ? `${v.maxCartons} karton` : 'belum diisi'}
                     {!v.photoUrl ? ' · Foto belum ada' : ''}
+                    {clashWith(openRoutes, 'vehicleId', v.id, planStart, planEnd)
+                      ? ' · Bentrok jadwal'
+                      : ''}
                   </option>
                 ))}
             </select>
           </label>
+          {vehicleClash && (
+            <p role="alert" className="work-clash">
+              Kendaraan {clashText(vehicleClash)}. Pilih kendaraan atau jam lain.
+            </p>
+          )}
           {suggestedVehicle && (
             <p className="admin-footnote">
               Saran kendaraan Admin: <strong>{suggestedVehicle.code}</strong> ·{' '}
@@ -616,10 +693,18 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
               {drivers.map((driver) => (
                 <option key={driver.id} value={driver.id}>
                   {driver.name}
+                  {clashWith(openRoutes, 'driverId', driver.id, planStart, planEnd)
+                    ? ' · Bentrok jadwal'
+                    : ''}
                 </option>
               ))}
             </select>
           </label>
+          {driverClash && (
+            <p role="alert" className="work-clash">
+              Supir {clashText(driverClash)}. Pilih supir atau jam lain.
+            </p>
+          )}
           <label className="block">
             Tanggal
             <input
@@ -689,7 +774,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
             Titik kembali dapat berbeda dari berangkat. GPS absen supir menjadi bukti titik aktual.
             Bentrok jadwal diperiksa saat disimpan.
           </p>
-          <details>
+          <details open={codeMissing || undefined}>
             <summary className="min-h-11 cursor-pointer">Nomor dan catatan perjalanan</summary>
             <BusinessCodeInput entity="DELIVERY_ROUTE" value={code} onChange={setCode} />
             <label>
@@ -748,6 +833,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
               !entries.length ||
               !vehicle?.photoUrl ||
               !driverId ||
+              Boolean(vehicleClash || driverClash) ||
               (Boolean(startTime && endTime) && endTime <= startTime) ||
               (over && !capacityReason.trim()) ||
               (changedSuggestion && !vehicleReason.trim())

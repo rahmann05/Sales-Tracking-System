@@ -398,8 +398,8 @@ export function AdminOrderWorkspace({
                   </div>
                 )}
                 <PendingOrderCard key={selected.id} order={selected} onDecision={handleDecision} />
-                <details>
-                  <summary className="min-h-11 cursor-pointer">Masalah / keluhan order</summary>
+                <details className="app-disclosure">
+                  <summary>Masalah / keluhan order</summary>
                   <OperationalIssues reference={{ orderId: selected.id }} />
                 </details>
               </aside>

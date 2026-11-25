@@ -1,4 +1,5 @@
 import { useFeaturePolicy } from '../../../../shared/hooks/useFeaturePolicy';
+import { useCodeMissing } from '../../../../shared/hooks/useCodeMissing';
 import React, { useDeferredValue, useMemo, useState } from 'react';
 import { OutletListPanel } from './OutletListPanel';
 import { RouteReferenceCard } from './RouteReferenceCard';
@@ -25,6 +26,7 @@ export function ClusterControlPanel({
   const activeStep = Math.min(3, Math.max(1, b.step || 1));
   const selectedIds = b.selectedOutlets.map((o) => o.id);
   const disabled = b.busy || b.saving || !featurePolicy.canStart;
+  const codeMissing = useCodeMissing('CLUSTER', b.draft.code);
   const canPlanRjp = user.permissions?.can_manage_rjp !== false;
   const canViewTeam = user.permissions?.can_view_team !== false;
 
@@ -300,8 +302,8 @@ export function ClusterControlPanel({
                   </div>
                 </label>
               </div>
-              <details className="cluster-advanced-code">
-                <summary>Pengaturan kode cluster (opsional)</summary>
+              <details className="cluster-advanced-code" open={codeMissing || undefined}>
+                <summary>Kode klaster</summary>
                 <div className="cluster-advanced-code-body">
                   <BusinessCodeInput
                     entity="CLUSTER"
@@ -527,7 +529,7 @@ export function ClusterControlPanel({
             <button
               type="button"
               className={`app-button ${!canPlanRjp ? 'app-button-primary' : ''}`}
-              disabled={disabled || !b.review}
+              disabled={disabled || !b.review || codeMissing}
               onClick={() => b.save({ openPlanner: false })}
             >
               {b.saving ? 'Menyimpan…' : 'Simpan wilayah'}
@@ -536,7 +538,7 @@ export function ClusterControlPanel({
               <button
                 type="button"
                 className="app-button app-button-primary"
-                disabled={disabled || !b.review}
+                disabled={disabled || !b.review || codeMissing}
                 onClick={() => b.save({ openPlanner: true })}
               >
                 {b.saving ? 'Menyimpan…' : 'Simpan & susun PJP'}

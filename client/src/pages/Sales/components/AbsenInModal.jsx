@@ -118,7 +118,7 @@ export const AbsenInModal = ({ stop, onClose, onConfirm }) => {
           }
           outletName={stop.outletName}
           facingModeDefault="user"
-          buttonLabel="Jepret Foto Selfie Absen In"
+          buttonLabel="Ambil foto absen masuk"
         />
       )}
 

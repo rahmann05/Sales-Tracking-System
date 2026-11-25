@@ -6,19 +6,20 @@ import { cameraInputPolicy, imageFileError } from '../../shared/camera-input-pol
 import { processPolicyValues } from '../../shared/process-policy.mjs';
 test('Camera choices retain legacy behavior and frozen process settings', () => {
   assert.deepEqual(cameraInputPolicy(), {
-    mode: 'CAMERA',
+    mode: 'LIVE_CAMERA',
     live: true,
-    native: true,
+    native: false,
     upload: false,
   });
   assert.equal(cameraInputPolicy('LIVE_CAMERA').native, false);
   assert.equal(cameraInputPolicy('NATIVE_CAMERA').live, false);
   assert.equal(cameraInputPolicy('CAMERA_OR_UPLOAD').upload, true);
-  assert.equal(cameraInputPolicy('unknown').mode, 'CAMERA');
+  assert.equal(cameraInputPolicy('unknown').mode, 'LIVE_CAMERA');
+  assert.equal(cameraInputPolicy('CAMERA').native, true);
   assert.equal(
     processPolicyValues({ values: {} }, { CAMERA_INPUT_MODE: 'CAMERA_OR_UPLOAD' })
       .CAMERA_INPUT_MODE,
-    'CAMERA'
+    'LIVE_CAMERA'
   );
   assert.equal(
     processPolicyValues(

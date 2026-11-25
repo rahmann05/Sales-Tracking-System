@@ -269,7 +269,7 @@ export const RecordMaintenanceModal = ({ vehicle, onClose, onSuccess }) => {
               }}
               facingModeDefault="environment"
               buttonLabel={
-                isAdmin ? 'Ambil Foto Struk Servis' : 'Jepret Struk & Titik Absen Servis'
+                isAdmin ? 'Ambil foto struk servis' : 'Ambil foto struk dan titik absen servis'
               }
             />
             {!isAdmin && serviceGps && Number.isFinite(serviceGps.lat) && (

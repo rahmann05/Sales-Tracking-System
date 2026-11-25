@@ -179,7 +179,16 @@ export const useOutletRegistrationForm = (onSuccess) => {
         formData.latitude,
         formData.longitude
       );
-      if (version === searchVersion.current) setPlaceSearchResults(res?.data || []);
+      if (version === searchVersion.current) {
+        setPlaceSearchResults(res?.data || []);
+        const { outsideRadius = 0, radiusMeters, distanceOrigin } = res?.meta || {};
+        if (!res?.data?.length && outsideRadius > 0)
+          setPlaceSearchError(
+            distanceOrigin === 'INPUT_COORDINATES'
+              ? `Ada ${outsideRadius} tempat bernama serupa, tetapi lebih dari ${radiusMeters} m dari posisi GPS Anda. Ambil GPS di lokasi toko lalu cari lagi.`
+              : `Ada ${outsideRadius} tempat bernama serupa. Ambil GPS di lokasi toko dulu agar pencarian memakai radius ${radiusMeters} m dari posisi Anda.`
+          );
+      }
     } catch (err) {
       if (version === searchVersion.current) {
         setPlaceSearchResults([]);
@@ -315,10 +324,7 @@ export const useOutletRegistrationForm = (onSuccess) => {
     if (fieldError) validationErrors.push(fieldError);
     const phoneError = validateIndonesianPhone(formData.phone);
     if (phoneError) validationErrors.push(phoneError);
-    const taxError = validateIndonesianTaxNumber(
-      formData.taxType || 'NON_PKP',
-      formData.taxNumber
-    );
+    const taxError = validateIndonesianTaxNumber(formData.taxType || 'NON_PKP', formData.taxNumber);
     if (taxError) validationErrors.push(taxError);
     let point;
     try {

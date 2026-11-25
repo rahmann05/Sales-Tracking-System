@@ -360,10 +360,14 @@ export const AdminConfigPage = () => {
               {dirty
                 ? 'Ada perubahan lokal'
                 : changeCount
-                  ? `${changeCount} aturan dalam draf`
+                  ? `${changeCount} aturan tersimpan sebagai draf`
                   : 'Aturan sudah dimuat'}
             </strong>
-            <span>Draf tidak mengubah proses sampai diterbitkan.</span>
+            <span>
+              {!dirty && changeCount
+                ? 'Draf belum berlaku. Tinjau lalu terbitkan agar aturan diterapkan.'
+                : 'Draf tidak mengubah proses sampai diterbitkan.'}
+            </span>
           </div>
           <label className="policy-field">
             Alasan perubahan
@@ -379,8 +383,17 @@ export const AdminConfigPage = () => {
             <button className="config-button" disabled={busy || !dirty} onClick={editor.discard}>
               Batalkan lokal
             </button>
+            {!dirty && changeCount > 0 && view !== 'review' && (
+              <button
+                className="config-button config-button-primary"
+                disabled={busy}
+                onClick={() => setView('review')}
+              >
+                Tinjau & terbitkan
+              </button>
+            )}
             <button
-              className="config-button config-button-primary"
+              className={`config-button${dirty || !changeCount ? ' config-button-primary' : ''}`}
               disabled={busy || (!dirty && !changeCount) || editor.reason.trim().length < 5}
               onClick={editor.save}
             >

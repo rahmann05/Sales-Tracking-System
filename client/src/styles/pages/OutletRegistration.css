@@ -131,24 +131,6 @@
   background: var(--color-surface-container, #f1f5f9);
 }
 
-.outlet-disclosure {
-  border: 1px solid var(--color-border-glass, #e2e8f0);
-  border-radius: 0.75rem;
-  background: var(--color-surface-container-low, #f8fafc);
-  overflow: hidden;
-}
-
-.outlet-disclosure > summary {
-  padding: 0.75rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-on-surface, #1e293b);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
 
 .outlet-facts {
   display: grid;

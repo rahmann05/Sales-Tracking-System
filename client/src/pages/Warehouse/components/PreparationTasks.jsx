@@ -69,7 +69,7 @@ export function PreparationTasks({ route, people, onChanged, canManage }) {
   };
   return (
     <section className="space-y-3">
-      <h3 className="font-bold">Pemeriksaan dan serah terima muatan</h3>
+      <h3 className="font-medium">Pemeriksaan dan serah terima muatan</h3>
       <div className="space-y-2">
         {enabled.map((key) => {
           const done = route.preparation?.[key],
@@ -79,17 +79,13 @@ export function PreparationTasks({ route, people, onChanged, canManage }) {
             <div
               key={key}
               className={`rounded-lg border p-3 text-sm ${
-                done
-                  ? 'border-slate-200 border-l-[3px] border-l-emerald-600 bg-white'
-                  : isActive
-                    ? 'border-slate-200 border-l-[3px] border-l-primary bg-white'
-                    : 'border-slate-200 bg-slate-50/60'
+                isActive ? 'border-primary bg-white' : 'border-slate-200 bg-white'
               }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong className="text-slate-900">{stages[key]}</strong>
+                <strong className="font-medium text-slate-900">{stages[key]}</strong>
                 <span
-                  className={`text-xs font-semibold ${
+                  className={`text-xs ${
                     done ? 'text-emerald-700' : isActive ? 'text-primary' : 'text-slate-500'
                   }`}
                 >

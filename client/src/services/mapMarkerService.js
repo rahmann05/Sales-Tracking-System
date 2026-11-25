@@ -71,7 +71,11 @@ export function createMapMarker(options) {
       marker.zIndex = value;
     },
     addListener: (event, handler) => {
-      const listener = marker.addListener(event, handler);
+      // AdvancedMarkerElement uses DOM-style 'gmp-' events; the legacy addListener is deprecated.
+      const name = event === 'click' ? 'gmp-click' : event;
+      if (name === 'gmp-click') marker.gmpClickable = true;
+      marker.addEventListener(name, handler);
+      const listener = { remove: () => marker.removeEventListener(name, handler) };
       listeners.push(listener);
       return listener;
     },

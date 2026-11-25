@@ -1,9 +1,13 @@
 import { prisma } from '../../../config/prisma.js';
 import { packingOrderIds } from '../../../../../shared/packing-orders.mjs';
 import { mileagePoint } from './vehicle-mileage-plan.service.js';
+import { getDynamicConfig } from '../../config/config.service.js';
+
+export const destinationFromOutlet = async () =>
+  (await getDynamicConfig('DELIVERY_DESTINATION_FROM_OUTLET', true)) === true;
 import { isVehicleLoad, loadLogistics } from '../../../../../shared/packing-load.mjs';
 
-export function packingDestination(packing, orders) {
+export function packingDestination(packing, orders, native = false) {
   if (isVehicleLoad(packing))
     return {
       destinationConflict: false,
@@ -14,18 +18,20 @@ export function packingDestination(packing, orders) {
     };
   const points = orders
     .filter((order) => packingOrderIds(packing).includes(order.id))
-    .map((order) => mileagePoint(packing.outlet, order.customerSnapshot?.deliveryPoint))
+    .map((order) => mileagePoint(packing.outlet, order.customerSnapshot?.deliveryPoint, { native }))
     .filter(Boolean);
   const keys = new Set(
     points.map((point) => `${point.latitude.toFixed(6)},${point.longitude.toFixed(6)}`)
   );
   return {
     destinationConflict: keys.size > 1,
-    destinationPoint: keys.size > 1 ? null : points[0] || mileagePoint(packing.outlet),
+    destinationPoint:
+      keys.size > 1 ? null : points[0] || mileagePoint(packing.outlet, undefined, { native }),
   };
 }
 
 export async function withPackingDestinations(packings, db = prisma) {
+  const native = await destinationFromOutlet();
   const ids = [...new Set(packings.flatMap(packingOrderIds))];
   const missingOutletIds = [
     ...new Set(
@@ -81,11 +87,11 @@ export async function withPackingDestinations(packings, db = prisma) {
                     outletCode: found.outletCode,
                   }
                 : row?.outlet || null,
-            point: row?.point || (found ? mileagePoint(found) : null),
+            point: row?.point || (found ? mileagePoint(found, undefined, { native }) : null),
           };
         }),
       };
     }
-    return { ...hydrated, ...packingDestination(hydrated, orders) };
+    return { ...hydrated, ...packingDestination(hydrated, orders, native) };
   });
 }

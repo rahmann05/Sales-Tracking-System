@@ -161,7 +161,7 @@ export const SpvOffPjpModal = ({
             targetLng={null}
             outletName={form?.outletName || 'Toko Supervisi Luar RJP'}
             facingModeDefault="user"
-            buttonLabel="Jepret Foto Presensi Supervisi (GPS Aktif)"
+            buttonLabel="Ambil foto presensi supervisi"
           />
         </div>
 

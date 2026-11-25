@@ -13,10 +13,13 @@ const finite = (point) =>
   Math.abs(Number(point.latitude)) <= 90 &&
   Math.abs(Number(point.longitude)) <= 180;
 export const km = (value) => Math.round(value * 1000) / 1000;
-export function mileagePoint(outlet, orderPoint) {
+// native: when the operational (Google) point is not valid, use the master outlet coordinates.
+export function mileagePoint(outlet, orderPoint, { native = false } = {}) {
   const order =
     orderPoint && orderPoint.outletId === outlet.id && finite(orderPoint) ? orderPoint : null;
-  const source = order || outletOperationalPoint(outlet);
+  let source = order || outletOperationalPoint(outlet);
+  if (!finite(source) && native && finite(outlet))
+    source = { latitude: outlet.latitude, longitude: outlet.longitude, source: 'OUTLET_MASTER' };
   return finite(source)
     ? {
         latitude: Number(source.latitude),

@@ -1103,7 +1103,10 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 .sales-map-scope-btn:hover {
   background: #eaf0f7;
@@ -1150,6 +1153,51 @@
   background: #eef5ff;
   box-shadow: inset 3px 0 #0869cf;
 }
+.sales-map-legend {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #edf0f4;
+  font-size: 13px;
+}
+.sales-map-legend ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sales-map-legend li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: #242931;
+}
+.sales-map-legend li i,
+.sales-map-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #cfd5de;
+  flex-shrink: 0;
+}
+.sales-map-dot {
+  margin-right: 8px;
+}
+.sales-map-legend small {
+  color: #697280;
+  font-size: 12px;
+}
+.sales-map-legend .sales-map-legend-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  color: #586475;
+}
 .sales-map-caption {
   padding: 12px 16px;
   font-size: 12px;
@@ -1183,7 +1231,9 @@
     width: 100%;
     flex: 1 1 100%;
   }
-  .sales-ui #main-content:has(.sales-map-workspace) :is(.cluster-map-legend, .route-provider-badge) {
+  .sales-ui
+    #main-content:has(.sales-map-workspace)
+    :is(.cluster-map-legend, .route-provider-badge) {
     display: none;
   }
   .sales-ui #main-content:has(.sales-map-workspace) .leaflet-top {
@@ -1362,4 +1412,39 @@
 
 .sales-detail-heading h2 {
   scroll-margin-top: 16px;
+}
+.attendance-recap {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #e2e6ec;
+  border-radius: 10px;
+  background: #fff;
+}
+.attendance-recap h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #242931;
+}
+.attendance-recap ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.attendance-recap li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: #242931;
+  font-variant-numeric: tabular-nums;
+}
+.attendance-recap p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #697280;
 }

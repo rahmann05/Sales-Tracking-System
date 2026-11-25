@@ -1,0 +1,28 @@
+.business-code {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.business-code-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #697280;
+}
+.business-code-value {
+  margin: 0;
+  padding: 2px 0 6px;
+  border-bottom: 1px solid #e2e6ec;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--on-surface, #1d1d1f);
+  overflow-wrap: anywhere;
+}
+.business-code-value[data-pending='true'] {
+  color: #697280;
+}
+.business-code-hint {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #697280;
+}

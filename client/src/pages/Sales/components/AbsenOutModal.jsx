@@ -4,7 +4,7 @@ import { processPolicyValues } from '../../../../../shared/process-policy.mjs';
 import { visitPolicy } from '../../../../../shared/operational-policy.mjs';
 import { useFormDraft } from '../../../shared/hooks/useFormDraft';
 import { SalesDialog } from './SalesDialog';
-import { AttendanceSalesInput } from './AttendanceSalesInput';
+import { AttendanceOrderRecap } from './AttendanceOrderRecap';
 import { VisitOutcomeInput } from './VisitOutcomeInput';
 import { visitResultPolicyError } from '../../../../../shared/visit-outcome.mjs';
 import { useApp } from '../../../context/AppContext';
@@ -26,7 +26,6 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
   const draft = useFormDraft(`AbsenOutModal:${stop?.id}`, {
     notes: '',
     visitOutcome: { purpose: '' },
-    salesResult: { orderAmount: '', productIds: [] },
     earlyReason: '',
   });
   const [saving, setSaving] = useState(false);
@@ -44,8 +43,6 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
     setNotes = draft.field('notes');
   const visitOutcome = draft.value.visitOutcome,
     setVisitOutcome = draft.field('visitOutcome');
-  const salesResult = draft.value.salesResult,
-    setSalesResult = draft.field('salesResult');
   const earlyReason = draft.value.earlyReason,
     setEarlyReason = draft.field('earlyReason');
   const [elapsedSecs, setElapsedSecs] = useState(0);
@@ -137,13 +134,6 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
       return;
     }
 
-    if (
-      settings.ATTENDANCE_ALLOW_MANUAL_SALES &&
-      (!Number.isFinite(Number(salesResult.orderAmount)) || Number(salesResult.orderAmount) < 0)
-    ) {
-      setError('Nominal penjualan harus angka positif atau nol.');
-      return;
-    }
     setSaving(true);
     setError('');
     try {
@@ -153,12 +143,6 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
         notes: notes || 'Kunjungan Selesai',
         ...(visitOutcome.purpose ? { visitOutcome } : {}),
         earlyReason: isEarlyCheckout ? earlyReason : null,
-        ...(settings.ATTENDANCE_ALLOW_MANUAL_SALES
-          ? {
-              orderAmount: Number(salesResult.orderAmount || 0),
-              productIds: salesResult.productIds,
-            }
-          : {}),
         durationMinutes: Math.round((elapsedSecs / 60) * 10) / 10,
       });
       draft.clear();
@@ -262,11 +246,11 @@ export const AbsenOutModal = ({ stop, onClose, onConfirm }) => {
           }
           outletName={stop.outletName}
           facingModeDefault="user"
-          buttonLabel="Jepret Foto Selfie Absen Out"
+          buttonLabel="Ambil foto absen keluar"
         />
       )}
 
-      <AttendanceSalesInput value={salesResult} onChange={setSalesResult} />
+      <AttendanceOrderRecap stop={stop} />
       <VisitOutcomeInput
         policy={settings}
         value={visitOutcome}

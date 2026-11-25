@@ -14,7 +14,7 @@ import {
   DEFAULT_DELIVERY_DEPOTS,
   parseDeliveryDepots,
 } from '../../../../../shared/delivery-depots.mjs';
-import { packingDestination } from './packing-destination.service.js';
+import { packingDestination, destinationFromOutlet } from './packing-destination.service.js';
 import { existingOperation, operationHash } from '../../../utils/operation-request.js';
 import { destinationPacking, isVehicleLoad } from '../../../../../shared/packing-load.mjs';
 
@@ -93,6 +93,7 @@ export const createDeliveryRoute = async (data, userId) => {
         select: { id: true, outletId: true, customerSnapshot: true, createdAt: true },
       })
     : [];
+  const native = await destinationFromOutlet();
   const mileageStops = stops.map((stop) => {
     const outlet = routeOutlets.find((row) => row.id === stop.outletId);
     const packing = routePackings.find((row) => row.id === stop.packingListId);
@@ -101,7 +102,7 @@ export const createDeliveryRoute = async (data, userId) => {
       destination = isVehicleLoad(packing)
         ? { destinationPoint: destinationPacking(packing, stop.packingDestinationId).point }
         : outlet
-          ? packingDestination({ ...packing, outlet }, sourceOrders)
+          ? packingDestination({ ...packing, outlet }, sourceOrders, native)
           : {};
     } catch (error) {
       throw new AppError(error.message, 422);

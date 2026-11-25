@@ -35,24 +35,35 @@
 }
 .outlet-page-heading {
   display: flex;
-  align-items: start;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e6ec;
 }
 .outlet-page-heading > div:first-child {
-  max-width: 720px;
+  display: grid;
+  gap: 6px;
+  max-width: 680px;
+}
+.outlet-page-heading h1 {
+  margin: 0;
+  font-weight: 600;
+}
+.outlet-page-heading p {
+  margin: 0;
 }
 .outlet-page-heading p:not(.outlet-eyebrow) {
   color: var(--on-surface-variant);
   font-size: 14px;
+  line-height: 1.6;
 }
 .outlet-eyebrow {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
-  font-weight: 650;
+  letter-spacing: 0.08em;
+  font-weight: 500;
   color: var(--on-surface-variant);
-  margin-bottom: 8px !important;
 }
 .outlet-panel {
   min-width: 0;
@@ -282,26 +293,27 @@
 .outlet-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
+  gap: 7px;
+  font-size: 13px;
   line-height: 1.4;
-  font-weight: 600;
-  padding: 5px 8px;
-  border-radius: 6px;
-  background: var(--surface-container);
-  color: var(--on-surface-variant);
+  font-weight: 400;
+  color: #242931;
   white-space: normal;
 }
-.outlet-badge-warning {
-  color: #92580d;
-  background: #fff3d8;
+.outlet-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a93a0;
+  flex-shrink: 0;
 }
-.outlet-badge-active {
-  color: #0f766e;
-  background: #e6f7f5;
+.outlet-badge-warning::before {
+  background: #b7791f;
 }
-.outlet-badge-ok {
-  color: #166534;
-  background: #dcfce7;
+.outlet-badge-active::before,
+.outlet-badge-ok::before {
+  background: #2f7d4f;
 }
 @container outlet-directory (inline-size < 560px) {
   .outlet-table thead {
@@ -468,20 +480,6 @@
 }
 .outlet-danger {
   color: #b43d32 !important;
-}
-.outlet-disclosure {
-  border-top: 1px solid var(--border-glass);
-  padding-top: 10px;
-}
-.outlet-disclosure > summary {
-  min-height: 44px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 10px 0;
-}
-.outlet-disclosure > div {
-  margin-top: 12px;
 }
 .outlet-dialog {
   max-width: 680px !important;

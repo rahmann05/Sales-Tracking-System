@@ -79,7 +79,7 @@ export const BUSINESS_FEATURES = [
   ['TEAMS', 'Penugasan tim', 'Wilayah'],
   ['REGISTRATION', 'Registrasi outlet', 'Outlet'],
   ['OUTLET_MASTER', 'Master outlet', 'Outlet'],
-  ['OUTLET_REVIEW', 'Pemeriksaan outlet opsional', 'Outlet'],
+  ['OUTLET_REVIEW', 'Pemeriksaan outlet opsional', 'Outlet', 'OFF'],
   ['ORDERS', 'Order', 'Transaksi'],
   ['PRODUCTS', 'Katalog produk', 'Transaksi'],
   ['COLLECTION', 'Catatan penagihan eksternal', 'Transaksi'],
@@ -91,7 +91,13 @@ export const BUSINESS_FEATURES = [
   ['EXPORT', 'Ekspor dan cetak', 'Pemantauan'],
   ['NOTIFICATIONS', 'Notifikasi', 'Pemantauan'],
   ['MAPS', 'Peta operasional', 'Integrasi'],
-].map(([id, label, domain]) => ({ id, label, domain, key: `FEATURE_${id}_MODE` }));
+].map(([id, label, domain, defaultMode = 'ACTIVE']) => ({
+  id,
+  label,
+  domain,
+  defaultMode,
+  key: `FEATURE_${id}_MODE`,
+}));
 export const OPERATIONAL_CONFIG_GROUPS = [
   group(
     'CLOSED_OUTLET_POLICY',
@@ -227,7 +233,7 @@ export const OPERATIONAL_CONFIG_GROUPS = [
       select(
         'CAMERA_INPUT_MODE',
         'Sumber foto formulir',
-        'CAMERA',
+        'LIVE_CAMERA',
         Object.keys(CAMERA_INPUT_LABELS),
         'Berlaku pada presensi Sales, SPV, Driver, shift dan validasi lapangan. Kamera bawaan merupakan permintaan ke perangkat; browser dapat tetap menawarkan pemilih berkas.',
         { optionLabels: CAMERA_INPUT_LABELS }
@@ -242,7 +248,7 @@ export const OPERATIONAL_CONFIG_GROUPS = [
       select(
         f.key,
         f.label,
-        'ACTIVE',
+        f.defaultMode,
         ['ACTIVE', 'PAUSED', 'OFF'],
         'Pengaturan berlaku pada menu, tindakan server, dan proses otomatis.'
       )
@@ -1321,6 +1327,18 @@ export const OPERATIONAL_CONFIG_GROUPS = [
         'Pada urutan bebas, tujuan yang sudah didatangi tetapi belum memiliki hasil ditandai untuk gudang. Tidak membuat bukti keluar atau hasil barang otomatis.'
       ),
       bool('DELIVERY_REQUIRE_GPS', 'Wajib GPS pada presensi tujuan'),
+      bool(
+        'DELIVERY_AUTO_SELECT_LOADS',
+        'Pilih otomatis muatan siap kirim saat menyusun trip',
+        true,
+        'Muatan yang sudah diserahkan Admin dan memiliki titik tujuan langsung terpilih di form trip. Gudang tetap dapat menghapus atau menambah pilihan sebelum menyimpan. Nonaktif: setiap muatan ditambahkan manual.'
+      ),
+      bool(
+        'DELIVERY_DESTINATION_FROM_OUTLET',
+        'Titik tujuan mengikuti lokasi master outlet',
+        true,
+        'Bila titik Google outlet tidak berlaku (kedaluwarsa atau data berubah), koordinat master outlet dipakai sebagai titik tujuan. Nonaktif: Admin harus melengkapi atau memvalidasi titik terlebih dahulu.'
+      ),
       num(
         'DELIVERY_ISSUE_DEFAULT_HOURS',
         'Tenggat awal masalah (0 = tanpa tenggat otomatis)',

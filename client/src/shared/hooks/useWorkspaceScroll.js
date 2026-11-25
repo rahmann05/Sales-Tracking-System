@@ -7,13 +7,18 @@ export function useWorkspaceScroll(mainRef, userId) {
     const main = mainRef.current;
     if (!main || !userId) return;
     let frame = 0,
+      timer = 0,
       restoring = false;
     const cancel = () => {
       cancelAnimationFrame(frame);
       restoring = false;
     };
+    // history.replaceState per scroll event floods the browser ("Throttling navigation"), so
+    // the position is saved once scrolling pauses; navigation still saves it immediately.
     const save = () => {
-      if (!restoring) saveWorkspaceScroll();
+      if (restoring) return;
+      clearTimeout(timer);
+      timer = setTimeout(saveWorkspaceScroll, 150);
     };
     const restore = () => {
       cancel();
@@ -42,6 +47,7 @@ export function useWorkspaceScroll(mainRef, userId) {
     restore();
     return () => {
       cancel();
+      clearTimeout(timer);
       main.removeEventListener('scroll', save);
       for (const name of ['wheel', 'touchstart', 'pointerdown', 'keydown'])
         main.removeEventListener(name, cancel);

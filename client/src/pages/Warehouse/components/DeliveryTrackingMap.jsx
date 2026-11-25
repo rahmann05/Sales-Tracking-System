@@ -61,17 +61,14 @@ export function DeliveryTrackingMap({ routes, issues = [], selectedId, onSelect 
         dianggap sebagai posisi armada.
       </p>
       {gpsOffRoutes.length > 0 && (
-        <div
-          role="alert"
-          className="px-3.5 py-2.5 rounded-lg border border-slate-200 border-l-[3px] border-l-red-600 bg-white text-slate-700 text-xs space-y-1"
-        >
-          <strong className="block font-semibold text-red-700">
-            FLAG ADMIN — POSISI GPS ARMADA TIDAK TERKINI ({gpsOffRoutes.length} trip)
+        <div role="alert" className="admin-feedback error space-y-1">
+          <strong className="block">
+            Posisi GPS armada tidak terkini ({gpsOffRoutes.length} trip)
           </strong>
           {gpsOffRoutes.map((r) => (
             <p key={r.id}>
               •{' '}
-              <strong className="text-slate-900">
+              <strong>
                 {r.vehicle?.code || r.code} ({r.code} · {r.driver?.name || 'Supir'})
               </strong>
               : Posisi langsung armada belum dapat dikonfirmasi. Periksa izin lokasi, koneksi, dan
@@ -85,11 +82,8 @@ export function DeliveryTrackingMap({ routes, issues = [], selectedId, onSelect 
         </div>
       )}
       {selectedRoute && !selectedRoute.departedAt && (
-        <div
-          role="status"
-          className="px-3.5 py-2.5 rounded-lg border border-slate-200 border-l-[3px] border-l-amber-600 bg-white text-slate-700 text-xs"
-        >
-          <strong className="text-slate-900">
+        <div role="status" className="admin-feedback">
+          <strong>
             Keterangan Peta Armada ({selectedRoute.vehicle?.code || selectedRoute.code}):
           </strong>{' '}
           Titik armada memang belum tersedia di peta karena trip belum dikirim / belum berangkat (
@@ -103,11 +97,8 @@ export function DeliveryTrackingMap({ routes, issues = [], selectedId, onSelect 
         </p>
       )}
       {selectedRoute && selectedRoute.returnedAt && (
-        <div
-          role="status"
-          className="px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50/70 text-slate-700 text-xs"
-        >
-          <strong className="text-slate-900">
+        <div role="status" className="admin-feedback">
+          <strong>
             Keterangan Peta Armada ({selectedRoute.vehicle?.code || selectedRoute.code}):
           </strong>{' '}
           Armada sudah kembali ke gudang pada {stamp(selectedRoute.returnedAt)} WIB.
@@ -237,7 +228,7 @@ export function DeliveryTrackingMap({ routes, issues = [], selectedId, onSelect 
                   {r.location.isLive
                     ? 'GPS armada terkini (aktif)'
                     : gpsDead
-                      ? 'FLAG ADMIN: GPS tidak terkini (posisi terakhir)'
+                      ? 'GPS tidak terkini (posisi terakhir)'
                       : r.location.source === 'GPS'
                         ? 'GPS terakhir'
                         : 'Absensi terakhir'}

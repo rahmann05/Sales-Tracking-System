@@ -155,8 +155,8 @@ export function SalesOrderDetail({ order: o }) {
           )}
         </section>
       )}
-      <details>
-        <summary className="min-h-11 cursor-pointer">Masalah / keluhan order</summary>
+      <details className="app-disclosure">
+        <summary>Masalah / keluhan order</summary>
         <OperationalIssues reference={{ orderId: o.id }} />
       </details>
       {!!o.history?.length && (

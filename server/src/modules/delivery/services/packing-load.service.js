@@ -1,8 +1,10 @@
 import { AppError } from '../../../utils/errors.js';
 import { mileagePoint } from './vehicle-mileage-plan.service.js';
+import { destinationFromOutlet } from './packing-destination.service.js';
 import { loadLogistics, capacityGuidance } from '../../../../../shared/packing-load.mjs';
 
 export async function preparePackingLoad(tx, data, orders) {
+  const native = await destinationFromOutlet();
   const definitions = data.destinations || [];
   if (!definitions.length || new Set(definitions.map((row) => row.id)).size !== definitions.length)
     throw new AppError('Sertakan tujuan muatan dengan identitas yang unik.', 400);
@@ -25,7 +27,7 @@ export async function preparePackingLoad(tx, data, orders) {
     )
       throw new AppError('Order dan toko pada tujuan muatan tidak sesuai.', 400);
     const points = sources.map((order) =>
-      mileagePoint(outlet, order.customerSnapshot?.deliveryPoint)
+      mileagePoint(outlet, order.customerSnapshot?.deliveryPoint, { native })
     );
     const keys = new Set(
       points
@@ -51,7 +53,7 @@ export async function preparePackingLoad(tx, data, orders) {
         address: outlet.address,
         outletCode: outlet.outletCode,
       },
-      point: points[0] || mileagePoint(outlet),
+      point: points[0] || mileagePoint(outlet, undefined, { native }),
     };
   });
   const suggestedVehicle = data.suggestedVehicleId
@@ -120,8 +122,7 @@ export function loadReadyError(packing, invoiceRequired) {
     if (!items.length || destination.totalCartons <= 0)
       return `Lengkapi barang dan karton untuk ${outletName}.`;
     if (!destination.point) return `Titik pengiriman ${outletName} belum tersedia.`;
-    if (invoiceRequired && !invoices.length)
-      return `Faktur untuk ${outletName} belum dilampirkan.`;
+    if (invoiceRequired && !invoices.length) return `Faktur untuk ${outletName} belum dilampirkan.`;
     if (
       invoices.length &&
       (invoices.some((invoice) => invoice.totalCartons <= 0) ||

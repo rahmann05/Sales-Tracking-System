@@ -5,6 +5,7 @@ import { useFormDraft } from '../../../shared/hooks/useFormDraft';
 import { orderApprovalDecision } from '../../../../../shared/approval-workflow.mjs';
 import { orderPricing, priceOverrideError } from '../../../../../shared/order-pricing.mjs';
 import { orderTerms } from '../../../../../shared/order-terms.mjs';
+import { manualCodeRequired } from '../../../../../shared/coding.mjs';
 
 export function useInputOrderState({ stop, onSubmitOrder, adminPlaceId }) {
   const { products = [], setProducts, settings, user } = useApp();
@@ -114,6 +115,8 @@ export function useInputOrderState({ stop, onSubmitOrder, adminPlaceId }) {
 
   const validateBeforeSubmit = () => {
     if (orderItems.length === 0) return 'Pilih minimal satu produk untuk membuat order.';
+    if (!pending && manualCodeRequired('ORDER', settings) && !String(code || '').trim())
+      return 'Nomor order wajib diisi karena pengkodean manual aktif.';
     if (
       !pending &&
       hasPriceOverride &&

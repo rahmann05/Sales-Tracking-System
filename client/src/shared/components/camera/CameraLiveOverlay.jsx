@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuSwitchCamera, LuClock, LuMapPin } from 'react-icons/lu';
+import { LuSwitchCamera } from 'react-icons/lu';
 
 /**
  * CameraLiveOverlay Component
@@ -15,27 +15,21 @@ export const CameraLiveOverlay = ({
 
   return (
     <>
-      {/* Switch Camera Button (Front vs Back) */}
       <button
         type="button"
         onClick={onToggleFacingMode}
-        title="Ganti Kamera Depan / Belakang"
-        className="absolute top-3 right-3 p-2.5 min-w-[44px] min-h-[44px] justify-center md:min-w-0 md:min-h-0 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-xl text-white text-xs font-semibold border border-white/20 transition-all shadow-md flex items-center gap-1"
+        title="Ganti kamera depan / belakang"
+        aria-label="Ganti kamera depan atau belakang"
+        className="camera-overlay-button"
       >
-        <LuSwitchCamera className="text-base" />
+        <LuSwitchCamera aria-hidden="true" />
       </button>
-
-      {/* Live Timestamp & GPS lock status banner */}
-      <div className="absolute bottom-3 left-3 right-3 flex-wrap md:right-auto md:flex-nowrap bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-xl text-[11px] text-white flex items-center gap-2 shadow-md">
-        <div className="flex items-center gap-1">
-          <LuClock className="text-xs text-primary shrink-0" />
-          <span className="font-mono">{currentTime} WIB</span>
-        </div>
-        <span className="text-slate-400">•</span>
-        <div className="flex items-center gap-1 text-emerald-400 font-mono">
-          <LuMapPin className="text-xs shrink-0" />
-          <span>{isGpsLocked ? 'GPS LOCKED' : 'SEARCHING GPS'}</span>
-        </div>
+      <div className="camera-caption">
+        <span>{currentTime} WIB</span>
+        <span>
+          <i className="camera-dot" aria-hidden="true" />
+          {isGpsLocked ? 'GPS terkunci' : 'Mencari GPS'}
+        </span>
       </div>
     </>
   );

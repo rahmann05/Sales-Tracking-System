@@ -108,9 +108,7 @@ export function TripMonitorWorkspace({
                             : 'Belum ada posisi'}
                   </span>
                   {gpsDead && (
-                    <span className="admin-trip-alert">
-                      FLAG ADMIN: Pembaruan GPS belum diterima
-                    </span>
+                    <span className="admin-trip-alert">Pembaruan GPS belum diterima</span>
                   )}
                   {pendingReturns > 0 && (
                     <span className="admin-trip-alert">
@@ -144,9 +142,7 @@ export function TripMonitorWorkspace({
             {selected?.location?.isLive ? (
               <span className="admin-status admin-status-approved">GPS terkini</span>
             ) : selectedGpsDead ? (
-              <span className="admin-status admin-status-rejected">
-                FLAG ADMIN: GPS tidak terkini
-              </span>
+              <span className="admin-status admin-status-rejected">GPS tidak terkini</span>
             ) : selected && !selected.departedAt ? (
               <span className="admin-status">Armada belum dikirim</span>
             ) : null}

@@ -23,11 +23,15 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
   const browserKey = await getDynamicConfig('MAPS_BROWSER_API_KEY', '');
   const distanceOrigin = lat != null && lng != null ? 'INPUT_COORDINATES' : 'OFFICE_SEARCH_BIAS';
   const results = [];
+  let outsideRadius = 0;
   let error;
   const append = (point) => {
     if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) return;
     const distanceMeters = getDistanceInMeters(userLat, userLng, point.latitude, point.longitude);
-    if (enforce && distanceMeters > radius) return;
+    if (enforce && distanceMeters > radius) {
+      outsideRadius++;
+      return;
+    }
     results.push({
       ...point,
       distanceMeters,
@@ -141,5 +145,10 @@ export const searchPlaces = async (keyword, lat = null, lng = null) => {
     }
   }
   if (!results.length && error) throw error;
+  // Not serialized with the array; the controller reports it so the form can explain an empty list.
+  Object.defineProperty(results, 'meta', {
+    value: { outsideRadius, radiusMeters: enforce ? Number(radius) : null, distanceOrigin },
+    enumerable: false,
+  });
   return results;
 };

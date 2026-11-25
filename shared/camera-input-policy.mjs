@@ -4,8 +4,10 @@ export const CAMERA_INPUT_LABELS = {
   NATIVE_CAMERA: 'Kamera bawaan saja',
   CAMERA_OR_UPLOAD: 'Kamera atau unggah gambar',
 };
-export function cameraInputPolicy(value = 'CAMERA') {
-  const mode = Object.hasOwn(CAMERA_INPUT_LABELS, value) ? value : 'CAMERA';
+// Evidence photos come from the live in-app camera unless a policy explicitly allows otherwise.
+export const DEFAULT_CAMERA_INPUT_MODE = 'LIVE_CAMERA';
+export function cameraInputPolicy(value = DEFAULT_CAMERA_INPUT_MODE) {
+  const mode = Object.hasOwn(CAMERA_INPUT_LABELS, value) ? value : DEFAULT_CAMERA_INPUT_MODE;
   return {
     mode,
     live: mode !== 'NATIVE_CAMERA',

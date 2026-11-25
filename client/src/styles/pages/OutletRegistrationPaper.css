@@ -27,7 +27,17 @@
   box-shadow:
     0 1px 3px #0003,
     0 8px 24px #00000018;
-  font: 12px/1.35 Arial, 'Liberation Sans', Helvetica, sans-serif;
+  font:
+    12px/1.35 Arial,
+    'Liberation Sans',
+    Helvetica,
+    sans-serif;
+}
+/* At 100% the stage grows to the full sheet, so the page itself must scroll; containing the
+   overscroll here stopped the wheel from reaching the page and cut the form off. */
+.npf-stage[data-fit='false'] {
+  flex: 0 0 auto;
+  overscroll-behavior: auto;
 }
 .npf-stage[data-fit='false'] .npf-sheet {
   width: 860px;
@@ -76,7 +86,8 @@
 .npf-title {
   margin-top: 6px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-align: center;
 }
 .npf-code {
@@ -101,7 +112,7 @@
   display: grid;
   gap: 4px;
   margin: 10px 0;
-  font-weight: 700;
+  font-weight: 400;
 }
 .npf-meta-row {
   display: grid;
@@ -120,7 +131,8 @@
 }
 .npf-block-title {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 .npf-row {
@@ -165,12 +177,12 @@
 }
 .npf-heading {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
 }
 .npf-static {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.5;
 }
 .npf-codebox {
@@ -197,7 +209,8 @@
   display: block;
   margin-top: 1px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 400;
+  color: #b42318;
   text-transform: none;
   color: #b42318;
 }
@@ -234,7 +247,11 @@
   border-radius: 0;
   background: transparent;
   color: #000;
-  font: 700 12px/1.3 Arial, 'Liberation Sans', Helvetica, sans-serif;
+  font:
+    400 12px/1.3 Arial,
+    'Liberation Sans',
+    Helvetica,
+    sans-serif;
   text-transform: none;
   outline: none;
   box-shadow: none;
@@ -282,7 +299,7 @@
   width: 100%;
 }
 .npf-tick[data-strong='true'] {
-  font-weight: 700;
+  font-weight: 600;
 }
 .npf-tick input {
   appearance: none;
@@ -326,7 +343,7 @@
 .npf-footnote {
   margin: 2px 0 6px;
   font-size: 10.5px;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 /* Hasil pencarian tempat: daftar dengan ruang tersendiri (tidak menimpa isian di bawahnya) */
@@ -359,7 +376,10 @@
   border-top: 1px solid #bbb;
   background: #fff;
   color: #000;
-  font: 11px/1.3 Arial, Helvetica, sans-serif;
+  font:
+    11px/1.3 Arial,
+    Helvetica,
+    sans-serif;
   text-align: left;
   cursor: pointer;
 }
@@ -414,7 +434,7 @@
   justify-content: space-between;
   gap: 6px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
 }
 .npf-photo-preview {
@@ -443,7 +463,10 @@
   border: 1.5px dashed #000;
   background: #fafafa;
   color: #000;
-  font: 700 11px/1.3 Arial, Helvetica, sans-serif;
+  font:
+    700 11px/1.3 Arial,
+    Helvetica,
+    sans-serif;
   cursor: pointer;
 }
 .npf-sheet button.npf-photo-empty:hover {
@@ -472,7 +495,11 @@
   border: 0;
   background: transparent;
   color: #000;
-  font: 400 12px/1.4 Arial, 'Liberation Sans', Helvetica, sans-serif;
+  font:
+    400 12px/1.4 Arial,
+    'Liberation Sans',
+    Helvetica,
+    sans-serif;
   outline: none;
   resize: vertical;
 }
@@ -484,34 +511,41 @@
 .npf-sheet button.npf-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid #000;
-  border-radius: 0;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #c8cbd1;
+  border-radius: 8px;
   background: #fff;
-  color: #000;
-  font: 700 12px/1 Arial, Helvetica, sans-serif;
+  color: #1d1d1f;
+  font:
+    500 13px/1 Arial,
+    Helvetica,
+    sans-serif;
   cursor: pointer;
 }
 .npf-sheet button.npf-btn--mini {
-  min-height: 24px;
-  padding: 0 8px;
-  font-size: 10.5px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 11px;
 }
 .npf-sheet button.npf-btn:hover:not(:disabled) {
-  background: #eee;
+  background: #f3f5f8;
 }
 .npf-sheet button.npf-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 .npf-sheet button.npf-btn--primary {
-  background: #000;
-  color: #fff;
+  background: var(--primary, #0b66d0);
+  border-color: var(--primary, #0b66d0);
+  color: var(--on-primary, #fff);
 }
 .npf-sheet button.npf-btn--primary:hover:not(:disabled) {
-  background: #222;
+  background: var(--primary, #0b66d0);
+  filter: brightness(0.92);
 }
 .npf-actions {
   display: flex;
@@ -520,9 +554,10 @@
   justify-content: space-between;
   gap: 10px;
   padding-top: 10px;
-  border-top: 1.5px solid #000;
-  font-size: 10.5px;
-  font-weight: 700;
+  border-top: 1px solid #c8cbd1;
+  font-size: 11px;
+  font-weight: 400;
+  color: #4b5563;
 }
 .npf-actions > div {
   display: flex;
@@ -552,4 +587,27 @@
   .npf-stage[data-fit='true'] .npf-meta-row {
     grid-template-columns: 62px 10px minmax(0, 1fr);
   }
+}
+
+/* Emphasis stays light so the sheet reads like a printed document, not a UI of bold labels. */
+.npf-sheet :is(b, strong) {
+  font-weight: 600;
+}
+.npf-sheet .business-code-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: #000;
+}
+.npf-sheet .business-code-value {
+  border-bottom: 1px dotted #000;
+  font-size: 12px;
+  color: #000;
+}
+.npf-sheet .business-code-value[data-pending='true'] {
+  color: #4b5563;
+}
+.npf-sheet .business-code-hint {
+  font-size: 9.5px;
+  font-style: italic;
+  color: #333;
 }

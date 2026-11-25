@@ -1,0 +1,70 @@
+/* One look for every expandable section (<details>): a blue chevron on the left of the summary
+   and, for the standard card, a hairline border like the other panels. :where() keeps the base
+   rules at zero specificity so a feature stylesheet can still override a specific panel. */
+:where(details > summary) {
+  cursor: pointer;
+  list-style: none;
+}
+:where(details > summary)::-webkit-details-marker {
+  display: none;
+}
+:where(details:not(.cluster-map-legend) > summary)::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 10px 1px 2px;
+  border-right: 2px solid var(--primary, #1b66ca);
+  border-bottom: 2px solid var(--primary, #1b66ca);
+  transform: rotate(-45deg);
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+:where(details[open]:not(.cluster-map-legend) > summary)::before {
+  transform: rotate(45deg);
+}
+
+/* Standard card: explicit class, or a bare <details> with no class at all. */
+.app-disclosure,
+.packing-disclosure,
+.outlet-disclosure,
+:where(details:not([class])) {
+  margin-top: 8px;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  background: #fff;
+}
+.app-disclosure > summary,
+.packing-disclosure > summary,
+.outlet-disclosure > summary,
+:where(details:not([class]) > summary) {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #242931;
+}
+.app-disclosure > summary::before,
+.packing-disclosure > summary::before,
+.outlet-disclosure > summary::before,
+:where(details:not([class]) > summary)::before {
+  margin: 0 8px 0 0;
+}
+.app-disclosure[open] > summary,
+.packing-disclosure[open] > summary,
+.outlet-disclosure[open] > summary,
+:where(details[open]:not([class]) > summary) {
+  border-bottom: 1px solid #edf0f4;
+}
+.app-disclosure > :not(summary),
+.outlet-disclosure > :not(summary),
+:where(details:not([class]) > :not(summary)) {
+  margin: 0;
+  padding: 12px 14px 14px;
+}
+.work-issues h3 {
+  font-size: 14px;
+  font-weight: 500;
+}

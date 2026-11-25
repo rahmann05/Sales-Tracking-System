@@ -12,6 +12,7 @@ import { cameraSnapshotService } from '../../../services/cameraSnapshotService';
 import { nativeFileCaptureService } from '../../../services/nativeFileCaptureService';
 import { notifyError } from '../../../services/notificationService';
 
+import '../../../styles/common/CameraCapture.css';
 import { CameraGpsStatusBadge } from './CameraGpsStatusBadge';
 import { CameraLiveVideoFeed } from './CameraLiveVideoFeed';
 import { CameraLiveOverlay } from './CameraLiveOverlay';
@@ -38,7 +39,7 @@ export const DeviceCameraCapture = ({
   targetLng = null,
   maxRadiusMeters = 50,
   outletName = '',
-  buttonLabel = 'Jepret Foto Presensi (GPS Terverifikasi)',
+  buttonLabel = 'Ambil foto',
   policyValues = null,
 }) => {
   const canvasRef = useRef(null);
@@ -181,10 +182,10 @@ export const DeviceCameraCapture = ({
   };
 
   return (
-    <div className="space-y-3 w-full">
+    <div className="camera-capture">
       <canvas ref={canvasRef} className="hidden" />
       {fileError && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="app-error">
           {fileError}
         </p>
       )}
@@ -210,11 +211,11 @@ export const DeviceCameraCapture = ({
       {capturedPhoto ? (
         <CapturedPhotoPreview capturedPhoto={capturedPhoto} onRetake={handleRetakePhoto} />
       ) : !inputPolicy.live ? (
-        <div className="rounded-xl border border-border-glass p-4 text-sm">
+        <p className="camera-note">
           Gunakan kamera perangkat di bawah. {photoRequired ? 'Foto wajib dilampirkan.' : ''}
-        </div>
+        </p>
       ) : photoRequired || cameraRequested ? (
-        <div className="relative rounded-2xl overflow-hidden aspect-video min-h-[220px] md:min-h-0 bg-slate-950 border border-border-glass shadow-inner flex items-center justify-center">
+        <div className="camera-viewport">
           <CameraLiveVideoFeed
             videoRef={videoRef}
             facingMode={facingMode}
@@ -240,13 +241,9 @@ export const DeviceCameraCapture = ({
           />
         </div>
       ) : (
-        <div className="rounded-xl border border-border-glass p-4 space-y-2">
-          <p className="text-sm">Anda dapat melanjutkan tanpa membuka kamera.</p>
-          <button
-            type="button"
-            className="config-button min-h-11"
-            onClick={() => setCameraRequested(true)}
-          >
+        <div className="camera-note">
+          <p>Anda dapat melanjutkan tanpa membuka kamera.</p>
+          <button type="button" className="app-button" onClick={() => setCameraRequested(true)}>
             Tambahkan foto
           </button>
         </div>
@@ -254,7 +251,7 @@ export const DeviceCameraCapture = ({
 
       {/* 3. Action Capture Button & Fallback */}
       {!capturedPhoto && (photoRequired || cameraRequested || !inputPolicy.live) && (
-        <div className="space-y-2">
+        <div className="camera-actions">
           {inputPolicy.live && (
             <CameraCaptureButton
               requireGps={requireGps}

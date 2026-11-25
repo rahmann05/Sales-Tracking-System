@@ -91,12 +91,19 @@ export function FollowUpActions({
     e.preventDefault();
     if (busy) return;
     if (!review) {
-      if (requireGps && (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng))) {
-        setError('GPS lokasi belum terdeteksi. Pastikan izin lokasi aktif dan tunggu hingga GPS terkunci.');
+      if (
+        requireGps &&
+        (!gpsData || !Number.isFinite(gpsData.lat) || !Number.isFinite(gpsData.lng))
+      ) {
+        setError(
+          'GPS lokasi belum terdeteksi. Pastikan izin lokasi aktif dan tunggu hingga GPS terkunci.'
+        );
         return;
       }
       if (requirePhoto && !capturedPhoto) {
-        setError('Ambil foto langsung menggunakan kamera saat berada di lokasi outlet terlebih dahulu.');
+        setError(
+          'Ambil foto langsung menggunakan kamera saat berada di lokasi outlet terlebih dahulu.'
+        );
         return;
       }
     }
@@ -166,9 +173,7 @@ export function FollowUpActions({
               {Number(targetOutlet.longitude).toFixed(5)})
             </a>
           ) : (
-            <p className="text-xs text-amber-700">
-              Koordinat master outlet belum tersedia.
-            </p>
+            <p className="text-xs text-amber-700">Koordinat master outlet belum tersedia.</p>
           )}
         </div>
       )}
@@ -246,7 +251,7 @@ export function FollowUpActions({
                   maxRadiusMeters={maxRadiusMeters}
                   outletName={displayOutletName}
                   facingModeDefault="user"
-                  buttonLabel="Jepret Foto Bukti Tugas (GPS Terverifikasi)"
+                  buttonLabel="Ambil foto bukti tugas"
                 />
               </div>
             )}
@@ -270,7 +275,9 @@ export function FollowUpActions({
                 {values.FOLLOW_UP_REQUIRE_EVIDENCE && !requirePhoto ? '(wajib)' : '(opsional)'}
                 <textarea
                   className="form-input block w-full"
-                  required={Boolean(values.FOLLOW_UP_REQUIRE_EVIDENCE && !requirePhoto && !capturedPhoto)}
+                  required={Boolean(
+                    values.FOLLOW_UP_REQUIRE_EVIDENCE && !requirePhoto && !capturedPhoto
+                  )}
                   maxLength={2000}
                   value={evidence}
                   onChange={(e) => setEvidence(e.target.value)}

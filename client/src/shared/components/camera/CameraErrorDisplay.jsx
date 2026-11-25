@@ -1,6 +1,5 @@
 import React from 'react';
 import { CameraNativeFileTrigger } from './CameraNativeFileTrigger';
-import { FiAlertCircle } from 'react-icons/fi';
 
 /**
  * CameraErrorDisplay Component
@@ -18,11 +17,10 @@ export const CameraErrorDisplay = ({
   if (!cameraError) return null;
 
   return (
-    <div className="absolute inset-0 p-3 sm:p-5 bg-slate-900/95 flex flex-col items-center justify-center text-center gap-2 sm:gap-3 overflow-y-auto">
-      <FiAlertCircle className="text-3xl text-rose-500" />
-      <div className="space-y-1 max-w-xs">
-        <p className="text-xs font-bold text-white">Gagal Membuka Kamera</p>
-        <p className="text-[11px] text-slate-400">{cameraError}</p>
+    <div className="camera-error" role="alert">
+      <div>
+        <h4>Kamera tidak dapat dibuka</h4>
+        <p>{cameraError}</p>
       </div>
       {allowNative ? (
         <CameraNativeFileTrigger
@@ -33,9 +31,7 @@ export const CameraErrorDisplay = ({
           allowUpload={allowUpload}
         />
       ) : (
-        <p className="text-xs text-white">
-          Aturan formulir mewajibkan kamera langsung. Periksa izin kamera pada browser.
-        </p>
+        <p>Aturan formulir mewajibkan kamera langsung. Periksa izin kamera pada browser.</p>
       )}
     </div>
   );

@@ -109,7 +109,7 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
       </div>
       {r.gpsFlag && (
         <p className="admin-feedback error" role="alert">
-          <strong>FLAG ADMIN — POSISI GPS ARMADA TIDAK TERKINI:</strong> {r.gpsFlag.message}
+          <strong>Posisi GPS armada tidak terkini:</strong> {r.gpsFlag.message}
         </p>
       )}
       {r.alerts.length > 0 && (

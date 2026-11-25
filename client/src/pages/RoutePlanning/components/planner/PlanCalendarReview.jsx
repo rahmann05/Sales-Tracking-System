@@ -139,6 +139,8 @@ export function PlanCalendarReview({ planner: p }) {
                   <label key={`${d.userId}:${d.date}`} className="app-field">
                     Kode PJP · {d.salesName} · {d.date}
                     <input
+                      required
+                      placeholder="Wajib diisi: kode PJP"
                       value={codes[`${d.userId}:${d.date}`] || ''}
                       maxLength={128}
                       onChange={(e) =>
@@ -190,6 +192,10 @@ export function PlanCalendarReview({ planner: p }) {
                 !!existing.length ||
                 !r.summary.visits ||
                 note.trim().length < 5 ||
+                (manual &&
+                  r.days
+                    .filter((d) => d.outletIds.length)
+                    .some((d) => !(codes[`${d.userId}:${d.date}`] || '').trim())) ||
                 (hasWarnings && !ack)
               }
               onClick={() =>

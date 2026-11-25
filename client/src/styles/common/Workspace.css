@@ -304,7 +304,9 @@ main {
   }
   .app-dialog {
     width: calc(100vw - 24px);
-    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(
+      100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
     border-radius: 16px;
   }
   .app-dialog-body {

@@ -550,43 +550,40 @@
 .admin-table-link:hover strong {
   text-decoration: underline;
 }
+/* Status is plain text with a small colored dot: no pill, border or tinted background. */
 .admin-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
   white-space: nowrap;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
-  font-size: 11px;
-  font-weight: 600;
+  color: #242931;
+  font-size: 13px;
+  font-weight: 400;
 }
-.admin-status-pending,
-.admin-status-pending_approval,
-.admin-status-draft {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+.admin-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a93a0;
+  flex-shrink: 0;
 }
-.admin-status-approved,
-.admin-status-released,
-.admin-status-delivered {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
+.admin-status-pending::before,
+.admin-status-pending_approval::before,
+.admin-status-draft::before {
+  background: #b7791f;
 }
-.admin-status-rejected,
-.admin-status-failed {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+.admin-status-approved::before,
+.admin-status-released::before,
+.admin-status-delivered::before {
+  background: #2f7d4f;
 }
-.admin-status-route {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+.admin-status-rejected::before,
+.admin-status-failed::before {
+  background: #b4452f;
+}
+.admin-status-route::before {
+  background: #0869cf;
 }
 .admin-pagination {
   display: flex;
@@ -652,15 +649,13 @@
   line-height: 1.6;
 }
 .admin-order-detail .poc-status-badge {
-  font-size: 10px;
-  font-weight: 500;
-  padding: 4px 7px;
-  border: 0;
+  font-size: 13px;
+  font-weight: 400;
 }
 .admin-order-detail .poc-actions-container {
-  background: #f8fafc;
-  border-top: 1px solid #edf0f4;
-  padding: 16px 18px;
+  background: #fff;
+  border-top: 1px solid #e2e6ec;
+  padding: 14px 18px;
 }
 .admin-order-detail .poc-action-grid {
   display: flex;
@@ -669,7 +664,9 @@
 }
 .admin-order-detail .poc-action-grid > button {
   min-height: 40px;
-  font-size: 12px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
   border-radius: 8px;
 }
 .admin-order-detail .poc-btn-approve {
@@ -678,8 +675,8 @@
 }
 .admin-order-detail .poc-btn-reject {
   background: white;
-  border: 1px solid #e0e5ec;
-  color: #b06059;
+  border: 1px solid #c8cbd1;
+  color: #242931;
 }
 .admin-empty {
   padding: 36px 24px;
@@ -699,26 +696,40 @@
   margin-top: 12px;
 }
 .admin-feedback {
-  padding: 12px 15px;
-  border-radius: 8px;
-  font-size: 12px;
+  position: relative;
+  padding: 12px 16px 12px 36px;
+  border-radius: 10px;
+  font-size: 13px;
   line-height: 1.6;
   margin-bottom: 16px;
-  background: #ffffff;
-  color: #334155;
+  background: #fff;
+  color: #242931;
   border: 1px solid #e2e6ec;
 }
-.admin-feedback.error {
-  color: #7f1d1d;
-  background: #ffffff;
-  border-color: #e2e6ec;
-  border-left: 3px solid #dc2626;
+.admin-feedback::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 19px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a93a0;
 }
-.admin-feedback.success {
-  color: #14532d;
-  background: #ffffff;
-  border-color: #e2e6ec;
-  border-left: 3px solid #15803d;
+.admin-feedback.error::before {
+  background: #b4452f;
+}
+.admin-feedback.success::before {
+  background: #2f7d4f;
+}
+.admin-feedback strong {
+  font-weight: 500;
+}
+.work-clash {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #8a3a28;
 }
 .admin-footnote {
   font-size: 11px;
@@ -885,8 +896,8 @@
   color: #166534;
 }
 .admin-trip-alert {
-  color: #b45309;
-  font-weight: 600;
+  color: #8a3a28;
+  font-weight: 400;
   line-height: 1.5;
 }
 .admin-trip-map > section {

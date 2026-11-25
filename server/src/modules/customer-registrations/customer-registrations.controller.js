@@ -21,7 +21,7 @@ export const searchPlaces = async (req, res, next) => {
       lat ? parseFloat(lat) : undefined,
       lng ? parseFloat(lng) : undefined
     );
-    res.status(200).json({ status: 'success', data: results });
+    res.status(200).json({ status: 'success', data: results, meta: results.meta });
   } catch (error) {
     next(error);
   }

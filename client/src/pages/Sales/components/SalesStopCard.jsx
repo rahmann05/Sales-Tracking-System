@@ -143,8 +143,8 @@ export const SalesStopCard = React.memo(
             {stop.checkOutNotes && <p>Keluar: {stop.checkOutNotes}</p>}
           </section>
         )}
-        <details>
-          <summary className="min-h-11 cursor-pointer">Masalah / keluhan (bila diperlukan)</summary>
+        <details className="app-disclosure">
+          <summary>Masalah / keluhan</summary>
           <OperationalIssues reference={{ salesVisitId: stop.id }} />
         </details>
         <details>

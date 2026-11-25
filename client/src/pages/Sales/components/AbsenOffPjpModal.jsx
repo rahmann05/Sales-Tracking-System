@@ -62,7 +62,7 @@ export const AbsenOffPjpModal = ({ isOpen, onClose, onSubmit }) => {
             targetLng={null}
             outletName={form.outletName || 'Toko Luar PJP'}
             facingModeDefault="user"
-            buttonLabel="Jepret Foto Presensi Luar PJP (GPS Aktif)"
+            buttonLabel="Ambil foto presensi luar PJP"
           />
         </div>
 

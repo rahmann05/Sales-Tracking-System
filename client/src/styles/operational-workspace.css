@@ -479,18 +479,7 @@
   border-radius: 12px;
   background: #ffffff;
 }
-.packing-disclosure > summary {
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-  cursor: pointer;
-}
+
 .packing-disclosure > summary::-webkit-details-marker {
   display: none;
 }

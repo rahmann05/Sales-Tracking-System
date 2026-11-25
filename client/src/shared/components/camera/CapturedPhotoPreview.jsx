@@ -1,34 +1,24 @@
 import React from 'react';
-import { LuRefreshCw, LuCheck } from 'react-icons/lu';
+import { LuRefreshCw } from 'react-icons/lu';
 
 /**
  * CapturedPhotoPreview Component
- * Single Responsibility: Display photo preview after snapshot is taken, with retake action and confirmation badge.
+ * Single Responsibility: Display photo preview after snapshot is taken, with retake action.
  */
 export const CapturedPhotoPreview = ({ capturedPhoto, onRetake }) => {
   if (!capturedPhoto) return null;
 
   return (
-    <div className="relative rounded-2xl overflow-hidden aspect-video min-h-[200px] md:min-h-0 bg-black border border-border-glass shadow-lg group">
-      <img
-        src={capturedPhoto}
-        alt="Foto Presensi Terambil"
-        className="w-full h-full object-cover"
-      />
-      <div className="absolute top-3 right-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onRetake}
-          className="px-3 py-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-md text-white text-xs font-semibold rounded-xl border border-white/20 transition-all flex items-center gap-1.5 shadow-md"
-        >
-          <LuRefreshCw className="text-xs" />
-          <span>Foto Ulang</span>
-        </button>
-      </div>
-      <div className="absolute bottom-3 left-3 right-3 md:right-auto bg-emerald-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md">
-        <LuCheck className="text-sm shrink-0" />
-        <span>Foto berhasil dilampirkan. Status GPS ditampilkan terpisah.</span>
-      </div>
+    <div className="camera-viewport">
+      <img src={capturedPhoto} alt="Foto bukti yang diambil" />
+      <button type="button" onClick={onRetake} className="camera-overlay-button">
+        <LuRefreshCw aria-hidden="true" />
+        Foto ulang
+      </button>
+      <p className="camera-attached">
+        <i className="camera-dot" aria-hidden="true" />
+        Foto terlampir
+      </p>
     </div>
   );
 };
