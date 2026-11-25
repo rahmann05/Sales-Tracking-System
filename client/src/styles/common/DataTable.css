@@ -176,3 +176,74 @@ table.app-data-table [hidden] {
     min-width: 640px;
   }
 }
+
+/* Sticky viewport-relative horizontal scroll bar for wide report tables */
+.report-table-hscroll {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--table-border);
+  box-shadow: 0 -4px 12px -4px rgba(15, 23, 42, 0.08);
+}
+
+.report-table-hscroll-btn {
+  flex-shrink: 0;
+  min-inline-size: 32px;
+  min-block-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--table-border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--table-text);
+  cursor: pointer;
+}
+
+.report-table-hscroll-btn:hover:not(:disabled) {
+  background: var(--table-row-hover);
+}
+
+.report-table-hscroll-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.report-table-hscroll-track {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(29, 29, 31, 0.35) rgba(0, 0, 0, 0.05);
+}
+
+.report-table-hscroll-track::-webkit-scrollbar {
+  height: 10px;
+}
+
+.report-table-hscroll-track::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 9999px;
+}
+
+.report-table-hscroll-track::-webkit-scrollbar-thumb {
+  background: rgba(29, 29, 31, 0.32);
+  border-radius: 9999px;
+}
+
+.report-table-hscroll-track::-webkit-scrollbar-thumb:hover {
+  background: rgba(29, 29, 31, 0.5);
+}
+
+@media (max-width: 767px) {
+  .report-table-hscroll {
+    display: none;
+  }
+}

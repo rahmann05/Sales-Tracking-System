@@ -158,6 +158,7 @@ export const PersistentMapShell = () => {
             markers={mapState?.markers || []}
             routes={mapState?.routes || []}
             onMapClick={handleFallbackClick}
+            showInternalOverlays={false}
           />
         </div>
       )}

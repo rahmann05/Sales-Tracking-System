@@ -19,13 +19,29 @@ export const useMapShapes = ({ mapInstanceRef, polylinesRef, polygonsRef, setMap
     routesData.forEach((r, i) => {
       const key = String(r.id ?? i);
       const path = (r.path || []).map((p) => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+      const strokeColor = r.color || '#4ade80';
+      const strokeOpacity = r.strokeOpacity ?? (r.isActive ? 1.0 : 0.4);
       const opts = {
         path,
         map,
-        strokeColor: r.color || '#4ade80',
-        strokeOpacity: r.strokeOpacity ?? (r.isActive ? 1.0 : 0.4),
+        strokeColor,
+        strokeOpacity: r.isDashed ? 0 : strokeOpacity,
         strokeWeight: r.strokeWeight ?? (r.isActive ? 4 : 2),
-        zIndex: r.isActive ? 10 : 1,
+        zIndex: r.zIndex ?? (r.isActive ? 10 : 1),
+        icons: r.isDashed
+          ? [
+              {
+                icon: {
+                  path: 'M 0,-1 0,1',
+                  strokeOpacity,
+                  strokeColor,
+                  scale: 3,
+                },
+                offset: '0',
+                repeat: '14px',
+              },
+            ]
+          : [],
       };
       const existing = polylinesRef.current.get(key);
       if (existing) {
@@ -62,8 +78,8 @@ export const useMapShapes = ({ mapInstanceRef, polylinesRef, polygonsRef, setMap
         paths: path,
         map,
         strokeColor: p.color || '#3b82f6',
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
+        strokeOpacity: p.strokeOpacity ?? 0.8,
+        strokeWeight: p.strokeWeight ?? 2,
         fillColor: p.color || '#3b82f6',
         fillOpacity: p.fillOpacity ?? 0.12,
         zIndex: 1,

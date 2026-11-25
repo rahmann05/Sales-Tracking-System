@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { reconciliationFingerprint } from '../../../shared/invoice-reconciliation.mjs';
+import { mileagePoint } from '../../src/modules/delivery/services/vehicle-mileage-plan.service.js';
 import { makeEvidencePng, makeSignaturePng } from './completions.js';
 import { at, ensure, id, note, offsetDate, operationalPolicy, workingDaysBack } from './context.js';
 
@@ -146,6 +147,13 @@ export async function seedWarehouse(db, master, salesData, date) {
           sourceOrderIds: [ord.id],
           totalCartons: cartons,
           totalWeight: cartons * 5,
+          outlet: {
+            id: ord.outlet.id,
+            name: ord.outlet.name,
+            address: ord.outlet.address,
+            outletCode: ord.outlet.outletCode,
+          },
+          point: mileagePoint(ord.outlet),
         });
         items.push(...makePackingItems(ord, destId));
         const invCode = `BF-INV-${def.day.replaceAll('-', '')}-${String(invSeq++).padStart(3, '0')}`;

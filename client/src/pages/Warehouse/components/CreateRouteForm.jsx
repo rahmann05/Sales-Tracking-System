@@ -228,7 +228,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
     (pl) =>
       pl.remainingCartons > 0 &&
       !entries.some((entry) => entry.packingListId === pl.id) &&
-      `${pl.code} ${pl.outlet?.name} ${(pl.destinations || []).map((row) => row.outlet.name).join(' ')}`
+      `${pl.code || ''} ${pl.outlet?.name || ''} ${(pl.destinations || []).map((row) => row?.outlet?.name || '').join(' ')}`
         .toLocaleLowerCase('id-ID')
         .includes(query.toLocaleLowerCase('id-ID'))
   );

@@ -229,20 +229,21 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
       (item) => item.destinationId === dest.id && Number(item.quantity) > 0
     );
     const destInvoices = load.invoices.filter((inv) => inv.destinationId === dest.id);
-    if (!dest.point) releaseIssues.push(`${dest.outlet.name}: titik lokasi toko belum tersedia.`);
+    const destLabel = dest.outlet?.name || 'Toko';
+    if (!dest.point) releaseIssues.push(`${destLabel}: titik lokasi toko belum tersedia.`);
     if (!destItems.length)
-      releaseIssues.push(`${dest.outlet.name}: minimal 1 barang dibawa (> 0).`);
+      releaseIssues.push(`${destLabel}: minimal 1 barang dibawa (> 0).`);
     if (Number(dest.totalCartons) <= 0)
-      releaseIssues.push(`${dest.outlet.name}: jumlah karton harus > 0.`);
+      releaseIssues.push(`${destLabel}: jumlah karton harus > 0.`);
     if (required && !destInvoices.length)
-      releaseIssues.push(`${dest.outlet.name}: faktur wajib dilampirkan.`);
+      releaseIssues.push(`${destLabel}: faktur wajib dilampirkan.`);
     if (destInvoices.some((inv) => Number(inv.totalCartons) <= 0))
-      releaseIssues.push(`${dest.outlet.name}: karton tiap faktur harus > 0.`);
+      releaseIssues.push(`${destLabel}: karton tiap faktur harus > 0.`);
     if (
       manualCodeRequired('INVOICE', settings) &&
       destInvoices.some((inv) => !String(inv.invoiceNumber || '').trim())
     )
-      releaseIssues.push(`${dest.outlet.name}: nomor faktur masih kosong.`);
+      releaseIssues.push(`${destLabel}: nomor faktur masih kosong.`);
   }
   const setInvoice = (index, invoice) =>
     setLoad((current) => ({
@@ -488,9 +489,11 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                   <div className="packing-target-title">
                     <span className="app-sequence">{index + 1}</span>
                     <div>
-                      <h3 className="font-semibold text-base">{destination.outlet.name}</h3>
+                      <h3 className="font-semibold text-base">
+                        {destination.outlet?.name || 'Toko'}
+                      </h3>
                       <p className="text-xs text-on-surface-variant">
-                        {destination.outlet.address}
+                        {destination.outlet?.address || ''}
                       </p>
                       <div className="packing-target-meta">
                         <span>{destination.sourceOrderIds.length} order</span>
@@ -730,7 +733,7 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                             Jumlah karton / koli fisik
                             <input
                               className="form-input block w-full"
-                              aria-label={`Jumlah karton ${destination.outlet.name}`}
+                              aria-label={`Jumlah karton ${destination.outlet?.name || 'Toko'}`}
                               type="number"
                               min="0"
                               step="1"
@@ -835,7 +838,9 @@ export function PackingLoadForm({ document: doc, order, orders, onSaved, onCance
                   <>
                     <div className="space-y-3">
                       <div className="flex flex-wrap gap-3 items-center justify-between">
-                        <h4 className="font-semibold">Faktur untuk {destination.outlet.name}</h4>
+                        <h4 className="font-semibold">
+                          Faktur untuk {destination.outlet?.name || 'Toko'}
+                        </h4>
                         <button
                           type="button"
                           className="admin-button"

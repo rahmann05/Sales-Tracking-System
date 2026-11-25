@@ -275,13 +275,15 @@ export const getDailyCallReport = async (query = {}) => {
         orderAmount,
         reason: stop.validationOnly
           ? `Validasi outlet · ${stop.validationResult?.state || 'PENDING'}`
-          : businessResult?.reason ||
-            checkOut?.earlyReason ||
-            (!isEc && isActual
-              ? 'Tidak Ada Order'
-              : isSkipped
-                ? 'Belum Dikunjungi / Terlewat'
-                : ''),
+          : isEc
+            ? ''
+            : businessResult?.reason ||
+              checkOut?.earlyReason ||
+              (isActual
+                ? 'Tidak Ada Order'
+                : isSkipped
+                  ? 'Belum Dikunjungi / Terlewat'
+                  : ''),
         earlyReason: checkOut?.earlyReason || null,
         visitOutcome: businessResult?.visitOutcome || null,
         remark: [
@@ -355,7 +357,7 @@ export const getDailyCallReport = async (query = {}) => {
       extraCall: 'Y',
       skuSold: offResult.skuSold,
       orderAmount: offResult.orderAmount,
-      reason: off.reason || 'Extra Call / Off-PJP',
+      reason: offResult.effective ? '' : off.reason || 'Extra Call / Off-PJP',
       earlyReason: null,
       visitOutcome: off.visitOutcome || null,
       remark: [`Off-PJP: ${off.reason}`, visitOutcomeText(off.visitOutcome)]

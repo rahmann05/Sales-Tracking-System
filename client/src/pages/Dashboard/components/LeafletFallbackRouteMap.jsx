@@ -38,6 +38,7 @@ export const LeafletFallbackRouteMap = ({
   routeLegs = [],
   routeProvider = 'osrm',
   clusterBaseColor = '#2563eb',
+  showInternalOverlays = true,
 }) => {
   const mapPolicy = useFeaturePolicy('MAPS');
   if (
@@ -88,15 +89,15 @@ export const LeafletFallbackRouteMap = ({
         minHeight: '400px',
       }}
     >
-      <ClusterMapLegend selectedClusterColor={clusterBaseColor} />
+      {showInternalOverlays ? <ClusterMapLegend selectedClusterColor={clusterBaseColor} /> : null}
 
-      {selectedSales && (
+      {showInternalOverlays && selectedSales ? (
         <SelectedSalesMapHeader
           selectedSales={selectedSales}
           onBack={onClearSelection}
           userRole={userRole}
         />
-      )}
+      ) : null}
 
       <MapContainer
         center={[centerLat, centerLng]}
@@ -129,11 +130,13 @@ export const LeafletFallbackRouteMap = ({
           const lng = Number(m.lng ?? m.longitude);
           if (isNaN(lat) || isNaN(lng)) return null;
           const markerColor = m.color || '#2563eb';
+          const pinLabel =
+            m.sequenceLabel ?? (typeof m.label === 'string' ? m.label : m.label?.text);
           return (
             <Marker
               key={m.id || `m-${idx}`}
               position={[lat, lng]}
-              icon={createCustomPinIcon(markerColor, false)}
+              icon={createCustomPinIcon(markerColor, Boolean(m._highlighted), pinLabel)}
               eventHandlers={{
                 click: () => {
                   if (typeof m.onClick === 'function') m.onClick(m);
@@ -167,6 +170,7 @@ export const LeafletFallbackRouteMap = ({
                 color: r.color || '#2563eb',
                 weight: r.strokeWeight || 4,
                 opacity: r.strokeOpacity || 0.85,
+                dashArray: r.isDashed ? '8 8' : undefined,
               }}
             />
           );
@@ -302,7 +306,7 @@ export const LeafletFallbackRouteMap = ({
         )}
       </MapContainer>
 
-      <RouteProviderBadge provider={routeProvider} />
+      {showInternalOverlays ? <RouteProviderBadge provider={routeProvider} /> : null}
     </div>
   );
 };

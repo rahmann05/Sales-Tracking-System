@@ -23,19 +23,31 @@ const createSalesLivePinIcon = () => {
 };
 
 // Helper custom Leaflet pin icon generator
-export const createCustomPinIcon = (color = '#2563eb', isSelected = false) => {
-  const size = isSelected ? 34 : 26;
+export const createCustomPinIcon = (color = '#2563eb', isSelected = false, label = null) => {
+  const safeColor = typeof color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : '#2563eb';
+  const rawLabel = label != null && String(label).trim() !== '' ? String(label).trim() : '';
+  const safeLabel = rawLabel
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+  const width = isSelected ? 34 : safeLabel ? 28 : 24;
+  const height = Math.round((width * 44) / 34);
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}">
-      <path fill="${color}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 44" width="${width}" height="${height}">
+      <path fill="${safeColor}" stroke="#ffffff" stroke-width="${isSelected ? 2.4 : 1.8}" d="M17 2C9.268 2 3 8.268 3 16c0 9.6 14 25 14 25s14-15.4 14-25C31 8.268 24.732 2 17 2z"/>
+      ${
+        safeLabel
+          ? `<text x="17" y="20.2" text-anchor="middle" fill="#ffffff" font-family="system-ui,sans-serif" font-size="${safeLabel.length >= 3 ? 9.5 : 12.5}" font-weight="800">${safeLabel}</text>`
+          : '<circle cx="17" cy="16" r="4" fill="#ffffff"/>'
+      }
     </svg>
   `;
   return L.divIcon({
     className: 'custom-leaflet-marker',
     html: svg,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size],
+    iconSize: [width, height],
+    iconAnchor: [width / 2, height],
+    popupAnchor: [0, -height],
   });
 };
 

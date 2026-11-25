@@ -226,6 +226,7 @@ export const useBackendSync = ({
                   outlet: s.outlet,
                   radiusMeters: s.outlet?.radiusMeters ?? null,
                   callplanName: p.name || '',
+                  clusterId: s.outlet?.clusterId || s.outlet?.cluster?.id || cluster?.id || null,
                   clusterName: s.outlet?.cluster?.name || cluster?.name || '',
                   regionName: s.outlet?.cluster?.region || cluster?.region || '',
                   dayOfWeek: p.dayOfWeek || '',
@@ -259,6 +260,10 @@ export const useBackendSync = ({
                   [...new Set(stops.map((s) => s.regionName).filter(Boolean))].join(' · ') ||
                   cluster?.region ||
                   '',
+                clusterId: cluster?.id || stops.find((s) => s.clusterId)?.clusterId || null,
+                clusterIds: [
+                  ...new Set([cluster?.id, ...stops.map((s) => s.clusterId)].filter(Boolean)),
+                ],
                 clusterName:
                   [...new Set(stops.map((s) => s.clusterName).filter(Boolean))].join(' · ') ||
                   cluster?.name ||

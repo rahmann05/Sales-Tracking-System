@@ -60,8 +60,8 @@ function buildVehicleLoadBlueprint(data) {
                 (id) => data.items.find((item) => item.sourceOrderId === id)?.sourceOrderCode || id
               )
               .join(', '),
-            destination?.outlet.name || 'Belum ditetapkan',
-            `${destination?.outlet.address || ''}${destination?.point ? ` · ${destination.point.latitude}, ${destination.point.longitude}` : ''}`,
+            destination?.outlet?.name || 'Belum ditetapkan',
+            `${destination?.outlet?.address || ''}${destination?.point ? ` · ${destination.point.latitude}, ${destination.point.longitude}` : ''}`,
             formatNumber(invoice.totalCartons),
             invoice.totalAmount == null ? 'Tidak dicatat' : formatCurrency(invoice.totalAmount),
           ];
@@ -72,7 +72,7 @@ function buildVehicleLoadBlueprint(data) {
         title: '3. Rincian barang per order dan tujuan',
         headers: ['Toko', 'Order', 'Faktur', 'SKU', 'Produk', 'Kuantitas', 'Satuan'],
         rows: data.items.map((item) => [
-          destinationFor(item.destinationId)?.outlet.name || '',
+          destinationFor(item.destinationId)?.outlet?.name || '',
           item.sourceOrderCode || 'Manual',
           invoiceFor(item.lineId),
           item.sku,
@@ -86,7 +86,7 @@ function buildVehicleLoadBlueprint(data) {
         title: '4. Rekap kemasan dan berat per tujuan',
         headers: ['Toko', 'Karton', 'Berat kg', 'Koordinat'],
         rows: data.destinations.map((destination) => [
-          destination.outlet.name,
+          destination?.outlet?.name || 'Belum ditetapkan',
           formatNumber(destination.totalCartons),
           destination.totalWeight == null
             ? 'Belum diketahui'

@@ -4,7 +4,13 @@ export const useMapMarkers = ({ mapInstanceRef, markersRef, setMapState }) => {
   // Viewport-based marker culling for zero-lag rendering when marker count is large
   const cullMarkersToViewport = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (!map || !window.google || markersRef.current.size <= 40) return;
+    if (!map || !window.google) return;
+    if (markersRef.current.size <= 40) {
+      markersRef.current.forEach((marker) => {
+        if (marker.getMap() !== map) marker.setMap(map);
+      });
+      return;
+    }
     const bounds = map.getBounds();
     if (!bounds) return;
 
@@ -68,6 +74,7 @@ export const useMapMarkers = ({ mapInstanceRef, markersRef, setMapState }) => {
         const existing = markersRef.current.get(key);
         if (existing) {
           existing._isHighlighted = isHigh;
+          if (existing.getMap() !== map) existing.setMap(map);
           existing.setPosition(position);
           if (m.icon !== undefined) existing.setIcon(m.icon);
           if (m.title !== undefined) existing.setTitle(m.title);

@@ -1,18 +1,36 @@
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
-import { LuClock, LuMapPin, LuShieldAlert, LuCar } from 'react-icons/lu';
+import {
+  LuClock,
+  LuMapPin,
+  LuShieldAlert,
+  LuCar,
+  LuHourglass,
+  LuCircleCheck,
+} from 'react-icons/lu';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 
+const EMPTY_COUNTS = { TRAVEL: 0, DURATION: 0, DISTANCE: 0, SKIPPED: 0 };
+
+const FILTER_OPTIONS = [
+  { key: 'ALL', label: 'Semua', Icon: null },
+  { key: 'TRAVEL', label: 'Jeda perjalanan', Icon: LuCar },
+  { key: 'DURATION', label: 'Durasi singkat', Icon: LuClock },
+  { key: 'DISTANCE', label: 'Di luar radius', Icon: LuMapPin },
+  { key: 'SKIPPED', label: 'Terlewat', Icon: LuHourglass },
+];
+
 /**
- * SuspiciousAttendanceTable Component
- * Single Responsibility: Dedicated table and audit dashboard for abnormal / suspicious attendances
- * (Early checkout < 5 minutes, GPS deviation > 50 meters, Travel time gaps e.g. 2km in 2 hours, and Skipped visits).
+ * SuspiciousAttendanceSummary Component
+ * Single Responsibility: Header, conditional finding status indicator, category filters, and export actions.
  */
 export function SuspiciousAttendanceSummary({
   filterAnomalyType,
   setFilterAnomalyType,
-  suspiciousRows = [],
+  totalCount = 0,
+  categoryCounts = EMPTY_COUNTS,
+  exportCount = 0,
   onExportDocx,
   onExportExcel,
   onExportCsv,
@@ -23,85 +41,31 @@ export function SuspiciousAttendanceSummary({
   const canExport = reportExportAllowed(user, settings);
 
   return (
-    <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 suspicious-header-mobile">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-          <LuShieldAlert className="text-xl" />
-        </div>
-        <div>
+    <div className="bg-surface border border-border-glass rounded-xl p-4 space-y-3 suspicious-header-mobile">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-sm font-black text-rose-700 m-0 uppercase tracking-tight">
-              Tabel Khusus Audit Absensi Janggal & Anomali Lapangan
+            <h3 className="text-sm font-semibold text-on-surface m-0">
+              Audit absensi &amp; indikasi lapangan
             </h3>
-            <span className="admin-status admin-status-rejected">
-              {suspiciousRows.length} Temuan
-            </span>
+            {totalCount === 0 ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#e4f7ea] text-[#15803d]">
+                <LuCircleCheck className="text-xs shrink-0" aria-hidden="true" />
+                Tidak ada temuan
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3]">
+                <LuShieldAlert className="text-xs shrink-0" aria-hidden="true" />
+                {totalCount} temuan
+              </span>
+            )}
           </div>
-          <p className="text-xs text-rose-800/80 m-0 mt-0.5">
-            Kunjungan yang memerlukan evaluasi: durasi di bawah batas aturan, posisi di luar radius,
-            jeda perjalanan yang perlu diperiksa, atau jadwal terlewat. Penilaian mengikuti aturan
-            dan bukti yang tersedia.
+          <p className="text-xs text-on-surface-variant m-0 mt-1">
+            Kunjungan yang perlu dievaluasi: durasi di bawah batas aturan, posisi di luar radius,
+            jeda perjalanan, atau jadwal terlewat. Penilaian mengikuti aturan dan bukti yang
+            tersedia.
           </p>
         </div>
-      </div>
-
-      {/* Filter Pills & Export */}
-      <div className="flex items-center gap-2 flex-wrap self-start md:self-auto suspicious-filter-pills-mobile w-full md:w-auto">
-        <button
-          type="button"
-          onClick={() => setFilterAnomalyType('ALL')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            filterAnomalyType === 'ALL'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
-          }`}
-        >
-          Semua ({suspiciousRows.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterAnomalyType('TRAVEL')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-            filterAnomalyType === 'TRAVEL'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
-          }`}
-        >
-          <LuCar className="text-xs" /> Jeda Travel
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterAnomalyType('DURATION')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-            filterAnomalyType === 'DURATION'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
-          }`}
-        >
-          <LuClock className="text-xs" /> Di bawah batas durasi
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterAnomalyType('DISTANCE')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-            filterAnomalyType === 'DISTANCE'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
-          }`}
-        >
-          <LuMapPin className="text-xs" /> Di luar radius aturan
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterAnomalyType('SKIPPED')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-            filterAnomalyType === 'SKIPPED'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-surface text-on-surface-variant border border-border-glass hover:bg-surface-container'
-          }`}
-        >
-          ⏳ Terlewat
-        </button>
 
         <ExportFormatMenu
           onExportDocx={onExportDocx}
@@ -109,10 +73,40 @@ export function SuspiciousAttendanceSummary({
           onExportCsv={onExportCsv}
           onExportTxt={onExportTxt}
           onExportPdf={onExportPdf}
-          disabled={!canExport}
+          disabled={!canExport || exportCount === 0}
           compact={true}
-          className="md:ml-auto"
+          className="shrink-0 self-start"
         />
+      </div>
+
+      {/* Category Filter Toolbar */}
+      <div
+        role="group"
+        aria-label="Filter kategori temuan absensi"
+        className="border-t border-border-glass pt-3 flex items-center gap-2 flex-wrap suspicious-filter-pills-mobile"
+      >
+        {FILTER_OPTIONS.map(({ key, label, Icon }) => {
+          const isActive = filterAnomalyType === key;
+          const count = key === 'ALL' ? totalCount : categoryCounts[key] || 0;
+          const showCount = key === 'ALL' || count > 0;
+
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => setFilterAnomalyType(key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer inline-flex items-center gap-1.5 border ${
+                isActive
+                  ? 'bg-primary text-on-primary border-primary'
+                  : 'bg-surface text-on-surface-variant border-border-glass hover:bg-surface-container hover:text-on-surface'
+              }`}
+            >
+              {Icon ? <Icon className="text-xs shrink-0" aria-hidden="true" /> : null}
+              <span>{showCount ? `${label} (${count})` : label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

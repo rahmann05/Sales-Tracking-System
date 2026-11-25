@@ -191,17 +191,14 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
 
       {/* 9. Reason & Remark */}
       <td data-label="Catatan" className="min-w-[150px] py-2.5 px-2.5">
-        {row.isTravelAnomaly && (
-          <div className="text-[10px] font-bold text-rose-700 leading-tight mb-1 flex items-center gap-1">
-            <LuShieldAlert className="text-[10px] shrink-0" />
+        {row.isTravelAnomaly ? (
+          <div className="text-[11px] font-semibold text-rose-700 leading-snug mb-1 flex items-start gap-1">
+            <LuShieldAlert className="text-xs shrink-0 mt-0.5" aria-hidden="true" />
             <span>{row.travelAnomalyReason}</span>
           </div>
-        )}
+        ) : null}
         {row.reason ? (
-          <div
-            className="text-xs font-semibold text-rose-600 leading-snug break-words"
-            title={row.reason}
-          >
+          <div className="text-xs text-on-surface leading-snug break-words" title={row.reason}>
             {row.reason}
           </div>
         ) : row.remark ? (
@@ -211,18 +208,18 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
           >
             {row.remark}
           </div>
-        ) : (
+        ) : !row.isTravelAnomaly && !row.earlyReason ? (
           <span className="text-on-surface-variant/60 font-mono text-xs">—</span>
-        )}
-        {row.earlyReason && (
+        ) : null}
+        {row.earlyReason ? (
           <div
-            className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1"
+            className="text-[11px] text-amber-700 font-medium mt-1 flex items-start gap-1"
             title={row.earlyReason}
           >
-            <LuTriangleAlert className="text-[10px] shrink-0" />
+            <LuTriangleAlert className="text-xs shrink-0 mt-0.5" aria-hidden="true" />
             <span>{row.earlyReason}</span>
           </div>
-        )}
+        ) : null}
       </td>
 
       {/* 10. GPS Deviation */}

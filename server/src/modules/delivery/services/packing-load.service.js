@@ -116,18 +116,19 @@ export function loadReadyError(packing, invoiceRequired) {
   for (const destination of packing.destinations) {
     const items = packing.items.filter((item) => item.destinationId === destination.id),
       invoices = packing.invoices.filter((invoice) => invoice.destinationId === destination.id);
+    const outletName = destination.outlet?.name || 'tujuan';
     if (!items.length || destination.totalCartons <= 0)
-      return `Lengkapi barang dan karton untuk ${destination.outlet.name}.`;
-    if (!destination.point) return `Titik pengiriman ${destination.outlet.name} belum tersedia.`;
+      return `Lengkapi barang dan karton untuk ${outletName}.`;
+    if (!destination.point) return `Titik pengiriman ${outletName} belum tersedia.`;
     if (invoiceRequired && !invoices.length)
-      return `Faktur untuk ${destination.outlet.name} belum dilampirkan.`;
+      return `Faktur untuk ${outletName} belum dilampirkan.`;
     if (
       invoices.length &&
       (invoices.some((invoice) => invoice.totalCartons <= 0) ||
         invoices.reduce((sum, invoice) => sum + invoice.totalCartons, 0) !==
           destination.totalCartons)
     )
-      return `Karton faktur ${destination.outlet.name} belum sesuai muatan tujuan tersebut.`;
+      return `Karton faktur ${outletName} belum sesuai muatan tujuan tersebut.`;
   }
   return null;
 }

@@ -1,12 +1,23 @@
 import { useWorkspaceState } from '../../shared/hooks/useWorkspaceState';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ActiveRoutesList } from './components/ActiveRoutesList';
+import { ClusterMapLegend } from './components/ClusterMapLegend';
+import { RouteProviderBadge } from './components/RouteProviderBadge';
 import { filterStopsForToday } from '../../utils/dateUtils';
 import { useMap } from '../../context/MapContext';
 import { useMapData } from '../../context/MapDataContext';
 import { computeClusterPolygons } from '../../utils/clusterBoundaryHelper';
 import { googlePlacesService } from '../../services/googlePlacesService';
+import { googleDirectionsService } from '../../services/googleDirectionsService';
+import {
+  resolveClusterColor,
+  buildClusterSequenceMap,
+  resolveRouteClusters,
+  filterOperationalMapScope,
+  buildPjpStopLookup,
+  buildNumberedPinSvg,
+} from './dashboardMapHelpers';
 import '../../styles/pages/Dashboard.css';
 
 export const DashboardPage = () => {
@@ -30,6 +41,9 @@ export const DashboardPage = () => {
     refetchAll,
   } = useMapData();
 
+  const outletsRef = useRef(outlets);
+  outletsRef.current = outlets;
+
   const [clusterLayer, setClusterLayer] = useWorkspaceState(
     'mapClusters',
     settings.MAP_DEFAULT_SHOW_CLUSTERS === false ? 'OFF' : 'ON'
@@ -40,7 +54,6 @@ export const DashboardPage = () => {
   );
   const isSalesRole = user?.role === 'SALES';
 
-  // Stops & rute difilter ke jadwal HARI INI
   const todayStops = useMemo(() => filterStopsForToday(salesStops), [salesStops]);
 
   const todayRoutes = useMemo(() => {
@@ -49,8 +62,10 @@ export const DashboardPage = () => {
       .filter((route) => route.stops.length > 0);
   }, [activeRoutes]);
 
-  // ─── Sales name filter ──────────────────────────────────────────────────────
   const [selectedSalesName, setSelectedSalesName] = useState('ALL');
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [selectedOutlet, setSelectedOutlet] = useState(null);
+  const [routeStatus, setRouteStatus] = useState(null);
 
   const salesOptions = useMemo(() => {
     const names = new Set();
@@ -66,15 +81,6 @@ export const DashboardPage = () => {
     return todayRoutes.filter((r) => (r.repName || r.name) === selectedSalesName);
   }, [todayRoutes, selectedSalesName]);
 
-  const routes = filteredRoutes;
-
-  // Selected Sales route (for SPV/Manager view or drilldown)
-  const [selectedRoute, setSelectedRoute] = useState(null);
-
-  // Selected Outlet (for auto-focusing map panTo)
-  const [selectedOutlet, setSelectedOutlet] = useState(null);
-
-  // For Sales role, restrict strictly to their own assigned stops
   const displayStops = useMemo(() => {
     if (isSalesRole) {
       const myStops = todayStops.filter(
@@ -85,10 +91,84 @@ export const DashboardPage = () => {
     return todayStops;
   }, [todayStops, isSalesRole, user]);
 
-  // ─── Map Mode Setup & Teardown ──────────────────────────────────────────────
+  // O(1) lookup maps for clusters, sequence numbers from DB, and route colors
+  const clusterById = useMemo(
+    () => new Map(mapClusters.map((c) => [c.id, c])),
+    [mapClusters]
+  );
+
+  const clusterSequenceMap = useMemo(
+    () => buildClusterSequenceMap(mapClusters),
+    [mapClusters]
+  );
+
+  const clusterColorByRouteId = useMemo(() => {
+    const map = {};
+    todayRoutes.forEach((route, idx) => {
+      const matched = resolveRouteClusters(route, mapClusters);
+      map[route.id] = resolveClusterColor(matched[0], idx);
+    });
+    return map;
+  }, [todayRoutes, mapClusters]);
+
+  // Scope visible clusters & outlets to active salesman / route filter
+  const { isFiltered, visibleClusters, visibleOutlets, focusRoutes } = useMemo(
+    () =>
+      filterOperationalMapScope({
+        outlets,
+        clusters: mapClusters,
+        routes: todayRoutes,
+        selectedSalesName,
+        selectedRoute,
+      }),
+    [outlets, mapClusters, todayRoutes, selectedSalesName, selectedRoute]
+  );
+
+  const pjpLookup = useMemo(
+    () => buildPjpStopLookup(isFiltered ? (selectedRoute ? [selectedRoute] : focusRoutes) : todayRoutes),
+    [isFiltered, selectedRoute, focusRoutes, todayRoutes]
+  );
+
+  const legendData = useMemo(() => {
+    const visibleIds = new Set(visibleClusters.map((c) => c.id));
+    const countByCluster = new Map();
+    visibleOutlets.forEach((o) => {
+      if (o.clusterId) {
+        countByCluster.set(o.clusterId, (countByCluster.get(o.clusterId) || 0) + 1);
+      }
+    });
+
+    const clusters = visibleClusters.map((c, idx) => ({
+      id: c.id,
+      name: c.name,
+      color: resolveClusterColor(c, idx),
+      salesName: c.assignedSales?.name || '',
+      outletCount: countByCluster.get(c.id) ?? (visibleIds.has(c.id) ? 0 : null),
+    }));
+
+    const hasClusterSequence = visibleOutlets.some(
+      (o) =>
+        !pjpLookup.byOutletId.has(o.id) &&
+        !(o.outletCode && pjpLookup.byOutletCode.has(o.outletCode)) &&
+        clusterSequenceMap.has(o.id)
+    );
+
+    return {
+      clusters,
+      totalOutletsCount: visibleOutlets.length,
+      hasClusterSequence,
+    };
+  }, [visibleClusters, visibleOutlets, pjpLookup, clusterSequenceMap]);
+
+  const handleSelectOutlet = useCallback((stopOrOutlet) => {
+    if (!stopOrOutlet) return;
+    setSelectedOutlet(stopOrOutlet);
+    googlePlacesService.openInGoogleMaps(stopOrOutlet, outletsRef.current);
+  }, []);
+
+  // Setup & Teardown Map Mode
   useEffect(() => {
     setMapMode('dashboard');
-
     return () => {
       setMapMode('hidden');
       clearMarkers();
@@ -98,10 +178,11 @@ export const DashboardPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── 1. Cluster Polygons (Wilayah Klaster Hari Ini) ─────────────────────────
-  const clusterPolygons = useMemo(() => {
-    return computeClusterPolygons(mapClusters, outlets);
-  }, [mapClusters, outlets]);
+  // 1. Cluster Polygons (scoped to active filter)
+  const clusterPolygons = useMemo(
+    () => computeClusterPolygons(visibleClusters, visibleOutlets),
+    [visibleClusters, visibleOutlets]
+  );
 
   useEffect(() => {
     if (!isMapReady) return;
@@ -110,177 +191,241 @@ export const DashboardPage = () => {
       return;
     }
 
-    // Highlight cluster if selected route or filtered sales belongs to it
-    const activeClusterName = selectedRoute?.clusterName;
-
-    const styledPolygons = clusterPolygons.map((poly) => {
-      const isHighlighted =
-        activeClusterName && poly.name.toLowerCase() === activeClusterName.toLowerCase();
-      return {
-        ...poly,
-        strokeOpacity: isHighlighted ? 1.0 : 0.7,
-        strokeWeight: isHighlighted ? 3 : 2,
-        fillOpacity: isHighlighted ? 0.28 : 0.12,
-      };
-    });
-
+    const styledPolygons = clusterPolygons.map((poly) => ({
+      ...poly,
+      strokeOpacity: isFiltered ? 0.95 : 0.72,
+      strokeWeight: isFiltered ? 2.5 : 2,
+      fillOpacity: isFiltered ? 0.22 : 0.12,
+    }));
     setPolygons(styledPolygons);
-  }, [isMapReady, clusterPolygons, selectedRoute, setPolygons, clusterLayer, clearPolygons]);
+  }, [isMapReady, clusterPolygons, isFiltered, setPolygons, clusterLayer, clearPolygons]);
 
-  // ─── 2. Outlet Markers ──────────────────────────────────────────────────────
+  const selectedOutletId = selectedOutlet?.id || null;
+  const selectedOutletCode = selectedOutlet?.outletCode || selectedOutlet?.customerId || null;
+  const selectedRefOutletId = selectedOutlet?.outletId || null;
+
+  // 2. Scoped & Numbered Outlet Markers
   useEffect(() => {
     if (!isMapReady) return;
-    if (outletLayer === 'OFF' || outlets.length === 0) {
+    if (outletLayer === 'OFF' || visibleOutlets.length === 0) {
       clearMarkers();
       return;
     }
 
-    let visibleOutlets = outlets;
-
-    if (selectedRoute && Array.isArray(selectedRoute.stops) && selectedRoute.stops.length > 0) {
-      const routeOutletCodes = new Set(
-        selectedRoute.stops.map((s) => s.outletCode || s.customerId).filter(Boolean)
-      );
-      const routeOutletIds = new Set(selectedRoute.stops.map((s) => s.id).filter(Boolean));
-
-      visibleOutlets = outlets.map((o) => ({
-        ...o,
-        _highlighted: routeOutletCodes.has(o.outletCode) || routeOutletIds.has(o.id),
-      }));
-    } else if (selectedSalesName !== 'ALL') {
-      const currentSalesRoutes = todayRoutes.filter(
-        (r) => (r.repName || r.name) === selectedSalesName
-      );
-      const allowedCodes = new Set();
-      currentSalesRoutes.forEach((r) =>
-        r.stops.forEach((s) => {
-          if (s.outletCode) allowedCodes.add(s.outletCode);
-        })
-      );
-      visibleOutlets = outlets.map((o) => ({
-        ...o,
-        _highlighted: allowedCodes.has(o.outletCode),
-      }));
-    }
-
-    const getSvgMarker = (color, scale = 1, label = '') => {
-      const size = Math.round(30 * scale);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}"><path fill="${color}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
-      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-    };
-
-    // Find cluster color for an outlet
-    const getOutletColor = (outlet) => {
-      const cluster = mapClusters.find((c) => c.id === outlet.clusterId);
-      if (cluster?.colorHex) return cluster.colorHex;
-      return outlet.type === 'GENERAL_TRADE' ? '#3b82f6' : '#8b5cf6';
-    };
-
-    const handleSelectOutlet = (stopOrOutlet) => {
-      if (!stopOrOutlet) return;
-      setSelectedOutlet(stopOrOutlet);
-      googlePlacesService.openInGoogleMaps(stopOrOutlet, outlets);
-    };
+    const hasWindowGoogle = typeof window !== 'undefined' && Boolean(window.google?.maps);
 
     const markersData = visibleOutlets
-      .filter((o) => o.latitude && o.longitude)
+      .filter((o) => Number.isFinite(Number(o.latitude)) && Number.isFinite(Number(o.longitude)))
       .map((o) => {
-        const highlighted = o._highlighted;
-        const baseColor = getOutletColor(o);
+        const cluster = clusterById.get(o.clusterId);
+        const baseColor = resolveClusterColor(cluster);
+        const pjpEntry =
+          pjpLookup.byOutletId.get(o.id) ||
+          (o.outletCode ? pjpLookup.byOutletCode.get(o.outletCode) : null);
+        const isPjp = Boolean(pjpEntry);
+        const clusterSeq = clusterSequenceMap.get(o.id)?.sequence ?? null;
+        const number = isPjp ? pjpEntry.sequence : clusterSeq;
+        const isSelectedOutlet = Boolean(
+          (selectedOutletId && (selectedOutletId === o.id || selectedRefOutletId === o.id)) ||
+            (selectedOutletCode && o.outletCode === selectedOutletCode)
+        );
+
+        const scale = isSelectedOutlet
+          ? 1.25
+          : isPjp
+            ? 1.05
+            : isFiltered
+              ? 0.95
+              : 0.85;
+
+        const svgIcon = buildNumberedPinSvg({
+          color: baseColor,
+          number,
+          scale,
+          variant: isPjp ? 'pjp' : 'cluster',
+          status: pjpEntry?.stop?.status || null,
+          isSelected: isSelectedOutlet,
+        });
+
+        const scaledSize = hasWindowGoogle
+          ? new window.google.maps.Size(svgIcon.scaledSize.width, svgIcon.scaledSize.height)
+          : svgIcon.scaledSize;
+        const anchor = hasWindowGoogle
+          ? new window.google.maps.Point(svgIcon.anchor.x, svgIcon.anchor.y)
+          : svgIcon.anchor;
+
+        const prefix = number != null ? `#${number} · ` : '';
+        const suffix = isPjp
+          ? ` (${pjpEntry.stop?.status || 'PENDING'})`
+          : cluster?.name
+            ? ` · ${cluster.name}`
+            : '';
 
         return {
           id: o.id,
-          googleMapsOnly: o.googleMapsOnly,
+          googleMapsOnly: Boolean(o.googleMapsOnly),
           lat: Number(o.latitude),
           lng: Number(o.longitude),
-          title: o.name,
+          title: `${prefix}${o.name}${suffix}`,
+          color: baseColor,
+          sequenceLabel: number != null ? String(number) : undefined,
+          _highlighted: isPjp || isSelectedOutlet,
           icon: {
-            url: getSvgMarker(highlighted ? '#ea580c' : baseColor, highlighted ? 1.35 : 0.95),
-            anchor: window.google ? new window.google.maps.Point(15, 30) : { x: 15, y: 30 },
+            url: svgIcon.url,
+            scaledSize,
+            anchor,
           },
-          zIndex: highlighted ? 50 : 1,
-          onClick: () => {
-            handleSelectOutlet(o);
-          },
+          zIndex: isSelectedOutlet ? 200 : isPjp ? 100 : 10,
+          onClick: () => handleSelectOutlet(pjpEntry?.stop || o),
         };
       });
 
     setMarkers(markersData);
   }, [
     isMapReady,
-    outlets,
-    selectedRoute,
-    selectedSalesName,
-    todayRoutes,
-    mapClusters,
-    setMarkers,
+    visibleOutlets,
+    clusterById,
+    pjpLookup,
+    clusterSequenceMap,
+    selectedOutletId,
+    selectedRefOutletId,
+    selectedOutletCode,
+    isFiltered,
     outletLayer,
+    setMarkers,
     clearMarkers,
+    handleSelectOutlet,
   ]);
 
-  // ─── 3. Selected Route Polyline (Jalur Rute) ────────────────────────────────
+  // 3. Road-Following Route Polyline (Google Directions -> OSRM -> Straight-line Fallback)
   useEffect(() => {
     if (!isMapReady) return;
+    if (!selectedRoute || !Array.isArray(selectedRoute.stops) || selectedRoute.stops.length === 0) {
+      clearPolylines();
+      setRouteStatus(null);
+      return;
+    }
 
-    if (selectedRoute && Array.isArray(selectedRoute.stops) && selectedRoute.stops.length > 0) {
-      const pathPoints = selectedRoute.stops
-        .filter((s) => s.latitude && s.longitude)
-        .map((s) => ({ lat: Number(s.latitude), lng: Number(s.longitude) }));
+    const orderedStops = [...selectedRoute.stops].sort(
+      (a, b) => (Number(a.sequence) || 0) - (Number(b.sequence) || 0)
+    );
+    const waypoints = orderedStops
+      .filter((s) => Number.isFinite(Number(s.latitude)) && Number.isFinite(Number(s.longitude)))
+      .map((s) => ({
+        lat: Number(s.latitude),
+        lng: Number(s.longitude),
+        outletId: s.outletId || s.outlet?.id,
+        googleMapsOnly: Boolean(s.googleMapsOnly),
+      }));
 
-      if (pathPoints.length > 0) {
+    if (waypoints.length === 0) {
+      clearPolylines();
+      setRouteStatus(null);
+      return;
+    }
+    if (waypoints.length === 1) {
+      clearPolylines();
+      setRouteStatus(null);
+      panTo(waypoints[0].lat, waypoints[0].lng, 15);
+      return;
+    }
+
+    let cancelled = false;
+    const routeColor = clusterColorByRouteId[selectedRoute.id] || '#2563eb';
+    fitBounds(waypoints);
+    setRouteStatus({ loading: true, provider: 'LOADING', isFallback: false, reason: null });
+
+    googleDirectionsService.resolveRoadRouteWithMeta(waypoints).then((res) => {
+      if (cancelled) return;
+      const gMapsOnly = waypoints.some((w) => w.googleMapsOnly);
+      if (res.isFallback) {
         setPolylines([
           {
             id: `route-polyline-${selectedRoute.id}`,
-            googleMapsOnly: selectedRoute.stops.some((s) => s.googleMapsOnly),
-            path: pathPoints,
-            color: '#2563eb',
+            googleMapsOnly: gMapsOnly,
+            path: res.path,
+            color: routeColor,
             strokeWeight: 4,
-            strokeOpacity: 0.95,
+            strokeOpacity: 0.9,
+            isDashed: true,
+            zIndex: 10,
             isActive: true,
           },
         ]);
-
-        if (pathPoints.length > 1) {
-          fitBounds(pathPoints);
-        } else {
-          panTo(pathPoints[0].lat, pathPoints[0].lng, 15);
-        }
+      } else {
+        setPolylines([
+          {
+            id: `route-halo-${selectedRoute.id}`,
+            googleMapsOnly: gMapsOnly,
+            path: res.path,
+            color: '#ffffff',
+            strokeWeight: 7,
+            strokeOpacity: 0.85,
+            zIndex: 9,
+            isActive: false,
+          },
+          {
+            id: `route-polyline-${selectedRoute.id}`,
+            googleMapsOnly: gMapsOnly,
+            path: res.path,
+            color: routeColor,
+            strokeWeight: 4.5,
+            strokeOpacity: 0.95,
+            zIndex: 10,
+            isActive: true,
+          },
+        ]);
       }
-    } else {
-      clearPolylines();
-    }
-  }, [isMapReady, selectedRoute, setPolylines, clearPolylines, fitBounds, panTo]);
+      setRouteStatus({
+        loading: false,
+        provider: res.provider,
+        isFallback: res.isFallback,
+        reason: res.reason,
+      });
+    });
 
-  // ─── 4. Auto-Focus ke Outlet yang dipilih ───────────────────────────────────
+    return () => {
+      cancelled = true;
+    };
+  }, [isMapReady, selectedRoute, clusterColorByRouteId, setPolylines, clearPolylines, fitBounds, panTo]);
+
+  // 4. Auto-fit bounds when filtering by sales without an active route
+  const scopeSignature = `${selectedSalesName}:${selectedRoute?.id || ''}:${visibleOutlets.length}`;
+  const visibleOutletsRef = useRef(visibleOutlets);
+  visibleOutletsRef.current = visibleOutlets;
+
+  useEffect(() => {
+    if (!isMapReady || selectedRoute || selectedOutletId) return;
+    const pts = visibleOutletsRef.current
+      .filter((o) => Number.isFinite(Number(o.latitude)) && Number.isFinite(Number(o.longitude)))
+      .map((o) => ({ lat: Number(o.latitude), lng: Number(o.longitude) }));
+    if (pts.length > 1) fitBounds(pts);
+    else if (pts.length === 1) panTo(pts[0].lat, pts[0].lng, 15);
+  }, [isMapReady, scopeSignature, selectedRoute, selectedOutletId, fitBounds, panTo]);
+
+  // 5. Auto-Focus ke Outlet yang dipilih
   useEffect(() => {
     if (selectedOutlet) {
       const lat = Number(selectedOutlet.latitude || selectedOutlet.lat);
       const lng = Number(selectedOutlet.longitude || selectedOutlet.lng);
-      if (lat && lng) {
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
         panTo(lat, lng, 16);
       }
     }
   }, [selectedOutlet, panTo]);
 
-  const handleSelectOutlet = (stopOrOutlet) => {
-    if (!stopOrOutlet) return;
-    setSelectedOutlet(stopOrOutlet);
-    googlePlacesService.openInGoogleMaps(stopOrOutlet, outlets);
-  };
-
   return (
     <div className="dashboard-wrapper">
-      {/* Floating Dashboard Left Overlay Panel */}
       <div className="dashboard-overlay">
         <div className="dashboard-left-col">
-          {mapDataError && (
+          {mapDataError ? (
             <div role="alert" className="app-error pointer-events-auto">
               <p>Data peta belum berhasil diperbarui: {mapDataError}</p>
               <button type="button" className="app-button" onClick={refetchAll}>
                 Coba lagi
               </button>
             </div>
-          )}
+          ) : null}
           <div className="app-actions" aria-label="Lapisan peta">
             <label>
               <input
@@ -300,7 +445,7 @@ export const DashboardPage = () => {
             </label>
           </div>
           <ActiveRoutesList
-            routes={routes}
+            routes={filteredRoutes}
             salesStops={displayStops}
             selectedRoute={selectedRoute}
             onSelectRoute={(route) => {
@@ -309,16 +454,46 @@ export const DashboardPage = () => {
             }}
             selectedOutlet={selectedOutlet}
             onSelectOutlet={handleSelectOutlet}
-            outlets={outlets}
             userRole={user?.role || 'SALES'}
             selectedSalesName={selectedSalesName}
             onSelectSalesName={(name) => {
               setSelectedSalesName(name);
-              setSelectedRoute(null);
               setSelectedOutlet(null);
+              if (name === 'ALL') {
+                setSelectedRoute(null);
+              } else {
+                const matching = todayRoutes.filter((r) => (r.repName || r.name) === name);
+                setSelectedRoute(matching.length === 1 ? matching[0] : null);
+              }
             }}
             salesOptions={salesOptions}
+            clusterColorByRouteId={clusterColorByRouteId}
+            routeStatus={routeStatus}
           />
+        </div>
+
+        <div className="dashboard-right-col">
+          <div className="dashboard-map-hud">
+            {routeStatus ? (
+              <RouteProviderBadge
+                provider={routeStatus.provider}
+                reason={routeStatus.reason}
+                inline
+              />
+            ) : null}
+            <ClusterMapLegend
+              clusters={legendData.clusters}
+              totalOutletsCount={legendData.totalOutletsCount}
+              isFiltered={isFiltered}
+              activeSalesName={
+                selectedRoute?.repName || (selectedSalesName !== 'ALL' ? selectedSalesName : '')
+              }
+              hasActiveRoute={Boolean(selectedRoute)}
+              isFallbackRoute={Boolean(routeStatus?.isFallback)}
+              hasClusterSequence={legendData.hasClusterSequence}
+              inline
+            />
+          </div>
         </div>
       </div>
     </div>

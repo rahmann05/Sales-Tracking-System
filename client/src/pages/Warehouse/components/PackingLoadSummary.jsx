@@ -43,8 +43,8 @@ export function PackingLoadSummary({ packing }) {
             {packing.destinations.map((destination) => (
               <tr key={destination.id}>
                 <td data-label="Toko / titik">
-                  <strong className="block">{destination.outlet.name}</strong>
-                  <span className="block">{destination.outlet.address}</span>
+                  <strong className="block">{destination.outlet?.name || 'Toko'}</strong>
+                  <span className="block">{destination.outlet?.address || ''}</span>
                   {destination.point && (
                     <a
                       className="admin-table-link"

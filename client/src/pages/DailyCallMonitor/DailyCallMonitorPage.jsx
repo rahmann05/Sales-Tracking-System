@@ -115,7 +115,7 @@ export const DailyCallMonitorPage = ({ initialTableView = 'ALL_VISITS', showHead
       <ReportBasisNote basis={reportData?.basis} />
 
       {/* 3. Unified Data & Audit Workspace Card */}
-      <div className="bg-surface border border-border-glass rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border-glass rounded-xl overflow-clip">
         {/* Workspace Card Header: View Switcher (Left) & Actions (Right) */}
         <div className="p-4 sm:p-5 border-b border-border-glass flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">

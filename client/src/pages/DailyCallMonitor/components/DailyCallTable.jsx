@@ -1,20 +1,110 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DailyCallTableRow } from './DailyCallTableRow';
-import { LuInbox } from 'react-icons/lu';
+import { LuChevronLeft, LuChevronRight, LuInbox } from 'react-icons/lu';
+
+const INITIAL_METRICS = {
+  hasOverflow: false,
+  scrollWidth: 0,
+  canLeft: false,
+  canRight: false,
+};
 
 /**
  * DailyCallTable Component
- * Single Responsibility: Render table header, list of Daily Call rows, and empty state.
+ * Single Responsibility: Render table header, list of Daily Call rows, sticky viewport-relative horizontal scroll bar, and empty state.
  */
 export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) => {
-  const [pageSize, setPageSize] = React.useState(50);
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scrollMetrics, setScrollMetrics] = useState(INITIAL_METRICS);
 
-  // Reset to page 1 if rows length changes significantly
-  React.useEffect(() => {
+  const regionRef = useRef(null);
+  const proxyRef = useRef(null);
+  const syncingRef = useRef(false);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [rows.length]);
+
+  const measureOverflow = useCallback(() => {
+    const el = regionRef.current;
+    if (!el) return;
+    const scrollWidth = el.scrollWidth;
+    const clientWidth = el.clientWidth;
+    const scrollLeft = el.scrollLeft;
+    const next = {
+      hasOverflow: scrollWidth - clientWidth > 2,
+      scrollWidth,
+      canLeft: scrollLeft > 2,
+      canRight: scrollLeft + clientWidth < scrollWidth - 2,
+    };
+    setScrollMetrics((prev) =>
+      prev.hasOverflow === next.hasOverflow &&
+      Math.abs(prev.scrollWidth - next.scrollWidth) <= 1 &&
+      prev.canLeft === next.canLeft &&
+      prev.canRight === next.canRight
+        ? prev
+        : next
+    );
+  }, []);
+
+  useEffect(() => {
+    const el = regionRef.current;
+    if (!el) return undefined;
+    measureOverflow();
+
+    const handleScroll = () => {
+      if (!syncingRef.current && proxyRef.current) {
+        syncingRef.current = true;
+        proxyRef.current.scrollLeft = el.scrollLeft;
+        queueMicrotask(() => {
+          syncingRef.current = false;
+        });
+      }
+      measureOverflow();
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    let ro;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(measureOverflow);
+      ro.observe(el);
+      if (el.firstElementChild) ro.observe(el.firstElementChild);
+    }
+
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+      ro?.disconnect();
+    };
+  }, [measureOverflow, rows.length, pageSize, currentPage, isLoading]);
+
+  useEffect(() => {
+    if (scrollMetrics.hasOverflow && proxyRef.current && regionRef.current) {
+      proxyRef.current.scrollLeft = regionRef.current.scrollLeft;
+    }
+  }, [scrollMetrics.hasOverflow]);
+
+  const handleProxyScroll = () => {
+    const el = regionRef.current;
+    const proxy = proxyRef.current;
+    if (!el || !proxy || syncingRef.current) return;
+    syncingRef.current = true;
+    el.scrollLeft = proxy.scrollLeft;
+    queueMicrotask(() => {
+      syncingRef.current = false;
+    });
+    measureOverflow();
+  };
+
+  const nudgeScroll = (delta) => {
+    const el = regionRef.current;
+    if (!el) return;
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    el.scrollBy({ left: delta, behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
 
   if (isLoading) {
     return (
@@ -30,7 +120,7 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
   if (!rows || rows.length === 0) {
     return (
       <div className="p-12 text-center space-y-3">
-        <LuInbox className="text-4xl text-on-surface-variant/40 mx-auto" />
+        <LuInbox className="text-4xl text-on-surface-variant/40 mx-auto" aria-hidden="true" />
         <h4 className="text-sm font-bold text-on-surface">Tidak Ada Data Kunjungan</h4>
         <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
           Belum ada data rekaman kunjungan Daily Call untuk filter tanggal dan sales yang dipilih.
@@ -47,8 +137,9 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
   const paginatedRows = isAll ? rows : rows.slice(startIndex, startIndex + limit);
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-clip">
       <div
+        ref={regionRef}
         tabIndex={0}
         role="region"
         aria-label="Tabel rekapitulasi kunjungan harian"
@@ -89,6 +180,37 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
         </DataTable>
       </div>
 
+      {scrollMetrics.hasOverflow ? (
+        <div className="report-table-hscroll" aria-label="Kontrol geser horizontal tabel">
+          <button
+            type="button"
+            className="report-table-hscroll-btn"
+            aria-label="Geser tabel ke kiri"
+            disabled={!scrollMetrics.canLeft}
+            onClick={() => nudgeScroll(-320)}
+          >
+            <LuChevronLeft aria-hidden="true" />
+          </button>
+          <div
+            ref={proxyRef}
+            className="report-table-hscroll-track"
+            aria-hidden="true"
+            onScroll={handleProxyScroll}
+          >
+            <div style={{ width: `${scrollMetrics.scrollWidth}px`, height: '1px' }} />
+          </div>
+          <button
+            type="button"
+            className="report-table-hscroll-btn"
+            aria-label="Geser tabel ke kanan"
+            disabled={!scrollMetrics.canRight}
+            onClick={() => nudgeScroll(320)}
+          >
+            <LuChevronRight aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
+
       <div className="p-3 bg-surface-container/60 border-t border-border-glass flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-on-surface-variant">
         <div className="flex items-center gap-3">
           <span>
@@ -118,7 +240,7 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
           </div>
         </div>
 
-        {totalPages > 1 && (
+        {totalPages > 1 ? (
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -140,7 +262,7 @@ export const DailyCallTable = ({ rows = [], isLoading = false, onSelectRow }) =>
               Berikutnya
             </button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

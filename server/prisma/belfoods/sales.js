@@ -423,7 +423,7 @@ export async function seedSales(db, master, date) {
               durationMinutes: 18,
               deviationMeters: 6,
               distanceWarning: 'OK',
-              reason: isApprovedOrd ? 'Order diterima pelanggan' : 'Tindak lanjut stok toko',
+              reason: isApprovedOrd ? null : 'Tindak lanjut stok toko',
               orderAmount: approvedAmt,
               skuSold: approvedLines.length,
               salesProducts: approvedLines.map((l) => ({

@@ -8,39 +8,81 @@
 
 /* Desktop: Floating Cards Overlay on top of Full-screen Map */
 .dashboard-overlay {
-  @apply relative z-10 flex flex-col lg:flex-row w-full h-auto lg:h-full p-4 md:p-6 lg:p-8 gap-4 lg:gap-8 pointer-events-none lg:items-end;
+  @apply relative z-10 flex flex-col lg:flex-row lg:items-stretch lg:justify-between w-full h-auto lg:h-full p-4 md:p-6 gap-4 lg:gap-6 pointer-events-none;
 }
 
 .dashboard-left-col {
-  @apply flex flex-col justify-end w-full lg:w-[420px] xl:w-[460px] shrink-0 gap-4 pointer-events-auto z-20;
+  @apply flex flex-col justify-start w-full lg:w-[400px] xl:w-[430px] max-h-full shrink-0 gap-3 pointer-events-auto z-20;
+}
+
+.dashboard-left-col > .app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  padding: 0.55rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 8px 20px -6px rgba(15, 23, 42, 0.14);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .dashboard-right-col {
-  @apply flex-1 flex flex-col justify-end w-full h-auto pointer-events-none relative z-20 mt-0;
+  @apply flex-1 flex flex-col items-end justify-start w-full h-auto pointer-events-none relative z-20 mt-0;
+}
+
+.dashboard-map-hud {
+  @apply flex flex-col items-end gap-2.5 w-full max-w-[288px] pointer-events-none;
+}
+
+.dashboard-map-hud > * {
+  @apply pointer-events-auto;
+}
+
+.route-card-cluster-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.45rem;
+  background-color: var(--cluster-color, #2563eb);
+  color: #ffffff;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+}
+
+.route-card-cluster-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--cluster-color, #2563eb);
+  flex-shrink: 0;
 }
 
 .map-container {
   @apply absolute inset-0 w-full h-full z-0 flex items-center justify-center bg-gradient-to-br from-[#eef2f5] to-[#dbe3eb];
 }
 
-@media (max-width: 767px) {
-  .dashboard-overlay {
-    padding: min(42dvh, 260px) 12px calc(84px + env(safe-area-inset-bottom, 0px)) 12px;
+@media (max-width: 1023px) {
+  .dashboard-map-hud {
+    max-width: 100%;
+    align-items: stretch;
   }
 
-  .dashboard-left-col > .app-actions {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(12px);
-    padding: 10px 14px;
-    border-radius: 14px;
-    border: 1px solid var(--border-glass);
+  .map-container {
+    @apply relative h-[480px] sm:h-[540px] w-full rounded-3xl overflow-hidden mb-4 shrink-0 shadow-md pointer-events-auto;
   }
 }
 
-/* Mobile & Tablet (< 1024px): Extended Height Vertical Flow Map View */
-@media (max-width: 1023px) {
-  .map-container {
-    @apply relative h-[480px] sm:h-[540px] w-full rounded-3xl overflow-hidden mb-4 shrink-0 shadow-md pointer-events-auto;
+@media (max-width: 767px) {
+  .dashboard-overlay {
+    padding: min(42dvh, 260px) 12px calc(84px + env(safe-area-inset-bottom, 0px)) 12px;
   }
 }
 
