@@ -133,17 +133,17 @@ export const ALL_PERMISSIONS = [
     categoryId: 'dashboard',
     icon: LuPhoneCall,
   },
-  // 2. RJP & Jadwal Sales
+  // 2. PJP & Jadwal Sales
   {
     key: 'can_access_rjp',
-    label: 'Jadwal & RJP Kunjungan',
-    desc: 'Akses jadwal Master RJP toko dan check-in kunjungan lapangan',
+    label: 'Jadwal & PJP Kunjungan',
+    desc: 'Akses jadwal Master PJP toko dan check-in kunjungan lapangan',
     categoryId: 'rjp',
     icon: LuNavigation,
   },
   {
     key: 'can_manage_rjp',
-    label: 'Kelola Master RJP',
+    label: 'Kelola Master PJP',
     desc: 'Boleh menyusun, mengedit, dan menetapkan rute PJP untuk sales',
     categoryId: 'rjp',
     icon: LuLayers,

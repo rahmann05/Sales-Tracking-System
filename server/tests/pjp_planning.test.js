@@ -67,7 +67,9 @@ test('temporary substitute rejects disabled policy, foreign team, invalid period
     ...rule,
     substitute: { userId: 'foreign', startsOn: '2026-09-01', endsOn: '2026-10-19', reason: '' },
   };
-  const result = buildPlanCalendar({ ...plan, rules: [r] }, sales, outlets);
+  const result = buildPlanCalendar({ ...plan, rules: [r] }, sales, outlets, undefined, {
+    PJP_REQUIRE_REASON: true,
+  });
   for (const code of [
     'SUBSTITUTION_DISABLED',
     'SUBSTITUTE_UNAVAILABLE',
@@ -146,10 +148,19 @@ test('substitution and frequency changes require a business reason', () => {
   const r = buildPlanCalendar(
     { ...plan, rules: [{ ...rule, userId: 'b', intervalWeeks: 4 }] },
     sales,
-    outlets
+    outlets,
+    undefined,
+    { PJP_REQUIRE_REASON: true }
   );
   assert.ok(r.problems.some((p) => p.code === 'OWNER_REASON'));
   assert.ok(r.problems.some((p) => p.code === 'FREQUENCY_REASON'));
+  // Default: no reason is requested.
+  const relaxed = buildPlanCalendar(
+    { ...plan, rules: [{ ...rule, userId: 'b', intervalWeeks: 4 }] },
+    sales,
+    outlets
+  );
+  assert.ok(!relaxed.problems.some((p) => ['OWNER_REASON', 'FREQUENCY_REASON'].includes(p.code)));
 });
 test('CSV headers can be reordered and quoted fields preserve embedded commas', () => {
   const rows = parseSpreadsheetCsv(

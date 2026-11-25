@@ -242,7 +242,7 @@ export const useSupervisorFieldVisits = (todayPjps = [], salesOptions = [], refr
       data.owner || offPjpForm.owner,
       data.phone ? `Telp: ${data.phone}` : null,
     ].filter(Boolean);
-    const notes = notesParts.join(' · ') || 'Kunjungan Supervisi Luar RJP';
+    const notes = notesParts.join(' · ') || 'Kunjungan Supervisi Luar PJP';
 
     return submit({
       action: 'OFF_PJP',

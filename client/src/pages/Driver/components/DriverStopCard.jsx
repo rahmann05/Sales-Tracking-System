@@ -12,21 +12,15 @@ import {
   LuCamera,
   LuCircleCheck,
   LuCircleX,
-  LuClock,
   LuNavigation,
 } from 'react-icons/lu';
-import { FiAlertTriangle } from 'react-icons/fi';
 
+// Status is plain text with a dot (shared admin-status look), not a colored pill.
 const STATUS_MAP = {
-  PENDING: { label: 'Menunggu', color: '#6b7280', bg: '#f3f4f6', Icon: LuClock },
-  DELIVERED: { label: 'Diterima penuh', color: '#16a34a', bg: '#dcfce7', Icon: LuCircleCheck },
-  REJECTED: { label: 'Ditolak', color: '#dc2626', bg: '#fee2e2', Icon: LuCircleX },
-  PARTIAL_REJECT: {
-    label: 'Diterima sebagian',
-    color: '#d97706',
-    bg: '#fef3c7',
-    Icon: FiAlertTriangle,
-  },
+  PENDING: { label: 'Menunggu', tone: '' },
+  DELIVERED: { label: 'Diterima penuh', tone: 'admin-status-approved' },
+  REJECTED: { label: 'Ditolak', tone: 'admin-status-rejected' },
+  PARTIAL_REJECT: { label: 'Diterima sebagian', tone: 'admin-status-pending' },
 };
 
 /**
@@ -46,11 +40,8 @@ export const DriverStopCard = ({
 }) => {
   const statusCfg = STATUS_MAP[stop.status] || {
     label: stop.status || 'Status belum tersedia',
-    color: '#697280',
-    bg: '#f3f5f8',
-    Icon: LuClock,
+    tone: '',
   };
-  const StatusIcon = statusCfg.Icon;
   const isCompleted = ['DELIVERED', 'REJECTED', 'PARTIAL_REJECT'].includes(stop.status);
   const hasArrived = !!stop.arrivedAt || policy.DELIVERY_ATTENDANCE_MODE === 'OPTIONAL';
 
@@ -81,25 +72,17 @@ export const DriverStopCard = ({
       {/* Header */}
       <div className="flex items-center gap-3 p-4">
         <div className="flex flex-col items-center gap-1">
-          <span
-            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black shrink-0 border border-border-glass shadow-2xs"
-            style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }}
-          >
+          <span className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium shrink-0 border border-border-glass bg-white text-on-surface">
             {index + 1}
           </span>
           {index < totalStops - 1 && <div className="w-0.5 h-4 bg-border-glass" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-on-surface min-w-0 whitespace-normal break-words">
+            <span className="text-sm font-medium text-on-surface min-w-0 whitespace-normal break-words">
               {outletName}
             </span>
-            <span
-              className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 shadow-2xs"
-              style={{ color: statusCfg.color, backgroundColor: statusCfg.bg }}
-            >
-              <StatusIcon className="inline mr-1 text-xs" /> {statusCfg.label}
-            </span>
+            <span className={`admin-status shrink-0 ${statusCfg.tone}`}>{statusCfg.label}</span>
           </div>
           <div className="text-xs text-on-surface-variant mt-1 flex items-center gap-1 min-w-0 whitespace-normal break-words">
             <LuMapPin className="text-primary text-xs shrink-0" />
@@ -114,7 +97,7 @@ export const DriverStopCard = ({
       <div className="px-4 pb-3 space-y-2">
         <div className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs bg-surface-variant/20 p-2.5 rounded-xl border border-border-glass">
           <LuPackage className="text-primary text-sm shrink-0" />
-          <span className="font-bold text-on-surface break-words">{stop.packingList?.code}</span>
+          <span className="font-medium text-on-surface break-words">{stop.packingList?.code}</span>
           <span className="text-on-surface-variant">
             — {stop.allocatedCartons ?? stop.packingList?.totalCartons ?? 0} Karton
           </span>
@@ -137,9 +120,7 @@ export const DriverStopCard = ({
                 className="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs text-on-surface-variant"
               >
                 <LuFileText className="shrink-0" />
-                <span className="font-semibold text-on-surface break-words">
-                  {inv.invoiceNumber}
-                </span>
+                <span className="font-medium text-on-surface break-words">{inv.invoiceNumber}</span>
                 <span>
                   {stop.allocatedInvoices?.find((i) => i.invoiceId === inv.id)?.cartons ??
                     inv.totalCartons}{' '}
@@ -154,7 +135,7 @@ export const DriverStopCard = ({
         <DeliveryReceiptSummary stop={stop} />
         {/* Reject info */}
         {stop.rejectReason && (
-          <div className="text-xs bg-rose-50 text-rose-800 rounded-xl p-3 mt-1 border border-rose-200/60 font-medium">
+          <div className="admin-feedback error mt-1">
             Alasan: {stop.rejectReason}
             {stop.rejectedCartons > 0 && ` (${stop.rejectedCartons} karton ditolak)`}
           </div>
@@ -165,7 +146,7 @@ export const DriverStopCard = ({
       {isCompleted &&
         policy.DELIVERY_ATTENDANCE_MODE === 'IN_OUT' &&
         !stop.attendances?.some((a) => a.type === 'OUT') && (
-          <p className="mx-4 mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="admin-feedback mx-4 mb-4">
             Hasil barang sudah dicatat. Bukti presensi keluar tidak tersedia; periksa tindak lanjut
             gudang pada trip ini.
           </p>
@@ -178,7 +159,7 @@ export const DriverStopCard = ({
               href={deliveryNavigationUrl(stopDestinationOutlet(stop))}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 text-sm font-bold transition-all shadow-xs"
+              className="app-button w-full"
             >
               <LuNavigation className="text-base shrink-0" /> Navigasi ke Toko
             </a>
@@ -195,7 +176,7 @@ export const DriverStopCard = ({
               type="button"
               onClick={onAbsenIn}
               disabled={disabled}
-              className="w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-primary text-on-primary text-sm font-black shadow-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="app-button app-button-primary w-full"
             >
               <LuCamera className="text-base shrink-0" /> Absen Sampai di Toko
             </button>
@@ -206,7 +187,7 @@ export const DriverStopCard = ({
                 type="button"
                 onClick={onMarkDelivered}
                 disabled={disabled}
-                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-black shadow-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="app-button app-button-primary"
               >
                 <LuCircleCheck className="text-base shrink-0" /> Diterima penuh
               </button>
@@ -214,7 +195,7 @@ export const DriverStopCard = ({
                 type="button"
                 onClick={onMarkRejected}
                 disabled={disabled}
-                className="min-h-[48px] flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-600 text-white text-sm font-black shadow-md hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="app-button"
               >
                 <LuCircleX className="text-base shrink-0" /> Penolakan / sebagian
               </button>

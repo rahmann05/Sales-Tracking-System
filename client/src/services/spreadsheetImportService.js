@@ -1,6 +1,6 @@
 /**
  * Spreadsheet Import Service
- * Single Responsibility: Parsing CSV/Excel Spreadsheet text for RJP Outlets & Cluster Data.
+ * Single Responsibility: Parsing CSV/Excel Spreadsheet text for PJP Outlets & Cluster Data.
  * No dummy data or hardcoded defaults allowed.
  * 1 File = 1 Pure Logic Service
  */

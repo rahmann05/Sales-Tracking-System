@@ -62,7 +62,7 @@ export function ClusterWorkspace({ management: m, onEdit, onOutlets, onOpenPlann
           <h2>Wilayah dan penanggung jawab</h2>
           <p>
             Kelompokkan outlet berdasarkan wilayah dan jenis perdagangan, lalu jadwalkan langsung ke
-            Planner kunjungan.
+            Jadwal kunjungan.
           </p>
         </div>
         {canManage && (
@@ -88,7 +88,7 @@ export function ClusterWorkspace({ management: m, onEdit, onOutlets, onOpenPlann
               title={featurePolicy.reason}
               onClick={() => setActiveTab(TAB_IDS.CREATE_CLUSTER)}
             >
-              Buat cluster
+              Buat cluster dari peta
             </button>
           </div>
         )}
@@ -254,7 +254,7 @@ export function ClusterWorkspace({ management: m, onEdit, onOutlets, onOpenPlann
                   <div className="cluster-inline-callout">
                     <span>
                       Lengkapi Supervisor &amp; Sales penanggung jawab agar outlet cluster ini siap
-                      dijadwalkan ke Planner kunjungan.
+                      dijadwalkan ke Jadwal kunjungan.
                     </span>
                     <button type="button" className="admin-button" onClick={() => onEdit(current)}>
                       Tetapkan PIC

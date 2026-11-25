@@ -1,15 +1,7 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
 import { formatVisitDuration } from '../../../../../shared/report-presentation.mjs';
 import React from 'react';
-import {
-  LuClock,
-  LuMapPin,
-  LuImage,
-  LuShieldAlert,
-  LuExternalLink,
-  LuCircleCheck,
-  LuCar,
-} from 'react-icons/lu';
+import { LuImage, LuExternalLink, LuCircleCheck } from 'react-icons/lu';
 
 /**
  * SuspiciousAttendanceRows Component
@@ -68,27 +60,27 @@ export function SuspiciousAttendanceRows({ filteredRows, onSelectRow }) {
                 >
                   <td
                     data-label="No"
-                    className="text-center font-mono text-xs font-semibold text-on-surface-variant tabular-nums"
+                    className="text-center text-xs text-on-surface-variant tabular-nums"
                   >
                     {idx + 1}
                   </td>
 
                   {/* Salesman */}
                   <td data-label="Salesman" className="text-on-surface">
-                    <div className="font-semibold text-on-surface">{r.salesmanName}</div>
+                    <div className="font-medium text-on-surface">{r.salesmanName}</div>
                     <div className="text-xs text-on-surface-variant">{r.clusterName}</div>
                   </td>
 
                   {/* Outlet */}
                   <td data-label="Outlet" className="text-on-surface md:max-w-[200px]">
                     <div
-                      className="font-semibold md:min-w-0 whitespace-normal break-words"
+                      className="font-medium md:min-w-0 whitespace-normal break-words"
                       title={r.customerName}
                     >
                       {r.customerName}
                     </div>
                     <div
-                      className="text-xs text-on-surface-variant md:min-w-0 whitespace-normal break-words font-mono"
+                      className="text-xs text-on-surface-variant md:min-w-0 whitespace-normal break-words"
                       title={r.customerAddress}
                     >
                       {r.customerId} · {r.customerAddress}
@@ -98,28 +90,22 @@ export function SuspiciousAttendanceRows({ filteredRows, onSelectRow }) {
                   {/* Time In / Out */}
                   <td
                     data-label="Jam In/Out"
-                    className="md:text-center text-left font-mono text-xs tabular-nums"
+                    className="md:text-center text-left text-xs tabular-nums"
                   >
-                    <div className="font-semibold text-on-surface">{r.timeIn || '—'}</div>
+                    <div className="text-on-surface">{r.timeIn || '—'}</div>
                     <div className="text-on-surface-variant">{r.timeOut || '—'}</div>
                   </td>
 
                   {/* Travel Time & Distance */}
-                  <td data-label="Jarak & Jeda" className="md:text-center text-left font-mono">
+                  <td data-label="Jarak & Jeda" className="md:text-center text-left tabular-nums">
                     {r.prevStopName ? (
-                      <div
-                        className={`inline-block px-2 py-1 rounded-lg text-xs tabular-nums ${
-                          isTravel
-                            ? 'bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3] font-semibold'
-                            : 'bg-surface-container text-on-surface-variant'
-                        }`}
-                      >
-                        <div>
+                      <div>
+                        <div className={isTravel ? 'admin-status admin-status-rejected' : ''}>
                           {r.travelDistanceKm == null
                             ? 'Jarak tidak tersedia'
                             : `${r.travelDistanceKm} km antartitik outlet`}
                         </div>
-                        <div className="font-semibold">{r.travelDurationFormatted}</div>
+                        <div className="text-on-surface-variant">{r.travelDurationFormatted}</div>
                       </div>
                     ) : (
                       <span className="text-on-surface-variant">—</span>
@@ -127,101 +113,76 @@ export function SuspiciousAttendanceRows({ filteredRows, onSelectRow }) {
                   </td>
 
                   {/* Duration Flag */}
-                  <td data-label="Durasi" className="md:text-center text-left">
-                    <div
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs whitespace-nowrap tabular-nums ${
-                        isShort
-                          ? 'bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3] font-semibold'
-                          : 'bg-surface-container text-on-surface font-medium'
-                      }`}
-                    >
-                      <LuClock className="text-xs shrink-0" aria-hidden="true" />
+                  <td data-label="Durasi" className="md:text-center text-left tabular-nums">
+                    <div className={isShort ? 'admin-status admin-status-rejected' : ''}>
                       {formatVisitDuration(r.durationMinutes, r.durationFormatted) ||
                         'Tidak tersedia'}
                     </div>
                     {isShort ? (
-                      <div className="text-[11px] font-medium text-[#9f1239] mt-0.5">
+                      <div className="text-[11px] text-on-surface-variant mt-0.5">
                         Di bawah batas
                       </div>
                     ) : null}
                   </td>
 
                   {/* GPS Deviation Flag */}
-                  <td data-label="Deviasi GPS" className="md:text-center text-left">
+                  <td data-label="Deviasi GPS" className="md:text-center text-left tabular-nums">
                     <div
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-medium tabular-nums ${
+                      className={
                         isFar
-                          ? 'bg-[#fff4df] text-[#99752e] border border-[#fde68a]'
+                          ? 'admin-status admin-status-pending'
                           : r.deviationMeters == null
-                            ? 'bg-surface-container text-on-surface-variant'
-                            : 'bg-[#e4f7ea] text-[#15803d]'
-                      }`}
+                            ? 'text-on-surface-variant'
+                            : 'admin-status admin-status-approved'
+                      }
                     >
-                      <LuMapPin className="text-xs shrink-0" aria-hidden="true" />
                       {r.deviationMeters == null ? 'Tidak tersedia' : `${r.deviationMeters} m`}
                     </div>
                     {isFar ? (
-                      <div className="text-[11px] font-medium text-[#99752e] mt-0.5 inline-flex items-center gap-1">
-                        <LuShieldAlert className="text-xs shrink-0" aria-hidden="true" />
+                      <div className="text-[11px] text-on-surface-variant mt-0.5">
                         Di luar radius
                       </div>
                     ) : null}
                   </td>
 
-                  {/* Anomaly Badge & Notes */}
+                  {/* Anomaly notes: one plain line per finding, marked by a status dot */}
                   <td data-label="Anomali" className="md:max-w-[240px]">
                     <div className="space-y-1">
                       {isTravel ? (
-                        <div className="p-1.5 rounded-lg bg-[#fff1f2] border border-[#fecdd3] text-xs text-[#9f1239] font-medium flex items-start gap-1">
-                          <LuCar className="text-xs shrink-0 mt-0.5" aria-hidden="true" />
-                          <span>{r.travelAnomalyReason}</span>
-                        </div>
+                        <p className="admin-status admin-status-rejected !whitespace-normal">
+                          {r.travelAnomalyReason}
+                        </p>
                       ) : null}
                       {isShort ? (
-                        <div className="px-2 py-1 rounded-md bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3] text-xs font-medium flex items-start gap-1">
-                          <LuClock className="text-xs shrink-0 mt-0.5" aria-hidden="true" />
-                          <span>
-                            Di bawah batas durasi{r.earlyReason ? `: "${r.earlyReason}"` : ''}
-                          </span>
-                        </div>
+                        <p className="admin-status admin-status-rejected !whitespace-normal">
+                          Di bawah batas durasi{r.earlyReason ? `: "${r.earlyReason}"` : ''}
+                        </p>
                       ) : null}
                       {isFar ? (
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-[#fff4df] text-[#99752e] text-xs font-medium border border-[#fde68a]">
-                          Deviasi radius GPS ({r.deviationMeters}m)
-                        </span>
+                        <p className="admin-status admin-status-pending !whitespace-normal">
+                          Deviasi radius GPS ({r.deviationMeters} m)
+                        </p>
                       ) : null}
                       {isSkipped ? (
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-surface-container text-on-surface-variant text-xs font-medium border border-border-glass">
-                          Jadwal PJP terlewat
-                        </span>
+                        <p className="admin-status !whitespace-normal">Jadwal PJP terlewat</p>
                       ) : null}
                     </div>
                   </td>
 
                   {/* Photo Evidence */}
                   <td data-label="Bukti Foto" className="md:text-center text-left">
-                    <div className="flex items-center justify-start md:justify-center gap-1">
+                    <div className="flex items-center justify-start md:justify-center gap-2 text-on-surface-variant">
                       {r.photoIn ? (
-                        <span
-                          role="img"
-                          className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs"
-                          aria-label="Foto Check-In tersedia"
-                        >
+                        <span role="img" aria-label="Foto Check-In tersedia" title="Foto masuk">
                           <LuImage aria-hidden="true" />
                         </span>
                       ) : null}
                       {r.photoOut ? (
-                        <span
-                          role="img"
-                          className="w-6 h-6 rounded-md bg-[#e4f7ea] text-[#15803d] flex items-center justify-center text-xs"
-                          aria-label="Foto Check-Out tersedia"
-                        >
+                        <span role="img" aria-label="Foto Check-Out tersedia" title="Foto keluar">
                           <LuImage aria-hidden="true" />
                         </span>
                       ) : null}
-                      {!r.photoIn && !r.photoOut ? (
-                        <span className="text-xs text-on-surface-variant">—</span>
-                      ) : null}
+                      {!r.photoIn && !r.photoOut ? <span className="text-xs">—</span> : null}
                     </div>
                   </td>
 
@@ -247,8 +208,11 @@ export function SuspiciousAttendanceRows({ filteredRows, onSelectRow }) {
               <tr>
                 <td colSpan="10" className="text-center py-10 text-on-surface-variant">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <LuCircleCheck className="text-[#15803d] text-2xl" aria-hidden="true" />
-                    <span className="font-semibold text-sm text-on-surface">
+                    <LuCircleCheck
+                      className="text-on-surface-variant text-2xl"
+                      aria-hidden="true"
+                    />
+                    <span className="font-medium text-sm text-on-surface">
                       Tidak ada temuan absensi janggal
                     </span>
                     <p className="text-xs text-on-surface-variant m-0 max-w-sm">

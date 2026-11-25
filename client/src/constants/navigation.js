@@ -123,7 +123,7 @@ export const getNavigationTabs = (userOrRole) => {
     });
   }
 
-  // 1. Rute & RJP Lapangan
+  // 1. Rute & PJP Lapangan
   if (
     role === ROLES.ADMIN ||
     ROUTE_PLANNING_ROLES.includes(role) ||
@@ -132,7 +132,7 @@ export const getNavigationTabs = (userOrRole) => {
   ) {
     tabs.push({
       id: TAB_IDS.ROUTE_PLANNING,
-      label: role === ROLES.SALES ? 'Jadwal Master RJP' : 'Kelola Master RJP',
+      label: role === ROLES.SALES ? 'Jadwal Master PJP' : 'Kelola Master PJP',
       icon: LuNavigation,
     });
   }

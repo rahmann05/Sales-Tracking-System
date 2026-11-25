@@ -62,13 +62,17 @@ export function TeamAssignmentPanel({ onChanged }) {
   };
   const assigned = source.sales.filter((s) => s.supervisorId);
   const unassigned = source.sales.filter((s) => !s.supervisorId);
-  const baseList =
-    scope === 'unassigned' ? unassigned : scope === 'all' ? source.sales : assigned;
+  const baseList = scope === 'unassigned' ? unassigned : scope === 'all' ? source.sales : assigned;
   const compareText = (a, b) =>
     String(a || '').localeCompare(String(b || ''), 'id-ID', { sensitivity: 'base' });
   const visible = baseList
     .filter((s) => {
-      if (user.role === 'ADMIN' && scope !== 'unassigned' && teamFilter && s.supervisorId !== teamFilter) {
+      if (
+        user.role === 'ADMIN' &&
+        scope !== 'unassigned' &&
+        teamFilter &&
+        s.supervisorId !== teamFilter
+      ) {
         return false;
       }
       const clusters = (s.assignedClusters || []).map((c) => c.name).join(' ');
@@ -84,7 +88,8 @@ export function TeamAssignmentPanel({ onChanged }) {
       if (sortBy === 'team-asc' || sortBy === 'team-desc') {
         if (!teamA && teamB) return 1;
         if (teamA && !teamB) return -1;
-        const byTeam = sortBy === 'team-desc' ? compareText(teamB, teamA) : compareText(teamA, teamB);
+        const byTeam =
+          sortBy === 'team-desc' ? compareText(teamB, teamA) : compareText(teamA, teamB);
         if (byTeam !== 0) return byTeam;
         return compareText(a.name, b.name);
       }
@@ -130,7 +135,9 @@ export function TeamAssignmentPanel({ onChanged }) {
             <option value="assigned">
               {user.role === 'SUPERVISOR' ? 'Tim saya' : 'Sudah ditugaskan'} ({assigned.length})
             </option>
-            <option value="unassigned">Belum memiliki tim ({unassigned.length})</option>
+            <option value="unassigned" disabled={user.role !== 'ADMIN'}>
+              Belum memiliki tim ({unassigned.length})
+            </option>
             {user.role === 'ADMIN' && (
               <option value="all">Semua sales ({source.sales.length})</option>
             )}

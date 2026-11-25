@@ -90,7 +90,7 @@ export function buildPlanCalendar(
           'SUBSTITUTE_PERIOD',
           `${outlet?.name || 'Outlet'}: periode pengganti harus berada dalam periode rencana.`
         );
-      if (!s.reason?.trim() || s.reason.trim().length < 5)
+      if (policy.PJP_REQUIRE_REASON === true && (!s.reason?.trim() || s.reason.trim().length < 5))
         add(
           'SUBSTITUTE_REASON',
           `${outlet?.name || 'Outlet'}: alasan pengganti minimal 5 karakter wajib diisi.`
@@ -120,12 +120,14 @@ export function buildPlanCalendar(
     if (
       outlet?.cluster?.assignedSalesId &&
       outlet.cluster.assignedSalesId !== r.userId &&
+      policy.PJP_REQUIRE_REASON === true &&
       !r.reason?.trim()
     )
       add('OWNER_REASON', `${outlet.name}: isi alasan penugasan ke Sales pengganti.`);
     if (
       frequencyWeeks(outlet?.itineraryCode) &&
       frequencyWeeks(outlet.itineraryCode) !== Number(r.intervalWeeks) &&
+      policy.PJP_REQUIRE_REASON === true &&
       !r.reason?.trim()
     )
       add(

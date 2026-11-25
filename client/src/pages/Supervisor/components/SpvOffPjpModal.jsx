@@ -84,7 +84,7 @@ export const SpvOffPjpModal = ({
     <SpvModalShell
       error={displayError}
       saving={saving}
-      title="Kunjungan Supervisi Luar RJP"
+      title="Kunjungan Supervisi Luar PJP"
       subtitle={
         optional
           ? 'Catat kegiatan supervisi tanpa presensi wajib'
@@ -159,7 +159,7 @@ export const SpvOffPjpModal = ({
             }
             targetLat={null}
             targetLng={null}
-            outletName={form?.outletName || 'Toko Supervisi Luar RJP'}
+            outletName={form?.outletName || 'Toko Supervisi Luar PJP'}
             facingModeDefault="user"
             buttonLabel="Ambil foto presensi supervisi"
           />

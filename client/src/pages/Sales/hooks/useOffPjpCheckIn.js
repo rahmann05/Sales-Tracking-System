@@ -7,7 +7,7 @@ import { useAddressLookup } from '../../../shared/hooks/useAddressLookup';
 
 /**
  * useOffPjpCheckIn Hook
- * Single Responsibility: State machine untuk form absen toko luar RJP
+ * Single Responsibility: State machine untuk form absen toko luar PJP
  * (identitas outlet, kamera capture, GPS geofence, reverse-geocode auto-fill).
  */
 export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
@@ -20,7 +20,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
     customerName: '',
     phone: '',
     address: '',
-    notes: 'Kunjungan Prospek Toko Baru di Luar RJP',
+    notes: 'Kunjungan Prospek Toko Baru di Luar PJP',
     pending: null,
   });
   const outletId = draft.value.outletId || '';
@@ -162,7 +162,7 @@ export const useOffPjpCheckIn = ({ isOpen, onSubmit }) => {
       customerName: customerName.trim(),
       phone: phone.trim() || '-',
       address: address.trim(),
-      reason: notes || 'Kunjungan Luar RJP',
+      reason: notes || 'Kunjungan Luar PJP',
       ...(visitOutcome.purpose ? { visitOutcome } : {}),
       photoUrl: capturedPhoto,
       gpsLocation: gps,

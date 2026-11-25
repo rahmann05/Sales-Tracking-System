@@ -1,14 +1,7 @@
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
 import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
-import {
-  LuClock,
-  LuMapPin,
-  LuShieldAlert,
-  LuCar,
-  LuHourglass,
-  LuCircleCheck,
-} from 'react-icons/lu';
+import { LuClock, LuMapPin, LuCar, LuHourglass } from 'react-icons/lu';
 import { ExportFormatMenu } from '../../../shared/components/common/ExportFormatMenu';
 
 const EMPTY_COUNTS = { TRAVEL: 0, DURATION: 0, DISTANCE: 0, SKIPPED: 0 };
@@ -49,15 +42,9 @@ export function SuspiciousAttendanceSummary({
               Audit absensi &amp; indikasi lapangan
             </h3>
             {totalCount === 0 ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#e4f7ea] text-[#15803d]">
-                <LuCircleCheck className="text-xs shrink-0" aria-hidden="true" />
-                Tidak ada temuan
-              </span>
+              <span className="admin-status admin-status-approved">Tidak ada temuan</span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3]">
-                <LuShieldAlert className="text-xs shrink-0" aria-hidden="true" />
-                {totalCount} temuan
-              </span>
+              <span className="admin-status admin-status-rejected">{totalCount} temuan</span>
             )}
           </div>
           <p className="text-xs text-on-surface-variant m-0 mt-1">

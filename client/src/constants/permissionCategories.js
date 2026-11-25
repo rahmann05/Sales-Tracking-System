@@ -33,7 +33,7 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     id: 'rjp',
-    name: 'RJP & Jadwal Sales',
+    name: 'PJP & Jadwal Sales',
     icon: LuNavigation,
     color: 'emerald',
   },

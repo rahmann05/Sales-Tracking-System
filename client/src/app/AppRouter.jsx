@@ -142,7 +142,7 @@ const ACCESS_CONTROL = {
     roles: ROUTE_PLANNING_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
     description:
-      'Halaman Jadwal Master RJP hanya dapat diakses oleh Sales Field, Supervisor, dan Admin.',
+      'Halaman Jadwal Master PJP hanya dapat diakses oleh Sales Field, Supervisor, dan Admin.',
   },
   [TAB_IDS.OUTLET_REGISTRATION]: {
     roles: OUTLET_REGISTRATION_ROLES,
@@ -167,7 +167,7 @@ const ACCESS_CONTROL = {
   [TAB_IDS.TEAM_TRACKING]: {
     roles: TEAM_TRACKING_ROLES,
     title: 'Akses Dibatasi (Access Denied)',
-    description: 'Halaman Tim dan RJP hanya dapat diakses oleh pengguna terdaftar.',
+    description: 'Halaman Tim dan PJP hanya dapat diakses oleh pengguna terdaftar.',
   },
   [TAB_IDS.OUTLET_MANAGEMENT]: {
     roles: ['ADMIN', 'SUPERVISOR'],

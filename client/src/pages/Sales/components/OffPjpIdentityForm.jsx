@@ -4,7 +4,7 @@ import { LuStore, LuUser, LuPhone, LuMapPin, LuRefreshCw, LuSparkles } from 'rea
 /**
  * OffPjpIdentityForm Component
  * Single Responsibility: Form identitas outlet, pemilik, telepon & alamat GPS auto-fill
- * untuk absen toko luar RJP.
+ * untuk absen toko luar PJP.
  */
 export const OffPjpIdentityForm = ({
   outletName,

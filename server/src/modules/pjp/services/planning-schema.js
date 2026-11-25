@@ -5,7 +5,7 @@ const substitute = z.object({
   userId: z.string().min(1),
   startsOn: planningDate,
   endsOn: planningDate,
-  reason: z.string().trim().min(5).max(500),
+  reason: z.string().trim().max(500).optional(),
 });
 export const planningBody = z
   .object({

@@ -27,7 +27,7 @@ export const updateOutlet = async (id, raw, actor, { db = prisma, validateOnly =
       throw new AppError('Isi kedua koordinat atau kosongkan keduanya.', 422);
     if (data.clusterId && data.clusterId !== previous.clusterId)
       throw new AppError(
-        'Pindahkan outlet melalui Wilayah & outlet pada Master RJP untuk meninjau dampak jadwal.',
+        'Pindahkan outlet melalui Wilayah & outlet pada Master PJP untuk meninjau dampak jadwal.',
         409
       );
     if (data.outletCode !== undefined)

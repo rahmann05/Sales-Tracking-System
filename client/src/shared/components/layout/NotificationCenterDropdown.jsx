@@ -77,13 +77,13 @@ export const NotificationCenterDropdown = () => {
   const getNotifIcon = (title = '') => {
     const t = title.toLowerCase();
     if (t.includes('tutup') || t.includes('skip'))
-      return <LuStore className="text-rose-500 text-sm flex-shrink-0" />;
+      return <LuStore className="text-primary text-sm flex-shrink-0" />;
     if (t.includes('kunci') || t.includes('unlock'))
-      return <LuKey className="text-amber-500 text-sm flex-shrink-0" />;
+      return <LuKey className="text-primary text-sm flex-shrink-0" />;
     if (t.includes('order'))
-      return <LuShoppingBag className="text-purple-500 text-sm flex-shrink-0" />;
+      return <LuShoppingBag className="text-primary text-sm flex-shrink-0" />;
     if (t.includes('reroute') || t.includes('rute'))
-      return <LuShuffle className="text-blue-500 text-sm flex-shrink-0" />;
+      return <LuShuffle className="text-primary text-sm flex-shrink-0" />;
     return <LuClock className="text-primary text-sm flex-shrink-0" />;
   };
 
@@ -101,7 +101,7 @@ export const NotificationCenterDropdown = () => {
       >
         <LuBell className="text-lg sm:text-xl" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center border-2 border-surface animate-pulse">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-on-primary font-medium text-[10px] rounded-md flex items-center justify-center border-2 border-surface">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -120,13 +120,11 @@ export const NotificationCenterDropdown = () => {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border-glass pb-3 shrink-0">
               <div>
-                <h4 className="font-bold text-sm text-on-surface flex items-center gap-2">
+                <h4 className="font-medium text-sm text-on-surface flex items-center gap-2">
                   <LuBell className="text-primary text-base" />
                   <span>Inbox Notifikasi</span>
                   {unreadCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/15 text-rose-600">
-                      {unreadCount} Baru
-                    </span>
+                    <span className="admin-status !text-xs !font-normal">{unreadCount} baru</span>
                   )}
                 </h4>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">
@@ -148,7 +146,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setActiveFilter('ALL')}
-                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-medium text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'ALL'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'
@@ -159,7 +157,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setActiveFilter('UNREAD')}
-                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-medium text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'UNREAD'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'
@@ -170,7 +168,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setActiveFilter('CLOSED')}
-                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-medium text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'CLOSED'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'
@@ -181,7 +179,7 @@ export const NotificationCenterDropdown = () => {
               <button
                 type="button"
                 onClick={() => setActiveFilter('UNLOCK')}
-                className={`px-2 py-1.5 rounded-lg font-bold text-center w-full truncate transition-all cursor-pointer ${
+                className={`px-2 py-1.5 rounded-lg font-medium text-center w-full truncate transition-all cursor-pointer ${
                   activeFilter === 'UNLOCK'
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/60'
@@ -192,7 +190,7 @@ export const NotificationCenterDropdown = () => {
             </div>
 
             {/* Action Row */}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold px-1 text-on-surface-variant shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium px-1 text-on-surface-variant shrink-0">
               <button
                 type="button"
                 onClick={handleMarkAllRead}
@@ -204,7 +202,7 @@ export const NotificationCenterDropdown = () => {
                 <button
                   type="button"
                   onClick={() => clearNotifications && clearNotifications()}
-                  className="hover:text-rose-600 transition-colors flex items-center gap-1 cursor-pointer"
+                  className="hover:text-on-surface transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <LuTrash2 className="text-sm" /> Hapus pesan lokal
                 </button>
@@ -267,7 +265,7 @@ export const NotificationCenterDropdown = () => {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         {getNotifIcon(notif.title)}
-                        <p className="font-bold text-on-surface truncate">{notif.title}</p>
+                        <p className="font-medium text-on-surface truncate">{notif.title}</p>
                       </div>
                       <span className="text-[10px] text-on-surface-variant font-mono whitespace-nowrap">
                         {notif.timestamp}

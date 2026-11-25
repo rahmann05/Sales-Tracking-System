@@ -22,7 +22,7 @@ export const ALL_PERMISSIONS = [
     desc: p.desc,
     category: {
       team: 'Tim & Master Wilayah',
-      rjp: 'RJP & Jadwal Sales',
+      rjp: 'PJP & Jadwal Sales',
       warehouse: 'Gudang & Logistik',
       transaction: 'Transaksi & Approval',
       reports: 'Laporan & Analitik',
@@ -40,13 +40,13 @@ export const ALL_PERMISSIONS = [
     key: 'can_review_route_change',
     label: 'Putuskan toko tutup / reroute',
     desc: 'Mengikuti tahap, penugasan kasus dan larangan memeriksa usulan sendiri.',
-    category: 'RJP & Jadwal Sales',
+    category: 'PJP & Jadwal Sales',
   },
   {
     key: 'can_assign_route_review',
     label: 'Tugaskan pemeriksa rute',
     desc: 'Khusus Admin; delegasi per kasus tanpa menambah hak akses umum.',
-    category: 'RJP & Jadwal Sales',
+    category: 'PJP & Jadwal Sales',
   },
   ...Object.entries(TRIP_PERMISSION_LABELS).map(([action, label]) => ({
     key: tripPermission(action),
@@ -107,24 +107,24 @@ export const ALL_PERMISSIONS = [
     category: 'Dashboard & Monitoring',
   },
 
-  // 2. RJP & Jadwal Kunjungan
+  // 2. PJP & Jadwal Kunjungan
   {
     key: 'can_access_rjp',
-    label: 'Jadwal & RJP Kunjungan',
-    desc: 'Akses jadwal Master RJP toko dan check-in kunjungan lapangan',
-    category: 'RJP & Jadwal Sales',
+    label: 'Jadwal & PJP Kunjungan',
+    desc: 'Akses jadwal Master PJP toko dan check-in kunjungan lapangan',
+    category: 'PJP & Jadwal Sales',
   },
   {
     key: 'can_manage_rjp',
-    label: 'Kelola Master RJP',
+    label: 'Kelola Master PJP',
     desc: 'Boleh menyusun, mengedit, dan menetapkan rute PJP untuk sales',
-    category: 'RJP & Jadwal Sales',
+    category: 'PJP & Jadwal Sales',
   },
   {
     key: 'can_request_reroute',
     label: 'Pengajuan Reroute & Skip',
     desc: 'Boleh mengajukan permohonan reroute toko atau skip kunjungan',
-    category: 'RJP & Jadwal Sales',
+    category: 'PJP & Jadwal Sales',
   },
 
   // 3. Master Outlet & NOO

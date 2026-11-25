@@ -1,5 +1,13 @@
 import React from 'react';
-export function PlanSubstituteEditor({ rule, people, startsOn, endsOn, enabled, onChange }) {
+export function PlanSubstituteEditor({
+  rule,
+  people,
+  startsOn,
+  endsOn,
+  enabled,
+  requireReason = false,
+  onChange,
+}) {
   const substitute = rule.substitute;
   if (!substitute)
     return enabled ? (
@@ -68,17 +76,20 @@ export function PlanSubstituteEditor({ rule, people, startsOn, endsOn, enabled, 
             onChange={(e) => change({ endsOn: e.target.value })}
           />
         </label>
-        <label className="app-field">
-          Alasan pengganti
-          <input
-            disabled={!enabled}
-            required
-            minLength={5}
-            maxLength={500}
-            value={substitute.reason}
-            onChange={(e) => change({ reason: e.target.value })}
-          />
-        </label>
+        {requireReason && (
+          <label className="app-field">
+            Alasan pengganti
+            <input
+              disabled={!enabled}
+              required
+              minLength={5}
+              maxLength={500}
+              placeholder="Wajib diisi: alasan Sales pengganti"
+              value={substitute.reason}
+              onChange={(e) => change({ reason: e.target.value })}
+            />
+          </label>
+        )}
       </div>
       <button type="button" className="app-button" onClick={() => onChange(null)}>
         Hapus pengganti sementara

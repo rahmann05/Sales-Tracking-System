@@ -134,7 +134,7 @@ export const useBackendSync = ({
               supervisorId: s.supervisorId,
               spvName: s.supervisor?.name || s.spvName || 'Belum ditugaskan',
               spvTeamName: `Tim ${s.supervisor?.name || s.spvName || 'belum ditugaskan'}`,
-              rjpTeamName: `RJP ${s.cluster?.name || 'Klaster'}`,
+              rjpTeamName: `PJP ${s.cluster?.name || 'Klaster'}`,
               status: 'Active',
               location: s.region || s.cluster?.region || '—',
             }));
@@ -155,7 +155,7 @@ export const useBackendSync = ({
 
             const mappedRjpTeams = clustersList.map((c) => ({
               id: c.id,
-              name: `RJP ${c.name}`,
+              name: `PJP ${c.name}`,
               cluster: c.name,
               region: c.region,
               spvName: c.supervisor?.name || 'Belum ditugaskan',

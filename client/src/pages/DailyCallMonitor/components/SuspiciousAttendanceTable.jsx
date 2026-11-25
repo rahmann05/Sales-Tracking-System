@@ -11,7 +11,11 @@ const EMPTY_ROWS = [];
  * SuspiciousAttendanceTable Component
  * Single Responsibility: Dedicated table and audit dashboard for abnormal / suspicious attendances.
  */
-export const SuspiciousAttendanceTable = ({ rows = EMPTY_ROWS, isLoading = false, onSelectRow }) => {
+export const SuspiciousAttendanceTable = ({
+  rows = EMPTY_ROWS,
+  isLoading = false,
+  onSelectRow,
+}) => {
   const [filterAnomalyType, setFilterAnomalyType] = useState('ALL');
   const [search, setSearch] = useState('');
   const searchInputId = useId();

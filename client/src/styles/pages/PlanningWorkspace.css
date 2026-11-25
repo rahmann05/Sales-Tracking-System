@@ -121,35 +121,37 @@
   background: #1b66ca;
   color: white;
 }
+/* Filter choices are a segmented control (same as the Sales tabs), not capsules. */
 .cluster-scope-pills {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
+  padding: 4px;
+  background: #e9edf2;
+  border-radius: 10px;
 }
 .cluster-pill {
   min-height: 36px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid #d5dfec;
-  background: #ffffff;
-  color: #475569;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #586475;
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
-    border-color 0.15s ease,
     color 0.15s ease;
 }
 .cluster-pill:hover {
-  border-color: #93c5fd;
-  color: #1b66ca;
+  color: #242931;
 }
 .cluster-pill[aria-pressed='true'] {
-  background: #1b66ca;
-  border-color: #1b66ca;
-  color: #ffffff;
+  background: #fff;
+  border-color: #e2e6ec;
+  color: #1b66ca;
 }
 .cluster-color-dot {
   width: 12px;
@@ -166,12 +168,9 @@
 }
 .cluster-trade-tag {
   margin-left: auto;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #334155 !important;
-  font-size: 11px !important;
-  font-weight: 600;
+  color: #697280 !important;
+  font-size: 12px !important;
+  font-weight: 400;
 }
 .cluster-inline-callout {
   display: flex;
@@ -189,10 +188,6 @@
 .planner-focus-pill {
   display: inline-block;
   margin-top: 2px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #f0f6ff;
-  border: 1px solid #bfdbfe;
   color: #1b66ca !important;
   width: fit-content;
 }
@@ -215,13 +210,9 @@
   margin-top: 4px;
 }
 .planner-gps-warning span {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #b45309;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  padding: 2px 8px;
-  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #8a3a28;
 }
 .planner-gps-warning .admin-button {
   min-height: 28px;
@@ -683,4 +674,50 @@
     transition: none !important;
     scroll-behavior: auto;
   }
+}
+
+/* Outlet picker and map are shown together so a point can be clicked and added. */
+.planner-pick {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+.planner-pick-form {
+  display: grid;
+  gap: 12px;
+}
+.planner-map {
+  height: 360px;
+  overflow: hidden;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+}
+@media (min-width: 1000px) {
+  .planner-pick {
+    grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr);
+  }
+  .planner-map {
+    height: 420px;
+  }
+}
+
+/* Compact flow indicator inside the map-based cluster panel. */
+.cluster-flow {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.cluster-flow button {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.planning-flow-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 0;
 }

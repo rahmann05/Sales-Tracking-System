@@ -26,7 +26,7 @@ export const SelectedSalesMapHeader = ({ selectedSales, onClearSelection }) => {
               Rute Aktif Sales: {salesName}
             </h4>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
-              {stopCount} Toko RJP
+              {stopCount} Toko PJP
             </span>
           </div>
           <p className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">

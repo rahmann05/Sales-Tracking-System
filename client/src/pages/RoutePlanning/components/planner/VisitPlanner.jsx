@@ -1,16 +1,18 @@
 import React from 'react';
+import { useApp } from '../../../../context/AppContext';
 import { useVisitPlanner } from '../../hooks/useVisitPlanner';
 import { PlanRuleEditor } from './PlanRuleEditor';
 import { PlanCalendarReview } from './PlanCalendarReview';
 import { PlanPublicationStatus, planStatusLabel } from './PlanPublicationStatus';
 export function VisitPlanner() {
+  const { user } = useApp();
   const p = useVisitPlanner(),
     locked = p.busy || p.loading || p.value.status !== 'DRAFT' || !p.canStart;
   return (
     <section className="visit-planner">
       <div className="planner-intro">
         <div>
-          <h2>Planner kunjungan</h2>
+          <h2>Jadwal kunjungan</h2>
           <p>
             Susun wilayah kunjungan menjadi tanggal kerja, periksa hasilnya, lalu terbitkan PJP.
           </p>
@@ -100,7 +102,8 @@ export function VisitPlanner() {
             Tim Supervisor
             <select
               value={p.value.supervisorId}
-              disabled={!!p.value.id}
+              // A Supervisor plans only for their own team; Admin chooses the team.
+              disabled={!!p.value.id || user?.role === 'SUPERVISOR'}
               onChange={(e) => {
                 if (
                   p.value.rules.length &&

@@ -123,8 +123,8 @@ const DETAILS = {
     'Pantau kunjungan, nominal order, dan SKU sales.',
   ],
   [TAB_IDS.ROUTE_PLANNING]: [
-    'Wilayah & jadwal RJP',
-    'Kelola kluster outlet, template mingguan, dan PJP harian.',
+    'Cluster & PJP',
+    'Buat cluster dari peta, susun jadwal kunjungan, lalu terbitkan PJP harian.',
   ],
   [TAB_IDS.TEAM_TRACKING]: [
     'Tim sales',

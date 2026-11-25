@@ -166,7 +166,7 @@ export async function exportCustomerExcel(data = [], filename = 'IMPORT_CUSTOMER
     'Alamat Pajak',
     'Tipe Pembayaran',
     'TOP (Hari)',
-    'Jadwal RJP',
+    'Jadwal PJP',
     'Hari Kunjungan',
     'Salesman',
     'Supervisor',

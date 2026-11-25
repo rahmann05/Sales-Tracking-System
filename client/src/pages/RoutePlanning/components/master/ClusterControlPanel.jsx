@@ -1,5 +1,8 @@
 import { useFeaturePolicy } from '../../../../shared/hooks/useFeaturePolicy';
 import { useCodeMissing } from '../../../../shared/hooks/useCodeMissing';
+import { useApp } from '../../../../context/AppContext';
+import { TAB_IDS } from '../../../../constants/navigation';
+import { setWorkspaceValues } from '../../../../shared/utils/workspaceNavigation';
 import React, { useDeferredValue, useMemo, useState } from 'react';
 import { OutletListPanel } from './OutletListPanel';
 import { RouteReferenceCard } from './RouteReferenceCard';
@@ -20,6 +23,12 @@ export function ClusterControlPanel({
   onCancel,
 }) {
   const featurePolicy = useFeaturePolicy('CLUSTERS');
+  const { setActiveTab } = useApp();
+  const openFlow = (view) => {
+    if (!window.dispatchEvent(new CustomEvent('app:before-navigate', { cancelable: true }))) return;
+    setWorkspaceValues({ rjpView: view }, { tab: TAB_IDS.ROUTE_PLANNING });
+    setActiveTab(TAB_IDS.ROUTE_PLANNING);
+  };
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState('ALL');
   const deferredQuery = useDeferredValue(query);
@@ -101,6 +110,17 @@ export function ClusterControlPanel({
   return (
     <section className="cluster-control-panel" aria-label="Buat cluster">
       <header className="cluster-panel-header">
+        <nav className="planning-steps cluster-flow" aria-label="Alur cluster dan PJP">
+          <button type="button" aria-pressed="true">
+            <span>1</span>Cluster
+          </button>
+          <button type="button" onClick={() => openFlow('SPV_ROLLING')}>
+            <span>2</span>Jadwal kunjungan
+          </button>
+          <button type="button" onClick={() => openFlow('SALES_VIEW')}>
+            <span>3</span>PJP terbit
+          </button>
+        </nav>
         <h1>Buat cluster wilayah</h1>
         <p>
           Langkah {activeStep} dari {steps.length} · {steps[activeStep - 1]}

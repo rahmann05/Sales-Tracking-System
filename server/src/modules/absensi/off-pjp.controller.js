@@ -24,7 +24,7 @@ export const submitOffPjpAttendance = async (req, res, next) => {
 export const listOffPjpAttendances = async (req, res, next) => {
   try {
     const result = await getOffPjpAttendances(req.user, req.query);
-    return successResponse(res, 200, result, 'Daftar absen toko luar RJP berhasil diambil');
+    return successResponse(res, 200, result, 'Daftar absen toko luar PJP berhasil diambil');
   } catch (err) {
     next(err);
   }
@@ -39,7 +39,7 @@ export const handleValidateOffPjpAttendance = async (req, res, next) => {
       res,
       200,
       updated,
-      approved ? 'Absen luar RJP divalidasi' : 'Absen luar RJP ditolak'
+      approved ? 'Absen luar PJP divalidasi' : 'Absen luar PJP ditolak'
     );
   } catch (err) {
     next(err);

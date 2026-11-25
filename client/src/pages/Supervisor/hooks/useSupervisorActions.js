@@ -36,8 +36,8 @@ export const useSupervisorActions = ({
         );
 
         addNotification({
-          title: approved ? 'Absen Toko Luar RJP TERVALIDASI' : 'Absen Toko Luar RJP DITOLAK',
-          message: `Supervisor ${user?.name || 'Supervisor'} mengubah status validasi absen toko luar RJP menjadi ${status}.`,
+          title: approved ? 'Absen Toko Luar PJP TERVALIDASI' : 'Absen Toko Luar PJP DITOLAK',
+          message: `Supervisor ${user?.name || 'Supervisor'} mengubah status validasi absen toko luar PJP menjadi ${status}.`,
           roleTarget: ['SALES', 'ADMIN'],
         });
       } catch (err) {
@@ -199,8 +199,8 @@ export const useSupervisorActions = ({
         );
 
         addNotification({
-          title: approved ? 'Kunjungan Toko Luar RJP Disetujui' : 'Kunjungan Toko Luar RJP Ditolak',
-          message: `Supervisor ${user?.name || 'Supervisor'} ${approved ? 'menyetujui' : 'menolak'} kunjungan toko luar RJP.`,
+          title: approved ? 'Kunjungan Toko Luar PJP Disetujui' : 'Kunjungan Toko Luar PJP Ditolak',
+          message: `Supervisor ${user?.name || 'Supervisor'} ${approved ? 'menyetujui' : 'menolak'} kunjungan toko luar PJP.`,
           roleTarget: ['SALES', 'ADMIN'],
         });
       } catch (err) {
@@ -280,11 +280,11 @@ export const useSupervisorActions = ({
     [setIncidents, addNotification]
   );
 
-  // Supervisor Action: Create RJP Team
+  // Supervisor Action: Create PJP Team
   const handleCreateRjpTeam = useCallback(async () => {
     addNotification({
       title: 'Fitur Belum Tersedia',
-      message: 'Pembuatan Tim RJP saat ini harus melalui sinkronisasi database secara langsung.',
+      message: 'Pembuatan Tim PJP saat ini harus melalui sinkronisasi database secara langsung.',
       roleTarget: ['SUPERVISOR', 'ADMIN'],
     });
   }, [addNotification]);

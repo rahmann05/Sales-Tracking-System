@@ -179,8 +179,8 @@ export const createOffPjpAttendance = async (userId, data) => {
         await createBulkNotificationByRoles(
           [ROLES.SUPERVISOR],
           NOTIFICATION_TYPES.OFF_PJP_SUBMITTED,
-          'Absen Toko Luar RJP (Menunggu Validasi)',
-          `Sales ${record.user.name} melakukan absen di toko luar RJP: ${outletName}. Membutuhkan validasi Supervisor.`,
+          'Absen Toko Luar PJP (Menunggu Validasi)',
+          `Sales ${record.user.name} melakukan absen di toko luar PJP: ${outletName}. Membutuhkan validasi Supervisor.`,
           { offPjpAttendanceId: record.id },
           tx
         );

@@ -21,7 +21,7 @@ export function PjpCodeGeneration() {
           setActiveTab(TAB_IDS.ROUTE_PLANNING);
         }}
       >
-        Buka Planner kunjungan
+        Buka Jadwal kunjungan
       </button>
     </section>
   );

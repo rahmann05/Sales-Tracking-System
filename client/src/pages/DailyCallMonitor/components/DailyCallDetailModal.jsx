@@ -1,14 +1,6 @@
 import { VisitOutcomeAttachments } from '../../../shared/components/common/VisitOutcomeAttachments';
 import React from 'react';
-import {
-  LuX,
-  LuMapPin,
-  LuCamera,
-  LuShoppingBag,
-  LuExternalLink,
-  LuCircleCheck,
-} from 'react-icons/lu';
-import { FiAlertTriangle } from 'react-icons/fi';
+import { LuMapPin, LuCamera, LuShoppingBag, LuExternalLink } from 'react-icons/lu';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
 import {
   formatVisitDuration,
@@ -66,19 +58,15 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
 
         {/* Anomaly Warning Banner (Shown strictly on genuine flags) */}
         {row.isDurationAnomaly || row.isDistanceAnomaly ? (
-          <div className="p-3.5 bg-[#fff1f2] border border-[#fecdd3] rounded-xl space-y-1.5 text-xs text-[#9f1239]">
-            <div className="flex items-center gap-1.5 font-semibold">
-              <FiAlertTriangle className="text-sm shrink-0" aria-hidden="true" />
-              <span>Indikasi anomali kunjungan toko</span>
-            </div>
+          <div className="admin-feedback error space-y-1.5 text-xs">
+            <div className="font-medium">Indikasi anomali kunjungan toko</div>
             <ul className="list-disc list-inside space-y-0.5 text-xs pl-1">
               {row.isDurationAnomaly ? (
                 <li>
                   <strong>Durasi terlalu singkat:</strong>{' '}
                   {formatVisitDuration(row.durationMinutes, row.durationFormatted) ||
                     'belum tersedia'}{' '}
-                  (batas kunjungan:{' '}
-                  {formatVisitDuration(row.minimumDuration) || 'belum tersedia'}).
+                  (batas kunjungan: {formatVisitDuration(row.minimumDuration) || 'belum tersedia'}).
                   {row.earlyReason ? (
                     <span>
                       {' '}
@@ -127,15 +115,9 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
               <dt className="text-xs text-on-surface-variant font-medium">Effective Call (EC)</dt>
               <dd className="mt-1 m-0">
                 {isEc ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-[#e4f7ea] text-[#15803d]">
-                    <LuCircleCheck className="text-xs shrink-0" aria-hidden="true" />
-                    <span>Ya · Diakui</span>
-                  </span>
+                  <span className="admin-status admin-status-approved">Ya · Diakui</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-surface-container text-on-surface-variant border border-border-glass">
-                    <LuX className="text-xs shrink-0" aria-hidden="true" />
-                    <span>Belum efektif</span>
-                  </span>
+                  <span className="admin-status">Belum efektif</span>
                 )}
               </dd>
             </div>

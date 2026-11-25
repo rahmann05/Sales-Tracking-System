@@ -100,7 +100,7 @@ export async function importRjp(raw, user, impactToken) {
         if (existing) {
           const audit = await recordOutletChange(tx, existing, data, {
             actor: user,
-            reason: 'Impor RJP setelah pratinjau dampak disetujui',
+            reason: 'Impor PJP setelah pratinjau dampak disetujui',
             source: 'IMPORT',
             updatedAt: existing.updatedAt.toISOString(),
           });
@@ -128,7 +128,7 @@ export async function importRjp(raw, user, impactToken) {
             data: {
               outletId: outlet.id,
               actor: actorSnapshot(user),
-              reason: 'Pembuatan master melalui impor RJP',
+              reason: 'Pembuatan master melalui impor PJP',
               source: 'IMPORT',
               before: {},
               after: data,

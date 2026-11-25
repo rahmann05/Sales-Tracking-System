@@ -131,7 +131,7 @@ export function OutletManagementPage() {
               className="app-button"
               onClick={() => setActiveTab(TAB_IDS.ROUTE_PLANNING)}
             >
-              Wilayah &amp; PJP
+              Cluster &amp; PJP
             </button>
           )}
           {canManage && (

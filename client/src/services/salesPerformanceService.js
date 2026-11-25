@@ -1,8 +1,8 @@
 import { summarizeVisits, wibDateKey } from '../../../shared/visit-metrics.mjs';
 /**
- * Sales Performance & RJP Adherence Service
+ * Sales Performance & PJP Adherence Service
  * Single Responsibility: Pure mathematical & analytical calculation of Sales visit metrics,
- * daily quota fulfillment, and RJP compliance vs Off-PJP deviation ratios.
+ * daily quota fulfillment, and PJP compliance vs Off-PJP deviation ratios.
  * 1 File = 1 Pure Logic Service
  */
 
@@ -32,7 +32,7 @@ export const calculateSalesPerformance = ({
       )
     : todayOffPjp;
 
-  // 1. RJP Metrics
+  // 1. PJP Metrics
   const visitMetrics = summarizeVisits(salesStops);
   const rjpCompleted = visitMetrics.completed;
   const rjpSkipped = salesStops.filter((s) => s.status === 'SKIPPED').length;
@@ -52,7 +52,7 @@ export const calculateSalesPerformance = ({
   const offPjpRejected = relevantOffPjp.filter((a) => a.validationStatus === 'DITOLAK').length;
 
   // 3. Quota & Target Calculations
-  // Total valid visits = purely completed RJP + SPV-validated Off-PJP
+  // Total valid visits = purely completed PJP + SPV-validated Off-PJP
   const totalValidVisits = rjpCompleted + offPjpValidated;
   // Total all recorded visit attempts
   const totalAttemptedVisits = rjpCompleted + offPjpTotal;
@@ -63,7 +63,7 @@ export const calculateSalesPerformance = ({
   const isTargetMet = totalValidVisits >= targetDailyVisits;
   const remainingToTarget = Math.max(0, targetDailyVisits - totalValidVisits);
 
-  // 4. RJP Compliance vs Off-PJP Ratio
+  // 4. PJP Compliance vs Off-PJP Ratio
   const rjpAdherenceRate =
     totalAttemptedVisits > 0 ? Math.round((rjpCompleted / totalAttemptedVisits) * 100) : 100;
   const offPjpDeviationRate = 100 - rjpAdherenceRate;
@@ -76,16 +76,16 @@ export const calculateSalesPerformance = ({
     complianceVerdict = 'Belum Ada Kunjungan Dicatat';
     complianceCategory = 'NEUTRAL';
   } else if (isTargetMet && rjpAdherenceRate >= 80) {
-    complianceVerdict = 'Target Terpenuhi Murni Disiplin RJP';
+    complianceVerdict = 'Target Terpenuhi Murni Disiplin PJP';
     complianceCategory = 'EXCELLENT';
   } else if (isTargetMet && rjpAdherenceRate < 80) {
-    complianceVerdict = 'Target Terpenuhi dengan Mitigasi Luar RJP';
+    complianceVerdict = 'Target Terpenuhi dengan Mitigasi Luar PJP';
     complianceCategory = 'MITIGATED';
   } else if (!isTargetMet && rjpAdherenceRate >= 80) {
-    complianceVerdict = 'Sedang Berjalan (Disiplin Rute RJP)';
+    complianceVerdict = 'Sedang Berjalan (Disiplin Rute PJP)';
     complianceCategory = 'IN_PROGRESS';
   } else {
-    complianceVerdict = 'Tinggi Deviasi Luar RJP (Perlu Review SPV)';
+    complianceVerdict = 'Tinggi Deviasi Luar PJP (Perlu Review SPV)';
     complianceCategory = 'HIGH_DEVIATION';
   }
 

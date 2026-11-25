@@ -21,7 +21,7 @@ const MASTER_HEADERS = [
   'NPWP / NIK',
   'Tipe Bayar',
   'TOP (Hr)',
-  'Jadwal RJP',
+  'Jadwal PJP',
   'Hari Kunjungan',
   'Salesman',
   'Supervisor',
@@ -121,7 +121,7 @@ export function buildOutletMasterBlueprint(items = [], customFilename) {
     sheetName: 'MASTER_OUTLET',
     orientation: 'landscape',
     title: 'LAPORAN MASTER & REKAPITULASI REGISTRASI OUTLET (NOO)',
-    subtitle: 'Data Pelanggan Baru, Klasifikasi Saluran, Identitas Pajak & Jadwal Kunjungan RJP',
+    subtitle: 'Data Pelanggan Baru, Klasifikasi Saluran, Identitas Pajak & Jadwal Kunjungan PJP',
     docNumber: `OUTLET-${dateCode.replace(/-/g, '')}`,
     metaItems: [
       { label: 'Tanggal Cetak', value: formatDateId(new Date()) },

@@ -11,6 +11,7 @@ import {
   buildClusterDraftRules,
 } from '../../../../../../shared/pjp-planning.mjs';
 import { PlanSubstituteEditor } from './PlanSubstituteEditor';
+import { PlanOutletMap } from './PlanOutletMap';
 export function PlanRuleEditor({ planner: p }) {
   const { user, settings, setActiveTab } = useApp(),
     policy = p.source.planningPolicies?.[p.value.supervisorId]?.values || settings,
@@ -177,26 +178,38 @@ export function PlanRuleEditor({ planner: p }) {
           kembali tanggal acuan dan interval sebelum diterbitkan.
         </p>
         <fieldset disabled={p.busy || p.loading || p.value.status !== 'DRAFT' || !p.canStart}>
-          <label className="app-field">
-            Cari outlet tim
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nama, kode, atau cluster"
+          <div className="planner-pick">
+            <div className="planner-pick-form">
+              <label className="app-field">
+                Cari outlet tim
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Nama, kode, atau cluster"
+                />
+              </label>
+              <label className="app-field">
+                Tambahkan ke jadwal {person?.name}
+                <select value="" onChange={(e) => add(e.target.value)} disabled={!person}>
+                  <option value="">Pilih outlet…</option>
+                  {eligible.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} · {o.cluster?.name} ·{' '}
+                      {o.itineraryCode || 'Interval belum ditetapkan'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <PlanOutletMap
+              shops={shops}
+              plannedIds={new Set(rules.map((r) => r.outletId))}
+              salesName={person?.name}
+              disabled={!person}
+              onAdd={add}
             />
-          </label>
-          <label className="app-field">
-            Tambahkan ke jadwal {person?.name}
-            <select value="" onChange={(e) => add(e.target.value)} disabled={!person}>
-              <option value="">Pilih outlet…</option>
-              {eligible.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name} · {o.cluster?.name} · {o.itineraryCode || 'Interval belum ditetapkan'}
-                </option>
-              ))}
-            </select>
-          </label>
+          </div>
           <ol className="planner-rule-list">
             {rules.map((r, n) => {
               const o = shops.find((o) => o.id === r.outletId);
@@ -263,21 +276,24 @@ export function PlanRuleEditor({ planner: p }) {
                         ))}
                       </select>
                     </label>
-                    <label className="app-field">
-                      Alasan penugasan / penyesuaian
-                      <input
-                        maxLength={500}
-                        value={r.reason || ''}
-                        onChange={(e) => change(r.index, 'reason', e.target.value)}
-                        placeholder="Wajib untuk Sales pengganti"
-                      />
-                    </label>
+                    {policy.PJP_REQUIRE_REASON === true && (
+                      <label className="app-field">
+                        Alasan penugasan / penyesuaian
+                        <input
+                          maxLength={500}
+                          value={r.reason || ''}
+                          onChange={(e) => change(r.index, 'reason', e.target.value)}
+                          placeholder="Wajib diisi: alasan penugasan atau penyesuaian"
+                        />
+                      </label>
+                    )}
                   </div>
                   <PlanSubstituteEditor
                     rule={r}
                     people={people}
                     startsOn={p.value.startsOn}
                     endsOn={p.value.endsOn}
+                    requireReason={policy.PJP_REQUIRE_REASON === true}
                     enabled={
                       policy.PJP_ALLOW_TEMPORARY_SUBSTITUTION === true &&
                       policy.PJP_ALLOW_OWNER_OVERRIDE !== false

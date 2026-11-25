@@ -49,7 +49,7 @@ export const SUPERVISOR_TABS = [
     label: 'Pusat Approval & Kendala',
     shortLabel: 'Pusat Approval',
     icon: LuCircleCheck,
-    description: 'Antrean persetujuan toko tutup (reroute), buka kunci presensi, dan luar RJP',
+    description: 'Antrean persetujuan toko tutup (reroute), buka kunci presensi, dan luar PJP',
   },
   {
     id: 'daily_recap',
@@ -65,7 +65,7 @@ export const ACTION_CENTER_FILTERS = [
   { id: 'ALL', label: 'Semua Antrean', icon: null },
   { id: 'CLOSED_SHOP', label: 'Kendala Toko Tutup', icon: FiAlertCircle, badgeColor: 'rose' },
   { id: 'UNLOCK', label: 'Buka Kunci Presensi', icon: LuKey, badgeColor: 'amber' },
-  { id: 'OFF_PJP', label: 'Absen Luar RJP', icon: LuClock, badgeColor: 'blue' },
+  { id: 'OFF_PJP', label: 'Absen Luar PJP', icon: LuClock, badgeColor: 'blue' },
 ];
 
 export const APPROVAL_SUB_FILTERS = ACTION_CENTER_FILTERS;

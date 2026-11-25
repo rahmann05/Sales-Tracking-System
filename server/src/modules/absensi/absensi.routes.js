@@ -38,7 +38,7 @@ router.post(
 router.get('/history', absensiController.history);
 router.get('/pjp/:pjpId', authorize('SUPERVISOR', 'ADMIN'), absensiController.getPjpRecap);
 
-// ─── Absensi Off-PJP (Kunjungan Toko Luar RJP) ───────────────────────────────
+// ─── Absensi Off-PJP (Kunjungan Toko Luar PJP) ───────────────────────────────
 router.post(
   '/off-pjp',
   authorizeDomainAction('OFF_PJP'),

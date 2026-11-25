@@ -26,7 +26,7 @@ export const validateOffPjpAttendance = async (id, supervisorId, approved, rejec
         where: { id },
         select: { userId: true },
       });
-      if (!subject) throw new AppError('Data absen luar RJP tidak ditemukan', 404);
+      if (!subject) throw new AppError('Data absen luar PJP tidak ditemukan', 404);
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`staff:${subject.userId}`}))`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('approval:actors'))`;
       const reviewer = (await reviewPeople(tx)).find((person) => person.id === supervisorId);
@@ -64,7 +64,7 @@ export const validateOffPjpAttendance = async (id, supervisorId, approved, rejec
           },
         },
       });
-      const notifTitle = approved ? 'Absen Luar RJP Divalidasi' : 'Absen Luar RJP Ditolak';
+      const notifTitle = approved ? 'Absen Luar PJP Divalidasi' : 'Absen Luar PJP Ditolak';
       const notifMsg = approved
         ? `Absen Anda di toko "${record.outletName}" telah divalidasi oleh Supervisor.`
         : `Absen Anda di toko "${record.outletName}" ditolak. Alasan: ${rejectionNote || '-'}.`;

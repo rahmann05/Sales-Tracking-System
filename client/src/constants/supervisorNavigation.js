@@ -36,7 +36,7 @@ const GROUPS = [
     id: 'team',
     label: 'Tim & jadwal',
     icon: LuUsers,
-    description: 'Atur anggota, wilayah outlet, dan jadwal RJP.',
+    description: 'Atur anggota, wilayah outlet, dan jadwal PJP.',
     tabs: [TAB_IDS.TEAM_TRACKING, TAB_IDS.ROUTE_PLANNING],
   },
   {
@@ -72,7 +72,7 @@ const LABELS = {
   [TAB_IDS.SPV_FIELD]: 'Supervisi lapangan',
   [TAB_IDS.SPV_ATTENTION]: 'Pekerjaan terbuka',
   [TAB_IDS.TEAM_TRACKING]: 'Anggota tim',
-  [TAB_IDS.ROUTE_PLANNING]: 'Wilayah & jadwal RJP',
+  [TAB_IDS.ROUTE_PLANNING]: 'Cluster & PJP',
   [TAB_IDS.OUTLET_MANAGEMENT]: 'Direktori outlet',
   [TAB_IDS.OUTLET_APPROVAL]: 'Pengajuan outlet',
   [TAB_IDS.OUTLET_VALIDATION]: 'Validasi outlet',

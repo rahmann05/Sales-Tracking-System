@@ -144,10 +144,10 @@ export function buildNooDocumentBlueprint(item = {}) {
         columnWidths: [8, 35, 57],
       },
       {
-        title: '3. Jadwal Kunjungan Rutin (RJP / PJP) & Verifikasi',
+        title: '3. Jadwal Kunjungan Rutin (PJP / PJP) & Verifikasi',
         headers: ['No', 'Atribut Rute & Otorisasi', 'Nilai / Keterangan Tercatat'],
         rows: [
-          ['1', 'Siklus Kunjungan RJP', visitCycle],
+          ['1', 'Siklus Kunjungan PJP', visitCycle],
           ['2', 'Hari Kunjungan Rutin', visitDays],
           ['3', 'Salesman Pengaju', safeStr(item.salesmanName || item.submittedBy?.name)],
           ['4', 'Supervisor Area', safeStr(item.spvName || item.supervisorName)],

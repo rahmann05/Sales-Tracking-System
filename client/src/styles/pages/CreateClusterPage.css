@@ -208,17 +208,18 @@
 }
 .cluster-chip-btn {
   justify-self: start;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid #bfdbfe;
-  background: #f0f6ff;
-  color: #1b66ca;
-  font-size: 12px;
-  font-weight: 600;
+  min-height: 36px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #c8cbd1;
+  background: #fff;
+  color: #242931;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
 }
 .cluster-chip-btn:hover {
-  background: #e0edff;
+  background: #f3f5f8;
 }
 .cluster-advanced-code {
   background: #ffffff;

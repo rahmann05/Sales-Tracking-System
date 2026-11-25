@@ -11,7 +11,7 @@ export const OutletExcelMetadata = ({ stop }) => {
 
   const customerName = stop.customerName || stop.outletName;
   const customerId = stop.customerId || stop.outletCode;
-  const callplanName = stop.callplanName || stop.callPlanName || 'RJP-CIMAHI-01';
+  const callplanName = stop.callplanName || stop.callPlanName || 'PJP-CIMAHI-01';
   const dayOfWeek = stop.dayOfWeek || 'Senin';
 
   return (

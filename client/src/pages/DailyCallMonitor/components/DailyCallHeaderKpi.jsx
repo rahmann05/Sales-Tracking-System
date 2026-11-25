@@ -64,7 +64,8 @@ export const DailyCallHeaderKpi = ({ summary = {}, onSelectAnomalies }) => {
         </div>
         <div className="flex items-baseline justify-between gap-2 flex-wrap">
           <div className="text-2xl font-semibold text-on-surface">
-            {totalAnomalies} <span className="text-xs font-normal text-on-surface-variant">Kasus</span>
+            {totalAnomalies}{' '}
+            <span className="text-xs font-normal text-on-surface-variant">Kasus</span>
           </div>
           <span
             className={totalAnomalies > 0 ? 'admin-status admin-status-rejected' : 'admin-status'}

@@ -516,6 +516,14 @@ export const CONFIG_DEFINITIONS = [
         max: 60,
       },
       {
+        key: 'LIVE_TRACKING_ONLY_ACTIVE_SHIFT',
+        label: 'Posisi terkini hanya untuk sales yang sedang shift',
+        description:
+          'Aktif: daftar dan peta Posisi terkini hanya memuat sales yang sudah memulai shift hari ini dan belum mengakhirinya. Nonaktif: seluruh sales dalam cakupan ditampilkan. Diabaikan bila fitur shift dinonaktifkan.',
+        type: 'boolean',
+        defaultValue: true,
+      },
+      {
         key: 'LIVE_TRACKING_PING_TIMEOUT_MINUTES',
         label: 'Timeout Ping GPS',
         description:
@@ -973,7 +981,7 @@ export const CONFIG_DEFINITIONS = [
         key: 'CALLPLAN_LEGEND',
         label: 'Legenda Callplan/PJP',
         description:
-          'Teks legenda yang ditampilkan pada kartu ringkasan rute harian sales di halaman RJP.',
+          'Teks legenda yang ditampilkan pada kartu ringkasan rute harian sales di halaman PJP.',
         type: 'text',
         defaultValue: 'F4 = Kunjungan 4 minggu, F2 = Kunjungan 2 minggu',
       },

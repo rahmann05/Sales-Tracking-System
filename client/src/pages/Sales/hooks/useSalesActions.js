@@ -252,7 +252,7 @@ export const useSalesActions = ({
     [user?.name, salesStops, setSalesStops, setIncidents, addNotification]
   );
 
-  // Sales Action: Absen Toko Luar RJP (Off-PJP)
+  // Sales Action: Absen Toko Luar PJP (Off-PJP)
   const handleSalesAbsenOffPJP = useCallback(
     async ({
       requestId,
@@ -306,7 +306,7 @@ export const useSalesActions = ({
         ]);
 
         addNotification({
-          title: 'Presensi Toko Luar RJP Masuk',
+          title: 'Presensi Toko Luar PJP Masuk',
           message: `Sales ${user?.name || 'Sales'} mencatat kunjungan luar PJP: ${outletName}. ${att.status === 'APPROVED' ? 'Diterima sesuai aturan tanpa pemeriksaan tambahan.' : 'Menunggu pemeriksaan Supervisor.'}`,
           roleTarget: ['SUPERVISOR'],
         });

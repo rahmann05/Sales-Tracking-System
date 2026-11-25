@@ -625,6 +625,12 @@ export const OPERATIONAL_CONFIG_GROUPS = [
       bool('PJP_ALLOW_FREQUENCY_OVERRIDE', 'Izinkan perubahan interval dengan alasan'),
       bool('PJP_ALLOW_OWNER_OVERRIDE', 'Izinkan Sales pengganti dengan alasan'),
       bool(
+        'PJP_REQUIRE_REASON',
+        'Wajib alasan penugasan dan penyesuaian PJP',
+        false,
+        'Aktif: alasan wajib diisi saat Sales bukan pemilik wilayah, interval berbeda dari acuan outlet, atau ada Sales pengganti sementara. Nonaktif (default): alasan tidak diminta.'
+      ),
+      bool(
         'PJP_ALLOW_TEMPORARY_SUBSTITUTION',
         'Izinkan Sales pengganti dalam rentang tanggal',
         false,

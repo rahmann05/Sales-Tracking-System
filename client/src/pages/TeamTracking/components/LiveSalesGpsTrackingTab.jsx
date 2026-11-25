@@ -13,7 +13,6 @@ export function LiveSalesGpsTrackingTab({ onSelectSalesId }) {
     [updated, setUpdated] = useState(null),
     [now, setNow] = useState(Date.now());
   const [search, setSearch] = useWorkspaceState('gpsSearch', ''),
-    [filter, setFilter] = useWorkspaceState('gpsFilter', 'all'),
     [selectedId, setSelectedId] = useWorkspaceState('gpsSales', '');
   const pending = useRef(false),
     mounted = useRef(false),
@@ -59,16 +58,9 @@ export function LiveSalesGpsTrackingTab({ onSelectSalesId }) {
     };
   }, [load]);
   const visible = (rows || []).filter((row) => {
-    const state = locationPresentation(row, now, timeoutMinutes);
-    return (
-      `${row.salesName} ${row.clusterName || ''}`
-        .toLocaleLowerCase('id-ID')
-        .includes(search.trim().toLocaleLowerCase('id-ID')) &&
-      (filter === 'all' ||
-        (filter === 'missing' && !state.hasPosition) ||
-        (filter === 'live' && state.tone === 'live') ||
-        (filter === 'visit' && row.activityStatus === 'IN_VISIT'))
-    );
+    return `${row.salesName} ${row.clusterName || ''}`
+      .toLocaleLowerCase('id-ID')
+      .includes(search.trim().toLocaleLowerCase('id-ID'));
   });
   const selected = visible.find((row) => row.salesId === selectedId);
   const choose = (id) => {
@@ -86,15 +78,6 @@ export function LiveSalesGpsTrackingTab({ onSelectSalesId }) {
             onChange={(e) => setSearch(e.target.value, { replace: true })}
             placeholder="Nama sales atau wilayah…"
           />
-        </label>
-        <label>
-          Kondisi
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="all">Seluruh tim</option>
-            <option value="live">GPS terkini</option>
-            <option value="visit">Dalam kunjungan</option>
-            <option value="missing">Lokasi belum tersedia</option>
-          </select>
         </label>
         <button type="button" className="app-button" disabled={loading} onClick={() => load(true)}>
           <LuRefreshCw />
@@ -150,7 +133,9 @@ export function LiveSalesGpsTrackingTab({ onSelectSalesId }) {
               );
             })}
             {!visible.length && (
-              <p className="spv-note spv-empty">Tidak ada sales sesuai filter.</p>
+              <p className="spv-note spv-empty">
+                Belum ada sales yang memulai shift atau sesuai pencarian.
+              </p>
             )}
           </section>
           <div className="spv-position-content">
