@@ -54,72 +54,96 @@ export const email = (key) => `${key}@sinaranugrah.com`;
 
 export const note = 'Operasional CV. Sinar Anugrah Divisi Belfoods Bandung Raya.';
 
+// Lean demo team: one Supervisor for both channels, one Sales per channel (GT, MT), plus Admin,
+// warehouse head and one driver. E-mail is the first name only.
 export const people = [
   ['admin', 'Rina Hartati', 'ADMIN', 'ADM01', null],
-  ['spv.gt', 'Hendra Wijaya', 'SUPERVISOR', 'SPVGT', null],
-  ['spv.mt', 'Siti Nurhaliza', 'SUPERVISOR', 'SPVMT', null],
+  ['pian', 'Pian Sopiandi', 'SUPERVISOR', 'SPV01', null],
   ['cahya', 'Cahya Pratama', 'SALES', 'SLD514', 0],
-  ['dadan', 'Dadan Ramdani', 'SALES', 'SLD516', 0],
-  ['puri', 'Puri Lestari', 'SALES', 'SLD515', 1],
-  ['yati', 'Yati Suryani', 'SALES', 'SLD517', 1],
-  ['yuli', 'Yulianti', 'SALES', 'SLD539', 1],
+  ['yuli', 'Yulianti', 'SALES', 'SLD539', 0],
   ['gudang', 'Bambang Supriatna', 'KEPALA_GUDANG', 'WH01', null],
-  ['andri.supir', 'Andri Setiawan', 'SUPIR', 'DRV01', null],
-  ['rendi.supir', 'Rendi Kurniawan', 'SUPIR', 'DRV02', null],
-  ['ridwanto.supir', 'Ridwanto', 'SUPIR', 'DRV03', null],
-  ['oki.supir', 'Oki Hermawan', 'SUPIR', 'DRV04', null],
+  ['andri', 'Andri Setiawan', 'SUPIR', 'DRV01', null],
 ];
 
+/**
+ * Real callplan owners in the source file. Only the sales listed in CLUSTER_DEFS are part of the
+ * demo; every other source outlet is still loaded but stays unassigned (no cluster, no sales, no PJP).
+ */
+export const SOURCE_SALES = {
+  SLD514: {
+    channel: 'GENERAL_TRADE',
+    itineraryCode: 'F2',
+    region: 'Cimahi & Kabupaten Bandung Barat',
+  },
+  SLD516: {
+    channel: 'GENERAL_TRADE',
+    itineraryCode: 'F2',
+    region: 'Kota Bandung Selatan & Kabupaten Bandung',
+  },
+  SLD515: { channel: 'MODERN_TRADE', itineraryCode: 'F4', region: 'Kota Bandung & Bandung Utara' },
+  SLD517: { channel: 'MODERN_TRADE', itineraryCode: 'F1', region: 'Kota Bandung Pusat & Timur' },
+  SLD539: { channel: 'MODERN_TRADE', itineraryCode: 'F1', region: 'Bandung Raya & Cimahi' },
+};
+
+export const UNASSIGNED_CLUSTER = {
+  code: 'BF-UNASSIGNED',
+  name: 'Belum Ditugaskan',
+  region: 'Belum ditetapkan',
+  colorHex: '#697280',
+};
+
+/**
+ * Compact territories, each built from the real callplan stops of its Sales that lie closest to
+ * `center`: a cluster is a contiguous area one person can cover, not a copy of a whole callplan.
+ */
 export const CLUSTER_DEFS = [
   {
-    staffCode: 'SLD514',
+    code: 'BF-GT-CMH',
+    name: 'GT Kota Cimahi',
+    region: 'Kota Cimahi',
     salesKey: 'cahya',
-    code: 'BF-SLD514',
-    name: 'GT Cimahi & Bandung Barat',
-    region: 'Cimahi & Kabupaten Bandung Barat',
+    staffCode: 'SLD514',
+    channel: 'GENERAL_TRADE',
+    itineraryCode: 'F2',
     colorHex: '#1b66ca',
-    channel: 'GENERAL_TRADE',
-    itineraryCode: 'F2',
+    center: [-6.89, 107.532],
+    size: 20,
   },
   {
-    staffCode: 'SLD516',
-    salesKey: 'dadan',
-    code: 'BF-SLD516',
-    name: 'GT Bandung Selatan & Kopo',
-    region: 'Kota Bandung Selatan & Kabupaten Bandung',
+    code: 'BF-GT-LMB',
+    name: 'GT Lembang & Parongpong',
+    region: 'Lembang & Parongpong, Kabupaten Bandung Barat',
+    salesKey: 'cahya',
+    staffCode: 'SLD514',
+    channel: 'GENERAL_TRADE',
+    itineraryCode: 'F2',
     colorHex: '#0f766e',
-    channel: 'GENERAL_TRADE',
-    itineraryCode: 'F2',
+    center: [-6.839, 107.598],
+    size: 14,
   },
   {
-    staffCode: 'SLD515',
-    salesKey: 'puri',
-    code: 'BF-SLD515',
-    name: 'MT Minimarket Bandung Raya',
-    region: 'Kota Bandung & Bandung Utara',
-    colorHex: '#0369a1',
-    channel: 'MODERN_TRADE',
-    itineraryCode: 'F4',
-  },
-  {
-    staffCode: 'SLD517',
-    salesKey: 'yati',
-    code: 'BF-SLD517',
-    name: 'MT Supermarket Bandung Kota',
-    region: 'Kota Bandung Pusat & Timur',
-    colorHex: '#1d4ed8',
-    channel: 'MODERN_TRADE',
-    itineraryCode: 'F1',
-  },
-  {
-    staffCode: 'SLD539',
+    code: 'BF-MT-CMH',
+    name: 'MT Cimahi & Padalarang',
+    region: 'Cimahi & Padalarang',
     salesKey: 'yuli',
-    code: 'BF-SLD539',
-    name: 'MT Supermarket Bandung Raya',
-    region: 'Bandung Raya & Cimahi',
-    colorHex: '#334155',
+    staffCode: 'SLD539',
     channel: 'MODERN_TRADE',
     itineraryCode: 'F1',
+    colorHex: '#0369a1',
+    center: [-6.871, 107.52],
+    size: 7,
+  },
+  {
+    code: 'BF-MT-BDG',
+    name: 'MT Bandung Utara',
+    region: 'Kota Bandung Utara',
+    salesKey: 'yuli',
+    staffCode: 'SLD539',
+    channel: 'MODERN_TRADE',
+    itineraryCode: 'F1',
+    colorHex: '#334155',
+    center: [-6.894, 107.612],
+    size: 12,
   },
 ];
 
@@ -265,9 +289,9 @@ export function sourceData() {
 
   for (const plan of rawPlans) {
     const salesCode = plan.nama_sales.split(/\s+/)[0];
-    const clusterDef = CLUSTER_DEFS.find((c) => c.staffCode === salesCode);
-    if (!clusterDef) throw new Error(`Sales code tidak dikenal pada JSON sumber: ${salesCode}`);
-    const isMt = clusterDef.channel === 'MODERN_TRADE';
+    const profile = SOURCE_SALES[salesCode];
+    if (!profile) throw new Error(`Sales code tidak dikenal pada JSON sumber: ${salesCode}`);
+    const isMt = profile.channel === 'MODERN_TRADE';
     const weekType = /\bW1\b/i.test(plan.nama_sales)
       ? 'WEEK_1'
       : /\bW2\b/i.test(plan.nama_sales)
@@ -289,7 +313,7 @@ export function sourceData() {
             `Koordinat outlet ${k.customer_id} (${k.customer_name}) masih tidak valid`
           );
         }
-        const address = normalizeAddress(curation.address ?? k.address, clusterDef.region);
+        const address = normalizeAddress(curation.address ?? k.address, profile.region);
         const name = k.customer_name.trim().replace(/\s+/g, ' ');
         const idx = outlets.length;
         const subChannel = classifySubChannel(name, isMt);
@@ -310,10 +334,12 @@ export function sourceData() {
           dayOfWeek: dayEntry.day_of_week,
           dayLabel: dayEntry.hari,
           sequence: seqIdx + 1,
-          clusterCode: clusterDef.code,
-          channel: clusterDef.channel,
+          // Assignment is decided below; until then every outlet is unassigned.
+          assigned: false,
+          clusterCode: UNASSIGNED_CLUSTER.code,
+          channel: profile.channel,
           subChannel,
-          itineraryCode: clusterDef.itineraryCode,
+          itineraryCode: profile.itineraryCode,
           ownerName: inferOwnerName(name, idx),
           phone: deterministicPhone(idx),
           taxType: isMt ? 'PKP' : 'NON_PKP',
@@ -333,13 +359,61 @@ export function sourceData() {
     });
   }
 
+  // Build each territory from the nearest real stops of its Sales (a stop belongs to one cluster).
+  for (const def of CLUSTER_DEFS) {
+    const taken = outlets
+      .filter((o) => o.salesCode === def.staffCode && !o.assigned)
+      .map((o) => ({
+        o,
+        d: haversineKm(def.center[0], def.center[1], o.latitude, o.longitude),
+      }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, def.size);
+    for (const { o } of taken) {
+      o.assigned = true;
+      o.clusterCode = def.code;
+    }
+  }
+
+  // Keep every working day usable: a Sales with fewer than 2 stops on a weekday (current-week plan)
+  // gets the nearest real stop of that same weekday (within 10 km) added to the closest territory.
+  for (const staffCode of new Set(CLUSTER_DEFS.map((d) => d.staffCode))) {
+    const defs = CLUSTER_DEFS.filter((d) => d.staffCode === staffCode);
+    for (let dow = 1; dow <= 6; dow++) {
+      const weekly = (o) =>
+        o.salesCode === staffCode && o.dayOfWeek === dow && o.weekType !== 'WEEK_2';
+      const have = () => outlets.filter((o) => weekly(o) && o.assigned).length;
+      const pool = outlets.filter((o) => weekly(o));
+      if (!pool.length) continue;
+      while (have() < 2) {
+        const next = outlets
+          .filter((o) => weekly(o) && !o.assigned)
+          .map((o) => {
+            const nearest = defs
+              .map((d) => ({
+                d,
+                km: haversineKm(d.center[0], d.center[1], o.latitude, o.longitude),
+              }))
+              .sort((x, y) => x.km - y.km)[0];
+            return { o, ...nearest };
+          })
+          .filter((x) => x.km <= 10)
+          .sort((x, y) => x.km - y.km)[0];
+        if (!next) break;
+        next.o.assigned = true;
+        next.o.clusterCode = next.d.code;
+      }
+    }
+  }
+
   cachedSource = {
     source: 'KUNJUNGAN_TOKO_BELFOODS_CONVERTED.json',
     summary: {
       sourceRows: outlets.length,
       uniqueOutletCodes: new Set(outlets.map((o) => o.customer_id)).size,
-      physicalSales: CLUSTER_DEFS.length,
+      physicalSales: Object.keys(SOURCE_SALES).length,
       callplanVariants: plans.length,
+      assignedOutlets: outlets.filter((o) => o.assigned).length,
     },
     plans,
     outlets,

@@ -33,6 +33,7 @@ export function CreateClusterPage() {
               plannerSpv: outcome.supervisorId,
               plannerSales: outcome.assignedSalesId || '',
               plannerCluster: outcome.cluster?.id || '',
+              plannerClusterName: outcome.cluster?.name || '',
             },
             { tab: routeTab }
           );

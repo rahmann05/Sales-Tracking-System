@@ -280,6 +280,7 @@ export function firstWorkingAnchorDate(
 export function buildClusterDraftRules({
   person,
   shops = [],
+  clusterId = '',
   existingOutletIds = [],
   startsOn,
   workingDays = [1, 2, 3, 4, 5, 6],
@@ -309,7 +310,9 @@ export function buildClusterDraftRules({
   const matching = shops.filter(
     (o) =>
       !existing.has(o.id) &&
-      (o.cluster?.assignedSalesId === person.id || assignedIds.has(o.clusterId))
+      (clusterId
+        ? (o.clusterId || o.cluster?.id) === clusterId
+        : o.cluster?.assignedSalesId === person.id || assignedIds.has(o.clusterId))
   );
   const grouped = new Map();
   for (const outlet of matching) {

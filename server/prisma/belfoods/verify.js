@@ -45,16 +45,18 @@ export async function verifyBelfoods(db, date, { exact = false } = {}) {
   }
 
   if (exact) {
-    assert.equal(users.length, 13);
-    assert.equal(clusters.length, 5);
+    const assigned = data.outlets.filter((o) => o.assigned);
+    const templates = new Set(assigned.map((o) => `${o.salesCode}:${o.dayOfWeek}:${o.weekType}`));
+    assert.equal(users.length, 6);
+    assert.equal(clusters.length, 5); // 4 territories + the unassigned placeholder
     assert.equal(outlets.length, 443);
     assert.equal(counts.Product, 12);
     assert.equal(counts.Vehicle, 11);
-    assert.equal(counts.PjpTemplate, 41);
-    assert.equal(counts.PjpTemplateStop, 443);
+    assert.equal(counts.PjpTemplate, templates.size);
+    assert.equal(counts.PjpTemplateStop, assigned.length);
     assert.equal(counts.CustomerRegistration, 4);
-    assert.equal(counts.PackingList, 10);
-    assert.equal(counts.DeliveryRoute, 5);
+    assert.equal(counts.PackingList, 8);
+    assert.equal(counts.DeliveryRoute, 4);
   }
 
   for (const role of ['ADMIN', 'SUPERVISOR', 'SALES', 'KEPALA_GUDANG', 'SUPIR']) {
@@ -80,6 +82,13 @@ export async function verifyBelfoods(db, date, { exact = false } = {}) {
 
   for (const cluster of clusters) {
     assert.equal(cluster.outletCount, cluster.outlets.length, `outletCount ${cluster.code}`);
+    if (cluster.code === 'BF-UNASSIGNED') {
+      assert.ok(
+        !cluster.assignedSalesId && !cluster.supervisorId,
+        'Cluster kosong harus tanpa Sales/SPV'
+      );
+      continue;
+    }
     assert.equal(
       new Set(cluster.outlets.map((o) => o.type)).size,
       1,
@@ -113,11 +122,18 @@ export async function verifyBelfoods(db, date, { exact = false } = {}) {
       !TEST_LABEL_RE.test(`${actual.name} ${actual.address}`),
       `Label test pada outlet: ${actual.outletCode}`
     );
-    assert.equal(
-      actual.cluster.assignedSalesId,
-      users.find((u) => u.staffCode === row.salesCode).id,
-      `Sales assignment tidak cocok pada ${row.customer_id}`
-    );
+    if (row.assigned)
+      assert.equal(
+        actual.cluster.assignedSalesId,
+        users.find((u) => u.staffCode === row.salesCode).id,
+        `Sales assignment tidak cocok pada ${row.customer_id}`
+      );
+    else
+      assert.equal(
+        actual.cluster.code,
+        'BF-UNASSIGNED',
+        `Outlet ${row.customer_id} harus belum ditugaskan`
+      );
     if (actual.validationStatus !== 'WARNING') {
       assert.deepEqual(outletIssues(actual), [], `Outlet ${row.customer_id} masih memiliki issue`);
     }
@@ -192,6 +208,6 @@ export async function verifyBelfoods(db, date, { exact = false } = {}) {
     );
   }
 
-  assert.equal(people.length, 13);
+  assert.equal(people.length, 6);
   return { date, counts, sourceOutlets: data.outlets.length, status: 'PASS' };
 }

@@ -56,6 +56,9 @@ function buildOrderItems(products, seedIndex, qtyA = 6, qtyB = 4) {
   };
 }
 
+const primaryCluster = (clusters, member) =>
+  clusters.find((c) => c.assignedSalesId === member.id) || clusters[0];
+
 export async function seedSales(db, master, date) {
   const {
     users,
@@ -75,6 +78,7 @@ export async function seedSales(db, master, date) {
   const baseStamp = at(date, '07:00');
   const plans = [];
   const orders = [];
+  const histOrderCode = new Map();
   let orderCounter = 1;
 
   // 1. Seed 2 PUBLISHED PjpPlans covering all 443 outlets across GT & MT supervisors
@@ -84,7 +88,9 @@ export async function seedSales(db, master, date) {
     const endsOn = offsetDate(date, 28);
     const rules = [];
     for (const member of team) {
-      const memberOutlets = source.outlets.filter((o) => o.salesCode === member.staffCode);
+      const memberOutlets = source.outlets.filter(
+        (o) => o.assigned && o.salesCode === member.staffCode
+      );
       for (const r of memberOutlets) {
         let anchor = startsOn;
         while (new Date(`${anchor}T12:00:00Z`).getUTCDay() !== r.dayOfWeek) {
@@ -104,7 +110,7 @@ export async function seedSales(db, master, date) {
 
     await ensure(db, 'pjpPlan', `pjp-plan-${spvIdx}-${date}`, {
       requestId: id(`pjp-plan-req-${spvIdx}-${date}`),
-      name: `Rencana Kunjungan Belfoods ${spvIdx === 0 ? 'General Trade' : 'Modern Trade'}`,
+      name: 'Rencana Kunjungan Belfoods GT & MT',
       supervisorId: spv.id,
       startsOn,
       endsOn,
@@ -143,12 +149,57 @@ export async function seedSales(db, master, date) {
     });
   }
 
+  // A DRAFT plan for the period after the published one, so the planner can be tried end to end.
+  {
+    const spv = supervisors[0];
+    const startsOn = offsetDate(date, 29);
+    const rules = [];
+    for (const member of sales) {
+      const own = source.outlets.filter((o) => o.assigned && o.salesCode === member.staffCode);
+      for (const r of own.slice(0, 5)) {
+        let anchor = startsOn;
+        while (new Date(`${anchor}T12:00:00Z`).getUTCDay() !== r.dayOfWeek)
+          anchor = offsetDate(anchor, 1);
+        rules.push({
+          userId: member.id,
+          outletId: outletByCode.get(r.customer_id).id,
+          anchorDate: anchor,
+          intervalWeeks: Number(r.itineraryCode.slice(1)),
+          reason: '',
+        });
+      }
+    }
+    await ensure(db, 'pjpPlan', `pjp-plan-draft-${date}`, {
+      requestId: id(`pjp-plan-draft-req-${date}`),
+      name: 'Draft rencana periode berikutnya',
+      supervisorId: spv.id,
+      startsOn,
+      endsOn: offsetDate(date, 56),
+      rules,
+      revision: 1,
+      status: 'DRAFT',
+      createdBy: spv.id,
+      updatedBy: spv.id,
+      history: [
+        {
+          action: 'DRAFT',
+          actorId: spv.id,
+          actorName: spv.name,
+          at: at(date, '07:30').toISOString(),
+          note: 'Draft awal; belum diterbitkan.',
+        },
+      ],
+      createdAt: at(date, '07:30'),
+      updatedAt: at(date, '07:30'),
+    });
+  }
+
   // 2. Seed PJP, PjpStop, Attendance, Orders, OrderItems, SalesLivePosition, StaffActivity
   const livePositionRows = [];
   const todayStopsBySalesIndex = new Map();
 
   for (const [sIdx, member] of sales.entries()) {
-    const cluster = clusters[sIdx];
+    const cluster = primaryCluster(clusters, member);
     const spv = supervisors.find((s) => s.id === member.supervisorId);
     const reportingContext = {
       source: 'KUNJUNGAN_TOKO_BELFOODS_CONVERTED',
@@ -207,18 +258,20 @@ export async function seedSales(db, master, date) {
         );
         const end = new Date(start.getTime() + 18 * 60000);
 
+        // Cahya: approved + pending orders today. Yuli: pending order (with a collection promise)
+        // and an open check-in without check-out. History keeps approved orders for packing.
         const shouldCreateOrder =
-          (dayKind === 'hist1' && j < 2) ||
-          (dayKind === 'hist2' && j === 0) ||
-          (dayKind === 'today' && ((j === 0 && sIdx < 5) || (j === 1 && [0, 2].includes(sIdx))));
+          (dayKind === 'hist1' && j < 3) ||
+          (dayKind === 'hist2' && j < 2) ||
+          (dayKind === 'today' && (j === 0 || (j === 1 && sIdx === 0)));
 
         let createdOrder = null;
         let orderSpec = null;
         if (shouldCreateOrder) {
           let orderStatus = 'APPROVED';
+          if (dayKind === 'hist2' && sIdx === 1 && j === 0) orderStatus = 'REJECTED';
           if (dayKind === 'today') {
-            if (j === 0 && sIdx === 3) orderStatus = 'PENDING_APPROVAL';
-            else if (j === 0 && sIdx === 4) orderStatus = 'REJECTED';
+            if (j === 0 && sIdx === 1) orderStatus = 'PENDING_APPROVAL';
             else if (j === 1) orderStatus = 'PENDING_APPROVAL';
           }
           orderSpec = {
@@ -227,11 +280,11 @@ export async function seedSales(db, master, date) {
           };
         }
 
-        const isCollectionStop = dayKind === 'today' && sIdx === 3 && j === 0;
+        const isCollectionStop = dayKind === 'today' && sIdx === 1 && j === 0;
         const visitOutcome = isCollectionStop
           ? {
               purpose: 'BOTH',
-              reference: `BF-ORD-${hist1.replaceAll('-', '')}-004`,
+              reference: histOrderCode.get(member.id) || `BF-ORD-${hist1.replaceAll('-', '')}-001`,
               result: 'PROMISED',
               promiseDate: offsetDate(date, 3),
               note: 'Pelanggan menjanjikan pelunasan faktur sebelumnya.',
@@ -289,6 +342,7 @@ export async function seedSales(db, master, date) {
           const ordTime = new Date(start.getTime() + 10 * 60000);
           const approvedAt = new Date(ordTime.getTime() + 5 * 60000);
           const reqHash = createHash('sha256').update(ordCode).digest('hex');
+          if (dayKind === 'hist1' && j === 0) histOrderCode.set(member.id, ordCode);
 
           createdOrder = await db.order.upsert({
             where: { id: id(ordKey) },
@@ -570,15 +624,34 @@ export async function seedSales(db, master, date) {
     });
   }
 
-  for (const [i, spv] of supervisors.entries()) {
-    const salesIdx = i === 0 ? 0 : 2;
-    const member = sales[salesIdx];
+  // Yesterday's shift that was never closed: the server closes it as "tidak checkout" on first load.
+  await ensure(db, 'staffActivity', `shift-unclosed-${sales[1].id}-${hist1}`, {
+    userId: sales[1].id,
+    dateKey: hist1,
+    activityKey: 'SHIFT',
+    kind: 'SHIFT',
+    outletName: 'Kantor & Gudang CV. Sinar Anugrah Padalarang',
+    checkInAt: at(hist1, '07:20'),
+    notes: 'Presensi masuk operasional harian.',
+    latitude: outlets[0].latitude,
+    longitude: outlets[0].longitude,
+    photoUrl: makeEvidencePng('visit', 230),
+    lateMinutes: 0,
+    policySnapshot: operationalPolicy(hist1, {
+      SHIFT_REQUIRE_GPS: false,
+      SHIFT_REQUIRE_PHOTO: false,
+    }),
+  });
+
+  for (const [i, member] of sales.entries()) {
+    const spv = supervisors[0];
+    const salesIdx = i;
     const targetStop = todayStopsBySalesIndex.get(salesIdx)[0];
     const targetOutlet = outlets.find((o) => o.id === targetStop.outletId);
     const start = at(date, '09:00');
     const finish = at(date, '09:20');
 
-    await ensure(db, 'staffActivity', `audit-${spv.id}-${date}`, {
+    await ensure(db, 'staffActivity', `audit-${spv.id}-${member.id}-${date}`, {
       userId: spv.id,
       dateKey: date,
       activityKey: targetStop.id,
@@ -628,7 +701,7 @@ export async function seedSales(db, master, date) {
       source.outlets[10].customer_id
   );
   const offOutletApproved = outletByCode.get(
-    source.outlets.find((o) => o.salesCode === 'SLD515' && o.dayOfWeek === 6)?.customer_id ||
+    source.outlets.find((o) => o.salesCode === 'SLD539' && o.dayOfWeek === 6)?.customer_id ||
       source.outlets[20].customer_id
   );
 
@@ -653,17 +726,17 @@ export async function seedSales(db, master, date) {
     isManualSalesApproved: false,
     policySnapshot: operationalPolicy(date),
     reportSupervisorId: sales[0].supervisorId,
-    reportClusterId: clusters[0].id,
+    reportClusterId: primaryCluster(clusters, sales[0]).id,
     reportingContext: {
       supervisorId: sales[0].supervisorId,
-      clusterId: clusters[0].id,
+      clusterId: primaryCluster(clusters, sales[0]).id,
     },
     createdAt: at(date, '10:15'),
     updatedAt: at(date, '10:15'),
   });
 
   await ensure(db, 'offPjpAttendance', `off-pjp-approved-${hist2}`, {
-    userId: sales[2].id,
+    userId: sales[1].id,
     outletId: offOutletApproved.id,
     outletName: offOutletApproved.name,
     customerName: offOutletApproved.ownerName,
@@ -674,7 +747,7 @@ export async function seedSales(db, master, date) {
     photoUrl: makeEvidencePng('visit', 302),
     reason: 'Kunjungan koordinasi promo akhir pekan di luar jadwal PJP reguler.',
     status: 'APPROVED',
-    validatedBy: supervisors[1].id,
+    validatedBy: supervisors[0].id,
     validatedAt: at(hist2, '14:20'),
     orderAmount: 0,
     skuSold: 0,
@@ -684,11 +757,11 @@ export async function seedSales(db, master, date) {
     manualSalesStatus: 'NOTES_ONLY',
     isManualSalesApproved: false,
     policySnapshot: operationalPolicy(hist2),
-    reportSupervisorId: sales[2].supervisorId,
-    reportClusterId: clusters[2].id,
+    reportSupervisorId: sales[1].supervisorId,
+    reportClusterId: primaryCluster(clusters, sales[1]).id,
     reportingContext: {
-      supervisorId: sales[2].supervisorId,
-      clusterId: clusters[2].id,
+      supervisorId: sales[1].supervisorId,
+      clusterId: primaryCluster(clusters, sales[1]).id,
     },
     createdAt: at(hist2, '13:10'),
     updatedAt: at(hist2, '14:20'),
@@ -696,7 +769,7 @@ export async function seedSales(db, master, date) {
 
   // 5. Seed connected RouteChangeRequest (1 APPROVED REROUTE + 1 PENDING_APPROVAL SKIP)
   const cahyaStopsToday = todayStopsBySalesIndex.get(0);
-  const dadanStopsToday = todayStopsBySalesIndex.get(1);
+  const yuliStopsToday = todayStopsBySalesIndex.get(1);
   const replacementOutlet = outletByCode.get(
     source.outlets.find((o) => o.salesCode === 'SLD514' && o.dayOfWeek === 6)?.customer_id ||
       source.outlets[12].customer_id
@@ -719,7 +792,7 @@ export async function seedSales(db, master, date) {
 
   await ensure(db, 'routeChangeRequest', `route-change-skip-${date}`, {
     pjpId: plans[1].id,
-    pjpStopId: dadanStopsToday[3].id,
+    pjpStopId: yuliStopsToday[3].id,
     type: 'SKIP',
     reportedBy: sales[1].id,
     handledBy: supervisors[0].id,
@@ -733,8 +806,9 @@ export async function seedSales(db, master, date) {
   // 6. Seed connected OutletUnlockRequest (1 PENDING_APPROVAL on the LOCKED outlet + 1 APPROVED)
   const lockedOutlet = outletByCode.get(lockedOutletCode);
   const unlockedHistoryOutlet = outletByCode.get(
-    source.outlets.find((o) => o.salesCode === 'SLD516' && o.customer_id !== lockedOutletCode)
-      .customer_id
+    source.outlets.find(
+      (o) => o.assigned && o.salesCode === 'SLD539' && o.customer_id !== lockedOutletCode
+    ).customer_id
   );
 
   await ensure(db, 'outletUnlockRequest', `unlock-pending-${date}`, {
@@ -767,7 +841,7 @@ export async function seedSales(db, master, date) {
   const reviewOutletB = outletByCode.get(fieldReviewOutletCodes[1]);
   const reviewOutletDone = outletByCode.get(source.outlets[0].customer_id);
 
-  // Review 1: WAITING_FIELD with an OPEN OutletFieldTask linked to Dadan's today PJP validation stop
+  // Review 1: WAITING_FIELD with an OPEN OutletFieldTask linked to Yuli's today PJP validation stop
   const revA = await ensure(db, 'outletReview', `outlet-review-a-${date}`, {
     outletId: reviewOutletA.id,
     ownerId: supervisors[0].id,
@@ -840,11 +914,11 @@ export async function seedSales(db, master, date) {
     updatedAt: at(date, '08:15'),
   });
 
-  // Link this field task to a validationOnly PjpStop on Dadan's today PJP
+  // Link this field task to a validationOnly PjpStop on Yuli's today PJP
   const valStop = await ensure(db, 'pjpStop', `stop-val-${sales[1].staffCode}-${date}`, {
     pjpId: plans[1].id,
     outletId: reviewOutletA.id,
-    sequence: dadanStopsToday.length + 1,
+    sequence: yuliStopsToday.length + 1,
     validationTaskId: fieldTaskOpen.id,
     validationOnly: true,
     validationResult: {
@@ -863,16 +937,16 @@ export async function seedSales(db, master, date) {
     data: { pjpStopId: valStop.id, updatedAt: at(date, '08:15') },
   });
 
-  // Review 2: SUBMITTED evidence from Puri awaiting SPV/Admin review
+  // Review 2: SUBMITTED evidence from Cahya awaiting SPV/Admin review
   const revB = await ensure(db, 'outletReview', `outlet-review-b-${date}`, {
     outletId: reviewOutletB.id,
-    ownerId: supervisors[1].id,
+    ownerId: supervisors[0].id,
     dueAt: at(offsetDate(date, 1), '17:00'),
     reason: 'Validasi titik masuk gerai dan konfirmasi jam operasional pengiriman.',
     status: 'WAITING_FIELD',
     revision: 3,
     workflow: { stage: 'SUBMITTED' },
-    assignment: { ownerId: supervisors[1].id, assignedAt: at(hist2, '08:00').toISOString() },
+    assignment: { ownerId: supervisors[0].id, assignedAt: at(hist2, '08:00').toISOString() },
     requestedBy: { id: users.admin.id, name: users.admin.name, role: 'ADMIN' },
     policySnapshot: operationalPolicy(hist2),
     createdAt: at(hist2, '08:00'),
@@ -914,8 +988,8 @@ export async function seedSales(db, master, date) {
 
   await ensure(db, 'outletFieldTask', `field-task-submitted-${date}`, {
     reviewId: revB.id,
-    ownerId: sales[2].id,
-    reviewerId: supervisors[1].id,
+    ownerId: sales[0].id,
+    reviewerId: supervisors[0].id,
     status: 'SUBMITTED',
     revision: 2,
     dueAt: at(offsetDate(date, 1), '17:00'),
@@ -937,7 +1011,7 @@ export async function seedSales(db, master, date) {
     history: [
       {
         action: 'SUBMIT',
-        actor: { id: sales[2].id, name: sales[2].name, role: 'SALES' },
+        actor: { id: sales[0].id, name: sales[0].name, role: 'SALES' },
         at: at(date, '09:10').toISOString(),
         note: 'Bukti foto & GPS pintu gerai dikirim untuk pemeriksaan.',
       },

@@ -30,13 +30,14 @@ export async function seedWarehouse(db, master, salesData, date) {
   const [hist1, hist2] = workingDaysBack(date, 2);
   const approvedOrders = salesData.orders.filter((o) => o.status === 'APPROVED');
 
-  if (approvedOrders.length < 11) {
+  if (approvedOrders.length < 9) {
     throw new Error(
       `Jumlah order APPROVED tidak mencukupi untuk packing list (${approvedOrders.length})`
     );
   }
 
-  // Use orders 0..10 (leaving orders 11..17 unpacked so Admin order-to-packing queue stays rich)
+  // 8 packing documents from 9 approved orders; the remaining approved orders stay unpacked so the
+  // Admin order-to-packing queue is not empty.
   const packingDefs = [
     {
       key: 'draft-1',
@@ -47,18 +48,10 @@ export async function seedWarehouse(db, master, salesData, date) {
       v2: false,
     },
     {
-      key: 'draft-2',
-      day: date,
-      status: 'DRAFT',
-      orders: [approvedOrders[1]],
-      cartons: [3],
-      v2: false,
-    },
-    {
       key: 'released-1',
       day: date,
       status: 'RELEASED',
-      orders: [approvedOrders[2]],
+      orders: [approvedOrders[1]],
       cartons: [4],
       v2: false,
     },
@@ -66,7 +59,7 @@ export async function seedWarehouse(db, master, salesData, date) {
       key: 'released-v2',
       day: date,
       status: 'RELEASED',
-      orders: [approvedOrders[3], approvedOrders[4]],
+      orders: [approvedOrders[2], approvedOrders[3]],
       cartons: [4, 4],
       v2: true,
     },
@@ -74,7 +67,7 @@ export async function seedWarehouse(db, master, salesData, date) {
       key: 'hist-delivered',
       day: hist2,
       status: 'RELEASED',
-      orders: [approvedOrders[5]],
+      orders: [approvedOrders[4]],
       cartons: [5],
       v2: false,
     },
@@ -82,7 +75,7 @@ export async function seedWarehouse(db, master, salesData, date) {
       key: 'transit-1',
       day: date,
       status: 'RELEASED',
-      orders: [approvedOrders[6]],
+      orders: [approvedOrders[5]],
       cartons: [4],
       v2: false,
     },
@@ -90,7 +83,7 @@ export async function seedWarehouse(db, master, salesData, date) {
       key: 'transit-2',
       day: date,
       status: 'RELEASED',
-      orders: [approvedOrders[7]],
+      orders: [approvedOrders[6]],
       cartons: [4],
       v2: false,
     },
@@ -98,23 +91,15 @@ export async function seedWarehouse(db, master, salesData, date) {
       key: 'ready-1',
       day: date,
       status: 'RELEASED',
-      orders: [approvedOrders[8]],
+      orders: [approvedOrders[7]],
       cartons: [5],
       v2: false,
     },
     {
-      key: 'ready-2',
-      day: date,
-      status: 'RELEASED',
-      orders: [approvedOrders[9]],
-      cartons: [4],
-      v2: false,
-    },
-    {
       key: 'return-1',
-      day: date,
+      day: hist1,
       status: 'RELEASED',
-      orders: [approvedOrders[10]],
+      orders: [approvedOrders[8]],
       cartons: [4],
       v2: false,
     },
@@ -259,14 +244,20 @@ export async function seedWarehouse(db, master, salesData, date) {
     packings.set(def.key, loaded);
   }
 
-  // Build 5 DeliveryRoutes covering all 4 SUPIR accounts (Andri has historical COMPLETED + today READY)
+  // One driver: trips are spread over different days so a single account never has overlapping
+  // work. COMPLETED (hist2), PARTIAL with a return issue (hist1), IN_TRANSIT (today), READY (next
+  // working day).
+  const tomorrow = (() => {
+    const d = offsetDate(date, 1);
+    return new Date(`${d}T12:00:00Z`).getUTCDay() === 0 ? offsetDate(date, 2) : d;
+  })();
   const routeDefs = [
     {
       key: 'hist-completed',
       code: `BF-TRIP-${hist2.replaceAll('-', '')}-001`,
       day: hist2,
       vehicle: vehicles[0], // D 8012 ZC
-      driver: users['andri.supir'],
+      driver: users.andri,
       status: 'COMPLETED',
       stops: [
         {
@@ -278,45 +269,11 @@ export async function seedWarehouse(db, master, salesData, date) {
       ],
     },
     {
-      key: 'transit',
-      code: `BF-TRIP-${date.replaceAll('-', '')}-001`,
-      day: date,
-      vehicle: vehicles[5], // D 8032 FS (Carry Thermo)
-      driver: users['rendi.supir'],
-      status: 'IN_TRANSIT',
-      stops: [
-        { packing: packings.get('transit-1'), status: 'DELIVERED', arrived: true, completed: true },
-        { packing: packings.get('transit-2'), status: 'PENDING', arrived: true, completed: false },
-      ],
-    },
-    {
-      key: 'ready-ridwanto',
-      code: `BF-TRIP-${date.replaceAll('-', '')}-002`,
-      day: date,
-      vehicle: vehicles[6], // D 8726 FP (Carry Thermo)
-      driver: users['ridwanto.supir'],
-      status: 'READY',
-      stops: [
-        { packing: packings.get('ready-1'), status: 'PENDING', arrived: false, completed: false },
-      ],
-    },
-    {
-      key: 'ready-andri',
-      code: `BF-TRIP-${date.replaceAll('-', '')}-003`,
-      day: date,
-      vehicle: vehicles[0], // D 8012 ZC
-      driver: users['andri.supir'],
-      status: 'READY',
-      stops: [
-        { packing: packings.get('ready-2'), status: 'PENDING', arrived: false, completed: false },
-      ],
-    },
-    {
       key: 'return',
-      code: `BF-TRIP-${date.replaceAll('-', '')}-004`,
-      day: date,
+      code: `BF-TRIP-${hist1.replaceAll('-', '')}-001`,
+      day: hist1,
       vehicle: vehicles[7], // D 8566 FK (Engkle Thermo)
-      driver: users['oki.supir'],
+      driver: users.andri,
       status: 'PARTIAL',
       stops: [
         {
@@ -325,6 +282,29 @@ export async function seedWarehouse(db, master, salesData, date) {
           arrived: true,
           completed: true,
         },
+      ],
+    },
+    {
+      key: 'transit',
+      code: `BF-TRIP-${date.replaceAll('-', '')}-001`,
+      day: date,
+      vehicle: vehicles[5], // D 8032 FS (Carry Thermo)
+      driver: users.andri,
+      status: 'IN_TRANSIT',
+      stops: [
+        { packing: packings.get('transit-1'), status: 'DELIVERED', arrived: true, completed: true },
+        { packing: packings.get('transit-2'), status: 'PENDING', arrived: true, completed: false },
+      ],
+    },
+    {
+      key: 'ready',
+      code: `BF-TRIP-${tomorrow.replaceAll('-', '')}-001`,
+      day: tomorrow,
+      vehicle: vehicles[6], // D 8726 FP (Carry Thermo)
+      driver: users.andri,
+      status: 'READY',
+      stops: [
+        { packing: packings.get('ready-1'), status: 'PENDING', arrived: false, completed: false },
       ],
     },
   ];
@@ -567,16 +547,16 @@ export async function seedWarehouse(db, master, salesData, date) {
     title: 'Periksa retur kemasan',
     reason: 'Satu karton ditolak karena kemasan penyok; menunggu verifikasi fisik di gudang.',
     responsibleRole: 'KEPALA_GUDANG',
-    supervisorId: users['spv.gt'].id,
+    supervisorId: users.pian.id,
     ownerId: users.gudang.id,
-    createdById: users['oki.supir'].id,
+    createdById: users.andri.id,
     status: 'OPEN',
     dueAt: at(date, '17:00'),
     history: [
       {
         action: 'OPENED',
-        actorId: users['oki.supir'].id,
-        actorName: users['oki.supir'].name,
+        actorId: users.andri.id,
+        actorName: users.andri.name,
         at: at(date, '10:45').toISOString(),
         note: 'Dilaporkan saat serah terima di toko.',
       },

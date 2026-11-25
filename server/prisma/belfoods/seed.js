@@ -27,7 +27,7 @@ export async function seedBelfoods(db, date) {
       { tab: 'exceptions' },
     ],
     [
-      'sales-dadan-field',
+      'sales-yuli-field',
       master.sales[1],
       'OUTLET_FIELD_ASSIGNED',
       'Tugas pemeriksaan lapangan outlet',

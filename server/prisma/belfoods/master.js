@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { CONFIG_PARAMS } from '../../../shared/config.mjs';
+import { CONFIG_DEFAULTS, CONFIG_PARAMS } from '../../../shared/config.mjs';
 import { OUTLET_DIGITAL_VERSION } from '../../../shared/outlet-validation.mjs';
 import { BUILT_IN_ROLES } from '../../src/modules/roles/roles.constants.js';
 import {
@@ -13,6 +13,7 @@ import {
   operationalPolicy,
   people,
   sourceData,
+  UNASSIGNED_CLUSTER,
 } from './context.js';
 import { makeEvidencePng } from './completions.js';
 import { seedFleet } from './fleet.js';
@@ -99,28 +100,23 @@ export async function seedMaster(db, date) {
         roleCode: role,
         staffCode,
         permissions: {},
-        ...(role === 'SALES' ? { supervisorId: users[team === 0 ? 'spv.gt' : 'spv.mt'].id } : {}),
+        ...(role === 'SALES' ? { supervisorId: users.pian.id } : {}),
         createdAt: baseStamp,
         updatedAt: baseStamp,
       },
     });
   }
 
-  const supervisors = [users['spv.gt'], users['spv.mt']];
-  const sales = CLUSTER_DEFS.map((def) => users[def.salesKey]);
-  const drivers = [
-    users['andri.supir'],
-    users['rendi.supir'],
-    users['ridwanto.supir'],
-    users['oki.supir'],
-  ];
+  const supervisors = [users.pian];
+  const sales = [users.cahya, users.yuli];
+  const drivers = [users.andri];
 
   // Create clusters cleanly and bind each Salesman's primary clusterId
   const clusters = [];
   const clusterByCode = new Map();
   for (const [index, def] of CLUSTER_DEFS.entries()) {
     const member = users[def.salesKey];
-    const rows = source.outlets.filter((o) => o.salesCode === def.staffCode);
+    const rows = source.outlets.filter((o) => o.clusterCode === def.code);
     const centerLat = Number((rows.reduce((s, r) => s + r.latitude, 0) / rows.length).toFixed(6));
     const centerLng = Number((rows.reduce((s, r) => s + r.longitude, 0) / rows.length).toFixed(6));
 
@@ -145,7 +141,7 @@ export async function seedMaster(db, date) {
     clusters.push(cluster);
     clusterByCode.set(def.code, cluster);
 
-    if (newUserKeys.has(def.salesKey)) {
+    if (newUserKeys.has(def.salesKey) && !users[def.salesKey].clusterId) {
       await db.user.update({
         where: { id: member.id },
         data: { clusterId: cluster.id, updatedAt: baseStamp },
@@ -154,24 +150,47 @@ export async function seedMaster(db, date) {
     }
   }
 
-  // Pick specific real outlets for connected workflows before bulk-inserting all 443 outlets
-  const cahyaOutlets = source.outlets.filter((o) => o.salesCode === 'SLD514');
-  const dadanOutlets = source.outlets.filter((o) => o.salesCode === 'SLD516');
-  const puriOutlets = source.outlets.filter((o) => o.salesCode === 'SLD515');
-  const yatiOutlets = source.outlets.filter((o) => o.salesCode === 'SLD517');
+  // Outlets that are not part of any territory yet live in one placeholder cluster with no Sales
+  // and no Supervisor, so the map/cluster tools can assign them later.
+  const unassigned = source.outlets.filter((o) => !o.assigned);
+  const unassignedCluster = await db.cluster.upsert({
+    where: { id: id(`cluster-${UNASSIGNED_CLUSTER.code}`) },
+    update: {},
+    create: {
+      id: id(`cluster-${UNASSIGNED_CLUSTER.code}`),
+      code: UNASSIGNED_CLUSTER.code,
+      name: UNASSIGNED_CLUSTER.name,
+      region: UNASSIGNED_CLUSTER.region,
+      colorHex: UNASSIGNED_CLUSTER.colorHex,
+      centerLat: Number(
+        (unassigned.reduce((n, r) => n + r.latitude, 0) / unassigned.length).toFixed(6)
+      ),
+      centerLng: Number(
+        (unassigned.reduce((n, r) => n + r.longitude, 0) / unassigned.length).toFixed(6)
+      ),
+      outletCount: unassigned.length,
+      createdAt: baseStamp,
+      updatedAt: baseStamp,
+    },
+  });
+  clusterByCode.set(UNASSIGNED_CLUSTER.code, unassignedCluster);
+
+  // Real outlets (assigned to a territory) used by the connected workflows below
+  const cahyaOutlets = source.outlets.filter((o) => o.assigned && o.salesCode === 'SLD514');
+  const yuliOutlets = source.outlets.filter((o) => o.assigned && o.salesCode === 'SLD539');
 
   const registeredOutletSrc = cahyaOutlets[0];
-  const lockedOutletSrc = dadanOutlets[0];
-  const fieldReviewOutlets = new Set([dadanOutlets[2].customer_id, puriOutlets[2].customer_id]);
+  const lockedOutletSrc = yuliOutlets[0];
+  const fieldReviewOutlets = new Set([yuliOutlets[2].customer_id, cahyaOutlets[2].customer_id]);
 
   // Seed 4 CustomerRegistration (NOO) rows covering every lifecycle status without null business fields
   const nooSpecs = [
     {
       status: 'REGISTERED_ACTIVE',
       src: registeredOutletSrc,
-      salesman: users['cahya'],
-      spv: users['spv.gt'],
-      cluster: clusterByCode.get('BF-SLD514'),
+      salesman: users.cahya,
+      spv: users.pian,
+      cluster: clusterByCode.get('BF-GT-CMH'),
       customerCode: registeredOutletSrc.customer_id,
       name: registeredOutletSrc.customer_name,
       address: registeredOutletSrc.address,
@@ -184,9 +203,9 @@ export async function seedMaster(db, date) {
     {
       status: 'SPV_APPROVED',
       src: { ...cahyaOutlets[5], latitude: -6.88912, longitude: 107.51542 },
-      salesman: users['cahya'],
-      spv: users['spv.gt'],
-      cluster: clusterByCode.get('BF-SLD514'),
+      salesman: users.cahya,
+      spv: users.pian,
+      cluster: clusterByCode.get('BF-GT-CMH'),
       customerCode: 'NOO-CAND-002',
       name: 'Toko Berkah Frozen Cimahi',
       address: 'Jl. Gandawijaya No. 112, Setiamanah, Cimahi Tengah, Kota Cimahi',
@@ -198,25 +217,25 @@ export async function seedMaster(db, date) {
     },
     {
       status: 'SUBMITTED',
-      src: { ...dadanOutlets[5], latitude: -6.96824, longitude: 107.57415 },
-      salesman: users['dadan'],
-      spv: users['spv.gt'],
-      cluster: clusterByCode.get('BF-SLD516'),
+      src: { ...yuliOutlets[5], latitude: -6.8116, longitude: 107.618 },
+      salesman: users.yuli,
+      spv: users.pian,
+      cluster: clusterByCode.get('BF-MT-BDG'),
       customerCode: 'NOO-CAND-003',
-      name: 'Warung Frozen Sayati Jaya',
-      address: 'Jl. Kopo Sayati No. 214, Margahayu, Kabupaten Bandung',
-      area: 'Kopo & Margahayu',
-      subAreaKecamatan: 'Margahayu',
-      kelurahan: 'Sayati',
-      city: 'Kabupaten Bandung',
+      name: 'Toserba Sari Lembang',
+      address: 'Jl. Raya Lembang No. 210, Lembang, Kabupaten Bandung Barat',
+      area: 'Lembang',
+      subAreaKecamatan: 'Lembang',
+      kelurahan: 'Lembang',
+      city: 'Kabupaten Bandung Barat',
       rejectionNote: '-',
     },
     {
       status: 'REJECTED',
-      src: { ...yatiOutlets[2], latitude: -6.91435, longitude: 107.61942 },
-      salesman: users['yati'],
-      spv: users['spv.mt'],
-      cluster: clusterByCode.get('BF-SLD517'),
+      src: { ...yuliOutlets[2], latitude: -6.91435, longitude: 107.61942 },
+      salesman: users.yuli,
+      spv: users.pian,
+      cluster: clusterByCode.get('BF-MT-BDG'),
       customerCode: 'NOO-CAND-004',
       name: 'Minimarket Riau Sentosa',
       address: 'Jl. Lombok No. 41, Merdeka, Sumur Bandung, Kota Bandung',
@@ -365,10 +384,9 @@ export async function seedMaster(db, date) {
       taxAddress: o.address,
       paymentType: o.paymentType,
       termOfPaymentDays: o.termOfPaymentDays,
-      visitSchedule: {
-        days: [o.dayOfWeek],
-        weekType: o.weekType,
-      },
+      visitSchedule: o.assigned
+        ? { days: [o.dayOfWeek], weekType: o.weekType }
+        : { days: [], weekType: 'ALL' },
       name: o.customer_name,
       address: o.address,
       latitude: o.latitude,
@@ -467,25 +485,40 @@ export async function seedMaster(db, date) {
     outletsByCluster.set(o.clusterId, arr);
   }
 
-  // Create active ClusterRoute per cluster using real outlet order and computed distance
+  // Active ClusterRoute per territory: a nearest-neighbour tour from the office, so the suggested
+  // order is a short, readable path instead of the callplan's weekday-by-weekday listing.
+  const depot = {
+    lat: Number(CONFIG_DEFAULTS.DEFAULT_OFFICE_LATITUDE),
+    lng: Number(CONFIG_DEFAULTS.DEFAULT_OFFICE_LONGITUDE),
+  };
   for (const def of CLUSTER_DEFS) {
     const cluster = clusterByCode.get(def.code);
-    const orderedSources = source.outlets
-      .filter((r) => r.clusterCode === def.code)
-      .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.sequence - b.sequence);
-    const orderedIds = orderedSources.map((r) => outletByCode.get(r.customer_id).id);
-    let totalDistanceKm = 0;
-    for (let i = 1; i < orderedSources.length; i++) {
-      totalDistanceKm += haversineKm(
-        orderedSources[i - 1].latitude,
-        orderedSources[i - 1].longitude,
-        orderedSources[i].latitude,
-        orderedSources[i].longitude
-      );
+    const remaining = source.outlets.filter((r) => r.clusterCode === def.code);
+    const ordered = [];
+    let here = depot;
+    while (remaining.length) {
+      let best = 0;
+      remaining.forEach((r, i) => {
+        if (
+          haversineKm(here.lat, here.lng, r.latitude, r.longitude) <
+          haversineKm(here.lat, here.lng, remaining[best].latitude, remaining[best].longitude)
+        )
+          best = i;
+      });
+      const [next] = remaining.splice(best, 1);
+      ordered.push(next);
+      here = { lat: next.latitude, lng: next.longitude };
     }
-    const overviewPath = orderedSources
-      .slice(0, 25)
-      .map((r) => ({ lat: r.latitude, lng: r.longitude }));
+    const orderedIds = ordered.map((r) => outletByCode.get(r.customer_id).id);
+    let totalDistanceKm = 0;
+    for (let i = 1; i < ordered.length; i++)
+      totalDistanceKm += haversineKm(
+        ordered[i - 1].latitude,
+        ordered[i - 1].longitude,
+        ordered[i].latitude,
+        ordered[i].longitude
+      );
+    const overviewPath = ordered.slice(0, 25).map((r) => ({ lat: r.latitude, lng: r.longitude }));
 
     await db.clusterRoute.upsert({
       where: { id: id(`cluster-route-${def.code}`) },
@@ -505,9 +538,9 @@ export async function seedMaster(db, date) {
     });
   }
 
-  // Build all 41 PjpTemplates + all 443 PjpTemplateStops matching KUNJUNGAN_TOKO_BELFOODS_CONVERTED.json
+  // PJP templates only for outlets that belong to a territory, keeping their real callplan weekday.
   const templateBuckets = new Map();
-  for (const r of source.outlets) {
+  for (const r of source.outlets.filter((o) => o.assigned)) {
     const key = `${r.salesCode}:${r.dayOfWeek}:${r.weekType}`;
     if (!templateBuckets.has(key)) {
       templateBuckets.set(key, {
@@ -579,6 +612,7 @@ export async function seedMaster(db, date) {
     sales,
     drivers,
     clusters,
+    unassignedCluster,
     clusterByCode,
     outlets: dbOutlets,
     outletByCode,

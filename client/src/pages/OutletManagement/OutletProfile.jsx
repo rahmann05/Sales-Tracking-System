@@ -54,6 +54,7 @@ export function OutletProfile({
         plannerSpv: o.cluster.supervisorId,
         plannerSales: o.cluster.assignedSales?.id || '',
         plannerCluster: o.clusterId,
+        plannerClusterName: o.cluster?.name || '',
       },
       { tab: TAB_IDS.ROUTE_PLANNING }
     );

@@ -35,6 +35,13 @@ export function PlanRuleEditor({ planner: p }) {
   }, [p.focusSalesId]);
   const people = p.source.sales.filter((s) => s.supervisorId === p.value.supervisorId),
     person = people.find((s) => s.id === salesId) || people[0];
+  const focusedClusterLabel =
+    p.focusClusterName ||
+    person?.assignedClusters?.find((c) => c.id === p.focusClusterId)?.name ||
+    (person?.cluster?.id === p.focusClusterId ? person.cluster.name : '') ||
+    p.source.outlets.find((o) => (o.clusterId || o.cluster?.id) === p.focusClusterId)?.cluster
+      ?.name ||
+    '';
   const shops = p.source.outlets.filter((o) => o.cluster?.supervisorId === p.value.supervisorId),
     rules = p.value.rules
       .map((r, index) => ({ ...r, index }))
@@ -139,12 +146,9 @@ export function PlanRuleEditor({ planner: p }) {
               'Belum memiliki wilayah khusus'}{' '}
             · {rules.length} outlet terencana
           </span>
-          {p.focusClusterId && person?.assignedClusters?.find((c) => c.id === p.focusClusterId) && (
+          {p.focusClusterId && focusedClusterLabel && (
             <span className="planner-focus-pill">
-              Fokus dari cluster:{' '}
-              <strong>
-                {person.assignedClusters.find((c) => c.id === p.focusClusterId)?.name}
-              </strong>
+              Fokus dari cluster: <strong>{focusedClusterLabel}</strong>
             </span>
           )}
         </div>

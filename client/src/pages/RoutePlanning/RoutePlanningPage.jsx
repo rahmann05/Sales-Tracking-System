@@ -56,6 +56,7 @@ export function RoutePlanningPage() {
       plannerSpv: cluster.supervisorId,
       plannerSales: cluster.assignedSalesId || '',
       plannerCluster: cluster.id || '',
+      plannerClusterName: cluster.name || '',
     });
   };
   const navSteps = [

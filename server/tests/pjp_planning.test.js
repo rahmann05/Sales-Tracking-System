@@ -312,3 +312,70 @@ test('selectFallbackClusterOutlets resolves multi-cluster assignedSalesId outlet
   );
   assert.deepEqual(nonWeekday.outletIds, ['o10', 'o11']);
 });
+test('buildClusterDraftRules strictly scopes to clusterId when specified and never falls back to other clusters', () => {
+  const person = {
+    id: 'sales-1',
+    supervisorId: 'spv-1',
+    clusterId: null,
+    assignedClusters: [
+      {
+        id: 'c-senin',
+        name: 'Cahya - Senin',
+        routes: [{ outletOrder: ['o1'] }],
+      },
+      {
+        id: 'c-selasa',
+        name: 'Cahya - Selasa',
+        routes: [{ outletOrder: ['o3', 'o2'] }],
+      },
+    ],
+  };
+  const teamOutlets = [
+    {
+      id: 'o1',
+      clusterId: 'c-senin',
+      itineraryCode: 'F1',
+      cluster: { id: 'c-senin', name: 'Cahya - Senin', assignedSalesId: 'sales-1' },
+    },
+    {
+      id: 'o2',
+      clusterId: 'c-selasa',
+      itineraryCode: 'F2',
+      cluster: { id: 'c-selasa', name: 'Cahya - Selasa', assignedSalesId: 'sales-1' },
+    },
+    {
+      id: 'o3',
+      clusterId: 'c-selasa',
+      itineraryCode: 'F4',
+      cluster: { id: 'c-selasa', name: 'Cahya - Selasa', assignedSalesId: 'sales-1' },
+    },
+  ];
+  const scoped = buildClusterDraftRules({
+    person,
+    shops: teamOutlets,
+    clusterId: 'c-selasa',
+    existingOutletIds: [],
+    startsOn: '2026-11-23',
+    workingDays: [1, 2, 3, 4, 5, 6],
+    allowedIntervals: [1, 2, 4],
+    defaultInterval: 1,
+  });
+  assert.deepEqual(
+    scoped.map((r) => [r.outletId, r.anchorDate, r.intervalWeeks]),
+    [
+      ['o3', '2026-11-24', 4],
+      ['o2', '2026-11-24', 2],
+    ]
+  );
+  const emptyCluster = buildClusterDraftRules({
+    person,
+    shops: teamOutlets,
+    clusterId: 'c-kosong',
+    existingOutletIds: [],
+    startsOn: '2026-11-23',
+    workingDays: [1, 2, 3, 4, 5, 6],
+    allowedIntervals: [1, 2, 4],
+    defaultInterval: 1,
+  });
+  assert.deepEqual(emptyCluster, []);
+});
