@@ -10,7 +10,10 @@ import {
 } from 'react-icons/lu';
 import { FiAlertTriangle } from 'react-icons/fi';
 import { NativeDialog } from '../../../shared/components/common/NativeDialog';
-import { reportVisitAttendance } from '../../../../../shared/report-presentation.mjs';
+import {
+  formatVisitDuration,
+  reportVisitAttendance,
+} from '../../../../../shared/report-presentation.mjs';
 
 /**
  * DailyCallDetailModal Component
@@ -61,8 +64,11 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
             <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
               {row.isDurationAnomaly && (
                 <li>
-                  <strong>Durasi terlalu singkat:</strong> {row.durationMinutes} menit (batas
-                  kunjungan: {row.minimumDuration ?? 'belum tersedia'} menit).
+                  <strong>Durasi terlalu singkat:</strong>{' '}
+                  {formatVisitDuration(row.durationMinutes, row.durationFormatted) ||
+                    'belum tersedia'}{' '}
+                  (batas kunjungan:{' '}
+                  {formatVisitDuration(row.minimumDuration) || 'belum tersedia'}).
                   {row.earlyReason && (
                     <span>
                       {' '}
@@ -102,14 +108,9 @@ export const DailyCallDetailModal = ({ row, onClose }) => {
             <span className="text-[10px] text-on-surface-variant font-semibold block">
               Durasi Kunjungan
             </span>
-            <strong className="text-on-surface font-mono">
+            <strong className="text-on-surface font-semibold whitespace-nowrap tabular-nums">
               {attendance.duration || 'Tidak tersedia'}
             </strong>
-            {row.durationMinutes != null && (
-              <span className="text-[10px] text-on-surface-variant block">
-                ({row.durationMinutes} menit)
-              </span>
-            )}
           </div>
           <div>
             <span className="text-[10px] text-on-surface-variant font-semibold block">

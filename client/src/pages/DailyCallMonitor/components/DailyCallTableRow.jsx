@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatVisitDuration } from '../../../../../shared/report-presentation.mjs';
 import {
   LuMapPin,
   LuClock,
@@ -55,8 +56,8 @@ export const DailyCallTableRow = ({ row, onSelectRow }) => {
             <div className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5 whitespace-nowrap">
               <LuClock className="text-[10px] text-primary shrink-0" />
               <span>
-                {row.durationFormatted ||
-                  (row.durationMinutes == null ? 'Tidak tersedia' : `${row.durationMinutes}m`)}
+                {formatVisitDuration(row.durationMinutes, row.durationFormatted) ||
+                  'Tidak tersedia'}
               </span>
             </div>
           </div>

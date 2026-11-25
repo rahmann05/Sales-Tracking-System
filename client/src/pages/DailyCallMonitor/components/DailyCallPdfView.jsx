@@ -2,7 +2,10 @@ import { reportMoney } from '../../../../../shared/report-visibility.mjs';
 import { printOperationalDocument } from '../../../services/operationalExportService';
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
-import { reportExportAllowed } from '../../../../../shared/report-presentation.mjs';
+import {
+  formatVisitDuration,
+  reportExportAllowed,
+} from '../../../../../shared/report-presentation.mjs';
 import { distanceStatus } from '../../../../../shared/report-semantics.mjs';
 import { ReportBasisNote } from '../../Reports/components/ReportBasisNote';
 import { LuPrinter, LuX } from 'react-icons/lu';
@@ -169,8 +172,8 @@ export const DailyCallPdfView = ({ reportData, date, salesmanName, onClose }) =>
                   <td className="p-1.5 border-r border-gray-300 font-mono text-center whitespace-nowrap">
                     {r.timeIn} - {r.timeOut}
                   </td>
-                  <td className="p-1.5 border-r border-gray-300 font-mono text-center whitespace-nowrap">
-                    {r.durationFormatted}
+                  <td className="p-1.5 border-r border-gray-300 font-semibold text-center whitespace-nowrap tabular-nums">
+                    {formatVisitDuration(r.durationMinutes, r.durationFormatted) || '-'}
                   </td>
                   <td className="p-1.5 border-r border-gray-300">
                     <span className="font-mono font-bold text-gray-700">[{r.customerId}]</span>{' '}

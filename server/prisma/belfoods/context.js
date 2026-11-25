@@ -58,11 +58,11 @@ export const people = [
   ['admin', 'Rina Hartati', 'ADMIN', 'ADM01', null],
   ['spv.gt', 'Hendra Wijaya', 'SUPERVISOR', 'SPVGT', null],
   ['spv.mt', 'Siti Nurhaliza', 'SUPERVISOR', 'SPVMT', null],
-  ['cahya.sld514', 'Cahya Pratama', 'SALES', 'SLD514', 0],
-  ['dadan.sld516', 'Dadan Ramdani', 'SALES', 'SLD516', 0],
-  ['puri.sld515', 'Puri Lestari', 'SALES', 'SLD515', 1],
-  ['yati.sld517', 'Yati Suryani', 'SALES', 'SLD517', 1],
-  ['yuli.sld539', 'Yulianti', 'SALES', 'SLD539', 1],
+  ['cahya', 'Cahya Pratama', 'SALES', 'SLD514', 0],
+  ['dadan', 'Dadan Ramdani', 'SALES', 'SLD516', 0],
+  ['puri', 'Puri Lestari', 'SALES', 'SLD515', 1],
+  ['yati', 'Yati Suryani', 'SALES', 'SLD517', 1],
+  ['yuli', 'Yulianti', 'SALES', 'SLD539', 1],
   ['gudang', 'Bambang Supriatna', 'KEPALA_GUDANG', 'WH01', null],
   ['andri.supir', 'Andri Setiawan', 'SUPIR', 'DRV01', null],
   ['rendi.supir', 'Rendi Kurniawan', 'SUPIR', 'DRV02', null],
@@ -73,7 +73,7 @@ export const people = [
 export const CLUSTER_DEFS = [
   {
     staffCode: 'SLD514',
-    salesKey: 'cahya.sld514',
+    salesKey: 'cahya',
     code: 'BF-SLD514',
     name: 'GT Cimahi & Bandung Barat',
     region: 'Cimahi & Kabupaten Bandung Barat',
@@ -83,7 +83,7 @@ export const CLUSTER_DEFS = [
   },
   {
     staffCode: 'SLD516',
-    salesKey: 'dadan.sld516',
+    salesKey: 'dadan',
     code: 'BF-SLD516',
     name: 'GT Bandung Selatan & Kopo',
     region: 'Kota Bandung Selatan & Kabupaten Bandung',
@@ -93,7 +93,7 @@ export const CLUSTER_DEFS = [
   },
   {
     staffCode: 'SLD515',
-    salesKey: 'puri.sld515',
+    salesKey: 'puri',
     code: 'BF-SLD515',
     name: 'MT Minimarket Bandung Raya',
     region: 'Kota Bandung & Bandung Utara',
@@ -103,7 +103,7 @@ export const CLUSTER_DEFS = [
   },
   {
     staffCode: 'SLD517',
-    salesKey: 'yati.sld517',
+    salesKey: 'yati',
     code: 'BF-SLD517',
     name: 'MT Supermarket Bandung Kota',
     region: 'Kota Bandung Pusat & Timur',
@@ -113,7 +113,7 @@ export const CLUSTER_DEFS = [
   },
   {
     staffCode: 'SLD539',
-    salesKey: 'yuli.sld539',
+    salesKey: 'yuli',
     code: 'BF-SLD539',
     name: 'MT Supermarket Bandung Raya',
     region: 'Bandung Raya & Cimahi',

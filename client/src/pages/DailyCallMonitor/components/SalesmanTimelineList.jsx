@@ -1,4 +1,5 @@
 import { reportMoney } from '../../../../../shared/report-visibility.mjs';
+import { formatVisitDuration } from '../../../../../shared/report-presentation.mjs';
 import React from 'react';
 import {
   LuClock,
@@ -229,9 +230,12 @@ export function SalesmanTimelineList({
                                   Durasi
                                 </span>
                                 <span
-                                  className={`font-black px-2 py-0.5 rounded-md ${isShort ? 'bg-rose-500/15 text-rose-600 border border-rose-500/30' : 'bg-surface-container text-on-surface'}`}
+                                  className={`font-bold px-2 py-0.5 rounded-md whitespace-nowrap tabular-nums ${isShort ? 'bg-rose-500/15 text-rose-600 border border-rose-500/30' : 'bg-surface-container text-on-surface'}`}
                                 >
-                                  {stop.durationFormatted}
+                                  {formatVisitDuration(
+                                    stop.durationMinutes,
+                                    stop.durationFormatted
+                                  ) || 'Tidak tersedia'}
                                 </span>
                               </div>
 

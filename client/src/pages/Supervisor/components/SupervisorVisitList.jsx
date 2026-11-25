@@ -11,9 +11,9 @@ export function SupervisorVisitList({ rows = [], loading, onSelect }) {
             <tr>
               <th>Sales / wilayah</th>
               <th>Outlet</th>
-              <th>Rencana</th>
-              <th>Presensi kunjungan</th>
-              <th>Pemeriksaan</th>
+              <th className="spv-visit-plan">Rencana</th>
+              <th className="spv-visit-attendance">Presensi kunjungan</th>
+              <th className="spv-visit-action">Pemeriksaan</th>
             </tr>
           </thead>
           <tbody>
@@ -32,7 +32,7 @@ export function SupervisorVisitList({ rows = [], loading, onSelect }) {
                         {row.customerId} · {row.customerAddress}
                       </small>
                     </td>
-                    <td data-label="Rencana">
+                    <td className="spv-visit-plan" data-label="Rencana">
                       {row.isExtraCall
                         ? 'Di luar PJP'
                         : row.planCall === 'Y'
@@ -40,15 +40,17 @@ export function SupervisorVisitList({ rows = [], loading, onSelect }) {
                           : 'Tanpa rencana'}
                       {row.isSkipped && <small>Dilewati</small>}
                     </td>
-                    <td data-label="Presensi">
+                    <td className="spv-visit-attendance" data-label="Presensi">
                       <span>{attendance.entry}</span>
                       {attendance.exit && <small>{attendance.exit}</small>}
-                      {attendance.duration && <small>Durasi {attendance.duration}</small>}
+                      {attendance.duration && (
+                        <small className="spv-visit-duration">Durasi {attendance.duration}</small>
+                      )}
                       {row.validationIncomplete && (
                         <small className="app-error">PJP validasi belum lengkap</small>
                       )}
                     </td>
-                    <td data-label="Pemeriksaan">
+                    <td className="spv-visit-action" data-label="Pemeriksaan">
                       {(row.isDurationAnomaly || row.isDistanceAnomaly || row.isTravelAnomaly) && (
                         <small>Indikasi perlu diperiksa</small>
                       )}

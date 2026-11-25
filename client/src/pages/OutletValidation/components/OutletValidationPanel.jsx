@@ -4,6 +4,7 @@ import { useFeaturePolicy } from '../../../shared/hooks/useFeaturePolicy';
 import { useApp } from '../../../context/AppContext';
 import { clustersApi, outletValidationApi } from '../../../services/api';
 import { confirmWorkspaceNavigation } from '../../../shared/utils/confirmWorkspaceNavigation';
+import { setWorkspaceValues } from '../../../shared/utils/workspaceNavigation';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useWorkspaceState } from '../../../shared/hooks/useWorkspaceState';
 import {
@@ -20,15 +21,19 @@ import { OutletValidationJobs } from './OutletValidationJobs';
 export function OutletValidationPanel() {
   const feature = useFeaturePolicy('OUTLET_REVIEW'),
     { user, settings, clusters: appClusters } = useApp();
-  const [stage, setStage] = useWorkspaceState(
+  const [stage] = useWorkspaceState(
       'outletReviewStage',
       workspaceChoice('OUTLET_REVIEW_DEFAULT_STAGE', settings.OUTLET_REVIEW_DEFAULT_STAGE)
     ),
+    [rawStatusFilter] = useWorkspaceState('outletReviewStatus', 'ALL'),
     [search, setSearch] = useWorkspaceState('outletReviewSearch', ''),
     [selected, setSelected] = useWorkspaceState('outletReview', ''),
     [issue, setIssue] = useWorkspaceState('outletReviewIssue', 'ALL'),
     [clusterFilter, setClusterFilter] = useWorkspaceState('outletReviewCluster', 'ALL'),
     [workspaceTab, setWorkspaceTab] = useWorkspaceState('outletValidationTab', 'QUEUE');
+  const statusFilter = ['ALL', 'OPEN', 'WAITING_FIELD', 'COMPLETED'].includes(rawStatusFilter)
+    ? rawStatusFilter
+    : 'ALL';
   const [page, setPage] = useState(1),
     [rows, setRows] = useState([]),
     [pagination, setPagination] = useState({ total: 0, totalPages: 1 }),
@@ -53,12 +58,12 @@ export function OutletValidationPanel() {
       } else {
         const [r, s] = await Promise.all([
           outletValidationApi.reviews({
-            status: 'ALL',
-            stage,
+            status: statusFilter,
+            stage: statusFilter === 'ALL' ? stage : 'ALL',
             search: debounced,
             page,
             issue,
-            clusterId: clusterFilter !== 'ALL' ? clusterFilter : undefined,
+            ...(clusterFilter !== 'ALL' ? { clusterId: clusterFilter } : {}),
             limit: settings.WORKSPACE_PAGE_SIZE || 25,
           }),
           outletValidationApi.getSummary().catch(() => ({ data: null })),
@@ -74,7 +79,16 @@ export function OutletValidationPanel() {
     } finally {
       if (v === version.current) setLoading(false);
     }
-  }, [selected, stage, debounced, page, issue, clusterFilter, settings.WORKSPACE_PAGE_SIZE]);
+  }, [
+    selected,
+    statusFilter,
+    stage,
+    debounced,
+    page,
+    issue,
+    clusterFilter,
+    settings.WORKSPACE_PAGE_SIZE,
+  ]);
   useEffect(() => {
     load();
     const onChanged = () => load();
@@ -107,6 +121,18 @@ export function OutletValidationPanel() {
   };
   const filter = (setter, value) => {
     setter(value);
+    setPage(1);
+  };
+  const selectSummaryStatus = (nextStatus) => {
+    if (statusFilter === nextStatus) {
+      setWorkspaceValues({ outletReviewStatus: 'ALL', outletReviewStage: 'ALL' });
+    } else {
+      setWorkspaceValues({ outletReviewStatus: nextStatus, outletReviewStage: 'ALL' });
+    }
+    setPage(1);
+  };
+  const selectStageTab = (nextStage) => {
+    setWorkspaceValues({ outletReviewStatus: 'ALL', outletReviewStage: nextStage });
     setPage(1);
   };
   return (
@@ -188,24 +214,24 @@ export function OutletValidationPanel() {
                 <div className="ov-summary-strip" role="region" aria-label="Ringkasan status kasus">
                   <button
                     type="button"
-                    aria-pressed={stage === 'OPEN'}
-                    onClick={() => filter(setStage, 'OPEN')}
+                    aria-pressed={statusFilter === 'OPEN'}
+                    onClick={() => selectSummaryStatus('OPEN')}
                   >
                     <span>Belum diperiksa</span>
                     <strong>{summary.OPEN ?? 0}</strong>
                   </button>
                   <button
                     type="button"
-                    aria-pressed={stage === 'WAITING_FIELD'}
-                    onClick={() => filter(setStage, 'WAITING_FIELD')}
+                    aria-pressed={statusFilter === 'WAITING_FIELD'}
+                    onClick={() => selectSummaryStatus('WAITING_FIELD')}
                   >
                     <span>Tugas lapangan aktif</span>
                     <strong>{summary.WAITING_FIELD ?? 0}</strong>
                   </button>
                   <button
                     type="button"
-                    aria-pressed={stage === 'COMPLETED'}
-                    onClick={() => filter(setStage, 'COMPLETED')}
+                    aria-pressed={statusFilter === 'COMPLETED'}
+                    onClick={() => selectSummaryStatus('COMPLETED')}
                   >
                     <span>Selesai diverifikasi</span>
                     <strong>{summary.COMPLETED ?? 0}</strong>
@@ -225,9 +251,9 @@ export function OutletValidationPanel() {
                   <button
                     type="button"
                     key={s}
-                    className={stage === s ? 'is-active' : ''}
-                    aria-pressed={stage === s}
-                    onClick={() => filter(setStage, s)}
+                    className={statusFilter === 'ALL' && stage === s ? 'is-active' : ''}
+                    aria-pressed={statusFilter === 'ALL' && stage === s}
+                    onClick={() => selectStageTab(s)}
                   >
                     {s === 'ALL' ? 'Semua kasus' : OUTLET_STAGE_LABELS[s]}
                   </button>

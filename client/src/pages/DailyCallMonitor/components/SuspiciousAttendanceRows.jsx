@@ -1,4 +1,5 @@
 import { DataTable } from '../../../shared/components/common/DataTable';
+import { formatVisitDuration } from '../../../../../shared/report-presentation.mjs';
 import React from 'react';
 import {
   LuClock,
@@ -105,11 +106,11 @@ export function SuspiciousAttendanceRows({ filteredRows, onSelectRow }) {
                   {/* Duration Flag */}
                   <td data-label="Durasi" className="md:text-center text-left">
                     <div
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black font-mono ${isShort ? 'bg-rose-500/15 text-rose-600 border border-rose-500/30' : 'bg-surface-container text-on-surface font-semibold'}`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs whitespace-nowrap tabular-nums ${isShort ? 'bg-rose-500/15 text-rose-600 border border-rose-500/30 font-bold' : 'bg-surface-container text-on-surface font-semibold'}`}
                     >
-                      <LuClock className="text-xs" />
-                      {r.durationFormatted ||
-                        (r.durationMinutes == null ? 'Tidak tersedia' : `${r.durationMinutes}m`)}
+                      <LuClock className="text-xs shrink-0" />
+                      {formatVisitDuration(r.durationMinutes, r.durationFormatted) ||
+                        'Tidak tersedia'}
                     </div>
                     {isShort && (
                       <div className="text-[10px] font-black text-rose-600 mt-0.5 inline-flex items-center gap-0.5">

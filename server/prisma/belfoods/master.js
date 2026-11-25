@@ -175,7 +175,7 @@ export async function seedMaster(db, date) {
     {
       status: 'REGISTERED_ACTIVE',
       src: registeredOutletSrc,
-      salesman: users['cahya.sld514'],
+      salesman: users['cahya'],
       spv: users['spv.gt'],
       cluster: clusterByCode.get('BF-SLD514'),
       customerCode: registeredOutletSrc.customer_id,
@@ -190,7 +190,7 @@ export async function seedMaster(db, date) {
     {
       status: 'SPV_APPROVED',
       src: { ...cahyaOutlets[5], latitude: -6.88912, longitude: 107.51542 },
-      salesman: users['cahya.sld514'],
+      salesman: users['cahya'],
       spv: users['spv.gt'],
       cluster: clusterByCode.get('BF-SLD514'),
       customerCode: 'NOO-CAND-002',
@@ -205,7 +205,7 @@ export async function seedMaster(db, date) {
     {
       status: 'SUBMITTED',
       src: { ...dadanOutlets[5], latitude: -6.96824, longitude: 107.57415 },
-      salesman: users['dadan.sld516'],
+      salesman: users['dadan'],
       spv: users['spv.gt'],
       cluster: clusterByCode.get('BF-SLD516'),
       customerCode: 'NOO-CAND-003',
@@ -220,7 +220,7 @@ export async function seedMaster(db, date) {
     {
       status: 'REJECTED',
       src: { ...yatiOutlets[2], latitude: -6.91435, longitude: 107.61942 },
-      salesman: users['yati.sld517'],
+      salesman: users['yati'],
       spv: users['spv.mt'],
       cluster: clusterByCode.get('BF-SLD517'),
       customerCode: 'NOO-CAND-004',

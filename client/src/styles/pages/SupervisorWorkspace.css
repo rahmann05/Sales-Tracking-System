@@ -317,6 +317,31 @@
 .spv-table :is(td, th) {
   overflow-wrap: anywhere;
 }
+.spv-visits-table :is(td, th) {
+  overflow-wrap: break-word;
+}
+.spv-visits-table .spv-visit-plan {
+  white-space: nowrap;
+}
+.spv-visits-table .spv-visit-attendance {
+  min-width: 175px;
+}
+.spv-visits-table .spv-visit-attendance > span {
+  display: block;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.spv-visits-table .spv-visit-duration {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.spv-visits-table .spv-visit-action {
+  white-space: nowrap;
+  text-align: right;
+}
+.spv-visits-table .spv-visit-action .app-button {
+  white-space: nowrap;
+}
 .spv-queue-detail fieldset {
   border: 0;
   min-width: 0;
@@ -654,6 +679,12 @@
     padding: 0;
     border: 0;
     min-width: 0;
+  }
+  .spv-visits-table .spv-visit-attendance {
+    min-width: 0;
+  }
+  .spv-visits-table .spv-visit-action {
+    text-align: left;
   }
   :is(.spv-visits-table, .spv-mobile-cards) td[data-label]:before {
     content: attr(data-label);

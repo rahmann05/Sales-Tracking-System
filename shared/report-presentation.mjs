@@ -40,6 +40,31 @@ export const reportExportAllowed = (user, values = {}) =>
   values.REPORT_EXPORT_ENABLED !== false &&
   user.permissions?.can_export_reports !== false;
 
+export function formatVisitDuration(minutes, fallbackFormatted) {
+  let resolvedMins = null;
+  if (typeof minutes === 'number' && Number.isFinite(minutes) && minutes >= 0) {
+    resolvedMins = minutes;
+  } else if (typeof fallbackFormatted === 'string') {
+    const trimmed = fallbackFormatted.trim();
+    if (!trimmed || ['-', '—', 'Tidak tersedia'].includes(trimmed)) return null;
+    const mmss = /^(\d+):(\d{2})$/.exec(trimmed);
+    if (mmss) {
+      resolvedMins = Number(mmss[1]) + Number(mmss[2]) / 60;
+    } else if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
+      resolvedMins = Number(trimmed);
+    } else {
+      return trimmed;
+    }
+  } else {
+    return null;
+  }
+  const totalMinutes = Math.round(resolvedMins);
+  if (totalMinutes < 60) return `${totalMinutes} menit`;
+  const hours = Math.floor(totalMinutes / 60);
+  const rem = totalMinutes % 60;
+  return rem === 0 ? `${hours} jam` : `${hours} jam ${rem} menit`;
+}
+
 // Report rows carry the process snapshot mode; never infer a missing OUT from
 // today's settings or from an outlet which has not been visited yet.
 export function reportVisitAttendance(row = {}) {
@@ -76,8 +101,8 @@ export function reportVisitAttendance(row = {}) {
     entry,
     exit,
     duration:
-      mode === 'IN_OUT' && valid(row.timeIn) && valid(row.timeOut) && valid(row.durationFormatted)
-        ? row.durationFormatted
+      mode === 'IN_OUT' && valid(row.timeIn) && valid(row.timeOut)
+        ? formatVisitDuration(row.durationMinutes, row.durationFormatted)
         : null,
   };
 }

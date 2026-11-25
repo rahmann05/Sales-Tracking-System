@@ -9,7 +9,7 @@ import { useWorkspaceState } from '../../shared/hooks/useWorkspaceState';
 import { useFeaturePolicy } from '../../shared/hooks/useFeaturePolicy';
 import { outletValidationApi } from '../../services/api';
 import { TAB_IDS } from '../../constants/navigation';
-export function OutletQualityFlag({ outlet: o }) {
+export function OutletQualityFlag({ outlet: o, compact = false }) {
   const issues = outletIssues(o),
     { user, setActiveTab } = useApp(),
     feature = useFeaturePolicy('OUTLET_REVIEW'),
@@ -40,6 +40,68 @@ export function OutletQualityFlag({ outlet: o }) {
     }
   };
   const confirmed = o.validationStatus === 'VALID' && o.validationDetails?.qualityConfirmed;
+  const actionAllowed =
+    !o.deletedAt &&
+    user?.permissions?.can_validate_outlet &&
+    (existing || canOpenOutletReview(o, user));
+  const actionButton = actionAllowed && (
+    <button
+      type="button"
+      className={compact ? 'app-button outlet-quality-action' : 'app-button'}
+      disabled={busy || (!existing && !feature.canStart)}
+      title={existing ? '' : feature.reason}
+      onClick={open}
+    >
+      {busy
+        ? 'Membuka…'
+        : existing
+          ? 'Lanjutkan validasi'
+          : issues.length
+            ? 'Validasi data'
+            : 'Validasi opsional'}
+    </button>
+  );
+
+  if (compact) {
+    return (
+      <div
+        className={`outlet-quality outlet-quality--compact ${issues.length ? 'outlet-quality--flagged' : 'outlet-quality--unflagged'}`}
+      >
+        {issues.length ? (
+          <>
+            <span
+              className="outlet-badge outlet-badge-warning"
+              title={issues.map((k) => OUTLET_ISSUE_LABELS[k]).join('; ')}
+            >
+              Perlu diperiksa ({issues.length})
+            </span>
+            <small className="outlet-quality-summary">
+              {OUTLET_ISSUE_LABELS[issues[0]]}
+              {issues.length > 1 ? ` +${issues.length - 1}` : ''}
+            </small>
+          </>
+        ) : confirmed && !o.validationDetails?.stale ? (
+          <span className="outlet-badge outlet-badge-ok" title="Pemeriksaan tercatat">
+            Terverifikasi
+          </span>
+        ) : (
+          <span
+            className="outlet-badge"
+            title="Tidak ada flag bukan jaminan identitas dan titik sudah benar."
+          >
+            Tanpa flag otomatis
+          </span>
+        )}
+        {actionButton}
+        {error && (
+          <p className="app-error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`outlet-quality ${issues.length ? 'outlet-quality--flagged' : 'outlet-quality--unflagged'}`}
@@ -60,25 +122,7 @@ export function OutletQualityFlag({ outlet: o }) {
       ) : (
         <small>Tidak ada flag bukan jaminan identitas dan titik sudah benar.</small>
       )}
-      {!o.deletedAt &&
-        user?.permissions?.can_validate_outlet &&
-        (existing || canOpenOutletReview(o, user)) && (
-          <button
-            type="button"
-            className="app-button"
-            disabled={busy || (!existing && !feature.canStart)}
-            title={existing ? '' : feature.reason}
-            onClick={open}
-          >
-            {busy
-              ? 'Membuka…'
-              : existing
-                ? 'Lanjutkan validasi'
-                : issues.length
-                  ? 'Validasi data'
-                  : 'Validasi opsional'}
-          </button>
-        )}
+      {actionButton}
       {error && (
         <p className="app-error" role="alert">
           {error}

@@ -138,10 +138,14 @@ export function OutletDirectory({
           <table className="outlet-table">
             <thead>
               <tr>
-                {canBatchValidate && <th aria-label="Pilih batch">Pilih</th>}
-                <th>Outlet</th>
-                <th>Wilayah / Sales</th>
-                <th>Status / kualitas data</th>
+                {canBatchValidate && (
+                  <th className="outlet-col-select" aria-label="Pilih batch">
+                    Pilih
+                  </th>
+                )}
+                <th className="outlet-col-outlet">Outlet</th>
+                <th className="outlet-col-territory">Wilayah / Sales</th>
+                <th className="outlet-col-status">Status / kualitas data</th>
               </tr>
             </thead>
             <tbody>
@@ -156,7 +160,7 @@ export function OutletDirectory({
                 return (
                   <tr key={o.id} aria-selected={selected === o.id}>
                     {canBatchValidate && (
-                      <td data-label="Pilih batch">
+                      <td className="outlet-col-select" data-label="Pilih batch">
                         <input
                           type="checkbox"
                           aria-label={`Pilih ${o.name} untuk batch validasi`}
@@ -169,30 +173,42 @@ export function OutletDirectory({
                         />
                       </td>
                     )}
-                    <td data-label="Outlet">
+                    <td className="outlet-col-outlet" data-label="Outlet">
                       <button type="button" className="outlet-name" onClick={() => onSelect(o.id)}>
                         {o.name}
                       </button>
-                      <small>
+                      <small className="outlet-meta">
                         {o.outletCode || 'Kode belum tersedia'} ·{' '}
                         {o.channel === 'MODERN_TRADE' ? 'MT' : 'GT'}
                       </small>
-                      <p>{o.address}</p>
+                      <p className="outlet-address" title={o.address}>
+                        {o.address}
+                      </p>
                     </td>
-                    <td data-label="Wilayah / Sales">
+                    <td className="outlet-col-territory" data-label="Wilayah / Sales">
                       {unassignedCluster ? (
                         <span className="outlet-badge outlet-badge-warning">Belum Ditugaskan</span>
                       ) : (
-                        <strong>{o.cluster?.name}</strong>
+                        <strong className="outlet-cluster-name">{o.cluster?.name}</strong>
                       )}
-                      <small>{o.cluster?.assignedSales?.name || 'Sales belum ditugaskan'}</small>
+                      <small className="outlet-sales-name">
+                        {o.cluster?.assignedSales?.name || 'Sales belum ditugaskan'}
+                      </small>
                     </td>
-                    <td data-label="Status / kualitas data">
-                      <OutletQualityFlag outlet={o} />
-                      <span className="outlet-badge">{o.deletedAt ? 'Nonaktif' : 'Aktif'}</span>
-                      {o.reviews?.[0] && (
-                        <small>Pemeriksaan: {reviewLabels[o.reviews[0].status]}</small>
-                      )}
+                    <td className="outlet-col-status" data-label="Status / kualitas data">
+                      <div className="outlet-status-stack">
+                        <div className="outlet-status-badges">
+                          <span
+                            className={`outlet-badge ${o.deletedAt ? 'outlet-badge-warning' : 'outlet-badge-active'}`}
+                          >
+                            {o.deletedAt ? 'Nonaktif' : 'Aktif'}
+                          </span>
+                          {o.reviews?.[0] && (
+                            <small>Pemeriksaan: {reviewLabels[o.reviews[0].status]}</small>
+                          )}
+                        </div>
+                        <OutletQualityFlag outlet={o} compact />
+                      </div>
                     </td>
                   </tr>
                 );

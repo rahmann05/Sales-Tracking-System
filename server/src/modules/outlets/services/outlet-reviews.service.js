@@ -53,6 +53,13 @@ export async function openOutletReview(id, body, actor) {
   invalidateOutletCache();
   return result;
 }
+export function normalizeReviewFilterId(value, { allowAll = false } = {}) {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') return null;
+  if (allowAll && trimmed === 'ALL') return null;
+  return trimmed;
+}
 export async function getOutletReviews(query, actor) {
   const status = z
     .enum(['OPEN', 'WAITING_FIELD', 'COMPLETED', 'CANCELLED', 'ALL'])
@@ -101,10 +108,12 @@ export async function getOutletReviews(query, actor) {
       id: { in: candidates.filter((o) => outletIssues(o).includes(issue)).map((o) => o.id) },
     };
   }
-  if (query.clusterId && query.clusterId !== 'ALL') {
-    where.outlet = { ...where.outlet, clusterId: String(query.clusterId) };
+  const clusterId = normalizeReviewFilterId(query.clusterId, { allowAll: true });
+  if (clusterId) {
+    where.outlet = { ...where.outlet, clusterId };
   }
-  if (query.ownerId) where.ownerId = String(query.ownerId);
+  const ownerId = normalizeReviewFilterId(query.ownerId);
+  if (ownerId) where.ownerId = ownerId;
   if (query.search?.trim())
     where.outlet = {
       ...where.outlet,
