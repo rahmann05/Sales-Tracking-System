@@ -2,7 +2,71 @@ import { createDocumentExporters } from '../core/createDocumentExporters';
 import { formatDateId, formatNumber, safeStr } from '../core/formatters';
 import { supervisorSignatories } from '../core/documentIdentity';
 
-function buildOutletMasterBlueprint(items = [], customFilename) {
+const MASTER_HEADERS = [
+  'No',
+  'No. Reg',
+  'Kode Outlet',
+  'Nama Toko',
+  'Nama Pemilik',
+  'Alamat',
+  'Kecamatan',
+  'Kota',
+  'Telepon',
+  'Divisi',
+  'Area',
+  'Channel',
+  'Sub Channel',
+  'Tier',
+  'Pajak',
+  'NPWP / NIK',
+  'Tipe Bayar',
+  'TOP (Hr)',
+  'Jadwal RJP',
+  'Hari Kunjungan',
+  'Salesman',
+  'Supervisor',
+  'Status',
+  'Tgl Pengajuan',
+  'Koordinat GPS',
+];
+
+// Kolom kode (channel, tier, pajak, jadwal, status) dibaca manusia di dokumen cetak.
+const HUMAN_COLUMNS = [11, 12, 13, 14, 16, 18, 22];
+const humanize = (row) =>
+  row.map((cell, index) =>
+    HUMAN_COLUMNS.includes(index) ? String(cell).replace(/_/g, ' ') : cell
+  );
+
+/**
+ * Tabel data penuh memiliki 25 kolom: Excel dan CSV memakainya apa adanya. Di kertas (PDF, Word,
+ * TXT) 25 kolom tidak muat terbaca, jadi dipecah menjadi tiga tabel bertema yang mengulang
+ * No dan Nama Toko sebagai penanda baris.
+ */
+function buildPaperSections(headers, rows) {
+  const pick = (title, columns, columnWidths, extra = {}) => ({
+    title,
+    headers: columns.map((index) => headers[index]),
+    rows: rows.map((row) => columns.map((index) => row[index])),
+    columnWidths,
+    ...extra,
+  });
+  return [
+    pick('A. Identitas & Alamat Outlet', [0, 1, 2, 3, 4, 5, 6, 7, 8], [4, 12, 10, 17, 14, 27, 11, 10, 12]),
+    pick(
+      'B. Klasifikasi, Pajak & Pembayaran',
+      [0, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      [4, 17, 9, 10, 11, 12, 8, 8, 15, 8, 6],
+      { rightAlignCols: [10] }
+    ),
+    pick(
+      'C. Jadwal Kunjungan & Status Pengajuan',
+      [0, 3, 18, 19, 20, 21, 22, 23, 24],
+      [4, 17, 11, 14, 12, 12, 9, 10, 17]
+    ),
+  ];
+}
+
+export function buildOutletMasterBlueprint(items = [], customFilename) {
   const list = Array.isArray(items) ? items : [];
   const dateCode = new Date().toISOString().split('T')[0];
 
@@ -67,36 +131,11 @@ function buildOutletMasterBlueprint(items = [], customFilename) {
       { label: 'Ditolak / Revisi', value: `${rejectedCount} Outlet` },
       { label: 'Standar Master', value: 'ND6 Customer Master' },
     ],
+    paperSections: buildPaperSections(MASTER_HEADERS, rows.map(humanize)),
     sections: [
       {
         title: 'Daftar Rekapitulasi Master & Registrasi Outlet',
-        headers: [
-          'No',
-          'No. Reg',
-          'Kode Outlet',
-          'Nama Toko',
-          'Nama Pemilik',
-          'Alamat',
-          'Kecamatan',
-          'Kota',
-          'Telepon',
-          'Divisi',
-          'Area',
-          'Channel',
-          'Sub Channel',
-          'Tier',
-          'Pajak',
-          'NPWP / NIK',
-          'Tipe Bayar',
-          'TOP (Hr)',
-          'Jadwal RJP',
-          'Hari Kunjungan',
-          'Salesman',
-          'Supervisor',
-          'Status',
-          'Tgl Pengajuan',
-          'Koordinat GPS',
-        ],
+        headers: MASTER_HEADERS,
         rows,
         rightAlignCols: [17],
       },

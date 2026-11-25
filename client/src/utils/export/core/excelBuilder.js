@@ -87,6 +87,7 @@ function addMeta(sheet, items, maxCols) {
 }
 
 function addSectionTable(sheet, section, tableRows) {
+  let headerRowNumber = 0;
   const headers = section.headers || [];
   const rightSet = new Set(section.rightAlignCols || []);
   const centerSet = new Set(section.centerAlignCols || []);
@@ -104,6 +105,7 @@ function addSectionTable(sheet, section, tableRows) {
     const headRow = sheet.addRow(headers);
     headRow.height = 24;
     tableRows.add(headRow.number);
+    headerRowNumber = headRow.number;
     headers.forEach((_, idx) => styleHeaderCell(headRow.getCell(idx + 1)));
   }
   for (const rowArr of section.rows || []) {
@@ -125,6 +127,7 @@ function addSectionTable(sheet, section, tableRows) {
     });
   }
   sheet.addRow([]);
+  return headerRowNumber;
 }
 
 function addNotes(sheet, notes, maxCols) {
@@ -232,7 +235,17 @@ export async function buildDocumentExcel(blueprint) {
 
   addLetterhead(sheet, blueprint, maxCols);
   if (blueprint.metaItems?.length) addMeta(sheet, blueprint.metaItems, maxCols);
-  for (const section of blueprint.sections || []) addSectionTable(sheet, section, tableRows);
+  const headerRows = (blueprint.sections || []).map((section) =>
+    addSectionTable(sheet, section, tableRows)
+  );
+  // Satu tabel data: header ikut tergulir (beku), dapat difilter, dan berulang di tiap halaman cetak.
+  const onlyHeader = headerRows.length === 1 ? headerRows[0] : 0;
+  if (onlyHeader) {
+    const cols = blueprint.sections[0].headers.length;
+    sheet.views = [{ state: 'frozen', ySplit: onlyHeader, xSplit: Math.min(2, cols - 1) }];
+    sheet.autoFilter = { from: { row: onlyHeader, column: 1 }, to: { row: onlyHeader, column: cols } };
+    sheet.pageSetup.printTitlesRow = `${onlyHeader}:${onlyHeader}`;
+  }
   await addImages(workbook, sheet, blueprint);
   if (blueprint.notes?.length) addNotes(sheet, blueprint.notes, maxCols);
 

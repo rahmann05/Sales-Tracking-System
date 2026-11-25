@@ -301,7 +301,8 @@ export async function buildDocumentPdf(blueprint) {
   let y = drawLetterhead(doc, blueprint, logo, layout);
   y = drawTitle(doc, blueprint, layout, y);
   if (blueprint.metaItems?.length) y = drawMeta(doc, blueprint.metaItems, layout, y, compact);
-  for (const section of blueprint.sections || []) y = drawSection(doc, section, layout, y, compact);
+  for (const section of blueprint.paperSections || blueprint.sections || [])
+    y = drawSection(doc, section, layout, y, compact);
   y = drawImages(doc, await documentImages(blueprint), layout, y);
   if (blueprint.notes?.length) y = drawNotes(doc, blueprint.notes, layout, y);
   if (blueprint.signatories?.length) drawSignatures(doc, blueprint.signatories, layout, y);

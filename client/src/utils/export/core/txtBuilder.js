@@ -24,38 +24,71 @@ function buildAsciiTable(section, maxColWidth = 34) {
   const widths = tableLayout(headers, rows, maxColWidth);
 
   const divider = (char = '-') => '+' + widths.map((w) => char.repeat(w + 2)).join('+') + '+';
-  const pad = (text, width, mode) => {
-    const raw = safeStr(text, '');
-    const clipped = raw.length > width ? `${raw.slice(0, width - 1)}…` : raw;
-    if (mode === 'right') return clipped.padStart(width, ' ');
+  const align = (text, width, mode) => {
+    if (mode === 'right') return text.padStart(width, ' ');
     if (mode === 'center') {
-      const left = Math.floor((width - clipped.length) / 2);
-      return `${' '.repeat(left)}${clipped}`.padEnd(width, ' ');
+      const left = Math.floor((width - text.length) / 2);
+      return `${' '.repeat(left)}${text}`.padEnd(width, ' ');
     }
-    return clipped.padEnd(width, ' ');
+    return text.padEnd(width, ' ');
   };
-  const formatRow = (cells, header = false) =>
-    '|' +
-    widths
-      .map((w, idx) => {
-        const mode = header
-          ? 'center'
-          : right.has(idx)
-            ? 'right'
-            : center.has(idx) || idx === 0
-              ? 'center'
-              : 'left';
-        return ` ${pad(cells[idx], w, mode)} `;
-      })
-      .join('|') +
-    '|';
+  // Teks panjang dibungkus ke beberapa baris dalam kolomnya (tidak dipotong), kata terlalu
+  // panjang dipecah per lebar kolom.
+  const cellLines = (text, width) => {
+    const out = [];
+    let line = '';
+    for (let word of safeStr(text, '').split(/\s+/).filter(Boolean)) {
+      while (word.length > width) {
+        if (line) {
+          out.push(line);
+          line = '';
+        }
+        out.push(word.slice(0, width));
+        word = word.slice(width);
+      }
+      if (line && `${line} ${word}`.length > width) {
+        out.push(line);
+        line = word;
+      } else {
+        line = line ? `${line} ${word}` : word;
+      }
+    }
+    if (line || !out.length) out.push(line);
+    return out;
+  };
+  const formatRow = (cells, header = false) => {
+    const wrapped = widths.map((w, idx) => cellLines(cells[idx], w));
+    const height = Math.max(...wrapped.map((l) => l.length));
+    return Array.from({ length: height }, (_, n) =>
+      '|' +
+      widths
+        .map((w, idx) => {
+          const mode = header
+            ? 'center'
+            : right.has(idx)
+              ? 'right'
+              : center.has(idx) || idx === 0
+                ? 'center'
+                : 'left';
+          return ` ${align(wrapped[idx][n] ?? '', w, mode)} `;
+        })
+        .join('|') +
+      '|'
+    ).join('\n');
+  };
 
   const lines = [divider('-'), formatRow(headers, true), divider('=')];
   if (!rows.length) {
     const inner = widths.reduce((a, b) => a + b + 3, -1);
     lines.push(`| ${'Tidak ada data pada bagian ini.'.padEnd(Math.max(inner - 2, 1), ' ')} |`);
   } else {
-    for (const r of rows) lines.push(formatRow(r));
+    const body = rows.map((r) => formatRow(r));
+    // Baris yang terbungkus ke beberapa baris teks dipisah garis tipis agar batasnya jelas.
+    const separated = body.some((text) => text.includes('\n'));
+    body.forEach((text, i) => {
+      lines.push(text);
+      if (separated && i < body.length - 1) lines.push(divider('-'));
+    });
   }
   lines.push(divider('-'));
   return { text: lines.join('\n'), width: divider().length };
@@ -87,7 +120,7 @@ function wrap(text, width, indent = '') {
  * "Label : nilai", tabel bernomor, catatan bernomor, tanda tangan, dan penutup.
  */
 export function buildDocumentTxt(blueprint) {
-  const sections = (blueprint.sections || []).map((section) => ({
+  const sections = (blueprint.paperSections || blueprint.sections || []).map((section) => ({
     section,
     table: buildAsciiTable(section),
   }));

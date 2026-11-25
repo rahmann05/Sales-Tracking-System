@@ -336,7 +336,7 @@ export async function buildDocumentDocx(blueprint) {
     children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
   }
 
-  for (const section of asForm ? [] : blueprint.sections || []) {
+  for (const section of asForm ? [] : blueprint.paperSections || blueprint.sections || []) {
     if (section.title) {
       children.push(
         new Paragraph({
