@@ -73,7 +73,21 @@ export const getPackingLists = async (query, role) => {
         },
         invoices: true,
         createdBy: { select: { id: true, name: true } },
-        deliveryStops: true,
+        deliveryStops: {
+          include: {
+            // Names printed on the document: the trip's driver and who checked the load.
+            deliveryRoute: {
+              select: {
+                id: true,
+                code: true,
+                status: true,
+                cancelledAt: true,
+                preparation: true,
+                driver: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
       },
     }),
     needsInMemorySlice ? Promise.resolve(0) : prisma.packingList.count({ where }),

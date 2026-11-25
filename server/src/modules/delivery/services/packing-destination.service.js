@@ -3,6 +3,8 @@ import { packingOrderIds } from '../../../../../shared/packing-orders.mjs';
 import { mileagePoint } from './vehicle-mileage-plan.service.js';
 import { getDynamicConfig } from '../../config/config.service.js';
 
+export const allowUnverifiedDestination = async () =>
+  (await getDynamicConfig('DELIVERY_ALLOW_UNVERIFIED_DESTINATION', true)) === true;
 export const destinationFromOutlet = async () =>
   (await getDynamicConfig('DELIVERY_DESTINATION_FROM_OUTLET', true)) === true;
 import { isVehicleLoad, loadLogistics } from '../../../../../shared/packing-load.mjs';

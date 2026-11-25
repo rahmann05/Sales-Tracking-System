@@ -21,7 +21,7 @@ import {
 } from '../../../../../shared/packing-orders.mjs';
 import { shipmentReady } from '../../../../../shared/shipment-document.mjs';
 import { existingOperation, operationHash } from '../../../utils/operation-request.js';
-import { packingDestination } from './packing-destination.service.js';
+import { packingDestination, allowUnverifiedDestination } from './packing-destination.service.js';
 import { preparePackingLoad, mapLoadInvoices, loadReadyError } from './packing-load.service.js';
 import { shipmentInvoiceRequired } from '../../../../../shared/shipment-document.mjs';
 import { isVehicleLoad, loadLogistics } from '../../../../../shared/packing-load.mjs';
@@ -232,7 +232,8 @@ export async function savePacking(data, userId, id) {
         const loadError = vehicleLoad
           ? loadReadyError(
               { ...data, ...loadData, items, invoices: invoiceRows },
-              shipmentInvoiceRequired({ documentKind }, documentValues)
+              shipmentInvoiceRequired({ documentKind }, documentValues),
+              { allowUnverified: await allowUnverifiedDestination() }
             ) ||
             (invoiceRows.length ? invoiceMappingErrors({ items, invoices: invoiceRows })[0] : null)
           : null;
@@ -372,7 +373,9 @@ export async function transitionPacking(id, action, userId) {
         MANIFEST_REQUIRE_INVOICE: await processValue(pl, 'MANIFEST_REQUIRE_INVOICE', false),
       };
       if (action === 'RELEASE' && isVehicleLoad(pl)) {
-        const loadError = loadReadyError(pl, shipmentInvoiceRequired(pl, documentValues));
+        const loadError = loadReadyError(pl, shipmentInvoiceRequired(pl, documentValues), {
+          allowUnverified: await allowUnverifiedDestination(),
+        });
         if (loadError) throw new AppError(loadError, 422);
         const errors = invoiceMappingErrors(pl);
         if (pl.invoices.length && errors.length) throw new AppError(errors[0], 422);

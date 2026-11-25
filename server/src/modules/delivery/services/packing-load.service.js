@@ -113,7 +113,7 @@ export function mapLoadInvoices(invoiceRows, items, destinations) {
   });
 }
 
-export function loadReadyError(packing, invoiceRequired) {
+export function loadReadyError(packing, invoiceRequired, { allowUnverified = false } = {}) {
   if (!packing.destinations?.length) return 'Tujuan muatan belum diisi.';
   for (const destination of packing.destinations) {
     const items = packing.items.filter((item) => item.destinationId === destination.id),
@@ -121,7 +121,8 @@ export function loadReadyError(packing, invoiceRequired) {
     const outletName = destination.outlet?.name || 'tujuan';
     if (!items.length || destination.totalCartons <= 0)
       return `Lengkapi barang dan karton untuk ${outletName}.`;
-    if (!destination.point) return `Titik pengiriman ${outletName} belum tersedia.`;
+    if (!destination.point && !allowUnverified)
+      return `Titik pengiriman ${outletName} belum tersedia.`;
     if (invoiceRequired && !invoices.length) return `Faktur untuk ${outletName} belum dilampirkan.`;
     if (
       invoices.length &&

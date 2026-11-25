@@ -31,3 +31,17 @@ test('both delivery planning rules default to on and are editable settings', () 
   assert.equal(CONFIG_DEFAULTS.DELIVERY_AUTO_SELECT_LOADS, true);
   assert.equal(CONFIG_DEFAULTS.DELIVERY_DESTINATION_FROM_OUTLET, true);
 });
+
+test('a vehicle load without a destination point is released only when the rule allows it', async () => {
+  const { loadReadyError } =
+    await import('../src/modules/delivery/services/packing-load.service.js');
+  const load = {
+    destinations: [{ id: 'd1', outlet: { name: 'Toko A' }, totalCartons: 2, point: null }],
+    items: [{ destinationId: 'd1' }],
+    invoices: [],
+  };
+  assert.match(loadReadyError(load, false), /Titik pengiriman Toko A belum tersedia/);
+  assert.equal(loadReadyError(load, false, { allowUnverified: true }), null);
+  const { CONFIG_DEFAULTS } = await import('../../shared/config.mjs');
+  assert.equal(CONFIG_DEFAULTS.DELIVERY_ALLOW_UNVERIFIED_DESTINATION, true);
+});

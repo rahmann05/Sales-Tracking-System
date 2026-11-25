@@ -35,6 +35,8 @@ export const getPackingListById = async (id) => {
               code: true,
               date: true,
               status: true,
+              cancelledAt: true,
+              preparation: true,
               vehicle: { select: { id: true, code: true, name: true } },
               driver: { select: { id: true, name: true } },
             },

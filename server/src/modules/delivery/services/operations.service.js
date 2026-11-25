@@ -700,6 +700,12 @@ export async function operationsDashboard(date) {
           ? 'Lewat target selesai'
           : null,
         r.onHold ? 'Trip ditahan' : null,
+        r.stops.some((s) => s.targetLatitude == null && !terminalStop(s.status))
+          ? `Titik outlet tidak valid: ${r.stops
+              .filter((s) => s.targetLatitude == null && !terminalStop(s.status))
+              .map((s) => s.outlet?.name || 'Outlet')
+              .join(', ')}`
+          : null,
         r.mileagePendingCount > 0
           ? `${r.mileagePendingCount} leg jarak menunggu layanan rute jalan`
           : null,

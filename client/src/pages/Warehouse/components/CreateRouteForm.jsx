@@ -57,10 +57,16 @@ const entriesFor = (pl) =>
         .filter((entry) => entry.remainingCartons > 0)
     : [entryFor(pl)];
 const entryKey = (entry) => `${entry.packingListId}:${entry.packingDestinationId || ''}`;
-const ready = (pl) =>
+// Rule DELIVERY_ALLOW_UNVERIFIED_DESTINATION: a load without a valid outlet point may still be
+// scheduled; it is flagged instead of blocked. Conflicting order points always need Admin.
+const ready = (pl, allowUnverified = false) =>
   isVehicleLoad(pl)
-    ? pl.destinations?.every((destination) => !!destination.point)
-    : !pl.destinationConflict && !!pl.destinationPoint;
+    ? allowUnverified || pl.destinations?.every((destination) => !!destination.point)
+    : !pl.destinationConflict && (allowUnverified || !!pl.destinationPoint);
+const missingPoint = (pl) =>
+  isVehicleLoad(pl)
+    ? pl.destinations?.some((destination) => !destination.point)
+    : !pl.destinationPoint;
 const wibClock = (value) =>
   new Date(value).toLocaleTimeString('id-ID', {
     timeZone: 'Asia/Jakarta',
@@ -105,6 +111,7 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
   const { settings, user, setActiveTab } = useApp(),
     feature = useFeaturePolicy('DELIVERY'),
     depots = parseDeliveryDepots(settings.DELIVERY_DEPOT_LOCATIONS || DEFAULT_DELIVERY_DEPOTS);
+  const allowUnverified = settings.DELIVERY_ALLOW_UNVERIFIED_DESTINATION === true;
   const [code, setCode] = useState('');
   const codeMissing = useCodeMissing('DELIVERY_ROUTE', code);
   const [date, setDate] = useState(wibDateKey),
@@ -183,12 +190,17 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
         setPackings(documents);
         // Rule DELIVERY_AUTO_SELECT_LOADS: loads handed over by Admin start selected. A vehicle
         // load must travel alone, so ordinary loads win and otherwise only the first one is taken.
-        const readyDocs = documents.filter((pl) => pl.remainingCartons > 0 && ready(pl)),
+        const readyDocs = documents.filter(
+            (pl) => pl.remainingCartons > 0 && ready(pl, allowUnverified)
+          ),
           ordinaryDocs = readyDocs.filter((pl) => !isVehicleLoad(pl)),
           autoDocs = ordinaryDocs.length ? ordinaryDocs : readyDocs.slice(0, 1);
         const selectedDocs = initialPackingIds.length
           ? documents.filter(
-              (pl) => initialPackingIds.includes(pl.id) && pl.remainingCartons > 0 && ready(pl)
+              (pl) =>
+                initialPackingIds.includes(pl.id) &&
+                pl.remainingCartons > 0 &&
+                ready(pl, allowUnverified)
             )
           : settings.DELIVERY_AUTO_SELECT_LOADS === true
             ? autoDocs
@@ -418,21 +430,29 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
                     <p role="status" className="text-amber-700">
                       Titik pada order sumber berbeda. Minta Admin memeriksa tujuan.
                     </p>
-                  ) : !ready(pl) ? (
-                    <p role="status" className="text-amber-700">
+                  ) : !ready(pl, allowUnverified) ? (
+                    <p role="status" className="work-clash">
                       Titik tujuan belum tersedia. Minta Admin melengkapi lokasi.
                     </p>
                   ) : (
-                    <button
-                      type="button"
-                      className="admin-button"
-                      disabled={
-                        entries.some((entry) => entry.loadPlanVersion === 2) && !isVehicleLoad(pl)
-                      }
-                      onClick={() => addPacking(pl)}
-                    >
-                      Tambahkan muatan
-                    </button>
+                    <>
+                      {missingPoint(pl) && (
+                        <p role="status" className="admin-footnote">
+                          Titik outlet tidak valid. Pengiriman tetap bisa dijalankan dan ditandai
+                          peringatan.
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        className="admin-button"
+                        disabled={
+                          entries.some((entry) => entry.loadPlanVersion === 2) && !isVehicleLoad(pl)
+                        }
+                        onClick={() => addPacking(pl)}
+                      >
+                        Tambahkan muatan
+                      </button>
+                    </>
                   )}
                 </div>
               ))}
@@ -512,6 +532,11 @@ export function CreateRouteForm({ onCreated, onCancel, initialPackingIds = [] })
                     </button>
                   </div>
                 </div>
+                {!entry.point && (
+                  <p role="status" className="admin-footnote">
+                    Titik outlet tidak valid. Pengiriman tetap berjalan dan ditandai peringatan.
+                  </p>
+                )}
                 {entry.point && (
                   <a
                     className="admin-table-link"

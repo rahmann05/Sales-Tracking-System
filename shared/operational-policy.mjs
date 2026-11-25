@@ -1334,6 +1334,12 @@ export const OPERATIONAL_CONFIG_GROUPS = [
         'Muatan yang sudah diserahkan Admin dan memiliki titik tujuan langsung terpilih di form trip. Gudang tetap dapat menghapus atau menambah pilihan sebelum menyimpan. Nonaktif: setiap muatan ditambahkan manual.'
       ),
       bool(
+        'DELIVERY_ALLOW_UNVERIFIED_DESTINATION',
+        'Izinkan pengiriman ke outlet dengan titik tidak valid',
+        true,
+        'Trip tetap bisa disusun dan dijalankan walau titik tujuan outlet belum tersedia atau tidak valid; tujuan itu ditandai peringatan di trip dan pantauan. Nonaktif: trip dan pelepasan muatan kendaraan ditolak sampai titik outlet dilengkapi.'
+      ),
+      bool(
         'DELIVERY_DESTINATION_FROM_OUTLET',
         'Titik tujuan mengikuti lokasi master outlet',
         true,

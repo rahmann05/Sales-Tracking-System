@@ -108,15 +108,34 @@ function buildVehicleLoadBlueprint(data) {
       { role: 'Disusun oleh', name: data.createdBy?.name || 'Admin', title: 'Admin' },
       {
         role: 'Diperiksa oleh',
-        name: '............................',
+        name: accountNames(data).inspector || BLANK,
         title: 'Kepala gudang / pemeriksa',
       },
       {
         role: 'Muatan diterima untuk diangkut',
-        name: '............................',
+        name: accountNames(data).driver || BLANK,
         title: 'Supir',
       },
     ],
+  };
+}
+
+const BLANK = '............................';
+/** Accounts tied to this document: the trip's driver and whoever checked or loaded the cargo. */
+function accountNames(data = {}) {
+  const trip = (data.deliveryStops || [])
+    .map((stop) => stop?.deliveryRoute)
+    .filter((route) => route && !route.cancelledAt && route.status !== 'CANCELLED')
+    .at(-1);
+  const prep = trip?.preparation || {};
+  return {
+    driver: data.driverName || data.driver?.name || trip?.driver?.name || '',
+    inspector:
+      data.warehouseStaffName ||
+      prep.CHECK?.actorName ||
+      prep.LOAD?.actorName ||
+      prep.PICK?.actorName ||
+      '',
   };
 }
 
@@ -207,7 +226,7 @@ export function buildPackingListBlueprint(data = {}) {
         label: 'No. Polisi Armada',
         value: safeStr(data.vehicleNumber || data.plateNumber || data.driver?.vehiclePlate),
       },
-      { label: 'Nama Supir', value: safeStr(data.driverName || data.driver?.name) },
+      { label: 'Nama Supir', value: safeStr(accountNames(data).driver) },
       { label: 'Asisten / Helper', value: safeStr(data.helperName || data.helper?.name) },
       {
         label: 'Petugas Gudang',
@@ -235,12 +254,12 @@ export function buildPackingListBlueprint(data = {}) {
     signatories: [
       {
         role: 'Disiapkan Oleh,',
-        name: safeStr(data.warehouseStaffName, 'Kepala Gudang'),
+        name: accountNames(data).inspector || safeStr(data.createdBy?.name, 'Kepala Gudang'),
         title: 'Kepala Gudang',
       },
       {
         role: 'Dibawa Oleh,',
-        name: safeStr(data.driverName || data.driver?.name, 'Supir Pengiriman'),
+        name: accountNames(data).driver || 'Supir Pengiriman',
         title: 'Supir / Ekspedisi',
       },
       {

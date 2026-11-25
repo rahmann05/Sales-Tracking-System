@@ -14,7 +14,11 @@ import {
   DEFAULT_DELIVERY_DEPOTS,
   parseDeliveryDepots,
 } from '../../../../../shared/delivery-depots.mjs';
-import { packingDestination, destinationFromOutlet } from './packing-destination.service.js';
+import {
+  packingDestination,
+  destinationFromOutlet,
+  allowUnverifiedDestination,
+} from './packing-destination.service.js';
 import { existingOperation, operationHash } from '../../../utils/operation-request.js';
 import { destinationPacking, isVehicleLoad } from '../../../../../shared/packing-load.mjs';
 
@@ -114,11 +118,21 @@ export const createDeliveryRoute = async (data, userId) => {
       );
     return { ...stop, point: destination.destinationPoint || null };
   });
-  if (mileageStops.some((stop) => !stop.point))
+  const withoutPoint = mileageStops.filter((stop) => !stop.point);
+  // Setting DELIVERY_ALLOW_UNVERIFIED_DESTINATION: the trip may be planned; such stops are flagged.
+  if (withoutPoint.length && !(await allowUnverifiedDestination())) {
+    const names = [
+      ...new Set(
+        withoutPoint.map(
+          (stop) => routeOutlets.find((row) => row.id === stop.outletId)?.name || 'Outlet'
+        )
+      ),
+    ];
     throw new AppError(
-      'Titik pengiriman satu atau lebih outlet belum tersedia. Lengkapi atau validasi titik toko sebelum membuat trip.',
+      `Titik pengiriman belum tersedia untuk: ${names.join(', ')}. Lengkapi koordinat di Master outlet atau validasi lokasinya, lalu buat trip lagi.`,
       422
     );
+  }
   const depots = parseDeliveryDepots(
     await getDynamicConfig('DELIVERY_DEPOT_LOCATIONS', DEFAULT_DELIVERY_DEPOTS)
   );
@@ -362,7 +376,10 @@ export const createDeliveryRoute = async (data, userId) => {
                   ?.googleMapsOnly
                   ? 'GOOGLE'
                   : (mileagePlan.points.find((point) => point.sequence === s.sequence)?.source ??
-                    null),
+                    (mileagePlan.points.find((point) => point.sequence === s.sequence)?.latitude ==
+                    null
+                      ? 'UNVERIFIED'
+                      : null)),
                 sequence: s.sequence,
                 allocatedCartons: s.allocatedCartons,
                 allocatedWeight: s.allocatedWeight,

@@ -162,6 +162,11 @@ export function TripOperationsDetail({ route, people, issues, canManage, onChang
               <div className="admin-stop-content">
                 <header>
                   <h4>{stop.outlet?.name || 'Outlet belum tercatat'}</h4>
+                  {stop.targetLatitude == null && (
+                    <p className="work-clash">
+                      Titik outlet tidak valid; tujuan ini berjalan dengan peringatan.
+                    </p>
+                  )}
                   <span className={`admin-status admin-status-${stop.status?.toLowerCase()}`}>
                     {deliveryStopLabel(stop.status)}
                   </span>
