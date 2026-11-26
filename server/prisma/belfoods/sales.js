@@ -81,6 +81,7 @@ export async function seedSales(db, master, date) {
   const histOrderCode = new Map();
   let orderCounter = 1;
 
+  const planIdBySupervisorId = new Map();
   // 1. Seed 2 PUBLISHED PjpPlans covering all 443 outlets across GT & MT supervisors
   for (const [spvIdx, spv] of supervisors.entries()) {
     const team = sales.filter((s) => s.supervisorId === spv.id);
@@ -108,7 +109,7 @@ export async function seedSales(db, master, date) {
       }
     }
 
-    await ensure(db, 'pjpPlan', `pjp-plan-${spvIdx}-${date}`, {
+    const seededPlan = await ensure(db, 'pjpPlan', `pjp-plan-${spvIdx}-${date}`, {
       requestId: id(`pjp-plan-req-${spvIdx}-${date}`),
       name: 'Rencana Kunjungan Belfoods GT & MT',
       supervisorId: spv.id,
@@ -147,6 +148,7 @@ export async function seedSales(db, master, date) {
       createdAt: at(hist1, '05:45'),
       updatedAt: at(hist1, '06:30'),
     });
+    if (seededPlan?.id) planIdBySupervisorId.set(spv.id, seededPlan.id);
   }
 
   // A DRAFT plan for the period after the published one, so the planner can be tried end to end.
@@ -201,12 +203,14 @@ export async function seedSales(db, master, date) {
   for (const [sIdx, member] of sales.entries()) {
     const cluster = primaryCluster(clusters, member);
     const spv = supervisors.find((s) => s.id === member.supervisorId);
+    const seededPlanId = planIdBySupervisorId.get(spv.id);
     const reportingContext = {
       source: 'KUNJUNGAN_TOKO_BELFOODS_CONVERTED',
       supervisorId: spv.id,
       clusterId: cluster.id,
       supervisorName: spv.name,
       clusterName: cluster.name,
+      ...(seededPlanId ? { planning: { planId: seededPlanId } } : {}),
     };
 
     const dayConfigs = [

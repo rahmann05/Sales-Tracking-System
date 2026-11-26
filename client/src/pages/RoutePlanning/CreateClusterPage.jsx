@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useMapData } from '../../context/MapDataContext';
 import { TAB_IDS } from '../../constants/navigation';
@@ -11,7 +11,8 @@ import '../../styles/pages/PlanningWorkspace.css';
 
 export function CreateClusterPage() {
   const { user, setActiveTab } = useApp();
-  const { outlets, isLoading, error, refetchAll, invalidate } = useMapData();
+  const { outlets, clusters, isLoading, error, refetchAll, invalidate } = useMapData();
+  const [hideClustered, setHideClustered] = useState(false);
   const routeTab = TAB_IDS.ROUTE_PLANNING || TAB_IDS.MASTER_CLUSTERS;
   const back = useCallback(() => setActiveTab(routeTab), [setActiveTab, routeTab]);
   const openTeam = useCallback(() => {
@@ -63,7 +64,13 @@ export function CreateClusterPage() {
       ),
     [available, builder.draft.tradeType, builder.draft.supervisorId]
   );
-  useClusterMap({ ...builder, allOutlets: mapOutlets });
+  useClusterMap({
+    ...builder,
+    allOutlets: mapOutlets,
+    areaOutlets: available,
+    clusters,
+    hideClustered,
+  });
   return (
     <div className="create-cluster-page">
       <div className="map-spacer">
@@ -86,6 +93,7 @@ export function CreateClusterPage() {
           }}
           onOpenTeam={openTeam}
           onCancel={back}
+          mapOptions={{ hideClustered, setHideClustered, clusters, outlets: mapOutlets }}
         />
       </div>
     </div>

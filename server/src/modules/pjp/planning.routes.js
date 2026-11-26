@@ -1,7 +1,10 @@
-import { cancelPublishedPlan } from './services/cancel-published-plan.service.js';
+import {
+  cancelPublishedPlan,
+  getPlanWithPublicationSummary,
+} from './services/cancel-published-plan.service.js';
 import { Router } from 'express';
 import { authorize, authorizeWithPermission } from '../../middlewares/auth.middleware.js';
-import { listPlans, getPlan, previewPlan, savePlan } from './services/planning.service.js';
+import { listPlans, previewPlan, savePlan } from './services/planning.service.js';
 import { publishPlan } from './services/publish-plan.service.js';
 import { schedulePublication, cancelPublication } from './services/publication-schedule.service.js';
 const router = Router(),
@@ -20,7 +23,7 @@ router.get(
 );
 router.get(
   '/:id',
-  run((req) => getPlan(req.params.id, req.user))
+  run((req) => getPlanWithPublicationSummary(req.params.id, req.user))
 );
 router.post(
   '/preview',

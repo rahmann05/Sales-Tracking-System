@@ -21,6 +21,7 @@ export function ClusterControlPanel({
   onRetry,
   onOpenTeam,
   onCancel,
+  mapOptions,
 }) {
   const featurePolicy = useFeaturePolicy('CLUSTERS');
   const { setActiveTab } = useApp();
@@ -347,6 +348,37 @@ export function ClusterControlPanel({
                 Pilih outlet dari daftar atau klik langsung marker di peta. Semua outlet terpilih
                 akan otomatis dicek rute &amp; dampaknya saat lanjut.
               </p>
+              {mapOptions && (
+                <div className="cluster-map-options">
+                  <label className="planner-check">
+                    <input
+                      type="checkbox"
+                      checked={mapOptions.hideClustered}
+                      onChange={(e) => mapOptions.setHideClustered(e.target.checked)}
+                    />
+                    Sembunyikan titik yang sudah masuk cluster
+                  </label>
+                  <ul className="cluster-map-legend-list" aria-label="Cluster di peta">
+                    {mapOptions.clusters
+                      .map((c) => ({
+                        c,
+                        total: mapOptions.outlets.filter((o) => o.clusterId === c.id).length,
+                      }))
+                      .filter(({ c, total }) => c.name !== 'Belum Ditugaskan' && total > 0)
+                      .map(({ c, total }) => (
+                        <li key={c.id}>
+                          <i style={{ background: c.colorHex || '#697280' }} aria-hidden="true" />
+                          <span>{c.name}</span>
+                          <small>{total} outlet</small>
+                        </li>
+                      ))}
+                    <li>
+                      <i style={{ background: '#9ca3af' }} aria-hidden="true" />
+                      <span>Belum ditugaskan</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
               <label className="app-field">
                 Cari outlet
                 <input
@@ -549,7 +581,7 @@ export function ClusterControlPanel({
             <button
               type="button"
               className={`app-button ${!canPlanRjp ? 'app-button-primary' : ''}`}
-              disabled={disabled || !b.review || codeMissing}
+              disabled={disabled || !b.review || codeMissing || b.review?.blocked}
               onClick={() => b.save({ openPlanner: false })}
             >
               {b.saving ? 'Menyimpan…' : 'Simpan wilayah'}
@@ -558,7 +590,7 @@ export function ClusterControlPanel({
               <button
                 type="button"
                 className="app-button app-button-primary"
-                disabled={disabled || !b.review || codeMissing}
+                disabled={disabled || !b.review || codeMissing || b.review?.blocked}
                 onClick={() => b.save({ openPlanner: true })}
               >
                 {b.saving ? 'Menyimpan…' : 'Simpan & susun PJP'}

@@ -178,7 +178,14 @@ export async function publishPlan(id, raw, actor, scheduled = null) {
           history: [...plan.history, event],
         },
       });
-      return { plan: published, count, replayed: false };
+      return {
+        plan: {
+          ...published,
+          publicationSummary: { total: count, cancellable: count, retained: 0 },
+        },
+        count,
+        replayed: false,
+      };
     },
     { timeout: 60000 }
   );

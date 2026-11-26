@@ -12,6 +12,7 @@ import {
 } from '../../shared/pjp-planning.mjs';
 import { parseSpreadsheetCsv } from '../../client/src/services/spreadsheetImportService.js';
 import { mapSalesPjpStops } from '../../client/src/context/hooks/mapSalesPjpStops.js';
+import { isPjpProtectedFromCancel } from '../src/modules/pjp/services/cancel-published-plan.service.js';
 const sales = [
   { id: 'a', name: 'Sales A', supervisorId: 's' },
   { id: 'b', name: 'Sales B', supervisorId: 's' },
@@ -378,4 +379,56 @@ test('buildClusterDraftRules strictly scopes to clusterId when specified and nev
     defaultInterval: 1,
   });
   assert.deepEqual(emptyCluster, []);
+});
+test('isPjpProtectedFromCancel distinguishes empty today/future SCHEDULED PJPs from past or active PJPs', () => {
+  const todayKey = '2026-11-26';
+  const emptyFuture = {
+    status: 'SCHEDULED',
+    date: '2026-11-27T00:00:00.000Z',
+    _count: { routeChanges: 0, derivedPjps: 0 },
+    stops: [{ status: 'PENDING', _count: { attendances: 0, orders: 0, routeChanges: 0 } }],
+  };
+  assert.equal(isPjpProtectedFromCancel(emptyFuture, todayKey), false);
+  assert.equal(
+    isPjpProtectedFromCancel({ ...emptyFuture, date: '2026-11-26T05:00:00.000Z' }, todayKey),
+    false
+  );
+  assert.equal(
+    isPjpProtectedFromCancel({ ...emptyFuture, date: '2026-11-25T10:00:00.000Z' }, todayKey),
+    true
+  );
+  assert.equal(
+    isPjpProtectedFromCancel({ ...emptyFuture, status: 'IN_PROGRESS' }, todayKey),
+    true
+  );
+  assert.equal(
+    isPjpProtectedFromCancel(
+      {
+        ...emptyFuture,
+        stops: [{ status: 'PENDING', _count: { attendances: 1, orders: 0, routeChanges: 0 } }],
+      },
+      todayKey
+    ),
+    true
+  );
+  assert.equal(
+    isPjpProtectedFromCancel(
+      {
+        ...emptyFuture,
+        stops: [{ status: 'PENDING', _count: { attendances: 0, orders: 1, routeChanges: 0 } }],
+      },
+      todayKey
+    ),
+    true
+  );
+  assert.equal(
+    isPjpProtectedFromCancel(
+      {
+        ...emptyFuture,
+        _count: { routeChanges: 1, derivedPjps: 0 },
+      },
+      todayKey
+    ),
+    true
+  );
 });

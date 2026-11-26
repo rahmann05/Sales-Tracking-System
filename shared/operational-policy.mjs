@@ -616,6 +616,12 @@ export const OPERATIONAL_CONFIG_GROUPS = [
     'F1/F2/F4 tetap berarti interval setiap 1/2/4 minggu.',
     [
       bool('CLUSTER_SINGLE_CHANNEL', 'Satu cluster hanya satu channel'),
+      bool(
+        'CLUSTER_ALLOW_SCHEDULE_CONFLICT',
+        'Izinkan pindah outlet yang masih terjadwal untuk Sales lain',
+        false,
+        'Nonaktif (default): outlet tidak dapat dipindah ke cluster atau Sales lain selama masih ada PJP mendatang, template mingguan, atau jadwal ganda pada tanggal lain milik Sales sebelumnya. Aktif: perpindahan diizinkan setelah dampaknya ditinjau.'
+      ),
       num('PJP_MAX_PLAN_DAYS', 'Periode maksimal rencana', 62, 1, 366, 'hari'),
       num('PJP_MAX_VISITS_PER_DAY', 'Batas kunjungan per Sales per hari', 50, 1, 500, 'outlet'),
       select('PJP_OVERLOAD_POLICY', 'Ketika beban harian melampaui batas', 'WARN', [

@@ -1,4 +1,10 @@
 import React from 'react';
+const KIND = {
+  OTHER_SALES_SCHEDULED: 'Masih dijadwalkan untuk',
+  DOUBLE_BOOKED: 'Terjadwal ganda untuk',
+  TEMPLATE_OTHER_SALES: 'Template mingguan masih milik',
+};
+const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 export function ClusterImpactReview({ review }) {
   if (!review) return null;
   return (
@@ -9,6 +15,30 @@ export function ClusterImpactReview({ review }) {
         {review.draftPlans.length} draft rencana · {review.publishedPjps.length} PJP terbit
         terdampak
       </p>
+      {review.conflictCount > 0 && (
+        <div role={review.blocked ? 'alert' : 'status'} className="admin-feedback error">
+          <strong>
+            {review.blocked
+              ? 'Penempatan bertabrakan dengan jadwal lain'
+              : 'Ada jadwal lain yang beririsan'}{' '}
+            ({review.conflictCount})
+          </strong>
+          <ul>
+            {review.conflicts.slice(0, 8).map((c) => (
+              <li key={`${c.kind}:${c.outletId}:${c.date || c.dayOfWeek}:${c.weekType || ''}`}>
+                {c.outletName} · {KIND[c.kind]} {c.salesName}
+                {c.date ? ` pada ${c.date}` : ` (${DAYS[c.dayOfWeek]}, ${c.weekType})`}
+              </li>
+            ))}
+          </ul>
+          {review.blocked && (
+            <p>
+              Batalkan atau jadwalkan ulang jadwal tersebut di Jadwal kunjungan, atau ubah outlet
+              yang dipilih, lalu tinjau ulang.
+            </p>
+          )}
+        </div>
+      )}
       {review.ownerChanged && (
         <p>
           Penanggung jawab wilayah berubah. Jadwal mendatang perlu ditinjau dengan penugasan

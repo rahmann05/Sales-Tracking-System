@@ -3,6 +3,8 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/errors.js';
 import { validateOutletAssignments } from './cluster-assignment-policy.service.js';
 import { wibDayRange } from '../../../../../shared/visit-metrics.mjs';
+import { clusterScheduleConflicts } from '../../../../../shared/cluster-schedule-conflicts.mjs';
+import { getDynamicConfig } from '../../config/config.service.js';
 export async function clusterImpact(raw, actor, db = prisma) {
   const { clusterId, outletIds = [], supervisorId, assignedSalesId } = raw;
   if (!['ADMIN', 'SUPERVISOR'].includes(actor?.role))
@@ -62,6 +64,7 @@ export async function clusterImpact(raw, actor, db = prisma) {
           select: {
             id: true,
             updatedAt: true,
+            userId: true,
             user: { select: { name: true } },
             dayOfWeek: true,
             weekType: true,
@@ -77,13 +80,39 @@ export async function clusterImpact(raw, actor, db = prisma) {
       where: { outletId: { in: affected }, pjp: { date: { gte: wibDayRange().gte } } },
       select: {
         outletId: true,
-        pjp: { select: { id: true, code: true, date: true, user: { select: { name: true } } } },
+        pjp: {
+          select: {
+            id: true,
+            code: true,
+            date: true,
+            userId: true,
+            user: { select: { name: true } },
+          },
+        },
       },
     }),
   ]);
   const draftPlans = plans
     .filter((p) => p.rules.some((r) => affected.includes(r.outletId)))
     .map(({ rules, ...p }) => p);
+  const destinationSalesId =
+    assignedSalesId === undefined ? (target?.assignedSalesId ?? null) : assignedSalesId;
+  const names = new Map(members.map((o) => [o.id, o.name]));
+  const conflicts = clusterScheduleConflicts({
+    destinationSalesId,
+    stops: pjps.map((s) => ({ ...s, outletName: names.get(s.outletId) })),
+    templates: templates.map((t) => ({
+      outletId: t.outletId,
+      outletName: names.get(t.outletId),
+      userId: t.pjpTemplate.userId,
+      salesName: t.pjpTemplate.user.name,
+      dayOfWeek: t.pjpTemplate.dayOfWeek,
+      weekType: t.pjpTemplate.weekType,
+    })),
+  });
+  const blocked =
+    conflicts.length > 0 &&
+    (await getDynamicConfig('CLUSTER_ALLOW_SCHEDULE_CONFLICT', false)) !== true;
   const snapshot = {
     target,
     members,
@@ -108,11 +137,21 @@ export async function clusterImpact(raw, actor, db = prisma) {
     })),
     draftPlans,
     publishedPjps: [...new Map(pjps.map((s) => [s.pjp.id, s.pjp])).values()],
+    conflicts: conflicts.slice(0, 100),
+    conflictCount: conflicts.length,
+    blocked,
     requiresConfirmation: ownerChanged || moves.some((m) => m.from !== 'Belum Ditugaskan'),
   };
 }
 export async function requireClusterImpact(db, raw, actor, token) {
   const review = await clusterImpact(raw, actor, db);
+  if (review.blocked) {
+    const sample = review.conflicts[0];
+    throw new AppError(
+      `Perpindahan bertabrakan dengan jadwal lain (${review.conflictCount}): ${sample.outletName}${sample.date ? ` pada ${sample.date}` : ' pada template mingguan'} masih milik ${sample.salesName}. Batalkan atau jadwalkan ulang di Jadwal kunjungan lebih dulu.`,
+      409
+    );
+  }
   if (review.requiresConfirmation && review.token !== token)
     throw new AppError(
       'Tinjau kembali dampak perubahan wilayah sebelum menyimpan. Data mungkin sudah berubah.',

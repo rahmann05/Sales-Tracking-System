@@ -5,6 +5,60 @@ import { cancelScheduleBody } from './planning-schema.js';
 import { teamPlanningPolicy } from './planning-policy.service.js';
 import { wibDateKey } from '../../../../../shared/visit-metrics.mjs';
 import { broadcastCacheInvalidation } from '../../../config/socket.js';
+
+const PLAN_PJP_ACTIVITY_INCLUDE = {
+  stops: {
+    include: {
+      _count: { select: { attendances: true, orders: true, routeChanges: true } },
+    },
+  },
+  _count: { select: { routeChanges: true, derivedPjps: true } },
+};
+
+export function isPjpProtectedFromCancel(pjp, todayKey = wibDateKey()) {
+  if (!pjp) return true;
+  return Boolean(
+    pjp.status !== 'SCHEDULED' ||
+      wibDateKey(pjp.date) < todayKey ||
+      pjp._count?.routeChanges ||
+      pjp._count?.derivedPjps ||
+      (pjp.stops || []).some(
+        (s) =>
+          s.status !== 'PENDING' ||
+          s.visitSession ||
+          s.validationTaskId ||
+          s.validationResult ||
+          s._count?.attendances ||
+          s._count?.orders ||
+          s._count?.routeChanges
+      )
+  );
+}
+
+export async function summarizePlanPublication(planId, db = prisma) {
+  const pjps = await db.pjp.findMany({
+    where: { reportingContext: { path: ['planning', 'planId'], equals: planId } },
+    include: PLAN_PJP_ACTIVITY_INCLUDE,
+    orderBy: { id: 'asc' },
+  });
+  const todayKey = wibDateKey();
+  const retained = pjps.filter((pjp) => isPjpProtectedFromCancel(pjp, todayKey)).length;
+  return {
+    total: pjps.length,
+    cancellable: pjps.length - retained,
+    retained,
+  };
+}
+
+export async function getPlanWithPublicationSummary(id, actor, db = prisma) {
+  const plan = await getPlan(id, actor, db);
+  if (plan.status !== 'PUBLISHED') return plan;
+  return {
+    ...plan,
+    publicationSummary: await summarizePlanPublication(plan.id, db),
+  };
+}
+
 export async function cancelPublishedPlan(id, raw, actor) {
   const body = cancelScheduleBody.parse(raw);
   const result = await prisma.$transaction(
@@ -35,36 +89,16 @@ export async function cancelPublishedPlan(id, raw, actor) {
         orderBy: { id: 'asc' },
       });
       const cancelled = [],
-        retained = [];
+        retained = [],
+        todayKey = wibDateKey();
       for (const pjp of pjps) {
         await tx.$queryRaw`SELECT id FROM "Pjp" WHERE id=${pjp.id} FOR UPDATE`;
         await tx.$queryRaw`SELECT id FROM "PjpStop" WHERE "pjpId"=${pjp.id} FOR UPDATE`;
         const current = await tx.pjp.findUnique({
           where: { id: pjp.id },
-          include: {
-            stops: {
-              include: {
-                _count: { select: { attendances: true, orders: true, routeChanges: true } },
-              },
-            },
-            _count: { select: { routeChanges: true, derivedPjps: true } },
-          },
+          include: PLAN_PJP_ACTIVITY_INCLUDE,
         });
-        const active =
-          current.status !== 'SCHEDULED' ||
-          wibDateKey(current.date) < wibDateKey() ||
-          current._count.routeChanges ||
-          current._count.derivedPjps ||
-          current.stops.some(
-            (s) =>
-              s.status !== 'PENDING' ||
-              s.visitSession ||
-              s.validationTaskId ||
-              s.validationResult ||
-              s._count.attendances ||
-              s._count.orders ||
-              s._count.routeChanges
-          );
+        const active = isPjpProtectedFromCancel(current, todayKey);
         const record = {
           id: current.id,
           code: current.code,

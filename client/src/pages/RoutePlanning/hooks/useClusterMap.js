@@ -1,6 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMap } from '../../../context/MapContext';
 import { routingService } from '../../../services/routingService';
+import { computeClusterPolygons } from '../../../utils/clusterBoundaryHelper';
+import { getClusterColorHex } from '../../../services/clusterColorService';
+
+export const UNASSIGNED_CLUSTER_NAME = 'Belum Ditugaskan';
 
 const coordinates = (outlet) => ({
   lat: Number(outlet.latitude),
@@ -11,6 +15,9 @@ const coordinates = (outlet) => ({
 export function useClusterMap({
   step,
   allOutlets,
+  areaOutlets,
+  clusters = [],
+  hideClustered = false,
   selectedOutlets,
   centerPoint,
   routes,
@@ -29,18 +36,45 @@ export function useClusterMap({
     clearPolylines,
     addClickListener,
     removeClickListener,
+    setPolygons,
+    clearPolygons,
     isMapReady,
     panTo,
   } = useMap();
+  // Existing territories (not the unassigned placeholder) and the color each one is drawn with.
+  const territories = useMemo(
+    () => clusters.filter((c) => c.name !== UNASSIGNED_CLUSTER_NAME),
+    [clusters]
+  );
+  const colorByCluster = useMemo(
+    () =>
+      new Map(territories.map((c) => [c.id, c.colorHex || getClusterColorHex(c.name, '', null)])),
+    [territories]
+  );
   useEffect(() => {
     setMapMode('create-cluster');
     return () => {
       setMapMode('hidden');
       clearMarkers();
       clearPolylines();
+      clearPolygons();
       removeClickListener();
     };
-  }, [setMapMode, clearMarkers, clearPolylines, removeClickListener]);
+  }, [setMapMode, clearMarkers, clearPolylines, clearPolygons, removeClickListener]);
+  // Area of every existing cluster, in that cluster's own color.
+  useEffect(() => {
+    if (!isMapReady) return;
+    const withOutlets = (areaOutlets || allOutlets).filter((o) => colorByCluster.has(o.clusterId));
+    setPolygons(
+      computeClusterPolygons(territories, withOutlets).map((poly) => ({
+        ...poly,
+        color: colorByCluster.get(poly.id) || poly.color,
+        strokeOpacity: 0.85,
+        strokeWeight: 2,
+        fillOpacity: 0.1,
+      }))
+    );
+  }, [isMapReady, areaOutlets, allOutlets, territories, colorByCluster, setPolygons]);
   useEffect(() => {
     if (step === 2 && isMapReady && !busy && !saving) addClickListener(selectCenter);
     else removeClickListener();
@@ -60,15 +94,24 @@ export function useClusterMap({
     );
     const markers = [...outlets.values()]
       .filter((outlet) => outlet.latitude != null && outlet.longitude != null)
+      // Optional: hide points that already belong to a cluster (selected ones always stay).
+      .filter(
+        (outlet) =>
+          !hideClustered || selected.has(outlet.id) || !colorByCluster.has(outlet.clusterId)
+      )
       .map((outlet) => ({
         id: outlet.id,
         ...coordinates(outlet),
-        title: outlet.name,
+        title: colorByCluster.has(outlet.clusterId)
+          ? `${outlet.name} · ${outlet.cluster?.name || 'Cluster'}`
+          : outlet.name,
         label: selected.has(outlet.id) ? String(selected.get(outlet.id)) : null,
         icon: {
           path: 0,
           scale: selected.has(outlet.id) ? 11 : 6,
-          fillColor: selected.has(outlet.id) ? draft.colorHex : '#9ca3af',
+          fillColor: selected.has(outlet.id)
+            ? draft.colorHex
+            : colorByCluster.get(outlet.clusterId) || '#9ca3af',
           strokeColor: '#fff',
           strokeWeight: 2,
         },
@@ -96,6 +139,8 @@ export function useClusterMap({
     busy,
     saving,
     setMarkers,
+    hideClustered,
+    colorByCluster,
   ]);
   useEffect(() => {
     let current = true;

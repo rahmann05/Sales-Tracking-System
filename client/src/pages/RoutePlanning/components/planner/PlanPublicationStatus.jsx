@@ -27,43 +27,70 @@ export function PlanPublicationStatus({ planner: p }) {
         ))}
       </section>
     );
-  if (p.value.status === 'PUBLISHED' && p.planPolicy.PJP_ALLOW_CANCEL_PUBLISHED !== false)
+  if (p.value.status === 'PUBLISHED' && p.planPolicy.PJP_ALLOW_CANCEL_PUBLISHED !== false) {
+    const summary = p.value.publicationSummary;
+    const nothingCancellable = summary && summary.cancellable === 0;
     return (
       <section className="admin-panel planner-panel-body">
         <h3>Batalkan sisa agenda tanpa aktivitas</h3>
-        <p>
-          Hanya agenda hari ini/masa depan yang belum memiliki aktivitas akan dibatalkan. Presensi,
-          hasil, order, perubahan rute dan agenda lampau dilindungi. Rincian agenda batal tetap
-          berada dalam riwayat rencana.
-        </p>
-        <label className="app-field">
-          Alasan pembatalan
-          <textarea
-            minLength={5}
-            maxLength={1000}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className="admin-button"
-          disabled={p.busy || note.trim().length < 5}
-          onClick={async () => {
-            if (
-              await confirmAction('Batalkan sisa agenda yang belum memiliki aktivitas?', {
-                title: 'Batalkan Sisa Agenda',
-                confirmLabel: 'Batalkan',
-                danger: true,
-              })
-            )
-              p.cancelPublished({ note });
-          }}
-        >
-          Batalkan sisa agenda
-        </button>
+        {nothingCancellable ? (
+          <p className="app-notice">
+            {summary.total === 0
+              ? 'Tidak ada PJP yang tertaut ke rencana ini (misalnya PJP dari data awal/seed). Untuk menyusun jadwal baru, buat draf dengan tanggal mulai pada hari yang belum memiliki PJP.'
+              : `Semua ${summary.retained} agenda PJP pada rencana ini sudah lampau atau memiliki aktivitas lapangan (presensi/order/perubahan rute), sehingga dilindungi dan tidak dapat dibatalkan. Untuk jadwal baru, pilih tanggal mulai yang belum memiliki PJP atau gunakan tindak lanjut rute.`}
+          </p>
+        ) : (
+          <>
+            <p>
+              Hanya agenda hari ini/masa depan yang belum memiliki aktivitas akan dibatalkan.
+              Presensi, hasil, order, perubahan rute dan agenda lampau dilindungi. Rincian agenda
+              batal tetap berada dalam riwayat rencana.
+            </p>
+            {summary && (
+              <p className="app-notice">
+                {summary.cancellable} agenda tanpa aktivitas dapat dibatalkan
+                {summary.retained > 0
+                  ? ` · ${summary.retained} agenda lampau/beraktivitas tetap dipertahankan`
+                  : ''}
+                .
+              </p>
+            )}
+            <label className="app-field">
+              Alasan pembatalan
+              <textarea
+                minLength={5}
+                maxLength={1000}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+            {p.error && (
+              <p role="alert" className="admin-feedback error">
+                {p.error}
+              </p>
+            )}
+            <button
+              type="button"
+              className="admin-button"
+              disabled={p.busy || note.trim().length < 5}
+              onClick={async () => {
+                if (
+                  await confirmAction('Batalkan sisa agenda yang belum memiliki aktivitas?', {
+                    title: 'Batalkan Sisa Agenda',
+                    confirmLabel: 'Batalkan',
+                    danger: true,
+                  })
+                )
+                  p.cancelPublished({ note });
+              }}
+            >
+              Batalkan sisa agenda
+            </button>
+          </>
+        )}
       </section>
     );
+  }
   if (p.value.status !== 'SCHEDULED' && schedule?.state !== 'FAILED') return null;
   if (schedule?.state === 'FAILED')
     return (
@@ -93,6 +120,11 @@ export function PlanPublicationStatus({ planner: p }) {
           placeholder="Contoh: Ada perubahan penugasan tim yang perlu diperiksa."
         />
       </label>
+      {p.error && (
+        <p role="alert" className="admin-feedback error">
+          {p.error}
+        </p>
+      )}
       <div className="app-actions">
         <button
           type="button"
